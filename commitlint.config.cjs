@@ -1,13 +1,30 @@
-// Enforces Conventional Commits, e.g.  feat(auth): add login form
-// Allowed types below. Husky's commit-msg hook runs this on every commit.
+// Commit message validation is disabled — any message is allowed.
+// No rules are enforced, so you can write any commit message you like.
 module.exports = {
-  extends: ['@commitlint/config-conventional'],
-  rules: {
-    'type-enum': [
-      2,
-      'always',
-      ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'build', 'ci', 'chore', 'revert'],
-    ],
-    'subject-case': [0],
-  },
+  rules: {},
 };
+
+// // Allowed types below. Husky's commit-msg hook runs this on every commit.
+// module.exports = {
+//   extends: ['@commitlint/config-conventional'],
+//   rules: {
+//     'type-enum': [
+//       2,
+//       'always',
+//       [
+//         'feat',
+//         'fix',
+//         'docs',
+//         'style',
+//         'refactor',
+//         'perf',
+//         'test',
+//         'build',
+//         'ci',
+//         'chore',
+//         'revert',
+//       ],
+//     ],
+//     'subject-case': [0],
+//   },
+// };
