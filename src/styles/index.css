@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens as CSS variables — the single source of truth for colors.
+ * Tailwind colors (tailwind.config.js) reference these via var(). To re-theme
+ * or support dark mode, change values here, not across components.
+ */
+:root {
+  --brand-50: #eff6ff;
+  --brand-500: #3b82f6;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
+
+  --surface: #ffffff;
+  --surface-muted: #f9fafb;
+  --content: #111827;
+  --content-muted: #6b7280;
+  --border-color: #e5e7eb;
+}
+
+/* Dark theme — toggled by adding the `dark` class to <html> (darkMode: 'class'). */
+.dark {
+  --brand-50: #1e293b;
+  --brand-500: #60a5fa;
+  --brand-600: #3b82f6;
+  --brand-700: #2563eb;
+
+  --surface: #0f172a;
+  --surface-muted: #1e293b;
+  --content: #f1f5f9;
+  --content-muted: #94a3b8;
+  --border-color: #334155;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-surface-muted text-content antialiased;
+}

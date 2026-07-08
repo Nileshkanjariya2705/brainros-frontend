@@ -1,0 +1,142 @@
+#!/usr/bin/env sh
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pre-push quality gate for react-vite-boilerplate
+#
+# Runs, fail-fast, on the commits being pushed:   lint → typecheck → tests
+# Adapted from the Smackdab frontend pre-push hook (which is Nx-based) for this
+# single-package Vite app, so it calls the project's npm scripts directly.
+#
+# Default branch: main.  Bypass once with:  git push --no-verify
+# ─────────────────────────────────────────────────────────────────────────────
+
+DEFAULT_BRANCH="main"
+
+# Give tsc/vite enough heap on large diffs (only set if the caller hasn't).
+if ! echo "$NODE_OPTIONS" | grep -q "max-old-space-size"; then
+  export NODE_OPTIONS="${NODE_OPTIONS} --max-old-space-size=4096"
+fi
+
+# Colors
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+BLUE='\033[0;34m'; CYAN='\033[0;36m'; MAGENTA='\033[0;35m'; NC='\033[0m'
+
+OVERALL_START=$(date +%s)
+timer_start() { TIMER_START=$(date +%s); }
+timer_end() { printf "%b\n" "${CYAN}⏱  ${1:-Time}: $(( $(date +%s) - TIMER_START ))s${NC}"; }
+count_lines() { printf '%s\n' "$1" | grep -c '.' || true; }
+
+printf "%b\n\n" "${BLUE}🚀 Pre-push checks starting...${NC}"
+
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+# ── Early exits ──────────────────────────────────────────────────────────────
+
+# 1) Skip hotfix/release branches (those go out fast, checked elsewhere)
+if echo "$current_branch" | grep -qE "^(hotfix|release)/"; then
+  printf "%b\n" "${YELLOW}⚠  Skipping checks on '$current_branch' (hotfix/release branch).${NC}"
+  exit 0
+fi
+
+# 2) Skip WIP commits
+last_commit_msg=$(git log -1 --pretty=%B 2>/dev/null || true)
+if echo "$last_commit_msg" | grep -qiE "^(WIP|wip:|--wip|\[wip\]|\[skip-checks\])"; then
+  printf "%b\n" "${YELLOW}⚠  WIP commit detected — skipping checks.${NC}"
+  exit 0
+fi
+
+# ── Work out what is actually being pushed ───────────────────────────────────
+# Prefer the upstream tracking branch, then origin/main; otherwise it's the very
+# first push (no remote yet) so we check the whole tracked source tree.
+base_ref=""
+upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)
+
+if [ -n "$upstream" ]; then
+  base_ref="$upstream"
+elif git show-ref --verify --quiet "refs/remotes/origin/$DEFAULT_BRANCH"; then
+  base_ref="origin/$DEFAULT_BRANCH"
+fi
+
+if [ -n "$base_ref" ]; then
+  changed_files=$(git diff --name-only "$base_ref"...HEAD 2>/dev/null || true)
+  commit_count=$(git rev-list --count "$base_ref"..HEAD 2>/dev/null || echo 0)
+  printf "%b\n" "${BLUE}ℹ  Branch ${YELLOW}$current_branch${BLUE} → ${YELLOW}$base_ref${NC}"
+  printf "%b\n" "${BLUE}ℹ  Commits to push: ${YELLOW}$commit_count${NC}"
+  if [ -z "$changed_files" ]; then
+    printf "%b\n" "${GREEN}✅ Nothing changed vs $base_ref. Up to date.${NC}"
+    exit 0
+  fi
+else
+  printf "%b\n" "${YELLOW}ℹ  No upstream / origin/$DEFAULT_BRANCH yet (first push) — checking full project.${NC}"
+  changed_files=$(git ls-files '*.ts' '*.tsx' '*.js' '*.jsx' '*.css' '*.json' || true)
+fi
+
+# ── Categorize changed files ─────────────────────────────────────────────────
+ASSET_PATTERN="\.(svg|png|jpg|jpeg|gif|ico|webp|avif|bmp|tiff|csv|md|txt|pdf|woff|woff2|ttf|eot|otf|mp3|mp4|webm|ogg|wav|lock)$"
+checkable_files=$(printf '%s\n' "$changed_files" | grep -vE "$ASSET_PATTERN" | grep -v '^$' || true)
+file_count=$(count_lines "$changed_files")
+checkable_count=$(count_lines "$checkable_files")
+
+printf "%b\n" "${MAGENTA}📊 $file_count file(s) changed — $checkable_count checkable, $((file_count - checkable_count)) asset/doc.${NC}"
+
+if [ "$checkable_count" -eq 0 ]; then
+  printf "%b\n" "${GREEN}✅ Only asset/doc files changed. Skipping lint, typecheck and tests.${NC}"
+  exit 0
+fi
+
+# ── Security scan (advisory) ─────────────────────────────────────────────────
+printf "\n%b\n" "${YELLOW}🔐 Security scan...${NC}"
+env_files=$(printf '%s\n' "$changed_files" | grep -E "\.env(\.|$)" | grep -vE "\.env\.example$" || true)
+if [ -n "$env_files" ]; then
+  printf "%b\n" "${RED}⚠  Environment files in this push — confirm no real secrets:${NC}"
+  printf '%s\n' "$env_files" | sed 's/^/   🔑 /'
+fi
+if [ -n "$base_ref" ]; then
+  secret_re="(api[_-]?key|secret|password|token|private[_-]?key|aws[_-]?(access|secret)|client[_-]?secret)"
+  secret_hits=$(git diff "$base_ref"...HEAD -- . ':!.husky/**' 2>/dev/null | grep -E '^\+' | grep -iE "$secret_re" | head -3 || true)
+  if [ -n "$secret_hits" ]; then
+    printf "%b\n" "${YELLOW}⚠  Possible secrets in the diff (use 'git push --no-verify' if intentional):${NC}"
+    printf '%s\n' "$secret_hits" | sed 's/^/   ⚠  /'
+  fi
+fi
+
+# ── Quality gates (fail-fast) ────────────────────────────────────────────────
+printf "\n%b\n\n" "${BLUE}🔄 Running checks (fail-fast)...${NC}"
+
+# Gate 1 — Lint
+timer_start
+printf "%b\n" "${YELLOW}🔍 Linting...${NC}"
+if npm run lint --silent; then
+  printf "%b\n" "${GREEN}✅ Lint passed${NC}"; timer_end "Lint"
+else
+  printf "\n%b\n" "${RED}❌ Pre-push failed at: LINT — run 'npm run lint:fix', or 'git push --no-verify' to bypass.${NC}"
+  exit 1
+fi
+
+# Gate 2 — Typecheck
+printf "\n"
+timer_start
+printf "%b\n" "${YELLOW}📝 Type checking...${NC}"
+if npm run typecheck --silent; then
+  printf "%b\n" "${GREEN}✅ Type check passed${NC}"; timer_end "Typecheck"
+else
+  printf "\n%b\n" "${RED}❌ Pre-push failed at: TYPECHECK — run 'npm run typecheck', or 'git push --no-verify' to bypass.${NC}"
+  exit 1
+fi
+
+# Gate 3 — Tests
+printf "\n"
+timer_start
+printf "%b\n" "${YELLOW}🧪 Running tests...${NC}"
+if npm test --silent -- --passWithNoTests; then
+  printf "%b\n" "${GREEN}✅ Tests passed${NC}"; timer_end "Tests"
+else
+  printf "\n%b\n" "${RED}❌ Pre-push failed at: TESTS — run 'npm test', or 'git push --no-verify' to bypass.${NC}"
+  exit 1
+fi
+
+# ── Done ─────────────────────────────────────────────────────────────────────
+printf "\n%b\n" "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+printf "%b\n"   "${GREEN}✅ All pre-push checks passed in $(( $(date +%s) - OVERALL_START ))s${NC}"
+printf "%b\n\n" "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+exit 0
