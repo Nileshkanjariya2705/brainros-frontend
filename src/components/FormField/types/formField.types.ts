@@ -19,6 +19,7 @@ export interface BaseFieldProps<T extends FieldValues> {
   autoComplete?: string;
   className?: string;
   wrapperClass?: string;
+  id?: string;
 }
 
 /** Input size scale — mirrors the `Button` primitive's sizes. */

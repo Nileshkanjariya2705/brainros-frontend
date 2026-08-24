@@ -21,17 +21,31 @@ import {
 
 // ** Pages (lazy — one chunk each) **
 const LoginPage = lazyRoute(() => import('@/modules/Auth/pages/LoginPage'));
+const RegisterPage = lazyRoute(() => import('@/modules/Auth/pages/RegisterPage'));
 const DashboardPage = lazyRoute(() => import('@/modules/Dashboard/pages/DashboardPage'));
+const AvailableExamsPage = lazyRoute(() => import('@/modules/Exams/pages/AvailableExamsPage'));
+const ExamInterfacePage = lazyRoute(() => import('@/modules/Exams/pages/ExamInterfacePage'));
+const ExamResultPage = lazyRoute(() => import('@/modules/Exams/pages/ExamResultPage'));
+const HistoryPage = lazyRoute(() => import('@/modules/Exams/pages/HistoryPage'));
 const NotFoundPage = lazyRoute(() => import('@/components/feedback/NotFoundPage'));
 
-// One central place for every route. Add new pages to the right group.
-
 // ** Public (unauthenticated-only) **
-const publicRoutes: RouteObject[] = [{ path: PUBLIC_NAVIGATION.login, element: <LoginPage /> }];
+const publicRoutes: RouteObject[] = [
+  { path: PUBLIC_NAVIGATION.login, element: <LoginPage /> },
+  { path: PUBLIC_NAVIGATION.register, element: <RegisterPage /> },
+];
 
-// ** Protected (authenticated-only) **
-const protectedRoutes: RouteObject[] = [
+// ** Protected inside standard AppLayout (with sidebar + top nav) **
+const protectedStandardRoutes: RouteObject[] = [
   { path: PRIVATE_NAVIGATION.dashboard, element: <DashboardPage /> },
+  { path: PRIVATE_NAVIGATION.availableExams, element: <AvailableExamsPage /> },
+  { path: PRIVATE_NAVIGATION.examResult, element: <ExamResultPage /> },
+  { path: PRIVATE_NAVIGATION.myHistory, element: <HistoryPage /> },
+];
+
+// ** Protected full-screen routes (distraction-free exam test portal) **
+const protectedFullScreenRoutes: RouteObject[] = [
+  { path: PRIVATE_NAVIGATION.examInterface, element: <ExamInterfacePage /> },
 ];
 
 const router = createBrowserRouter([
@@ -41,13 +55,15 @@ const router = createBrowserRouter([
   },
   {
     element: <ProtectedRoute />,
-    children: [{ element: <AppLayout />, children: protectedRoutes }],
+    children: [
+      { element: <AppLayout />, children: protectedStandardRoutes },
+      ...protectedFullScreenRoutes,
+    ],
   },
   { path: NOT_FOUND_PATH, element: <NotFoundPage /> },
 ]);
 
 const AppRouter = () => {
-  // Single Suspense boundary covers every lazily-loaded page chunk.
   return (
     <Suspense fallback={<PageLoader />}>
       <RouterProvider router={router} />

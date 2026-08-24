@@ -1,18 +1,32 @@
-// ** Components **
 import LoginForm from '../components/LoginForm';
-
-// ** Config **
 import { APP_NAME } from '@config';
+import { Link } from 'react-router-dom';
 
 const LoginPage = () => {
   return (
-    <div>
-      <h1 className="mb-1 text-center text-2xl font-semibold text-gray-900">Welcome back</h1>
-      <p className="mb-6 text-center text-sm text-gray-500">Sign in to {APP_NAME}</p>
-      <LoginForm />
-      <p className="mt-6 text-center text-xs text-gray-400">
-        Demo: any email + a 6+ char password (wire to your real API).
-      </p>
+    <div className="w-full max-w-md space-y-6">
+      <div>
+        <h1 className="text-center text-3xl font-extrabold text-gray-900 tracking-tight">
+          Welcome back
+        </h1>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Sign in to {APP_NAME} using passwordless OTP login
+        </p>
+      </div>
+
+      <div className="bg-white py-8 px-4 shadow-sm rounded-lg sm:px-10 border border-gray-200">
+        <LoginForm />
+      </div>
+
+      <div className="text-center text-sm text-gray-600">
+        <span>New student? </span>
+        <Link
+          to="/register"
+          className="font-semibold text-brand-600 hover:text-brand-500 transition"
+        >
+          Register Student Profile
+        </Link>
+      </div>
     </div>
   );
 };

@@ -10,7 +10,7 @@ export default defineConfig({
   // tsconfigPaths → resolve the @/, @config, @components/... aliases from tsconfig
   plugins: [react(), svgr(), tsconfigPaths()],
   server: {
-    port: 3000,
+    port: 3001,
     open: true,
   },
   // Used by Playwright E2E (`npm run preview`). Fixed port + strictPort so the

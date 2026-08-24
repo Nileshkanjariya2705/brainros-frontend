@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { reducer, setCredentials, logout } from './authSlice';
 import type { AuthState } from '@/modules/Auth/types/auth.types';
 
-const initial: AuthState = { user: null, token: null, isAuthenticated: false };
+const initial: AuthState = { user: null, token: null, refreshToken: null, isAuthenticated: false };
 
 describe('authSlice', () => {
   beforeEach(() => localStorage.clear());
@@ -11,21 +11,41 @@ describe('authSlice', () => {
     const next = reducer(
       initial,
       setCredentials({
-        token: 'jwt-123',
-        user: { id: '1', name: 'Vivek', email: 'v@x.com', role: 'admin' },
+        accessToken: 'jwt-123',
+        refreshToken: 'refresh-123',
+        user: {
+          id: '1',
+          phone: '+919876543210',
+          mobileNumber: '+919876543210',
+          email: 'v@x.com',
+          roles: ['STUDENT'],
+          isActive: true,
+          isVerified: true,
+        },
       }),
     );
 
     expect(next.isAuthenticated).toBe(true);
     expect(next.token).toBe('jwt-123');
+    expect(next.refreshToken).toBe('refresh-123');
     expect(next.user?.email).toBe('v@x.com');
     expect(localStorage.getItem('access_token')).toBe('jwt-123');
+    expect(localStorage.getItem('refresh_token')).toBe('refresh-123');
   });
 
   it('clears everything on logout', () => {
     const loggedIn: AuthState = {
-      user: { id: '1', name: 'Vivek', email: 'v@x.com', role: 'admin' },
+      user: {
+        id: '1',
+        phone: '+919876543210',
+        mobileNumber: '+919876543210',
+        email: 'v@x.com',
+        roles: ['STUDENT'],
+        isActive: true,
+        isVerified: true,
+      },
       token: 'jwt-123',
+      refreshToken: 'refresh-123',
       isAuthenticated: true,
     };
 
@@ -33,7 +53,9 @@ describe('authSlice', () => {
 
     expect(next.isAuthenticated).toBe(false);
     expect(next.token).toBeNull();
+    expect(next.refreshToken).toBeNull();
     expect(next.user).toBeNull();
     expect(localStorage.getItem('access_token')).toBeNull();
+    expect(localStorage.getItem('refresh_token')).toBeNull();
   });
 });
