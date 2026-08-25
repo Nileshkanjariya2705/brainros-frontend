@@ -2,9 +2,17 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import cn from 'classnames';
+import {
+  Smartphone,
+  KeyRound,
+  ArrowLeft,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle2,
+} from 'lucide-react';
 
 // ** Components **
-import { InputField } from '@/components/FormField';
+import { InputField, PhoneInputField } from '@/components/FormField';
 import Button from '@/components/ui/Button';
 
 // ** Hooks **
@@ -31,6 +39,8 @@ const LoginForm = () => {
   const {
     register: registerSend,
     handleSubmit: handleSubmitSend,
+    setValue: setSendValue,
+    watch: watchSend,
     formState: { errors: errorsSend },
   } = useForm<SendOtpFormValues>({
     resolver: yupResolver(sendOtpSchema),
@@ -85,26 +95,32 @@ const LoginForm = () => {
 
   if (step === 1) {
     return (
-      <form onSubmit={handleSubmitSend(handleSendOtp)} className="space-y-4">
-        <InputField<SendOtpFormValues>
+      <form onSubmit={handleSubmitSend(handleSendOtp)} className="space-y-5">
+        <PhoneInputField<SendOtpFormValues>
           name="mobileNumber"
           label="Mobile Number"
-          type="tel"
-          autoComplete="tel"
-          placeholder="e.g. +919876543210"
+          placeholder="98765 43210"
           required
           register={registerSend}
+          setValue={setSendValue}
+          watch={watchSend}
           errors={errorsSend}
-          helperText="Enter your mobile number with country code (e.g. +91 for India)"
+          helperText="Select country code and enter your 10-digit mobile number"
         />
 
         {sendError && (
-          <div className="rounded-md bg-red-50 p-3">
-            <p className="text-xs font-medium text-red-700">{sendError}</p>
+          <div className="flex items-start space-x-2 rounded-xl bg-rose-50 p-3.5 border border-rose-200 text-rose-800">
+            <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+            <p className="text-xs font-medium leading-relaxed">{sendError}</p>
           </div>
         )}
 
-        <Button type="submit" isLoading={isSending} className="w-full">
+        <Button
+          type="submit"
+          isLoading={isSending}
+          className="w-full py-2.5 text-sm font-semibold shadow-md shadow-brand-500/20 hover:shadow-brand-500/30 transition-all"
+        >
+          <Smartphone className="h-4 w-4 mr-2" />
           Get OTP Verification Code
         </Button>
       </form>
@@ -112,62 +128,81 @@ const LoginForm = () => {
   }
 
   return (
-    <form onSubmit={handleSubmitVerify(handleVerifyOtp)} className="space-y-4">
-      <div>
-        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          Mobile Number
-        </label>
-        <div className="mt-1 flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-          <span>{mobileNumber}</span>
+    <form onSubmit={handleSubmitVerify(handleVerifyOtp)} className="space-y-5">
+      {/* Mobile number review card */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 transition-all">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+              <CheckCircle2 className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+                OTP Sent To
+              </p>
+              <p className="text-sm font-bold text-slate-800">{mobileNumber}</p>
+            </div>
+          </div>
           <button
             type="button"
             onClick={handleGoBack}
-            className="text-xs font-semibold text-brand-600 hover:text-brand-500 transition"
+            className="inline-flex items-center space-x-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-brand-600 hover:bg-brand-50 hover:text-brand-700 transition"
           >
-            Change Number
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Change</span>
           </button>
         </div>
       </div>
 
-      <InputField<VerifyOtpFormValues>
-        name="otp"
-        label="Enter 6-Digit OTP"
-        type="text"
-        maxLength={6}
-        placeholder="123456"
-        required
-        register={registerVerify}
-        errors={errorsVerify}
-        inputProps={{
-          inputMode: 'numeric',
-          pattern: '[0-9]*',
-        }}
-      />
+      <div className="space-y-1">
+        <InputField<VerifyOtpFormValues>
+          name="otp"
+          label="Enter 6-Digit OTP Code"
+          type="text"
+          maxLength={6}
+          placeholder="e.g. 123456"
+          required
+          register={registerVerify}
+          errors={errorsVerify}
+          className="tracking-widest font-mono text-center text-lg font-bold"
+          inputProps={{
+            inputMode: 'numeric',
+            pattern: '[0-9]*',
+          }}
+        />
+      </div>
 
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-gray-400">Didn't receive code?</span>
+      <div className="flex items-center justify-between rounded-lg bg-slate-50 p-2.5 border border-slate-200/60 text-xs">
+        <span className="text-slate-500">Didn't receive the OTP?</span>
         <button
           type="button"
           disabled={cooldownTime > 0}
           onClick={handleResend}
           className={cn(
-            'font-semibold transition outline-none',
+            'inline-flex items-center space-x-1 font-semibold transition outline-none rounded px-2 py-1',
             cooldownTime > 0
-              ? 'text-gray-400 cursor-not-allowed'
-              : 'text-brand-600 hover:text-brand-500',
+              ? 'text-slate-400 cursor-not-allowed bg-slate-100'
+              : 'text-brand-600 hover:text-brand-700 hover:bg-brand-50',
           )}
         >
-          {cooldownTime > 0 ? `Resend OTP in ${cooldownTime}s` : 'Resend OTP'}
+          <RefreshCw className={cn('h-3.5 w-3.5 mr-1', cooldownTime > 0 && 'animate-spin')} />
+          {cooldownTime > 0 ? `Resend in ${cooldownTime}s` : 'Resend OTP'}
         </button>
       </div>
 
       {verifyError && (
-        <div className="rounded-md bg-red-50 p-3">
-          <p className="text-xs font-medium text-red-700">{verifyError}</p>
+        <div className="flex items-start space-x-2 rounded-xl bg-rose-50 p-3.5 border border-rose-200 text-rose-800">
+          <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+          <p className="text-xs font-medium leading-relaxed">{verifyError}</p>
         </div>
       )}
 
-      <Button type="submit" isLoading={isVerifying} className="w-full">
+      <Button
+        type="submit"
+        isLoading={isVerifying}
+        className="w-full py-2.5 text-sm font-semibold shadow-md shadow-brand-500/20 hover:shadow-brand-500/30 transition-all"
+      >
+        <KeyRound className="h-4 w-4 mr-2" />
         Verify & Sign In
       </Button>
     </form>

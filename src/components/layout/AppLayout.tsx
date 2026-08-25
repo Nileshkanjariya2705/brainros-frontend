@@ -13,6 +13,18 @@ import {
   X,
   User,
   Bell,
+  Database,
+  Globe2,
+  Sliders,
+  CalendarClock,
+  Compass,
+  Trophy,
+  Sparkles,
+  TrendingUp,
+  ShieldCheck,
+  Building2,
+  ShieldAlert,
+  CalendarDays,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -32,6 +44,66 @@ const navItems = [
     to: PRIVATE_NAVIGATION.dashboard,
     icon: LayoutDashboard,
     end: true,
+  },
+  {
+    label: 'Question Bank',
+    to: PRIVATE_NAVIGATION.questionBank,
+    icon: Database,
+  },
+  {
+    label: 'Exam Generator',
+    to: PRIVATE_NAVIGATION.examBlueprints,
+    icon: Sliders,
+  },
+  {
+    label: 'Exam Scheduling',
+    to: PRIVATE_NAVIGATION.examScheduling,
+    icon: CalendarClock,
+  },
+  {
+    label: 'Regional Languages',
+    to: PRIVATE_NAVIGATION.languages,
+    icon: Globe2,
+  },
+  {
+    label: 'Strategy Rules',
+    to: PRIVATE_NAVIGATION.strategyRules,
+    icon: Compass,
+  },
+  {
+    label: 'Leaderboard',
+    to: PRIVATE_NAVIGATION.leaderboard,
+    icon: Trophy,
+  },
+  {
+    label: 'Historical Datasets',
+    to: PRIVATE_NAVIGATION.historicalDatasets,
+    icon: Sparkles,
+  },
+  {
+    label: 'Performance Trends',
+    to: PRIVATE_NAVIGATION.performanceTrends,
+    icon: TrendingUp,
+  },
+  {
+    label: 'Parent Portal',
+    to: PRIVATE_NAVIGATION.parentDashboard,
+    icon: ShieldCheck,
+  },
+  {
+    label: 'Institution Portal',
+    to: PRIVATE_NAVIGATION.institutionDashboard,
+    icon: Building2,
+  },
+  {
+    label: 'Admin Control Center',
+    to: PRIVATE_NAVIGATION.adminControlCenter,
+    icon: ShieldAlert,
+  },
+  {
+    label: 'Exam Calendar',
+    to: PRIVATE_NAVIGATION.academicCalendar,
+    icon: CalendarDays,
   },
   {
     label: 'Available Exams',

@@ -24,7 +24,7 @@ type RequestState = { isLoading: boolean; isError: boolean; isSuccess: boolean }
 /** Builds the success branch of an ExtendedResponse from a raw axios response. */
 const toSuccess = <T>(response: AxiosResponse): ExtendedResponse<T> => ({
   isSuccess: true,
-  data: response?.data?.data,
+  data: response?.data?.data !== undefined ? response?.data?.data : response?.data,
   message: response?.data?.message,
   status: response?.status,
   statusText: response?.statusText,

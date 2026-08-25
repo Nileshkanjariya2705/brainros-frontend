@@ -39,14 +39,23 @@ const DashboardPage = () => {
   useEffect(() => {
     let active = true;
     (async () => {
-      const res = await getMyAttemptsAPI();
-      if (!active) return;
-      if (res.data) setAttempts(res.data);
+      try {
+        const res = await getMyAttemptsAPI();
+        if (!active) return;
+        const list = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray((res.data as any)?.data)
+            ? (res.data as any).data
+            : [];
+        setAttempts(list);
+      } catch {
+        if (active) setAttempts([]);
+      }
     })();
     return () => {
       active = false;
     };
-  }, [getMyAttemptsAPI]);
+  }, []);
 
   // Stats calculations
   const completedAttempts = attempts.filter(

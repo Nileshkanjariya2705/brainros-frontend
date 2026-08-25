@@ -7,9 +7,9 @@ export const useSendOtp = () => {
 
   const sendOtp = async (mobileNumber: string) => {
     setError(null);
-    const { data, error: apiError } = await sendOtpAPI({ mobileNumber });
+    const { isSuccess: apiSuccess, data, error: apiError } = await sendOtpAPI({ mobileNumber });
 
-    if (apiError || !data?.success) {
+    if (apiError || !apiSuccess || data?.success === false) {
       setError(apiError ?? 'Failed to send OTP. Please try again.');
       return false;
     }
