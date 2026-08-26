@@ -36,6 +36,7 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   adminAuditLogs: '/admin/audit-logs',
   adminNotifications: '/admin/notifications',
   academicCalendar: '/exam-calendar',
+  profile: '/profile',
 });
 
 // ** Misc **

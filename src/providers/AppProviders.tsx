@@ -8,6 +8,7 @@ import store, { persistor } from '@/redux/store';
 
 // ** Providers **
 import QueryProvider from '@/providers/QueryProvider';
+import AuthProvider from '@/providers/AuthProvider';
 
 // ** Components **
 import PageLoader from '@/components/feedback/PageLoader';
@@ -19,13 +20,15 @@ interface AppProvidersProps {
 
 /**
  * Single place that wires global providers:
- *   Redux store  →  PersistGate (waits for rehydration)  →  React Query  →  app.
+ *   Redux store  →  PersistGate  →  AuthProvider  →  React Query  →  app.
  */
 const AppProviders = ({ children }: AppProvidersProps) => {
   return (
     <ReduxProvider store={store}>
       <PersistGate loading={<PageLoader />} persistor={persistor}>
-        <QueryProvider>{children}</QueryProvider>
+        <AuthProvider>
+          <QueryProvider>{children}</QueryProvider>
+        </AuthProvider>
       </PersistGate>
     </ReduxProvider>
   );

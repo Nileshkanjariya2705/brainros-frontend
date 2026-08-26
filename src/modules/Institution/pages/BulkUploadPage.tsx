@@ -37,11 +37,20 @@ export const BulkUploadPage: React.FC = () => {
     fetchHistory();
   }, []);
 
+  const getArrayData = (response: any): any[] => {
+    if (!response) return [];
+    if (Array.isArray(response)) return response;
+    if (Array.isArray(response.data)) return response.data;
+    if (Array.isArray(response.data?.data)) return response.data.data;
+    return [];
+  };
+
   const fetchBatches = async () => {
     try {
       const res = await Axios.get('/institutions/me/batches');
-      setBatches(res.data);
-      if (res.data.length > 0) setSelectedBatchId(res.data[0].id);
+      const batchList = getArrayData(res);
+      setBatches(batchList);
+      if (batchList.length > 0) setSelectedBatchId(batchList[0].id);
     } catch (err) {
       console.error(err);
     }
@@ -51,7 +60,7 @@ export const BulkUploadPage: React.FC = () => {
     try {
       setLoadingHistory(true);
       const res = await Axios.get('/institutions/me/bulk-uploads');
-      setUploadHistory(res.data.data || []);
+      setUploadHistory(getArrayData(res));
     } catch (err) {
       console.error(err);
     } finally {

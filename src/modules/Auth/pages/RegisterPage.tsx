@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
+import cn from 'classnames';
 import {
   ChevronRight,
   ChevronLeft,
@@ -9,20 +10,22 @@ import {
   MapPin,
   GraduationCap,
   Sparkles,
-  CheckCircle2,
   AlertCircle,
-  Building2,
-  BookOpen,
+  ShieldCheck,
+  RefreshCw,
+  ArrowLeft,
 } from 'lucide-react';
 
 // ** Components **
 import { InputField, SelectField, PhoneInputField } from '@/components/FormField';
 import Button from '@/components/ui/Button';
 import RegisterStepper from '../components/RegisterStepper';
+import PageLoader from '@/components/feedback/PageLoader';
 
 // ** Hooks & Services **
 import { useRegisterStudent } from '../hooks/useRegisterStudent';
 import { useGetRegisterOptionsAPI } from '../services';
+import { useAuth } from '@/hooks/useAuth';
 
 // ** Validation **
 import {
@@ -30,16 +33,34 @@ import {
   STEP_FIELDS,
   type RegisterFormValues,
 } from '../validation-schema/register.schema';
-import type { OptionItem } from '../types/auth.types';
+import type { OptionItem, State, District } from '../types/auth.types';
 
 const RegisterPage = () => {
+  const { isAuthenticated, isInitializing } = useAuth();
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const { registerStudent, isLoading: isRegistering, error: registerError } = useRegisterStudent();
+  const [otpCode, setOtpCode] = useState<string>('');
+  const [cooldownTime, setCooldownTime] = useState<number>(0);
+
+  const {
+    initiateRegistration,
+    verifyRegistrationOtp,
+    resendOtp,
+    reset: resetRegistration,
+    pendingRegistration,
+    error: registerError,
+    setError: setRegisterError,
+    isInitiating,
+    isVerifying,
+    isResending,
+  } = useRegisterStudent();
+
   const { getRegisterOptionsAPI, isLoading: isLoadingOptions } = useGetRegisterOptionsAPI();
 
   const [classes, setClasses] = useState<OptionItem[]>([]);
   const [languages, setLanguages] = useState<OptionItem[]>([]);
   const [examTargets, setExamTargets] = useState<OptionItem[]>([]);
+  const [statesList, setStatesList] = useState<State[]>([]);
+  const [filteredDistricts, setFilteredDistricts] = useState<District[]>([]);
   const [optionsError, setOptionsError] = useState<string | null>(null);
 
   // Form setup
@@ -59,6 +80,8 @@ const RegisterPage = () => {
       email: '',
       state: '',
       district: '',
+      stateId: '',
+      districtId: '',
       schoolCollege: '',
       classId: '',
       preferredLanguageId: '',
@@ -66,10 +89,9 @@ const RegisterPage = () => {
     },
   });
 
-  // Watch form values for Step 3 summary review
   const watchedValues = watch();
 
-  // Fetch register metadata options on mount
+  // Fetch registration options (classes, targets, languages, states & districts)
   useEffect(() => {
     let isMounted = true;
     const fetchOptions = async () => {
@@ -79,6 +101,7 @@ const RegisterPage = () => {
         setClasses(data.classes || []);
         setLanguages(data.languages || []);
         setExamTargets(data.examTargets || []);
+        setStatesList(data.states || []);
       } else {
         setOptionsError(error ?? 'Failed to load registration options.');
       }
@@ -89,8 +112,65 @@ const RegisterPage = () => {
     };
   }, [getRegisterOptionsAPI]);
 
+  // Sync cooldown timer on pending registration
+  useEffect(() => {
+    if (pendingRegistration) {
+      setCooldownTime(pendingRegistration.resendAvailableIn || 60);
+    }
+  }, [pendingRegistration]);
+
+  // Cooldown countdown timer
+  useEffect(() => {
+    if (cooldownTime > 0) {
+      const timer = setTimeout(() => setCooldownTime((t) => t - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldownTime]);
+
+  if (isInitializing) {
+    return <PageLoader label="Checking session..." />;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Handle State Selection -> filter districts dynamically
+  const handleStateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedStateId = e.target.value;
+    const stateObj = statesList.find((s) => s.id === selectedStateId || s.name === selectedStateId);
+
+    if (stateObj) {
+      setValue('stateId', stateObj.id, { shouldValidate: true });
+      setValue('state', stateObj.name, { shouldValidate: true });
+      setFilteredDistricts(stateObj.districts || []);
+      setValue('districtId', '', { shouldValidate: true });
+      setValue('district', '', { shouldValidate: true });
+    } else {
+      setValue('stateId', '', { shouldValidate: true });
+      setValue('state', selectedStateId, { shouldValidate: true });
+      setFilteredDistricts([]);
+    }
+  };
+
+  // Handle District Selection
+  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedDistrictId = e.target.value;
+    const districtObj = filteredDistricts.find(
+      (d) => d.id === selectedDistrictId || d.name === selectedDistrictId,
+    );
+    if (districtObj) {
+      setValue('districtId', districtObj.id, { shouldValidate: true });
+      setValue('district', districtObj.name, { shouldValidate: true });
+    } else {
+      setValue('districtId', '', { shouldValidate: true });
+      setValue('district', selectedDistrictId, { shouldValidate: true });
+    }
+  };
+
   // Step Navigation Validation Handler
   const handleNextStep = async () => {
+    setRegisterError(null);
     const fieldsToValidate = STEP_FIELDS[step];
     const isStepValid = await trigger(fieldsToValidate as unknown as (keyof RegisterFormValues)[]);
 
@@ -100,16 +180,20 @@ const RegisterPage = () => {
   };
 
   const handlePrevStep = () => {
+    setRegisterError(null);
     setStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3) : prev));
   };
 
+  // Step 3 Submit -> initiate registration & trigger OTP
   const onSubmit = async (values: RegisterFormValues) => {
-    await registerStudent({
+    await initiateRegistration({
       phone: values.phone,
       name: values.name,
       email: values.email || undefined,
       state: values.state,
       district: values.district,
+      stateId: values.stateId || undefined,
+      districtId: values.districtId || undefined,
       schoolCollege: values.schoolCollege,
       classId: values.classId,
       preferredLanguageId: values.preferredLanguageId,
@@ -117,9 +201,49 @@ const RegisterPage = () => {
     });
   };
 
+  // OTP Verification Submit
+  const handleVerifyOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.trim().length < 4) {
+      setRegisterError('Please enter a valid OTP verification code.');
+      return;
+    }
+    await verifyRegistrationOtp(otpCode.trim());
+  };
+
+  const handleResend = async () => {
+    if (cooldownTime > 0) return;
+    const ok = await resendOtp();
+    if (ok) {
+      setCooldownTime(60);
+    }
+  };
+
   const classOptions = (classes || []).map((c) => ({ label: c.name, value: c.id }));
   const languageOptions = (languages || []).map((l) => ({ label: l.name, value: l.id }));
   const examTargetOptions = (examTargets || []).map((e) => ({ label: e.name, value: e.id }));
+
+  const stateOptions =
+    statesList.length > 0
+      ? statesList.map((s) => ({ label: s.name, value: s.id }))
+      : [
+          { label: 'Karnataka', value: 'Karnataka' },
+          { label: 'Maharashtra', value: 'Maharashtra' },
+          { label: 'Gujarat', value: 'Gujarat' },
+          { label: 'Tamil Nadu', value: 'Tamil Nadu' },
+          { label: 'Delhi', value: 'Delhi' },
+        ];
+
+  const districtOptions =
+    filteredDistricts.length > 0
+      ? filteredDistricts.map((d) => ({ label: d.name, value: d.id }))
+      : [
+          { label: 'Bengaluru Urban', value: 'Bengaluru Urban' },
+          { label: 'Bengaluru Rural', value: 'Bengaluru Rural' },
+          { label: 'Mysuru', value: 'Mysuru' },
+          { label: 'Mumbai', value: 'Mumbai' },
+          { label: 'Pune', value: 'Pune' },
+        ];
 
   // Helper labels for summary view
   const selectedClassName = (classes || []).find((c) => c.id === watchedValues.classId)?.name;
@@ -131,327 +255,383 @@ const RegisterPage = () => {
   )?.name;
 
   return (
-    <div className="w-full max-w-2xl space-y-6">
+    <div className="w-full max-w-2xl space-y-6 animate-in fade-in zoom-in-95 duration-300">
       {/* Page Header */}
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center space-x-2 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-600 ring-1 ring-inset ring-brand-500/20">
+        <div className="inline-flex items-center space-x-2 rounded-full bg-brand-50 px-3.5 py-1 text-xs font-semibold text-brand-600 ring-1 ring-inset ring-brand-500/20 shadow-sm">
           <Sparkles className="h-3.5 w-3.5" />
           <span>Student Onboarding Wizard</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
           Create Student Profile
         </h1>
         <p className="text-sm text-slate-500 max-w-md mx-auto">
-          Complete the 3 simple steps to register and gain instant access to your examination portal
+          Complete the quick steps to register and generate your official Student ID via OTP
+          verification
         </p>
       </div>
 
-      {/* Main Multi-Step Form Card */}
-      <div className="bg-white/95 backdrop-blur-xl p-6 sm:p-8 shadow-xl shadow-slate-200/60 rounded-2xl border border-slate-200/80 space-y-6">
-        {/* Stepper Progress Bar */}
-        <RegisterStepper currentStep={step} totalSteps={3} />
+      {/* Main Form Card */}
+      <div className="bg-white/95 backdrop-blur-2xl p-6 sm:p-8 shadow-2xl shadow-brand-500/10 rounded-2xl border border-slate-200/90 space-y-6 relative overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-brand-500 via-purple-500 to-indigo-500" />
 
-        {isLoadingOptions ? (
-          <div className="flex flex-col items-center justify-center py-12 space-y-4">
-            <span className="h-10 w-10 animate-spin rounded-full border-4 border-brand-600 border-t-transparent shadow-md" />
-            <p className="text-sm font-medium text-slate-500">
-              Loading registration choices & institutions...
-            </p>
-          </div>
-        ) : optionsError ? (
-          <div className="flex flex-col items-center space-y-4 rounded-xl bg-rose-50 p-6 border border-rose-200">
-            <div className="flex items-start space-x-3 w-full">
-              <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-              <div>
-                <h3 className="text-sm font-bold text-rose-800">Configuration Error</h3>
-                <p className="mt-1 text-xs text-rose-700">{optionsError}</p>
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* OTP VERIFICATION STEP                                          */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {pendingRegistration ? (
+          <div className="space-y-6 animate-in fade-in zoom-in-95">
+            <div className="text-center space-y-2">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-sm mx-auto">
+                <ShieldCheck className="h-6 w-6" />
               </div>
+              <h2 className="text-xl font-black text-slate-900">Verify Mobile Number</h2>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                We have sent an OTP verification code to{' '}
+                <strong className="text-slate-800 font-mono">
+                  {pendingRegistration.mobileMasked}
+                </strong>
+                . Enter it below to activate your account and generate your official Student ID.
+              </p>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                setOptionsError(null);
-                const { data, error } = await getRegisterOptionsAPI();
-                if (!error && data) {
-                  setClasses(data.classes || []);
-                  setLanguages(data.languages || []);
-                  setExamTargets(data.examTargets || []);
-                } else {
-                  setOptionsError(error ?? 'Failed to load registration options.');
-                }
-              }}
-            >
-              Retry Loading Options
-            </Button>
+
+            {registerError && (
+              <div className="rounded-xl bg-red-50 p-3.5 border border-red-200 flex items-start space-x-3">
+                <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                <p className="text-xs font-semibold text-red-700">{registerError}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleVerifyOtpSubmit} className="space-y-5">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-700 text-center">
+                  6-Digit Verification Code
+                </label>
+                <input
+                  type="text"
+                  placeholder="• • • • • •"
+                  maxLength={8}
+                  autoFocus
+                  value={otpCode}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtpCode(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 py-3 text-center font-mono text-2xl tracking-widest text-slate-900 placeholder:text-slate-300 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none transition-all"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                isLoading={isVerifying}
+                className="w-full"
+              >
+                <span>Verify & Complete Registration</span>
+              </Button>
+
+              <div className="flex items-center justify-between pt-2 text-xs border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={resetRegistration}
+                  className="inline-flex items-center text-slate-500 hover:text-slate-800 font-semibold"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5 mr-1" />
+                  <span>Edit Registration Details</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={cooldownTime > 0 || isResending}
+                  className={cn(
+                    'inline-flex items-center font-bold transition-colors',
+                    cooldownTime > 0
+                      ? 'text-slate-400 cursor-not-allowed'
+                      : 'text-brand-600 hover:text-brand-700 hover:underline',
+                  )}
+                >
+                  <RefreshCw className={cn('h-3.5 w-3.5 mr-1', isResending && 'animate-spin')} />
+                  <span>{cooldownTime > 0 ? `Resend in ${cooldownTime}s` : 'Resend Code'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* STEP 1: Personal Details */}
-            {step === 1 && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-brand-600">
-                    <User className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900">Step 1: Personal Details</h2>
-                    <p className="text-xs text-slate-500">
-                      Your full name and primary contact details
-                    </p>
-                  </div>
-                </div>
+          /* ═══════════════════════════════════════════════════════════════ */
+          /* 3-STEP REGISTRATION WIZARD                                      */
+          /* ═══════════════════════════════════════════════════════════════ */
+          <>
+            {/* Stepper Progress Bar */}
+            <RegisterStepper currentStep={step} totalSteps={3} />
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <InputField<RegisterFormValues>
-                    name="name"
-                    label="Full Name"
-                    placeholder="e.g. Nilesh Kanjariya"
-                    required
-                    register={register}
-                    errors={errors}
-                  />
-
-                  <PhoneInputField<RegisterFormValues>
-                    name="phone"
-                    label="Mobile Number"
-                    placeholder="98765 43210"
-                    required
-                    register={register}
-                    setValue={setValue}
-                    watch={watch}
-                    errors={errors}
-                    helperText="Select country code & enter 10-digit mobile number"
-                  />
-                </div>
-
-                <InputField<RegisterFormValues>
-                  name="email"
-                  label="Email Address (Optional)"
-                  type="email"
-                  placeholder="e.g. nilesh@example.com"
-                  register={register}
-                  errors={errors}
-                  helperText="Used for exam reports and score card notifications"
-                />
+            {isLoadingOptions ? (
+              <div className="py-12 flex flex-col items-center justify-center space-y-3 text-slate-400">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+                <p className="text-xs font-semibold">Loading registration options...</p>
               </div>
+            ) : (
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                {optionsError && (
+                  <div className="rounded-xl bg-amber-50 p-3.5 border border-amber-200 flex items-start space-x-3">
+                    <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-xs font-semibold text-amber-700">{optionsError}</p>
+                  </div>
+                )}
+
+                {registerError && (
+                  <div className="rounded-xl bg-red-50 p-3.5 border border-red-200 flex items-start space-x-3">
+                    <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                    <p className="text-xs font-semibold text-red-700">{registerError}</p>
+                  </div>
+                )}
+
+                {/* ─── STEP 1: Personal Identification ─────────────────── */}
+                {step === 1 && (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                        <User className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h2 className="text-sm font-bold text-slate-800">Student Identity</h2>
+                        <p className="text-xs text-slate-500">
+                          Provide your full legal name and mobile contact
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                      <InputField
+                        name="name"
+                        register={register}
+                        errors={errors}
+                        label="Full Legal Name"
+                        placeholder="e.g. Aarav Sharma"
+                      />
+
+                      <PhoneInputField
+                        name="phone"
+                        register={register}
+                        setValue={setValue}
+                        watch={watch}
+                        errors={errors}
+                        label="Mobile Number (for OTP verification)"
+                        placeholder="+919876543210"
+                      />
+
+                      <InputField
+                        name="email"
+                        register={register}
+                        errors={errors}
+                        label="Email Address (Optional)"
+                        type="email"
+                        placeholder="e.g. aarav.sharma@example.com"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* ─── STEP 2: Location & Institution ──────────────────── */}
+                {step === 2 && (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                        <MapPin className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h2 className="text-sm font-bold text-slate-800">Location & School</h2>
+                        <p className="text-xs text-slate-500">
+                          Select your state, district, and current educational institute
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <SelectField
+                        name="state"
+                        register={register}
+                        errors={errors}
+                        label="State"
+                        options={stateOptions}
+                        placeholder="Select State"
+                        selectProps={{
+                          value: watchedValues.stateId || watchedValues.state,
+                          onChange: handleStateChange,
+                        }}
+                      />
+
+                      <SelectField
+                        name="district"
+                        register={register}
+                        errors={errors}
+                        label="District"
+                        options={districtOptions}
+                        placeholder={
+                          filteredDistricts.length > 0 ? 'Select District' : 'Select State first'
+                        }
+                        selectProps={{
+                          value: watchedValues.districtId || watchedValues.district,
+                          onChange: handleDistrictChange,
+                        }}
+                      />
+                    </div>
+
+                    <InputField
+                      name="schoolCollege"
+                      register={register}
+                      errors={errors}
+                      label="School / College / Institute Name"
+                      placeholder="e.g. Delhi Public School or National PU College"
+                    />
+                  </div>
+                )}
+
+                {/* ─── STEP 3: Academic Profile & Preferences ───────────── */}
+                {step === 3 && (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                        <GraduationCap className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h2 className="text-sm font-bold text-slate-800">
+                          Academic & Target Goals
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                          Configure your target exam and question language
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4">
+                      <SelectField
+                        name="classId"
+                        register={register}
+                        errors={errors}
+                        label="Class / Grade"
+                        options={classOptions}
+                        placeholder="Select your Class"
+                      />
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <SelectField
+                          name="examTargetId"
+                          register={register}
+                          errors={errors}
+                          label="Target Exam Goal"
+                          options={examTargetOptions}
+                          placeholder="Select Target"
+                        />
+
+                        <SelectField
+                          name="preferredLanguageId"
+                          register={register}
+                          errors={errors}
+                          label="Medium / Preferred Language"
+                          options={languageOptions}
+                          placeholder="Select Language"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Summary Preview Box */}
+                    <div className="mt-2 rounded-xl bg-slate-50 p-3.5 border border-slate-200 text-xs space-y-1.5">
+                      <p className="font-bold text-slate-700">Registration Summary</p>
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-slate-600">
+                        <div>
+                          Name:{' '}
+                          <span className="font-semibold text-slate-900">
+                            {watchedValues.name || '—'}
+                          </span>
+                        </div>
+                        <div>
+                          Mobile:{' '}
+                          <span className="font-semibold text-slate-900">
+                            {watchedValues.phone || '—'}
+                          </span>
+                        </div>
+                        <div>
+                          State:{' '}
+                          <span className="font-semibold text-slate-900">
+                            {watchedValues.state || '—'}
+                          </span>
+                        </div>
+                        <div>
+                          Class:{' '}
+                          <span className="font-semibold text-slate-900">
+                            {selectedClassName || '—'}
+                          </span>
+                        </div>
+                        <div>
+                          Target:{' '}
+                          <span className="font-semibold text-slate-900">
+                            {selectedExamTargetName || '—'}
+                          </span>
+                        </div>
+                        <div>
+                          Medium:{' '}
+                          <span className="font-semibold text-slate-900">
+                            {selectedLanguageName || '—'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bottom Step Actions */}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                  {step > 1 ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="md"
+                      onClick={handlePrevStep}
+                      className="inline-flex items-center space-x-1.5"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      <span>Back</span>
+                    </Button>
+                  ) : (
+                    <div />
+                  )}
+
+                  {step < 3 ? (
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="md"
+                      onClick={handleNextStep}
+                      className="inline-flex items-center space-x-1.5"
+                    >
+                      <span>Continue</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="md"
+                      isLoading={isInitiating}
+                      className="inline-flex items-center space-x-1.5"
+                    >
+                      <span>Proceed to OTP Verification</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </form>
             )}
-
-            {/* STEP 2: Location & Institute Details */}
-            {step === 2 && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-brand-600">
-                    <MapPin className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900">
-                      Step 2: Location & Institution
-                    </h2>
-                    <p className="text-xs text-slate-500">
-                      Specify your geographic area and school/college
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <InputField<RegisterFormValues>
-                    name="state"
-                    label="State"
-                    placeholder="e.g. Gujarat"
-                    required
-                    register={register}
-                    errors={errors}
-                  />
-
-                  <InputField<RegisterFormValues>
-                    name="district"
-                    label="District"
-                    placeholder="e.g. Morbi"
-                    required
-                    register={register}
-                    errors={errors}
-                  />
-                </div>
-
-                <InputField<RegisterFormValues>
-                  name="schoolCollege"
-                  label="School / College / Institute Name"
-                  placeholder="e.g. Model Higher Secondary School"
-                  required
-                  register={register}
-                  errors={errors}
-                  helperText="Enter your official school, PUC, or college name"
-                />
-              </div>
-            )}
-
-            {/* STEP 3: Academic Profile & Summary */}
-            {step === 3 && (
-              <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-brand-600">
-                    <GraduationCap className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900">
-                      Step 3: Academic Profile & Preferences
-                    </h2>
-                    <p className="text-xs text-slate-500">
-                      Select your current standard, medium, and exam target
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <SelectField<RegisterFormValues>
-                    name="classId"
-                    label="Class / Grade"
-                    placeholder="Select Class"
-                    options={classOptions}
-                    required
-                    register={register}
-                    errors={errors}
-                  />
-
-                  <SelectField<RegisterFormValues>
-                    name="preferredLanguageId"
-                    label="Medium / Language"
-                    placeholder="Select Language"
-                    options={languageOptions}
-                    required
-                    register={register}
-                    errors={errors}
-                  />
-
-                  <SelectField<RegisterFormValues>
-                    name="examTargetId"
-                    label="Target Exam"
-                    placeholder="Select Target"
-                    options={examTargetOptions}
-                    required
-                    register={register}
-                    errors={errors}
-                  />
-                </div>
-
-                {/* Profile Confirmation Preview Box */}
-                <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 space-y-3">
-                  <div className="flex items-center space-x-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    <span>Profile Summary Overview</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600">
-                    <div className="flex items-center space-x-1.5">
-                      <User className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                      <span>
-                        Name:{' '}
-                        <strong className="text-slate-800">{watchedValues.name || '—'}</strong>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-1.5">
-                      <Building2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                      <span>
-                        Phone:{' '}
-                        <strong className="text-slate-800">{watchedValues.phone || '—'}</strong>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-1.5">
-                      <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                      <span>
-                        Location:{' '}
-                        <strong className="text-slate-800">
-                          {watchedValues.district
-                            ? `${watchedValues.district}, ${watchedValues.state}`
-                            : '—'}
-                        </strong>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-1.5">
-                      <GraduationCap className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                      <span>
-                        Class & Medium:{' '}
-                        <strong className="text-slate-800">
-                          {selectedClassName && selectedLanguageName
-                            ? `${selectedClassName} (${selectedLanguageName})`
-                            : selectedClassName || '—'}
-                        </strong>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-1.5 sm:col-span-2">
-                      <BookOpen className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                      <span>
-                        Target Exam:{' '}
-                        <strong className="text-slate-800">{selectedExamTargetName || '—'}</strong>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Registration Error Notification */}
-            {registerError && (
-              <div className="flex items-start space-x-3 rounded-xl bg-rose-50 p-4 border border-rose-200 text-rose-800">
-                <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-                <p className="text-xs font-medium leading-relaxed">{registerError}</p>
-              </div>
-            )}
-
-            {/* Wizard Action Controls */}
-            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-              {step > 1 ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handlePrevStep}
-                  className="inline-flex items-center space-x-1.5"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  <span>Back</span>
-                </Button>
-              ) : (
-                <div />
-              )}
-
-              {step < 3 ? (
-                <Button
-                  type="button"
-                  onClick={handleNextStep}
-                  className="inline-flex items-center space-x-1.5 shadow-md shadow-brand-500/20 hover:shadow-brand-500/30 transition-all ml-auto"
-                >
-                  <span>Continue</span>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button
-                  type="submit"
-                  isLoading={isRegistering}
-                  className="inline-flex items-center space-x-1.5 shadow-md shadow-brand-500/20 hover:shadow-brand-500/30 transition-all ml-auto"
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-1" />
-                  <span>Complete Registration</span>
-                </Button>
-              )}
-            </div>
-          </form>
+          </>
         )}
       </div>
 
       {/* Footer Link to Login */}
-      <div className="text-center text-sm text-slate-600">
-        <span>Already have a student profile? </span>
+      <div className="text-center text-sm text-slate-600 pt-1">
+        <span>Already have an account? </span>
         <Link
           to="/login"
-          className="font-semibold text-brand-600 hover:text-brand-700 hover:underline transition"
+          className="inline-flex items-center font-bold text-brand-600 hover:text-brand-700 hover:underline transition-all"
         >
-          Sign In Here
+          <span>Sign In Passwordless</span>
         </Link>
       </div>
     </div>

@@ -14,6 +14,14 @@ export const AdminAuditLogsPage: React.FC = () => {
     fetchAuditLogs();
   }, [actionFilter, entityFilter]);
 
+  const getArrayData = (response: any): any[] => {
+    if (!response) return [];
+    if (Array.isArray(response)) return response;
+    if (Array.isArray(response.data)) return response.data;
+    if (Array.isArray(response.data?.data)) return response.data.data;
+    return [];
+  };
+
   const fetchAuditLogs = async () => {
     try {
       setLoading(true);
@@ -22,7 +30,7 @@ export const AdminAuditLogsPage: React.FC = () => {
       if (entityFilter) params.entityType = entityFilter;
 
       const res = await Axios.get('/admin/audit-logs', { params });
-      setLogs(res.data.data || []);
+      setLogs(getArrayData(res));
     } catch (err) {
       console.error('Failed to load audit logs', err);
     } finally {

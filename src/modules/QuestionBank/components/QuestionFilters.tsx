@@ -34,10 +34,13 @@ export const QuestionFilters: React.FC<QuestionFiltersProps> = ({
 
   // 1. Fetch subjects when examTargetId changes
   useEffect(() => {
+    let active = true;
     const fetchSubjects = async () => {
       const { data } = await getSubjectsAPI(filters.examTargetId);
-      setSubjects(data || []);
-      if (!data?.some((s) => s.id === filters.subjectId)) {
+      if (!active) return;
+      const list = Array.isArray(data) ? data : (data as any)?.data || [];
+      setSubjects(list);
+      if (filters.subjectId && !list.some((s: any) => s.id === filters.subjectId)) {
         onFilterChange({
           subjectId: undefined,
           chapterId: undefined,
@@ -47,6 +50,9 @@ export const QuestionFilters: React.FC<QuestionFiltersProps> = ({
       }
     };
     fetchSubjects();
+    return () => {
+      active = false;
+    };
   }, [filters.examTargetId, getSubjectsAPI]);
 
   // 2. Fetch chapters when subjectId changes
@@ -55,14 +61,20 @@ export const QuestionFilters: React.FC<QuestionFiltersProps> = ({
       setChapters([]);
       return;
     }
+    let active = true;
     const fetchChapters = async () => {
       const { data } = await getChaptersAPI(filters.subjectId!);
-      setChapters(data || []);
-      if (!data?.some((c) => c.id === filters.chapterId)) {
+      if (!active) return;
+      const list = Array.isArray(data) ? data : (data as any)?.data || [];
+      setChapters(list);
+      if (filters.chapterId && !list.some((c: any) => c.id === filters.chapterId)) {
         onFilterChange({ chapterId: undefined, topicId: undefined, subTopicId: undefined });
       }
     };
     fetchChapters();
+    return () => {
+      active = false;
+    };
   }, [filters.subjectId, getChaptersAPI]);
 
   // 3. Fetch topics when chapterId changes
@@ -71,14 +83,20 @@ export const QuestionFilters: React.FC<QuestionFiltersProps> = ({
       setTopics([]);
       return;
     }
+    let active = true;
     const fetchTopics = async () => {
       const { data } = await getTopicsAPI(filters.chapterId!);
-      setTopics(data || []);
-      if (!data?.some((t) => t.id === filters.topicId)) {
+      if (!active) return;
+      const list = Array.isArray(data) ? data : (data as any)?.data || [];
+      setTopics(list);
+      if (filters.topicId && !list.some((t: any) => t.id === filters.topicId)) {
         onFilterChange({ topicId: undefined, subTopicId: undefined });
       }
     };
     fetchTopics();
+    return () => {
+      active = false;
+    };
   }, [filters.chapterId, getTopicsAPI]);
 
   // 4. Fetch subtopics when topicId changes
@@ -87,14 +105,20 @@ export const QuestionFilters: React.FC<QuestionFiltersProps> = ({
       setSubTopics([]);
       return;
     }
+    let active = true;
     const fetchSubTopics = async () => {
       const { data } = await getSubTopicsAPI(filters.topicId!);
-      setSubTopics(data || []);
-      if (!data?.some((st) => st.id === filters.subTopicId)) {
+      if (!active) return;
+      const list = Array.isArray(data) ? data : (data as any)?.data || [];
+      setSubTopics(list);
+      if (filters.subTopicId && !list.some((st: any) => st.id === filters.subTopicId)) {
         onFilterChange({ subTopicId: undefined });
       }
     };
     fetchSubTopics();
+    return () => {
+      active = false;
+    };
   }, [filters.topicId, getSubTopicsAPI]);
 
   const hasActiveFilters = Boolean(

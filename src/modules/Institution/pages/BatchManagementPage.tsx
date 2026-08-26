@@ -22,13 +22,22 @@ export const BatchManagementPage: React.FC = () => {
     fetchBatches();
   }, []);
 
+  const getArrayData = (response: any): any[] => {
+    if (!response) return [];
+    if (Array.isArray(response)) return response;
+    if (Array.isArray(response.data)) return response.data;
+    if (Array.isArray(response.data?.data)) return response.data.data;
+    return [];
+  };
+
   const fetchBatches = async () => {
     try {
       setLoading(true);
       const res = await Axios.get('/institutions/me/batches');
-      setBatches(res.data);
-      if (res.data.length > 0 && !selectedBatch) {
-        selectBatch(res.data[0]);
+      const batchList = getArrayData(res);
+      setBatches(batchList);
+      if (batchList.length > 0 && !selectedBatch) {
+        selectBatch(batchList[0]);
       }
     } catch (err) {
       console.error('Failed to fetch batches', err);
@@ -42,7 +51,7 @@ export const BatchManagementPage: React.FC = () => {
     try {
       setLoadingStudents(true);
       const res = await Axios.get(`/institutions/me/batches/${batch.id}/students`);
-      setStudents(res.data);
+      setStudents(getArrayData(res));
     } catch (err) {
       console.error('Failed to load batch students', err);
     } finally {

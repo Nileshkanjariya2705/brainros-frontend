@@ -35,7 +35,7 @@ export const AdminControlCenterPage: React.FC = () => {
       const res = await Axios.get('/admin/dashboard', {
         params: { range },
       });
-      setData(res.data);
+      setData(res.data?.data || res.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load admin control center data');
     } finally {

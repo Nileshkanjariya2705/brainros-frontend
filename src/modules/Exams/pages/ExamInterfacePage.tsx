@@ -149,24 +149,41 @@ const ExamInterfacePage = () => {
       // 1. Fetch questions
       const qRes = await getAttemptQuestionsAPI(attemptId);
       if (!isMounted) return;
-      if (qRes.error || !qRes.data) {
-        setErrorMessage(qRes.error || 'Failed to load exam questions');
+      const qData: ExamQuestion[] = Array.isArray(qRes.data)
+        ? qRes.data
+        : Array.isArray((qRes.data as any)?.data)
+          ? (qRes.data as any).data
+          : Array.isArray(qRes.response?.data?.data)
+            ? qRes.response.data.data
+            : [];
+
+      if (!qData || qData.length === 0) {
+        setErrorMessage(
+          qRes.error ||
+            qRes.response?.data?.message ||
+            (qRes.data as any)?.message ||
+            'Failed to load exam questions',
+        );
         return;
       }
-      setQuestions(qRes.data);
+      setQuestions(qData);
 
       // 2. Fetch attempt status
       const sRes = await getAttemptStatusAPI(attemptId);
       if (!isMounted) return;
-      if (sRes.data) {
+      const sData: any = sRes.data?.answers
+        ? sRes.data
+        : (sRes.data as any)?.data || sRes.response?.data?.data;
+
+      if (sData) {
         const ansMap: Record<string, AttemptAnswer> = {};
-        sRes.data.answers.forEach((ans) => {
+        (sData.answers || []).forEach((ans: any) => {
           ansMap[ans.examQuestionId] = ans;
         });
         setAnswers(ansMap);
 
-        if (sRes.data.serverEndTime) {
-          const endMs = new Date(sRes.data.serverEndTime).getTime();
+        if (sData.serverEndTime) {
+          const endMs = new Date(sData.serverEndTime).getTime();
           const remainingSecs = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
           setTimeLeft(remainingSecs);
         }

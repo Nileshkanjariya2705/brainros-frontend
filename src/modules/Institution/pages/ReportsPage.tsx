@@ -30,10 +30,18 @@ export const ReportsPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const getArrayData = (response: any): any[] => {
+    if (!response) return [];
+    if (Array.isArray(response)) return response;
+    if (Array.isArray(response.data)) return response.data;
+    if (Array.isArray(response.data?.data)) return response.data.data;
+    return [];
+  };
+
   const fetchReports = async () => {
     try {
       const res = await Axios.get('/institutions/me/reports');
-      setReports(res.data.data || []);
+      setReports(getArrayData(res));
     } catch (err) {
       console.error('Failed to fetch reports', err);
     } finally {
@@ -44,7 +52,7 @@ export const ReportsPage: React.FC = () => {
   const fetchBatches = async () => {
     try {
       const res = await Axios.get('/institutions/me/batches');
-      setBatches(res.data);
+      setBatches(getArrayData(res));
     } catch (err) {
       console.error(err);
     }

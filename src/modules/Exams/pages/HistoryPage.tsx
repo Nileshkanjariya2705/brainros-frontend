@@ -52,7 +52,7 @@ const HistoryPage = () => {
       statusFilter === 'ALL'
         ? true
         : statusFilter === 'COMPLETED'
-          ? ['SUBMITTED', 'AUTO_SUBMITTED'].includes(attempt.status?.name)
+          ? ['SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED', 'COMPLETED'].includes(attempt.status?.name)
           : attempt.status?.name === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -119,7 +119,9 @@ const HistoryPage = () => {
       ) : (
         <div className="space-y-3">
           {filteredAttempts.map((attempt) => {
-            const isCompleted = ['SUBMITTED', 'AUTO_SUBMITTED'].includes(attempt.status?.name);
+            const isCompleted = ['SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED', 'COMPLETED'].includes(
+              attempt.status?.name,
+            );
             const scorePerc = attempt.result?.percentage ?? 0;
             const scoreColor = scorePerc >= 80 ? 'emerald' : scorePerc >= 50 ? 'amber' : 'rose';
 

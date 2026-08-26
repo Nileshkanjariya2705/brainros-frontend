@@ -2,19 +2,20 @@ import { useState } from 'react';
 import { useSendOtpAPI } from '../services';
 
 export const useSendOtp = () => {
-  const { sendOtpAPI, isLoading, isSuccess } = useSendOtpAPI();
+  const { sendOtpAPI, isLoading } = useSendOtpAPI();
   const [error, setError] = useState<string | null>(null);
 
-  const sendOtp = async (mobileNumber: string) => {
+  const sendOtp = async (phone: string, purpose: 'LOGIN' | 'REGISTER' = 'LOGIN') => {
     setError(null);
-    const { isSuccess: apiSuccess, data, error: apiError } = await sendOtpAPI({ mobileNumber });
+    const { error: apiError } = await sendOtpAPI({ phone, purpose });
 
-    if (apiError || !apiSuccess || data?.success === false) {
-      setError(apiError ?? 'Failed to send OTP. Please try again.');
+    if (!apiError) {
+      return true;
+    } else {
+      setError(apiError ?? 'Failed to send verification OTP. Please try again.');
       return false;
     }
-    return true;
   };
 
-  return { sendOtp, isLoading, isSuccess, error };
+  return { sendOtp, isLoading, error, setError };
 };

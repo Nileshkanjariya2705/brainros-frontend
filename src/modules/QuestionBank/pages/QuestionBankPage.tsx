@@ -68,32 +68,93 @@ const QuestionBankPage: React.FC = () => {
   const { archiveQuestionAPI } = useArchiveQuestionAPI();
   const { deleteQuestionAPI } = useDeleteQuestionAPI();
 
+  // ─── Helper to unpack question response envelope ──────────────
+  const unpackQuestions = useCallback(
+    (res: any) => {
+      const payload = res?.data;
+      const raw = res?.response?.data;
+
+      const list: QuestionItem[] = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(raw?.data)
+            ? raw.data
+            : [];
+
+      const meta = payload?.meta ||
+        raw?.meta || {
+          total: list.length,
+          page: filters.page || 1,
+          limit: filters.limit || 10,
+          totalPages: Math.ceil(list.length / (filters.limit || 10)) || 1,
+        };
+
+      setQuestions(list);
+      setPaginationMeta(meta);
+    },
+    [filters.page, filters.limit],
+  );
+
+  // ─── Helper to unpack stats response envelope ─────────────────
+  const unpackStats = useCallback((res: any) => {
+    const payload = res?.data;
+    const raw = res?.response?.data;
+
+    if (payload && !Array.isArray(payload) && payload.totalQuestions !== undefined) {
+      setStats(payload);
+    } else if (payload?.data && payload.data.totalQuestions !== undefined) {
+      setStats(payload.data);
+    } else if (raw?.data && raw.data.totalQuestions !== undefined) {
+      setStats(raw.data);
+    } else if (payload) {
+      setStats(payload);
+    }
+  }, []);
+
   // ─── Fetch Questions Function ──────────────────────────────────
   const fetchQuestions = useCallback(async () => {
     const apiParams = {
       ...filters,
       status: filters.status === 'ALL' ? undefined : (filters.status as any),
     };
-    const { data } = await getQuestionsAPI(apiParams);
-    if (data) {
-      setQuestions(data.data || []);
-      setPaginationMeta(data.meta || { total: 0, page: 1, limit: 10, totalPages: 1 });
-    }
-  }, [filters, getQuestionsAPI]);
+    const res = await getQuestionsAPI(apiParams);
+    unpackQuestions(res);
+  }, [filters, getQuestionsAPI, unpackQuestions]);
 
   // ─── Fetch Stats Function ──────────────────────────────────────
   const fetchStats = useCallback(async () => {
-    const { data } = await getQuestionStatsAPI(filters.examTargetId);
-    if (data) setStats(data);
-  }, [filters.examTargetId, getQuestionStatsAPI]);
+    const res = await getQuestionStatsAPI(filters.examTargetId);
+    unpackStats(res);
+  }, [filters.examTargetId, getQuestionStatsAPI, unpackStats]);
 
   useEffect(() => {
-    fetchQuestions();
-  }, [fetchQuestions]);
+    let active = true;
+    (async () => {
+      const apiParams = {
+        ...filters,
+        status: filters.status === 'ALL' ? undefined : (filters.status as any),
+      };
+      const res = await getQuestionsAPI(apiParams);
+      if (!active) return;
+      unpackQuestions(res);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [filters, getQuestionsAPI, unpackQuestions]);
 
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    let active = true;
+    (async () => {
+      const res = await getQuestionStatsAPI(filters.examTargetId);
+      if (!active) return;
+      unpackStats(res);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [filters.examTargetId, getQuestionStatsAPI, unpackStats]);
 
   // ─── Handlers ──────────────────────────────────────────────────
   const handleFilterChange = (updated: Partial<QuestionFilterParams>) => {

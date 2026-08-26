@@ -30,7 +30,7 @@ export const InstitutionDashboardPage: React.FC = () => {
       setLoading(true);
       setError(null);
       const res = await Axios.get('/institutions/me/dashboard');
-      setData(res.data);
+      setData(res.data?.data || res.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load institution dashboard');
     } finally {

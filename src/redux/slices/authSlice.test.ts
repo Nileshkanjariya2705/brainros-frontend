@@ -2,7 +2,16 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { reducer, setCredentials, logout } from './authSlice';
 import type { AuthState } from '@/modules/Auth/types/auth.types';
 
-const initial: AuthState = { user: null, token: null, refreshToken: null, isAuthenticated: false };
+const initial: AuthState = {
+  user: null,
+  token: null,
+  refreshToken: null,
+  isAuthenticated: false,
+  isInitializing: false,
+  roles: [],
+  permissions: [],
+  activeRole: null,
+};
 
 describe('authSlice', () => {
   beforeEach(() => localStorage.clear());
@@ -27,10 +36,10 @@ describe('authSlice', () => {
 
     expect(next.isAuthenticated).toBe(true);
     expect(next.token).toBe('jwt-123');
-    expect(next.refreshToken).toBe('refresh-123');
     expect(next.user?.email).toBe('v@x.com');
-    expect(localStorage.getItem('access_token')).toBe('jwt-123');
-    expect(localStorage.getItem('refresh_token')).toBe('refresh-123');
+    expect(next.roles).toContain('STUDENT');
+    expect(next.activeRole).toBe('STUDENT');
+    expect(next.isInitializing).toBe(false);
   });
 
   it('clears everything on logout', () => {
@@ -45,17 +54,20 @@ describe('authSlice', () => {
         isVerified: true,
       },
       token: 'jwt-123',
-      refreshToken: 'refresh-123',
+      refreshToken: null,
       isAuthenticated: true,
+      isInitializing: false,
+      roles: ['STUDENT'],
+      permissions: ['exam:attempt'],
+      activeRole: 'STUDENT',
     };
 
     const next = reducer(loggedIn, logout());
-
     expect(next.isAuthenticated).toBe(false);
     expect(next.token).toBeNull();
-    expect(next.refreshToken).toBeNull();
     expect(next.user).toBeNull();
-    expect(localStorage.getItem('access_token')).toBeNull();
-    expect(localStorage.getItem('refresh_token')).toBeNull();
+    expect(next.roles).toEqual([]);
+    expect(next.permissions).toEqual([]);
+    expect(next.activeRole).toBeNull();
   });
 });
