@@ -12,6 +12,7 @@ import AuthProvider from '@/providers/AuthProvider';
 
 // ** Components **
 import PageLoader from '@/components/feedback/PageLoader';
+import ToastContainer from '@/components/feedback/ToastContainer';
 
 // ** Types **
 interface AppProvidersProps {
@@ -27,7 +28,10 @@ const AppProviders = ({ children }: AppProvidersProps) => {
     <ReduxProvider store={store}>
       <PersistGate loading={<PageLoader />} persistor={persistor}>
         <AuthProvider>
-          <QueryProvider>{children}</QueryProvider>
+          <QueryProvider>
+            {children}
+            <ToastContainer />
+          </QueryProvider>
         </AuthProvider>
       </PersistGate>
     </ReduxProvider>

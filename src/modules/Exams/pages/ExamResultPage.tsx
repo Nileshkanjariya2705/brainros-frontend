@@ -88,10 +88,16 @@ const ExamResultPage = () => {
       // 1. Ensure result calculated
       await calculateResultAPI(attemptId);
 
-      // 2. Fetch full Brainros Analysis Engine report
-      const aRes = await getFullAnalysisAPI(attemptId);
+      // 2. Fetch full Brainros Analysis Engine report (with auto-retry)
+      let aRes = await getFullAnalysisAPI(attemptId);
+      if (!aRes.data && aRes.error) {
+        // Retry once after 600ms in case calculation was in-flight
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        aRes = await getFullAnalysisAPI(attemptId);
+      }
+
       if (!isMounted) return;
-      if (aRes.error) {
+      if (aRes.error && !aRes.data) {
         setErrorMsg(aRes.error);
         return;
       }

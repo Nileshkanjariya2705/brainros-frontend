@@ -5,13 +5,14 @@
 
 // ** Unauthenticated paths **
 export const PUBLIC_NAVIGATION = Object.freeze({
+  home: '/',
   login: '/login',
   register: '/register',
 });
 
 // ** Authenticated paths **
 export const PRIVATE_NAVIGATION = Object.freeze({
-  dashboard: '/',
+  dashboard: '/dashboard',
   availableExams: '/exams',
   examInterface: '/exam/:examId/attempt/:attemptId',
   examResult: '/exam/result/:attemptId',

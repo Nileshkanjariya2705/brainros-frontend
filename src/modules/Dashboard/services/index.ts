@@ -1,4 +1,5 @@
 // ** Packages **
+import { useCallback } from 'react';
 import type { AxiosRequestConfig } from 'axios';
 
 // ** Custom Hooks **
@@ -16,8 +17,11 @@ const DASHBOARD_API_BASE_PATH = '/dashboard';
 
 export const useGetStatsAPI = () => {
   const [callApi, { isLoading, isError, isSuccess }] = useAxiosGet();
-  const getStatsAPI = async (config: AxiosRequestConfig<object> = {}) => {
-    return callApi<DashboardStats>(`${DASHBOARD_API_BASE_PATH}/stats`, config);
-  };
+  const getStatsAPI = useCallback(
+    async (config: AxiosRequestConfig<object> = {}) => {
+      return callApi<DashboardStats>(`${DASHBOARD_API_BASE_PATH}/stats`, config);
+    },
+    [callApi],
+  );
   return { getStatsAPI, isLoading, isError, isSuccess };
 };

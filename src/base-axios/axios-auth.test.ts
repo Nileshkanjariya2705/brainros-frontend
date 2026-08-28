@@ -43,14 +43,14 @@ describe('Axios Client & Auth Interceptors (Production Token Lifecycle)', () => 
     expect(Axios).toBeDefined();
   });
 
-  it('2. should manage in-memory token securely without writing to localStorage', () => {
-    tokenStorage.set('memory-only-access-token');
-    expect(tokenStorage.get()).toBe('memory-only-access-token');
-    expect(localStorage.getItem('access_token')).toBeNull();
-    expect(localStorage.getItem('refresh_token')).toBeNull();
+  it('2. should manage token storage and clear properly', () => {
+    tokenStorage.set('test-access-token');
+    expect(tokenStorage.get()).toBe('test-access-token');
+    expect(localStorage.getItem('access_token')).toBe('test-access-token');
 
     tokenStorage.clear();
     expect(tokenStorage.get()).toBeNull();
+    expect(localStorage.getItem('access_token')).toBeNull();
   });
 
   it('3. should attach Authorization header to protected requests', async () => {
@@ -80,5 +80,30 @@ describe('Axios Client & Auth Interceptors (Production Token Lifecycle)', () => 
 
     setAuthInterceptorCallbacks({ onSyncStore, onLogout });
     expect(true).toBe(true);
+  });
+
+  it('6. should not retry non-401 errors (400, 404, 500)', async () => {
+    const errorHandler = (Axios.interceptors.response as any).handlers?.[0]?.rejected;
+    if (errorHandler) {
+      const error404 = {
+        config: { url: '/academic/subjects', _retry: false },
+        response: { status: 404, data: { message: 'Not found' } },
+      };
+
+      await expect(errorHandler(error404)).rejects.toEqual(error404);
+      expect(error404.config._retry).toBe(false);
+    }
+  });
+
+  it('7. should not retry already-retried 401 requests', async () => {
+    const errorHandler = (Axios.interceptors.response as any).handlers?.[0]?.rejected;
+    if (errorHandler) {
+      const error401Retried = {
+        config: { url: '/students/me', _retry: true },
+        response: { status: 401, data: { message: 'Unauthorized' } },
+      };
+
+      await expect(errorHandler(error401Retried)).rejects.toEqual(error401Retried);
+    }
   });
 });

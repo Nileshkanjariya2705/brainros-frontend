@@ -4,6 +4,7 @@ import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig 
 // ** Config / Utils **
 import { API_URL, API_TIMEOUT } from '@config';
 import { tokenStorage } from '@/utils/token';
+import { toast } from '@/utils/toast';
 
 // ** Types **
 import type { ApiErrorResponse } from './types';
@@ -45,6 +46,8 @@ const PUBLIC_AUTH_PATHS = [
   '/auth/otp/resend',
   '/auth/refresh',
   '/auth/options',
+  '/public/',
+  '/public/exams',
 ];
 
 const isPublicAuthUrl = (url?: string): boolean => {
@@ -87,7 +90,7 @@ Axios.interceptors.response.use(
     const originalConfig = error.config as InternalAxiosRequestConfig | undefined;
     const status = error.response?.status;
 
-    // 1. Only process 401 Unauthorized for protected requests
+    // 1. Only process 401 Unauthorized for protected requests that haven't been retried yet
     if (
       status === 401 &&
       originalConfig &&
@@ -143,16 +146,31 @@ Axios.interceptors.response.use(
         const newAccessToken = await refreshPromise;
 
         if (newAccessToken) {
-          // 4. Retry original request with new access token
+          // 4. Retry original request ONLY ONCE with new access token
           originalConfig.headers.Authorization = `Bearer ${newAccessToken}`;
           return Axios(originalConfig);
         }
       } catch (refreshErr) {
+        toast.error('Session expired. Please log in again.');
         return Promise.reject(refreshErr);
       }
     }
 
-    // 2. Pass through 403 Forbidden, 400 Bad Request, network errors without refreshing
+    // 2. Show user-friendly toast for non-auth errors or after retry failure
+    if (originalConfig && !isPublicAuthUrl(originalConfig.url)) {
+      const errorMsg =
+        error.response?.data?.message ||
+        (error.response?.data as any)?.error ||
+        (error.message && error.message !== 'canceled' && !error.message.includes('timeout')
+          ? error.message
+          : undefined);
+
+      if (errorMsg) {
+        toast.error(errorMsg);
+      }
+    }
+
+    // 3. Pass through 403 Forbidden, 400 Bad Request, 404 Not Found, etc. without retrying
     return Promise.reject(error);
   },
 );

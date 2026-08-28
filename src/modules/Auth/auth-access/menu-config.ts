@@ -81,7 +81,7 @@ export const MENU_GROUPS: MenuGroupConfig[] = [
   {
     categoryKey: 'STUDENT_EXAMS',
     categoryLabel: 'Examination Portal',
-    roles: [ROLES.STUDENT, ROLES.ADMIN, ROLES.SUPER_ADMIN],
+    roles: [ROLES.STUDENT],
     items: [
       {
         key: 'available-exams',

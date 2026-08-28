@@ -32,19 +32,22 @@ const slice = createSlice({
       state.token = accessToken;
       state.refreshToken = refreshToken || state.refreshToken;
 
-      const roles = user.roles || [];
-      const computedPermissions = computeEffectivePermissions(roles, user.permissions || []);
-      const activeRole = user.activeRole || getHighestPriorityRole(roles);
+      if (user) {
+        const roles = user.roles || [];
+        const computedPermissions = computeEffectivePermissions(roles, user.permissions || []);
+        const activeRole = user.activeRole || getHighestPriorityRole(roles);
 
-      state.user = {
-        ...user,
-        roles,
-        permissions: computedPermissions,
-        activeRole,
-      };
-      state.roles = roles;
-      state.permissions = computedPermissions;
-      state.activeRole = activeRole;
+        state.user = {
+          ...user,
+          roles,
+          permissions: computedPermissions,
+          activeRole,
+        };
+        state.roles = roles;
+        state.permissions = computedPermissions;
+        state.activeRole = activeRole;
+      }
+
       state.isAuthenticated = true;
       state.isInitializing = false;
 

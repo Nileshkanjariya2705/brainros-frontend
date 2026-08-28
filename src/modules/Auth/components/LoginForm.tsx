@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 // ** Components **
-import { InputField, PhoneInputField } from '@/components/FormField';
+import { InputField, PhoneInputField, OtpPinInput } from '@/components/FormField';
 import Button from '@/components/ui/Button';
 
 // ** Hooks **
@@ -93,14 +93,17 @@ const LoginForm = () => {
 
   // ─── 4. OTP Verification Form ─────────────────────────────────────────────
   const {
-    register: registerVerify,
     handleSubmit: handleSubmitVerify,
+    setValue: setValueVerify,
+    watch: watchVerify,
     formState: { errors: errorsVerify },
     reset: resetVerifyForm,
   } = useForm<VerifyOtpFormValues>({
     resolver: yupResolver(verifyOtpSchema),
     defaultValues: { otp: '' },
   });
+
+  const currentOtp = watchVerify('otp') || '';
 
   // Sync cooldown timer when OTP is sent
   useEffect(() => {
@@ -294,37 +297,38 @@ const LoginForm = () => {
           onSubmit={handleSubmitVerify(handleVerifySubmit)}
           className="space-y-5 animate-in fade-in zoom-in-95"
         >
-          <div className="rounded-xl bg-emerald-50/80 p-4 border border-emerald-200/80 space-y-1.5">
-            <div className="flex items-center space-x-2 text-emerald-800 font-bold text-xs">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-              <span>OTP Sent to Registered Mobile</span>
+          <div className="rounded-xl bg-emerald-500/10 p-4 border border-emerald-500/20 space-y-1.5">
+            <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+              <span>OTP Dispatched Successfully</span>
             </div>
-            <p className="text-xs text-emerald-700 leading-relaxed">
-              We dispatched a 6-digit verification code to your verified mobile number ending in{' '}
-              <strong className="font-mono text-slate-900 font-bold">
+            <p className="text-xs text-slate-300 leading-relaxed">
+              We sent a 6-digit verification code to your verified mobile ending in{' '}
+              <strong className="font-mono text-white font-bold">
                 {pendingLogin.mobileMasked}
               </strong>
               .
             </p>
           </div>
 
-          <InputField
-            name="otp"
-            register={registerVerify}
-            errors={errorsVerify}
-            label="Enter 6-Digit OTP Code"
-            placeholder="• • • • • •"
-            maxLength={8}
-            autoFocus
-            className="text-center font-mono text-lg tracking-widest"
-          />
+          <div className="space-y-3 py-1">
+            <label className="block text-xs font-bold text-slate-300 text-center uppercase tracking-wider">
+              Enter 6-Digit OTP Code
+            </label>
+            <OtpPinInput
+              length={6}
+              value={currentOtp}
+              onChange={(newOtp) => setValueVerify('otp', newOtp, { shouldValidate: true })}
+              error={errorsVerify.otp?.message}
+            />
+          </div>
 
           <Button
             type="submit"
             variant="primary"
             size="lg"
             isLoading={isVerifyingOtp}
-            className="w-full"
+            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold shadow-lg shadow-indigo-500/25"
           >
             <span>Verify & Sign In</span>
           </Button>

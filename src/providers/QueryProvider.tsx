@@ -24,7 +24,14 @@ const QueryProvider = ({ children }: QueryProviderProps) => {
           queries: {
             staleTime: 60_000, // 1 min — data is "fresh" before a background refetch
             gcTime: 5 * 60_000, // cache kept 5 min after last use
-            retry: 1,
+            retry: (failureCount, error: any) => {
+              const status = error?.response?.status || error?.status;
+              // Never retry client errors (400, 401, 403, 404, 422, etc.)
+              if (status && status >= 400 && status < 500) {
+                return false;
+              }
+              return failureCount < 1;
+            },
             refetchOnWindowFocus: false,
           },
         },

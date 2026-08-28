@@ -878,6 +878,44 @@ const CreateQuestionPage: React.FC = () => {
             </div>
           </div>
 
+          {/* 9 Mandatory Languages Translation Status Checklist */}
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Languages size={18} className="text-indigo-600" />
+                <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
+                  9 Mandatory Languages Completeness Status
+                </span>
+              </div>
+              <span className="text-[11px] font-bold text-slate-500">
+                All 9 regional languages must be translated before publishing
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 pt-1">
+              {languages.map((lang) => {
+                const tr = formData.translations.find((t) => t.languageId === lang.id);
+                const isComplete = Boolean(tr?.questionText?.trim());
+                return (
+                  <div
+                    key={lang.id}
+                    className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border text-center transition-all ${
+                      isComplete
+                        ? 'border-emerald-200 bg-emerald-50/50 text-emerald-900 shadow-sm'
+                        : 'border-rose-200 bg-rose-50/30 text-rose-800'
+                    }`}
+                  >
+                    <span className="text-xs font-bold">{lang.name}</span>
+                    <span className="text-sm mt-0.5">{isComplete ? '✅' : '❌'}</span>
+                    <span className="text-[9px] font-medium text-slate-500 mt-0.5">
+                      {isComplete ? 'Complete' : 'Missing'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Interactive Student Test Preview */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-xs font-bold text-slate-600 uppercase tracking-wider px-1">

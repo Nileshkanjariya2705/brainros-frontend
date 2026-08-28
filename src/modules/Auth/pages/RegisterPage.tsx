@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 // ** Components **
-import { InputField, SelectField, PhoneInputField } from '@/components/FormField';
+import { InputField, SelectField, PhoneInputField, OtpPinInput } from '@/components/FormField';
 import Button from '@/components/ui/Button';
 import RegisterStepper from '../components/RegisterStepper';
 import PageLoader from '@/components/feedback/PageLoader';
@@ -255,25 +255,25 @@ const RegisterPage = () => {
   )?.name;
 
   return (
-    <div className="w-full max-w-2xl space-y-6 animate-in fade-in zoom-in-95 duration-300">
+    <div className="w-full max-w-2xl space-y-6 animate-in fade-in zoom-in-95 duration-300 text-slate-100">
       {/* Page Header */}
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center space-x-2 rounded-full bg-brand-50 px-3.5 py-1 text-xs font-semibold text-brand-600 ring-1 ring-inset ring-brand-500/20 shadow-sm">
+        <div className="inline-flex items-center space-x-2 rounded-full bg-indigo-500/10 px-3.5 py-1 text-xs font-semibold text-indigo-400 border border-indigo-500/20 shadow-sm">
           <Sparkles className="h-3.5 w-3.5" />
           <span>Student Onboarding Wizard</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
           Create Student Profile
         </h1>
-        <p className="text-sm text-slate-500 max-w-md mx-auto">
+        <p className="text-sm text-slate-400 max-w-md mx-auto">
           Complete the quick steps to register and generate your official Student ID via OTP
           verification
         </p>
       </div>
 
       {/* Main Form Card */}
-      <div className="bg-white/95 backdrop-blur-2xl p-6 sm:p-8 shadow-2xl shadow-brand-500/10 rounded-2xl border border-slate-200/90 space-y-6 relative overflow-hidden">
-        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-brand-500 via-purple-500 to-indigo-500" />
+      <div className="bg-[#121528] p-6 sm:p-8 shadow-2xl shadow-black/60 rounded-2xl border border-white/10 space-y-6 relative overflow-hidden text-slate-100">
+        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
 
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* OTP VERIFICATION STEP                                          */}
@@ -302,19 +302,11 @@ const RegisterPage = () => {
             )}
 
             <form onSubmit={handleVerifyOtpSubmit} className="space-y-5">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700 text-center">
+              <div className="space-y-3 py-1">
+                <label className="block text-xs font-bold text-slate-300 text-center uppercase tracking-wider">
                   6-Digit Verification Code
                 </label>
-                <input
-                  type="text"
-                  placeholder="• • • • • •"
-                  maxLength={8}
-                  autoFocus
-                  value={otpCode}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtpCode(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 py-3 text-center font-mono text-2xl tracking-widest text-slate-900 placeholder:text-slate-300 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none transition-all"
-                />
+                <OtpPinInput length={6} value={otpCode} onChange={setOtpCode} />
               </div>
 
               <Button
@@ -322,7 +314,7 @@ const RegisterPage = () => {
                 variant="primary"
                 size="lg"
                 isLoading={isVerifying}
-                className="w-full"
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold shadow-lg shadow-indigo-500/25"
               >
                 <span>Verify & Complete Registration</span>
               </Button>
@@ -625,11 +617,11 @@ const RegisterPage = () => {
       </div>
 
       {/* Footer Link to Login */}
-      <div className="text-center text-sm text-slate-600 pt-1">
+      <div className="text-center text-sm text-slate-400 pt-1">
         <span>Already have an account? </span>
         <Link
           to="/login"
-          className="inline-flex items-center font-bold text-brand-600 hover:text-brand-700 hover:underline transition-all"
+          className="inline-flex items-center font-bold text-indigo-400 hover:text-indigo-300 hover:underline transition-all"
         >
           <span>Sign In Passwordless</span>
         </Link>

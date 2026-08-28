@@ -46,17 +46,33 @@ export interface QuestionOption {
   id: string;
   optionLabel: string;
   optionText: string;
+  optionKey?: string;
+  translations?: Record<string, { optionText: string }>;
   isCorrect?: boolean;
 }
 
 export interface ExamQuestion {
   examQuestionId: string;
+  questionId?: string;
   displayOrder: number;
   marks: number;
   negativeMarks: number;
   section: { id: string; name: string; subjectId: string };
   questionType: QuestionType;
+  type?: string;
   questionText: string;
+  passage?: string | null;
+  assertion?: string | null;
+  reason?: string | null;
+  translations?: Record<
+    string,
+    {
+      questionText: string;
+      passageText?: string | null;
+      assertionText?: string | null;
+      reasonText?: string | null;
+    }
+  >;
   options: QuestionOption[];
 }
 

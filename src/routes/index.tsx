@@ -22,6 +22,7 @@ import {
 import { lazyRoute } from '@/utils/lazyRoute';
 
 // ** Pages (lazy — one chunk each) **
+const HomePage = lazyRoute(() => import('@/modules/Home/pages/HomePage'));
 const LoginPage = lazyRoute(() => import('@/modules/Auth/pages/LoginPage'));
 const RegisterPage = lazyRoute(() => import('@/modules/Auth/pages/RegisterPage'));
 const DashboardPage = lazyRoute(() => import('@/modules/Dashboard/pages/DashboardPage'));
@@ -357,6 +358,11 @@ const protectedFullScreenRoutes: RouteObject[] = [
 ];
 
 const router = createBrowserRouter([
+  {
+    path: PUBLIC_NAVIGATION.home,
+    element: <HomePage />,
+    errorElement: <RouteErrorBoundary />,
+  },
   {
     element: <PublicRoute />,
     errorElement: <RouteErrorBoundary />,

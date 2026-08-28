@@ -1,45 +1,52 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Languages, ChevronDown, Check, Sparkles, Loader2 } from 'lucide-react';
 import {
-  useGetExamLanguagesAPI,
+  useGetLanguagesAPI,
   useSwitchAttemptLanguageAPI,
 } from '@/modules/RegionalLanguage/services/regionalLanguage.service';
-import type { ExamLanguageConfig } from '@/modules/RegionalLanguage/types/regionalLanguage.types';
+import type { SupportedLanguage } from '@/modules/RegionalLanguage/types/regionalLanguage.types';
+import { SUPPORTED_EXAM_LANGUAGES } from '@/constants/languages.constant';
 
 interface ExamLanguageSwitcherProps {
   examId?: string;
   attemptId: string;
   currentLanguageId?: string;
-  onLanguageChanged: (newLangId: string) => Promise<void> | void;
+  onLanguageChanged: (newLangIdOrCode: string) => Promise<void> | void;
 }
 
 export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
-  examId,
   attemptId,
   currentLanguageId,
   onLanguageChanged,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [languages, setLanguages] = useState<ExamLanguageConfig[]>([]);
-  const [activeLanguageId, setActiveLanguageId] = useState<string>(currentLanguageId || '');
+  const [languages, setLanguages] = useState<SupportedLanguage[]>([]);
+  const [activeLanguageId, setActiveLanguageId] = useState<string>(currentLanguageId || 'en');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { getExamLanguagesAPI, isLoading: isLoadingLanguages } = useGetExamLanguagesAPI();
+  const { getLanguagesAPI, isLoading: isLoadingLanguages } = useGetLanguagesAPI();
   const { switchAttemptLanguageAPI, isLoading: isSwitching } = useSwitchAttemptLanguageAPI();
 
-  // Load enabled languages for this exam
+  // Load languages (prefers database records, falls back to 9 mandatory constants)
   useEffect(() => {
-    if (!examId) return;
-    getExamLanguagesAPI(examId).then(({ data }) => {
+    getLanguagesAPI().then(({ data }) => {
       if (data && data.length > 0) {
         setLanguages(data);
-        if (!activeLanguageId) {
-          const defaultLang = data.find((l) => l.isDefault) || data[0];
-          setActiveLanguageId(defaultLang.languageId);
-        }
+      } else {
+        // Fallback to the 9 mandatory languages configuration
+        setLanguages(
+          SUPPORTED_EXAM_LANGUAGES.map((sl) => ({
+            id: sl.code,
+            code: sl.code,
+            name: sl.name,
+            nativeName: sl.nativeName,
+            isActive: true,
+            displayOrder: sl.displayOrder,
+          })),
+        );
       }
     });
-  }, [examId, getExamLanguagesAPI, activeLanguageId]);
+  }, [getLanguagesAPI]);
 
   useEffect(() => {
     if (currentLanguageId) {
@@ -58,14 +65,15 @@ export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSelectLanguage = async (langConfig: ExamLanguageConfig) => {
-    if (langConfig.languageId === activeLanguageId || isSwitching) return;
+  const handleSelectLanguage = async (lang: SupportedLanguage) => {
+    const langKey = lang.id || lang.code;
+    if (langKey === activeLanguageId || isSwitching) return;
 
     setIsOpen(false);
     const prevLang = activeLanguageId;
-    setActiveLanguageId(langConfig.languageId);
+    setActiveLanguageId(langKey);
 
-    const { data, error } = await switchAttemptLanguageAPI(attemptId, langConfig.languageId);
+    const { data, error } = await switchAttemptLanguageAPI(attemptId, langKey);
 
     if (error || !data) {
       // Revert if API failed
@@ -73,11 +81,13 @@ export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
       return;
     }
 
-    // Inform parent (ExamInterfacePage) to refetch question text smoothly
-    await onLanguageChanged(langConfig.languageId);
+    // Inform parent (ExamInterfacePage) to switch in-flight translation instantly
+    await onLanguageChanged(langKey);
   };
 
-  const currentLang = languages.find((l) => l.languageId === activeLanguageId)?.language;
+  const currentLang = languages.find(
+    (l) => l.id === activeLanguageId || l.code?.toLowerCase() === activeLanguageId?.toLowerCase(),
+  );
 
   return (
     <div className="relative inline-block text-left" ref={dropdownRef}>
@@ -111,7 +121,7 @@ export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
 
       {/* Language Selection Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-60 origin-top-right rounded-2xl border border-slate-700 bg-slate-900/95 p-1.5 text-white shadow-2xl backdrop-blur-xl ring-1 ring-black ring-opacity-5 z-50 animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute right-0 mt-2 w-64 origin-top-right rounded-2xl border border-slate-700 bg-slate-900/95 p-1.5 text-white shadow-2xl backdrop-blur-xl ring-1 ring-black ring-opacity-5 z-50 animate-in fade-in zoom-in-95 duration-100">
           <div className="px-3 py-2 border-b border-slate-800 mb-1">
             <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-indigo-400 uppercase tracking-wider">
               <Sparkles size={12} />
@@ -122,17 +132,18 @@ export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
             </p>
           </div>
 
-          <div className="max-h-56 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+          <div className="max-h-64 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
             {languages.length > 0 ? (
-              languages.map((config) => {
-                const lang = config.language;
-                const isSelected = lang.id === activeLanguageId;
+              languages.map((lang) => {
+                const isSelected =
+                  lang.id === activeLanguageId ||
+                  lang.code?.toLowerCase() === activeLanguageId?.toLowerCase();
 
                 return (
                   <button
-                    key={lang.id}
+                    key={lang.id || lang.code}
                     type="button"
-                    onClick={() => handleSelectLanguage(config)}
+                    onClick={() => handleSelectLanguage(lang)}
                     className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-medium transition-colors text-left ${
                       isSelected
                         ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
@@ -158,7 +169,7 @@ export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
               })
             ) : (
               <div className="p-3 text-center text-xs text-slate-400">
-                Default: English (All 9 Regional Languages Available)
+                All 9 Regional Languages Available
               </div>
             )}
           </div>
