@@ -28,6 +28,9 @@ import {
   FileCheck,
   Plus,
   FileSpreadsheet,
+  UploadCloud,
+  Languages,
+  BookOpen,
 } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 import type { MenuGroupConfig } from './menu-config';
@@ -141,16 +144,28 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         icon: Plus,
       },
       {
+        key: 'import-questions',
+        label: 'Bulk Import Questions',
+        to: PRIVATE_NAVIGATION.adminImportQuestions,
+        icon: UploadCloud,
+      },
+      {
         key: 'regional-languages',
         label: 'Regional Languages',
         to: PRIVATE_NAVIGATION.adminLanguages,
         icon: Globe2,
       },
+      {
+        key: 'import-translations',
+        label: 'Bulk Import Translations',
+        to: PRIVATE_NAVIGATION.adminImportTranslations,
+        icon: Languages,
+      },
     ],
   },
   {
     categoryKey: 'EXAM_STUDIO',
-    categoryLabel: 'Exam Blueprint & Scheduling',
+    categoryLabel: 'Mock Test Studio',
     items: [
       {
         key: 'exam-blueprints',
@@ -159,16 +174,40 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         icon: Sliders,
       },
       {
-        key: 'exams',
-        label: 'Exam Manager',
-        to: PRIVATE_NAVIGATION.adminExams,
+        key: 'mock-tests',
+        label: 'Mock Test Manager',
+        to: PRIVATE_NAVIGATION.adminMockTests,
         icon: FileSpreadsheet,
       },
       {
         key: 'exam-scheduling',
-        label: 'Exam Scheduling',
+        label: 'Mock Test Scheduling',
         to: PRIVATE_NAVIGATION.adminExamScheduling,
         icon: CalendarClock,
+      },
+    ],
+  },
+  {
+    categoryKey: 'EXAM_MANAGEMENT',
+    categoryLabel: 'Exam Manager (Question Papers)',
+    items: [
+      {
+        key: 'exam-manager-list',
+        label: 'Exam Manager',
+        to: PRIVATE_NAVIGATION.adminExamManager,
+        icon: BookOpen,
+      },
+      {
+        key: 'upload-question-paper',
+        label: 'Upload Question Paper',
+        to: PRIVATE_NAVIGATION.adminUploadPaper,
+        icon: UploadCloud,
+      },
+      {
+        key: 'exam-import-history',
+        label: 'Import History',
+        to: PRIVATE_NAVIGATION.adminExamImportHistory,
+        icon: History,
       },
     ],
   },
@@ -266,16 +305,28 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         icon: Plus,
       },
       {
+        key: 'import-questions',
+        label: 'Bulk Import Questions',
+        to: PRIVATE_NAVIGATION.superAdminImportQuestions,
+        icon: UploadCloud,
+      },
+      {
         key: 'regional-languages',
         label: 'Regional Languages',
         to: PRIVATE_NAVIGATION.superAdminLanguages,
         icon: Globe2,
       },
+      {
+        key: 'import-translations',
+        label: 'Bulk Import Translations',
+        to: PRIVATE_NAVIGATION.superAdminImportTranslations,
+        icon: Languages,
+      },
     ],
   },
   {
     categoryKey: 'EXAM_STUDIO',
-    categoryLabel: 'Exam Blueprint & Scheduling',
+    categoryLabel: 'Mock Test Studio',
     items: [
       {
         key: 'exam-blueprints',
@@ -284,16 +335,40 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         icon: Sliders,
       },
       {
-        key: 'exams',
-        label: 'Exam Manager',
-        to: PRIVATE_NAVIGATION.superAdminExams,
+        key: 'mock-tests',
+        label: 'Mock Test Manager',
+        to: PRIVATE_NAVIGATION.superAdminMockTests,
         icon: FileSpreadsheet,
       },
       {
         key: 'exam-scheduling',
-        label: 'Exam Scheduling',
+        label: 'Mock Test Scheduling',
         to: PRIVATE_NAVIGATION.superAdminExamScheduling,
         icon: CalendarClock,
+      },
+    ],
+  },
+  {
+    categoryKey: 'EXAM_MANAGEMENT',
+    categoryLabel: 'Exam Manager (Question Papers)',
+    items: [
+      {
+        key: 'exam-manager-list',
+        label: 'Exam Manager',
+        to: PRIVATE_NAVIGATION.superAdminExamManager,
+        icon: BookOpen,
+      },
+      {
+        key: 'upload-question-paper',
+        label: 'Upload Question Paper',
+        to: PRIVATE_NAVIGATION.superAdminUploadPaper,
+        icon: UploadCloud,
+      },
+      {
+        key: 'exam-import-history',
+        label: 'Import History',
+        to: PRIVATE_NAVIGATION.superAdminExamImportHistory,
+        icon: History,
       },
     ],
   },

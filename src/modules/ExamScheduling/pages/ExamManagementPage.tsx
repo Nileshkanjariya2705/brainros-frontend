@@ -144,13 +144,13 @@ export const ExamManagementPage: React.FC = () => {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700 ring-1 ring-inset ring-indigo-500/20 mb-2">
             <Sparkles size={13} className="text-indigo-600 animate-pulse" />
-            <span>Predefined Templates & BullMQ Generator</span>
+            <span>Predefined Blueprints & Background Generator</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Exam Manager & Blueprint Compiler
+            Mock Test Manager
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Instantly create mock exams from standard presets using background worker queues
+            Instantly generate and manage multi-subject mock tests from academic blueprints
           </p>
         </div>
 
@@ -162,7 +162,7 @@ export const ExamManagementPage: React.FC = () => {
           className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200"
         >
           <Plus size={16} />
-          <span>Create Exam from Template</span>
+          <span>Generate Mock Test from Blueprint</span>
         </Button>
       </div>
 

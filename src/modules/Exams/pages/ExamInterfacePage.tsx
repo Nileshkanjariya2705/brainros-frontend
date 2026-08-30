@@ -19,12 +19,9 @@ import {
   Grid3X3,
   Loader2,
   Flag,
-  Eye,
-  EyeOff,
-  ZoomIn,
-  ZoomOut,
   Maximize,
   Minimize,
+  GraduationCap,
 } from 'lucide-react';
 import cn from 'classnames';
 
@@ -120,6 +117,7 @@ const ExamInterfacePage = () => {
   const [serverEndTime, setServerEndTime] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [examId, setExamId] = useState<string>('');
+  const [examTitle, setExamTitle] = useState<string>('Competitive Mock Examination');
   const [currentLanguageId, setCurrentLanguageId] = useState<string>('');
 
   // Active answer editing state
@@ -244,6 +242,9 @@ const ExamInterfacePage = () => {
 
         if (sData) {
           if (sData.examId) setExamId(sData.examId);
+          if (sData.exam?.title || sData.examTitle) {
+            setExamTitle(sData.exam?.title || sData.examTitle);
+          }
           if (sData.languageId) setCurrentLanguageId(sData.languageId);
           if (sData.serverEndTime) setServerEndTime(sData.serverEndTime);
 
@@ -683,24 +684,31 @@ const ExamInterfacePage = () => {
   }
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-slate-50 text-slate-900 select-none font-sans">
-      {/* ══ HEADER ══════════════════════════════════════════════════ */}
-      <header className="relative z-20 flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur-md">
-        {/* Left: Brand & Exam Info */}
+    <div className="flex h-screen w-screen flex-col bg-slate-50 text-slate-900 overflow-hidden select-none font-sans">
+      {/* ══ HEADER BAR ════════════════════════════════════════════════ */}
+      <header className="relative z-20 flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 shadow-xs">
+        {/* Left: Brand & Exam Meta */}
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 font-black text-slate-900 text-xs shadow-md shadow-indigo-500/20">
-            BR
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-200">
+            <GraduationCap size={20} />
           </div>
-          <div>
-            <span className="hidden sm:inline-block text-xs font-black tracking-wide text-slate-900 uppercase">
-              Brainros Exam Engine
-            </span>
-            <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium">
-              <span className="rounded bg-indigo-500/20 px-1.5 py-0.5 text-indigo-300 font-semibold">
+
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black tracking-tight text-indigo-600 uppercase">
+                Brainros Exam Portal
+              </span>
+              <span className="hidden sm:inline text-slate-300">•</span>
+              <h1 className="text-xs sm:text-sm font-extrabold text-slate-900 truncate max-w-[140px] sm:max-w-[240px] md:max-w-[340px]">
+                {examTitle}
+              </h1>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+              <span className="truncate max-w-[100px] sm:max-w-[160px]">
                 {currentQuestion?.section?.name ?? 'General Section'}
               </span>
               <span>•</span>
-              <span>
+              <span className="font-mono text-slate-700">
                 Q{currentIdx + 1} of {questions.length}
               </span>
             </div>
@@ -708,34 +716,40 @@ const ExamInterfacePage = () => {
         </div>
 
         {/* Center: Countdown Timer */}
-        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-black/40 px-3.5 py-1.5 shadow-inner">
+        <div
+          className={cn(
+            'flex items-center gap-2 rounded-2xl px-3.5 py-1.5 border transition-all shadow-xs',
+            timeLeft !== null && timeLeft < 300
+              ? 'bg-rose-50 border-rose-200 text-rose-700 animate-pulse ring-2 ring-rose-200'
+              : timeLeft !== null && timeLeft < 600
+                ? 'bg-amber-50 border-amber-200 text-amber-800'
+                : 'bg-indigo-50/70 border-indigo-200/80 text-indigo-900',
+          )}
+        >
           <Clock
-            size={15}
+            size={16}
             className={cn(
-              'transition-colors',
+              'shrink-0',
               timeLeft !== null && timeLeft < 300
-                ? 'animate-pulse text-rose-400'
-                : 'text-indigo-400',
+                ? 'text-rose-600'
+                : timeLeft !== null && timeLeft < 600
+                  ? 'text-amber-600'
+                  : 'text-indigo-600',
             )}
           />
           <div className="flex flex-col">
             <span className="text-[9px] uppercase tracking-wider text-slate-500 font-bold leading-none">
               Time Left
             </span>
-            <span
-              className={cn(
-                'font-mono text-sm sm:text-base font-black tracking-tight leading-tight',
-                timeLeft !== null && timeLeft < 300 ? 'text-rose-400' : 'text-slate-900',
-              )}
-            >
+            <span className="font-mono text-sm sm:text-base font-black tracking-tight leading-tight tabular-nums">
               {formatTimer(timeLeft)}
             </span>
           </div>
         </div>
 
-        {/* Right: Language, Network, Fullscreen, User, Submit */}
+        {/* Right: Controls & Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Language Switcher (In-flight multilingual engine) */}
+          {/* Language Switcher */}
           {attemptId && (
             <ExamLanguageSwitcher
               examId={examId}
@@ -748,12 +762,12 @@ const ExamInterfacePage = () => {
           {/* Network & Autosave State Indicator */}
           <div
             className={cn(
-              'flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-[11px] font-semibold transition-all border',
+              'flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-bold transition-all border shadow-2xs',
               !isOnline
-                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                ? 'bg-rose-50 text-rose-700 border-rose-200'
                 : saveStatus === 'saving' || saveStatus === 'syncing'
-                  ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200',
             )}
             title={
               !isOnline
@@ -763,18 +777,18 @@ const ExamInterfacePage = () => {
           >
             {!isOnline ? (
               <>
-                <WifiOff size={13} />
+                <WifiOff size={13} className="text-rose-600" />
                 <span className="hidden md:inline">Offline</span>
               </>
             ) : saveStatus === 'saving' || saveStatus === 'syncing' ? (
               <>
-                <Loader2 size={13} className="animate-spin" />
+                <Loader2 size={13} className="animate-spin text-amber-600" />
                 <span className="hidden md:inline">Syncing…</span>
               </>
             ) : (
               <>
-                <Wifi size={13} />
-                <span className="hidden md:inline">Online</span>
+                <Wifi size={13} className="text-emerald-600" />
+                <span className="hidden md:inline">Saved</span>
               </>
             )}
           </div>
@@ -785,45 +799,47 @@ const ExamInterfacePage = () => {
             onClick={toggleFullscreen}
             aria-label={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
             title={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
-            className="hidden sm:flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-black/5 text-slate-600 hover:bg-black/10 hover:text-slate-900 transition-all"
+            className="hidden sm:flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all"
           >
             {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
           </button>
 
           {/* User badge */}
           <div className="hidden lg:flex items-center gap-2 border-l border-slate-200 pl-3 text-xs">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400 font-bold text-[11px]">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 font-black text-xs">
               {user?.studentProfile?.name?.charAt(0)?.toUpperCase() ?? <User size={12} />}
             </div>
-            <span className="font-medium text-slate-600 text-[11px] max-w-[100px] truncate">
+            <span className="font-bold text-slate-700 text-xs max-w-[100px] truncate">
               {user?.studentProfile?.name ?? 'Candidate'}
             </span>
           </div>
 
           {/* Final Submit Button */}
-          <button
+          <Button
             type="button"
+            variant="success"
+            size="sm"
             onClick={() => setShowSubmitModal(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3.5 py-1.5 text-xs font-bold text-slate-900 shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-95"
+            className="flex items-center gap-1.5 shadow-md shadow-emerald-200 font-extrabold text-xs"
           >
             <Send size={13} />
             <span>Submit</span>
-          </button>
+          </Button>
         </div>
       </header>
 
       {/* ══ SECTION TABS BAR ═════════════════════════════════════════ */}
-      <div className="relative z-10 flex h-10 shrink-0 items-center justify-between border-b border-white/5 bg-white/80 px-4 backdrop-blur-sm">
+      <div className="relative z-10 flex h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6">
         {/* Section Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pr-2">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pr-2">
           <button
             type="button"
             onClick={() => setActiveSection('ALL')}
             className={cn(
-              'shrink-0 rounded-lg px-3 py-1 text-xs font-semibold transition-all',
+              'shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold transition-all',
               activeSection === 'ALL'
-                ? 'bg-indigo-600 text-slate-900 shadow-sm shadow-indigo-500/30'
-                : 'text-slate-500 hover:bg-black/5 hover:text-slate-800',
+                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
             )}
           >
             All ({questions.length})
@@ -836,10 +852,10 @@ const ExamInterfacePage = () => {
                 type="button"
                 onClick={() => setActiveSection(sec)}
                 className={cn(
-                  'shrink-0 rounded-lg px-3 py-1 text-xs font-semibold transition-all',
+                  'shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold transition-all',
                   activeSection === sec
-                    ? 'bg-indigo-600 text-slate-900 shadow-sm shadow-indigo-500/30'
-                    : 'text-slate-500 hover:bg-black/5 hover:text-slate-800',
+                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
                 )}
               >
                 {sec} ({secCount})
@@ -848,276 +864,270 @@ const ExamInterfacePage = () => {
           })}
         </div>
 
-        {/* Font Controls & Palette Toggle */}
+        {/* Font Controls & Mobile Palette Toggle */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => setFontSize('sm')}
-            title="Small Font"
-            className={cn(
-              'rounded-md p-1 transition-colors',
-              fontSize === 'sm'
-                ? 'text-indigo-400 bg-black/5'
-                : 'text-slate-500 hover:text-slate-600',
-            )}
-          >
-            <ZoomOut size={13} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setFontSize('base')}
-            title="Default Font"
-            className={cn(
-              'rounded-md p-1 transition-colors',
-              fontSize === 'base'
-                ? 'text-indigo-400 bg-black/5'
-                : 'text-slate-500 hover:text-slate-600',
-            )}
-          >
-            <Eye size={13} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setFontSize('lg')}
-            title="Large Font"
-            className={cn(
-              'rounded-md p-1 transition-colors',
-              fontSize === 'lg'
-                ? 'text-indigo-400 bg-black/5'
-                : 'text-slate-500 hover:text-slate-600',
-            )}
-          >
-            <ZoomIn size={13} />
-          </button>
+          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setFontSize('sm')}
+              title="Small Font"
+              className={cn(
+                'rounded-lg px-2 py-1 font-bold transition-colors',
+                fontSize === 'sm' ? 'bg-white text-indigo-600 shadow-2xs' : 'text-slate-500 hover:text-slate-900',
+              )}
+            >
+              A-
+            </button>
+            <button
+              type="button"
+              onClick={() => setFontSize('base')}
+              title="Default Font"
+              className={cn(
+                'rounded-lg px-2 py-1 font-bold transition-colors',
+                fontSize === 'base' ? 'bg-white text-indigo-600 shadow-2xs' : 'text-slate-500 hover:text-slate-900',
+              )}
+            >
+              A
+            </button>
+            <button
+              type="button"
+              onClick={() => setFontSize('lg')}
+              title="Large Font"
+              className={cn(
+                'rounded-lg px-2 py-1 font-bold transition-colors',
+                fontSize === 'lg' ? 'bg-white text-indigo-600 shadow-2xs' : 'text-slate-500 hover:text-slate-900',
+              )}
+            >
+              A+
+            </button>
+          </div>
 
           {/* Mobile/Tablet Palette toggle button */}
           <button
             type="button"
             onClick={() => setIsPaletteOpen((v) => !v)}
             title="Toggle Question Palette"
-            className="ml-2 flex items-center gap-1 rounded-lg bg-black/5 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-black/10 transition-all lg:hidden"
+            className="flex lg:hidden items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700 shadow-2xs"
           >
-            {isPaletteOpen ? <EyeOff size={13} /> : <Grid3X3 size={13} />}
-            <span>Palette</span>
+            <Grid3X3 size={14} />
+            <span>Palette ({currentIdx + 1}/{questions.length})</span>
           </button>
         </div>
       </div>
 
-      {/* ══ MAIN BODY: QUESTION AREA + QUESTION PALETTE (BOTH VISIBLE) ══════════════ */}
+      {/* ══ MAIN BODY: QUESTION AREA + QUESTION PALETTE ══════════════ */}
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* ── Center Question Area ─────────────────────────────── */}
-        <main className="flex flex-1 min-w-0 flex-col overflow-y-auto bg-white p-4 md:p-6">
+        <main className="flex flex-1 min-w-0 flex-col overflow-y-auto bg-slate-50/70 p-4 sm:p-6 lg:p-8">
           {currentQuestion && (
-            <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-between gap-4 md:gap-5">
-              {/* Question Card (Sharp & High Contrast, No Blur) */}
-              <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-2xl shadow-black/50">
-                <div className="h-[3px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
-
-                <div className="p-5 md:p-6">
-                  {/* Question Header Meta */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-500/15 px-3 py-1 text-xs font-bold text-indigo-400 border border-indigo-500/20">
-                        Q{currentIdx + 1}
-                        <span className="text-indigo-500/60">/</span>
-                        <span className="text-indigo-300/60">{questions.length}</span>
-                      </span>
-                      <span className="rounded-lg bg-black/5 px-2.5 py-1 text-[11px] font-medium text-slate-500 border border-slate-200">
-                        {currentQuestion.section?.name ?? 'General'}
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded-lg bg-purple-500/10 px-2.5 py-1 text-[11px] font-semibold text-purple-400 border border-purple-500/20">
-                        <QuestionTypeIcon
-                          code={currentQuestion.questionType?.code || (currentQuestion as any).type}
-                        />
-                        {currentQuestion.questionType?.name ||
-                          (currentQuestion as any).type ||
-                          'Multiple Choice'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-3 text-xs font-bold">
-                      <span className="flex items-center gap-1 rounded-lg bg-emerald-500/10 px-2.5 py-1 text-emerald-400 border border-emerald-500/20">
-                        +{currentQuestion.marks}
-                      </span>
-                      <span className="flex items-center gap-1 rounded-lg bg-rose-500/10 px-2.5 py-1 text-rose-400 border border-rose-500/20">
-                        −{currentQuestion.negativeMarks}
-                      </span>
-                    </div>
+            <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-between gap-5">
+              {/* Question Card */}
+              <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
+                {/* Question Header Meta */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700 border border-indigo-200/80">
+                      Question {currentIdx + 1}
+                      <span className="text-indigo-300">/</span>
+                      <span className="text-indigo-400 font-semibold">{questions.length}</span>
+                    </span>
+                    <span className="rounded-xl bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 border border-slate-200">
+                      {currentQuestion.section?.name ?? 'General Section'}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-purple-50 px-2.5 py-1 text-xs font-bold text-purple-700 border border-purple-200/80">
+                      <QuestionTypeIcon
+                        code={currentQuestion.questionType?.code || (currentQuestion as any).type}
+                      />
+                      {currentQuestion.questionType?.name ||
+                        (currentQuestion as any).type ||
+                        'Multiple Choice'}
+                    </span>
                   </div>
 
-                  {/* Optional Passage / Comprehension Context */}
-                  {displayPassage && (
-                    <div className="mt-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 text-sm leading-relaxed text-slate-600">
-                      <div className="font-semibold text-indigo-400 text-xs mb-1.5 uppercase tracking-wide">
-                        Passage / Context:
-                      </div>
-                      {displayPassage}
-                    </div>
-                  )}
-
-                  {/* Optional Assertion & Reason */}
-                  {displayAssertion && (
-                    <div className="mt-4 space-y-2 rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 text-sm text-slate-600">
-                      <div>
-                        <span className="font-bold text-purple-400 mr-2">Assertion (A):</span>
-                        {displayAssertion}
-                      </div>
-                      {displayReason && (
-                        <div className="mt-2 pt-2 border-t border-purple-500/10">
-                          <span className="font-bold text-purple-400 mr-2">Reason (R):</span>
-                          {displayReason}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Question Text (Multilingual) */}
-                  <div
-                    className={cn('mt-5 leading-relaxed text-slate-900 font-medium', fontSizeClass)}
-                  >
-                    {displayQuestionText}
-                  </div>
-
-                  {/* ── Options / Inputs (Multilingual) ───────────── */}
-                  <div className="mt-6 space-y-3">
-                    {getNormalizedQuestionType(currentQuestion) === 'NUM' ? (
-                      /* NUMERICAL */
-                      <div className="mt-4 rounded-xl border border-slate-200 bg-white/[0.03] p-5">
-                        <label className="block text-xs font-semibold text-slate-500 mb-3">
-                          Enter your numerical answer:
-                        </label>
-                        <input
-                          type="number"
-                          step="any"
-                          value={numericalAnswer}
-                          onChange={(e) => handleNumericalChange(e.target.value)}
-                          placeholder="e.g. 25.5"
-                          className="w-full rounded-xl border border-slate-200 bg-black/5 px-4 py-3 text-xl font-bold text-slate-900 placeholder-slate-600 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                        />
-                      </div>
-                    ) : getNormalizedQuestionType(currentQuestion) === 'MCQ' ? (
-                      /* MULTIPLE CORRECT (MCQ) */
-                      (currentQuestion.options || []).map((opt, optIdx) => {
-                        const isSelected = selectedOptions.includes(opt.id);
-                        const label =
-                          opt.optionLabel ||
-                          (opt as any).optionKey ||
-                          String.fromCharCode(65 + optIdx);
-
-                        const activeOptTrans = currentLanguageId
-                          ? opt.translations?.[currentLanguageId] ||
-                            opt.translations?.[currentLanguageId.toLowerCase()]
-                          : null;
-                        const optionText =
-                          activeOptTrans?.optionText ||
-                          opt.optionText ||
-                          opt.optionLabel ||
-                          (opt as any).optionKey ||
-                          `Option ${label}`;
-
-                        return (
-                          <label
-                            key={opt.id || optIdx}
-                            onClick={() => handleToggleMultipleOption(opt.id)}
-                            className={cn(
-                              'group flex cursor-pointer items-start gap-4 rounded-xl border p-4 transition-all duration-200',
-                              isSelected
-                                ? 'border-indigo-500/60 bg-indigo-500/15 shadow-lg shadow-indigo-500/10'
-                                : 'border-slate-200 bg-black/[0.02] hover:border-indigo-500/30 hover:bg-indigo-500/5',
-                            )}
-                          >
-                            <div
-                              className={cn(
-                                'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-xs font-bold transition-all duration-200',
-                                isSelected
-                                  ? 'border-indigo-500 bg-indigo-600 text-slate-900 shadow-lg shadow-indigo-500/30'
-                                  : 'border-white/20 text-slate-500 group-hover:border-indigo-400/40',
-                              )}
-                            >
-                              {isSelected ? '✓' : label}
-                            </div>
-                            <span className="text-sm font-medium text-slate-800 leading-relaxed">
-                              {optionText}
-                            </span>
-                          </label>
-                        );
-                      })
-                    ) : (
-                      /* SINGLE CORRECT (SCQ, TF, AR, MTF, etc.) */
-                      (currentQuestion.options || []).map((opt, optIdx) => {
-                        const isSelected = selectedOptionId === opt.id;
-                        const label =
-                          opt.optionLabel ||
-                          (opt as any).optionKey ||
-                          String.fromCharCode(65 + optIdx);
-
-                        const activeOptTrans = currentLanguageId
-                          ? opt.translations?.[currentLanguageId] ||
-                            opt.translations?.[currentLanguageId.toLowerCase()]
-                          : null;
-                        const optionText =
-                          activeOptTrans?.optionText ||
-                          opt.optionText ||
-                          opt.optionLabel ||
-                          (opt as any).optionKey ||
-                          `Option ${label}`;
-
-                        return (
-                          <label
-                            key={opt.id || optIdx}
-                            onClick={() => handleSelectSingleOption(opt.id)}
-                            className={cn(
-                              'group flex cursor-pointer items-start gap-4 rounded-xl border p-4 transition-all duration-200',
-                              isSelected
-                                ? 'border-indigo-500/60 bg-indigo-500/15 shadow-lg shadow-indigo-500/10'
-                                : 'border-slate-200 bg-black/[0.02] hover:border-indigo-500/30 hover:bg-indigo-500/5',
-                            )}
-                          >
-                            <div
-                              className={cn(
-                                'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-all duration-200',
-                                isSelected
-                                  ? 'border-indigo-500 bg-indigo-600 text-slate-900 shadow-lg shadow-indigo-500/30'
-                                  : 'border-white/20 text-slate-500 group-hover:border-indigo-400/40 group-hover:text-indigo-300',
-                              )}
-                            >
-                              {isSelected ? <CheckCircle2 size={14} /> : label}
-                            </div>
-                            <span
-                              className={cn(
-                                'font-medium text-slate-800 leading-relaxed',
-                                fontSizeClass === 'text-lg' ? 'text-base' : 'text-sm',
-                              )}
-                            >
-                              {optionText}
-                            </span>
-                          </label>
-                        );
-                      })
+                  <div className="flex items-center gap-2 text-xs font-black">
+                    <span className="flex items-center gap-1 rounded-xl bg-emerald-50 px-2.5 py-1 text-emerald-700 border border-emerald-200">
+                      +{currentQuestion.marks} Mark{currentQuestion.marks > 1 ? 's' : ''}
+                    </span>
+                    {currentQuestion.negativeMarks > 0 && (
+                      <span className="flex items-center gap-1 rounded-xl bg-rose-50 px-2.5 py-1 text-rose-700 border border-rose-200">
+                        −{currentQuestion.negativeMarks} Neg
+                      </span>
                     )}
                   </div>
                 </div>
+
+                {/* Optional Passage / Context */}
+                {displayPassage && (
+                  <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 text-xs sm:text-sm leading-relaxed text-slate-700">
+                    <div className="font-bold text-indigo-700 text-xs mb-1 uppercase tracking-wider">
+                      Passage / Comprehension Context:
+                    </div>
+                    {displayPassage}
+                  </div>
+                )}
+
+                {/* Optional Assertion & Reason */}
+                {displayAssertion && (
+                  <div className="mt-4 space-y-2 rounded-2xl border border-purple-100 bg-purple-50/40 p-4 text-xs sm:text-sm text-slate-700">
+                    <div>
+                      <span className="font-bold text-purple-800 mr-2">Assertion (A):</span>
+                      {displayAssertion}
+                    </div>
+                    {displayReason && (
+                      <div className="mt-2 pt-2 border-t border-purple-100">
+                        <span className="font-bold text-purple-800 mr-2">Reason (R):</span>
+                        {displayReason}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Question Text */}
+                <div
+                  className={cn('mt-5 leading-relaxed text-slate-900 font-semibold', fontSizeClass)}
+                >
+                  {displayQuestionText}
+                </div>
+
+                {/* ── Options / Inputs ────────────────────────────── */}
+                <div className="mt-6 space-y-3">
+                  {getNormalizedQuestionType(currentQuestion) === 'NUM' ? (
+                    /* NUMERICAL */
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
+                      <label className="block text-xs font-bold text-slate-700 mb-2">
+                        Enter your numerical response:
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={numericalAnswer}
+                        onChange={(e) => handleNumericalChange(e.target.value)}
+                        placeholder="e.g. 25.5"
+                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-lg font-bold text-slate-900 placeholder-slate-400 shadow-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                    </div>
+                  ) : getNormalizedQuestionType(currentQuestion) === 'MCQ' ? (
+                    /* MULTIPLE CORRECT (MCQ) */
+                    (currentQuestion.options || []).map((opt, optIdx) => {
+                      const isSelected = selectedOptions.includes(opt.id);
+                      const label =
+                        opt.optionLabel ||
+                        (opt as any).optionKey ||
+                        String.fromCharCode(65 + optIdx);
+
+                      const activeOptTrans = currentLanguageId
+                        ? opt.translations?.[currentLanguageId] ||
+                          opt.translations?.[currentLanguageId.toLowerCase()]
+                        : null;
+                      const optionText =
+                        activeOptTrans?.optionText ||
+                        opt.optionText ||
+                        opt.optionLabel ||
+                        (opt as any).optionKey ||
+                        `Option ${label}`;
+
+                      return (
+                        <label
+                          key={opt.id || optIdx}
+                          onClick={() => handleToggleMultipleOption(opt.id)}
+                          className={cn(
+                            'group flex cursor-pointer items-start gap-3.5 rounded-2xl border p-4 transition-all duration-150 select-none',
+                            isSelected
+                              ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-600/30 shadow-xs'
+                              : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/20',
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              'flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border text-xs font-black transition-all',
+                              isSelected
+                                ? 'border-indigo-600 bg-indigo-600 text-white shadow-xs'
+                                : 'border-slate-300 text-slate-600 group-hover:border-indigo-400',
+                            )}
+                          >
+                            {isSelected ? '✓' : label}
+                          </div>
+                          <span className="text-xs sm:text-sm font-medium text-slate-800 leading-relaxed pt-0.5">
+                            {optionText}
+                          </span>
+                        </label>
+                      );
+                    })
+                  ) : (
+                    /* SINGLE CORRECT (SCQ, TF, AR, MTF) */
+                    (currentQuestion.options || []).map((opt, optIdx) => {
+                      const isSelected = selectedOptionId === opt.id;
+                      const label =
+                        opt.optionLabel ||
+                        (opt as any).optionKey ||
+                        String.fromCharCode(65 + optIdx);
+
+                      const activeOptTrans = currentLanguageId
+                        ? opt.translations?.[currentLanguageId] ||
+                          opt.translations?.[currentLanguageId.toLowerCase()]
+                        : null;
+                      const optionText =
+                        activeOptTrans?.optionText ||
+                        opt.optionText ||
+                        opt.optionLabel ||
+                        (opt as any).optionKey ||
+                        `Option ${label}`;
+
+                      return (
+                        <label
+                          key={opt.id || optIdx}
+                          onClick={() => handleSelectSingleOption(opt.id)}
+                          className={cn(
+                            'group flex cursor-pointer items-start gap-3.5 rounded-2xl border p-4 transition-all duration-150 select-none',
+                            isSelected
+                              ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-600/30 shadow-xs'
+                              : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/20',
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-black transition-all',
+                              isSelected
+                                ? 'border-indigo-600 bg-indigo-600 text-white shadow-xs'
+                                : 'border-slate-300 text-slate-600 group-hover:border-indigo-400',
+                            )}
+                          >
+                            {isSelected ? <CheckCircle2 size={15} /> : label}
+                          </div>
+                          <span
+                            className={cn(
+                              'font-medium text-slate-800 leading-relaxed pt-0.5',
+                              fontSizeClass === 'text-lg' ? 'text-base' : 'text-xs sm:text-sm',
+                            )}
+                          >
+                            {optionText}
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
-              {/* ── Action Toolbar (Solid & Sharp, No Blur) ──────────────────────────────── */}
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-100 p-3.5 shadow-md">
+              {/* ── Action Toolbar ──────────────────────────────── */}
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Mark for Review */}
                   <button
                     type="button"
                     onClick={handleToggleMarkForReview}
                     className={cn(
-                      'flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all duration-200',
+                      'flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all',
                       isMarkedForReview
-                        ? 'bg-purple-600/30 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-500/20'
-                        : 'border border-slate-200 bg-black/5 text-slate-600 hover:bg-black/10 hover:text-slate-900',
+                        ? 'bg-purple-600 text-white shadow-sm shadow-purple-200'
+                        : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
                     )}
                   >
                     <Flag
                       size={14}
                       className={cn(
                         'transition-transform',
-                        isMarkedForReview ? 'fill-purple-400 text-purple-400' : 'text-slate-500',
+                        isMarkedForReview ? 'fill-white text-white' : 'text-purple-600',
                       )}
                     />
                     <span>{isMarkedForReview ? 'Marked for Review' : 'Mark for Review'}</span>
@@ -1130,7 +1140,7 @@ const ExamInterfacePage = () => {
                     disabled={
                       !selectedOptionId && selectedOptions.length === 0 && numericalAnswer === ''
                     }
-                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-black/5 px-3 py-2 text-xs font-medium text-slate-500 hover:bg-black/10 hover:text-slate-900 disabled:opacity-40 disabled:pointer-events-none transition-all"
+                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none transition-all"
                   >
                     <RotateCcw size={13} />
                     <span>Clear Response</span>
@@ -1139,48 +1149,49 @@ const ExamInterfacePage = () => {
 
                 {/* Navigation: Previous / Next / Save & Next */}
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={handlePrevious}
                     disabled={currentIdx === 0}
-                    className="flex items-center gap-1 rounded-xl border border-slate-200 bg-black/5 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-black/10 hover:text-slate-900 disabled:opacity-30 disabled:pointer-events-none transition-all"
+                    className="flex items-center gap-1 font-bold text-xs"
                   >
                     <ChevronLeft size={15} />
                     <span>Previous</span>
-                  </button>
+                  </Button>
 
                   {currentIdx < questions.length - 1 && (
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
                       onClick={handleNext}
-                      className="hidden sm:flex items-center gap-1 rounded-xl border border-slate-200 bg-black/5 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-black/10 hover:text-slate-900 transition-all"
+                      className="hidden sm:flex items-center gap-1 font-bold text-xs"
                     >
                       <span>Next</span>
                       <ChevronRight size={15} />
-                    </button>
+                    </Button>
                   )}
 
-                  <button
+                  <Button
                     type="button"
+                    variant="primary"
+                    size="sm"
                     onClick={handleSaveAndNext}
-                    className="flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-xs font-bold text-slate-900 shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.02]"
+                    className="flex items-center gap-1.5 shadow-md shadow-indigo-200 font-extrabold text-xs"
                   >
                     <span>Save & Next</span>
                     <ChevronRight size={15} />
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
           )}
         </main>
 
-        {/* ── Question Palette Sidebar (Permanently Visible Side-by-Side, No Blur) ─ */}
-        <aside
-          className={cn(
-            'h-full shrink-0 border-l border-slate-200 bg-white transition-all duration-200',
-            isPaletteOpen ? 'flex' : 'hidden md:flex',
-          )}
-        >
+        {/* ── Question Palette Sidebar (Desktop) ─ */}
+        <aside className="hidden lg:flex h-full shrink-0">
           <QuestionPalette
             questions={questions}
             currentIdx={currentIdx}
@@ -1191,23 +1202,45 @@ const ExamInterfacePage = () => {
             onSelectSection={(sec) => setActiveSection(sec)}
           />
         </aside>
+
+        {/* ── Mobile/Tablet Slide-over Drawer for Question Palette ─ */}
+        {isPaletteOpen && (
+          <div className="fixed inset-0 z-40 flex justify-end bg-slate-950/40 backdrop-blur-xs lg:hidden">
+            <div className="relative h-full w-full max-w-xs bg-white shadow-2xl animate-in slide-in-from-right duration-200">
+              <QuestionPalette
+                questions={questions}
+                currentIdx={currentIdx}
+                activeSection={activeSection}
+                sections={sections}
+                getQuestionStatus={getQuestionStatus}
+                onSelectQuestion={(idx) => {
+                  setCurrentIdx(idx);
+                  setIsPaletteOpen(false);
+                }}
+                onSelectSection={(sec) => setActiveSection(sec)}
+                onClose={() => setIsPaletteOpen(false)}
+                isMobileDrawer={true}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ══ SUBMIT CONFIRMATION MODAL ════════════════════════════════ */}
       {showSubmitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-in fade-in duration-150">
-          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl text-slate-900">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 font-bold">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl text-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 font-bold">
                   <Send size={16} />
                 </div>
-                <h3 className="text-base font-bold text-slate-900">Submit Examination</h3>
+                <h3 className="text-base font-black text-slate-900">Submit Examination</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowSubmitModal(false)}
-                className="rounded-lg p-1 text-slate-500 hover:bg-black/10 hover:text-slate-900"
+                className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-colors"
               >
                 <X size={18} />
               </button>
@@ -1215,13 +1248,13 @@ const ExamInterfacePage = () => {
 
             {/* Summary Statistics */}
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-xl bg-black/5 p-3 border border-white/5">
-                <span className="text-slate-500 block text-[11px]">Total Questions</span>
-                <span className="text-lg font-bold text-slate-900">{questions.length}</span>
+              <div className="rounded-2xl bg-slate-50 p-3.5 border border-slate-100">
+                <span className="text-slate-400 block text-[10px] font-bold uppercase">Total Questions</span>
+                <span className="text-xl font-black text-slate-900 mt-0.5 block">{questions.length}</span>
               </div>
-              <div className="rounded-xl bg-emerald-500/10 p-3 border border-emerald-500/20">
-                <span className="text-emerald-400 block text-[11px]">Answered</span>
-                <span className="text-lg font-bold text-emerald-300">
+              <div className="rounded-2xl bg-emerald-50 p-3.5 border border-emerald-100">
+                <span className="text-emerald-700 block text-[10px] font-bold uppercase">Answered</span>
+                <span className="text-xl font-black text-emerald-800 mt-0.5 block">
                   {
                     questions.filter((q) => {
                       const st = getQuestionStatus(q);
@@ -1230,15 +1263,15 @@ const ExamInterfacePage = () => {
                   }
                 </span>
               </div>
-              <div className="rounded-xl bg-rose-500/10 p-3 border border-rose-500/20">
-                <span className="text-rose-400 block text-[11px]">Unanswered</span>
-                <span className="text-lg font-bold text-rose-300">
+              <div className="rounded-2xl bg-rose-50 p-3.5 border border-rose-100">
+                <span className="text-rose-700 block text-[10px] font-bold uppercase">Unanswered</span>
+                <span className="text-xl font-black text-rose-800 mt-0.5 block">
                   {questions.filter((q) => getQuestionStatus(q) === 'NOT_ANSWERED').length}
                 </span>
               </div>
-              <div className="rounded-xl bg-purple-500/10 p-3 border border-purple-500/20">
-                <span className="text-purple-400 block text-[11px]">Marked for Review</span>
-                <span className="text-lg font-bold text-purple-300">
+              <div className="rounded-2xl bg-purple-50 p-3.5 border border-purple-100">
+                <span className="text-purple-700 block text-[10px] font-bold uppercase">Marked for Review</span>
+                <span className="text-xl font-black text-purple-800 mt-0.5 block">
                   {
                     questions.filter((q) => {
                       const st = getQuestionStatus(q);
@@ -1255,7 +1288,7 @@ const ExamInterfacePage = () => {
             </p>
 
             {/* Modal Actions */}
-            <div className="mt-6 flex items-center justify-end gap-2.5 border-t border-slate-200 pt-4">
+            <div className="mt-6 flex items-center justify-end gap-2.5 border-t border-slate-100 pt-4">
               <Button
                 variant="outline"
                 size="sm"
@@ -1265,13 +1298,13 @@ const ExamInterfacePage = () => {
                 Return to Exam
               </Button>
               <Button
-                variant="primary"
+                variant="success"
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-500 text-slate-900"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold"
                 onClick={handleAutoSubmit}
                 isLoading={isSubmitting}
               >
-                Yes, Submit Now
+                Yes, Submit Examination
               </Button>
             </div>
           </div>

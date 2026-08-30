@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Globe2,
   Plus,
@@ -10,6 +11,7 @@ import {
   Sparkles,
   Save,
   X,
+  UploadCloud,
 } from 'lucide-react';
 import {
   useGetLanguagesAPI,
@@ -21,6 +23,12 @@ import type { SupportedLanguage } from '../types/regionalLanguage.types';
 import Button from '@/components/ui/Button';
 
 const LanguageManagementPage: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const routePrefix = location.pathname.startsWith('/super-admin')
+    ? '/super-admin'
+    : '/admin';
+
   const [languages, setLanguages] = useState<SupportedLanguage[]>([]);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -145,13 +153,24 @@ const LanguageManagementPage: React.FC = () => {
           </p>
         </div>
 
-        <Button
-          onClick={handleOpenCreateModal}
-          className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200"
-        >
-          <Plus size={16} />
-          <span>Add New Language</span>
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => navigate(`${routePrefix}/languages/import`)}
+            className="flex items-center gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold"
+          >
+            <UploadCloud size={16} />
+            <span>Bulk Import Translations</span>
+          </Button>
+
+          <Button
+            onClick={handleOpenCreateModal}
+            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200"
+          >
+            <Plus size={16} />
+            <span>Add New Language</span>
+          </Button>
+        </div>
       </div>
 
       {/* KPI Stats Bar */}

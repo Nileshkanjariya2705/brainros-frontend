@@ -3,33 +3,60 @@
 @tailwind utilities;
 
 /*
- * Design tokens as CSS variables — single source of truth for themes.
+ * ==========================================================================
+ * Brainros Design System - Core Variables & Tokens
+ * ==========================================================================
  */
 :root {
-  --brand-50: #eef2ff;
+  /* Brand Palette (Academic Indigo / Deep Slate) */
+  --brand-50: #f0f4ff;
   --brand-100: #e0e7ff;
+  --brand-200: #c7d2fe;
   --brand-500: #4f46e5;
   --brand-600: #4338ca;
   --brand-700: #3730a3;
+  --brand-900: #1e1b4b;
 
-  --accent-orange: #ff6b00;
-  --accent-green: #10b981;
-  --accent-red: #ef4444;
+  /* Semantic Accents */
+  --accent-emerald: #10b981;
+  --accent-emerald-dark: #047857;
   --accent-amber: #f59e0b;
-  --accent-purple: #8b5cf6;
+  --accent-amber-dark: #b45309;
+  --accent-rose: #ef4444;
+  --accent-rose-dark: #b91c1c;
+  --accent-violet: #8b5cf6;
+  --accent-sky: #0284c7;
 
+  /* Neutral Surface & Content */
   --surface: #ffffff;
-  --surface-muted: #f8fafc;
+  --surface-subtle: #f8fafc;
+  --surface-muted: #f1f5f9;
   --content: #0f172a;
+  --content-secondary: #334155;
   --content-muted: #64748b;
-  --border-color: #e2e8f0;
+  --content-subtle: #94a3b8;
+  --border-subtle: #f1f5f9;
+  --border-default: #e2e8f0;
+  --border-strong: #cbd5e1;
 
-  /* Question Palette Tokens */
-  --qp-answered: #10b981;
-  --qp-not-answered: #ef4444;
-  --qp-marked: #8b5cf6;
-  --qp-ans-marked: #6366f1;
-  --qp-not-visited: #94a3b8;
+  /* Question Palette Semantic Tokens */
+  --qp-answered-bg: #10b981;
+  --qp-answered-text: #ffffff;
+  --qp-not-answered-bg: #ef4444;
+  --qp-not-answered-text: #ffffff;
+  --qp-marked-bg: #8b5cf6;
+  --qp-marked-text: #ffffff;
+  --qp-ans-marked-bg: #4f46e5;
+  --qp-ans-marked-text: #ffffff;
+  --qp-not-visited-bg: #f1f5f9;
+  --qp-not-visited-text: #475569;
+  --qp-not-visited-border: #cbd5e1;
+
+  /* Elevations */
+  --shadow-subtle: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  --shadow-dropdown: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+  --shadow-modal: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.08);
 }
 
 .dark {
@@ -38,18 +65,35 @@
   --brand-500: #6366f1;
   --brand-600: #4f46e5;
   --brand-700: #4338ca;
+  --brand-900: #0f172a;
 
   --surface: #0f172a;
-  --surface-muted: #1e293b;
+  --surface-subtle: #1e293b;
+  --surface-muted: #334155;
   --content: #f8fafc;
+  --content-secondary: #cbd5e1;
   --content-muted: #94a3b8;
-  --border-color: #334155;
+  --content-subtle: #64748b;
+  --border-subtle: #1e293b;
+  --border-default: #334155;
+  --border-strong: #475569;
+
+  --qp-not-visited-bg: #1e293b;
+  --qp-not-visited-text: #94a3b8;
+  --qp-not-visited-border: #334155;
 }
 
+/*
+ * ==========================================================================
+ * Global Typography & Reset
+ * ==========================================================================
+ */
 html,
 body,
 #root {
   height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 body {
@@ -62,9 +106,20 @@ body {
     'Segoe UI',
     Roboto,
     sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbars */
+/* Tabular numbers for clocks, ranks, metrics */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * ==========================================================================
+ * Custom Clean Scrollbars
+ * ==========================================================================
+ */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -75,26 +130,58 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply rounded-full bg-slate-300 hover:bg-slate-400 dark:bg-slate-700;
+  @apply rounded-full bg-slate-200 hover:bg-slate-300 transition-colors;
 }
 
-/* Custom Question Status Badges */
+/*
+ * ==========================================================================
+ * Exam Question Palette States (Accessible Dual Indicator)
+ * ==========================================================================
+ */
 .status-badge-answered {
-  @apply bg-emerald-500 text-white;
+  background-color: var(--qp-answered-bg);
+  color: var(--qp-answered-text);
+  border-color: var(--qp-answered-bg);
 }
 
 .status-badge-not-answered {
-  @apply bg-rose-500 text-white;
+  background-color: var(--qp-not-answered-bg);
+  color: var(--qp-not-answered-text);
+  border-color: var(--qp-not-answered-bg);
 }
 
 .status-badge-marked {
-  @apply bg-purple-600 text-white;
+  background-color: var(--qp-marked-bg);
+  color: var(--qp-marked-text);
+  border-color: var(--qp-marked-bg);
 }
 
 .status-badge-ans-marked {
-  @apply bg-indigo-600 text-white ring-2 ring-purple-300;
+  background-color: var(--qp-ans-marked-bg);
+  color: var(--qp-ans-marked-text);
+  border-color: var(--qp-ans-marked-bg);
+  position: relative;
 }
 
 .status-badge-not-visited {
-  @apply bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200;
+  background-color: var(--qp-not-visited-bg);
+  color: var(--qp-not-visited-text);
+  border: 1px solid var(--qp-not-visited-border);
+}
+
+/*
+ * ==========================================================================
+ * Card & Container Utility Presets
+ * ==========================================================================
+ */
+.brainros-card {
+  @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-all;
+}
+
+.brainros-card-hover {
+  @apply hover:border-slate-300 hover:shadow-md;
+}
+
+.brainros-badge {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold transition-all;
 }

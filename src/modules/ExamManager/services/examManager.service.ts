@@ -2,20 +2,20 @@ import { useCallback, useState } from 'react';
 import type { AxiosRequestConfig } from 'axios';
 import { Axios } from '@/base-axios';
 import type {
-  QuestionImportSession,
-  QuestionImportRow,
-  QuestionImportFilterParams,
-} from '../types/questionImport.types';
+  ExamImportSession,
+  ExamImportFilterParams,
+  ExamItem,
+} from '../types/examManager.types';
 
-const IMPORT_BASE_PATH = '/questions/import';
+const EXAM_MANAGER_BASE_PATH = '/admin/exam-manager';
 
-export const useUploadImportFileAPI = () => {
+export const useUploadQuestionPaperAPI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const uploadImportFileAPI = useCallback(
+  const uploadQuestionPaperAPI = useCallback(
     async (file: File, config: AxiosRequestConfig = {}) => {
       setIsLoading(true);
       setIsError(false);
@@ -26,9 +26,11 @@ export const useUploadImportFileAPI = () => {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await Axios.post(IMPORT_BASE_PATH, formData, {
-          ...config,
-        });
+        const response = await Axios.post(
+          `${EXAM_MANAGER_BASE_PATH}/import`,
+          formData,
+          config,
+        );
 
         setIsLoading(false);
         setIsSuccess(true);
@@ -39,7 +41,7 @@ export const useUploadImportFileAPI = () => {
         setIsLoading(false);
         setIsError(true);
         const errorMsg =
-          err?.response?.data?.message || err?.message || 'Failed to upload spreadsheet.';
+          err?.response?.data?.message || err?.message || 'Failed to upload question paper.';
         setError(errorMsg);
         return { data: null, error: errorMsg, isSuccess: false };
       }
@@ -47,23 +49,26 @@ export const useUploadImportFileAPI = () => {
     [],
   );
 
-  return { uploadImportFileAPI, isLoading, isError, isSuccess, error };
+  return { uploadQuestionPaperAPI, isLoading, isError, isSuccess, error };
 };
 
-export const useGetImportSessionAPI = () => {
+export const useGetExamImportSessionAPI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getImportSessionAPI = useCallback(
+  const getExamImportSessionAPI = useCallback(
     async (importId: string, config: AxiosRequestConfig = {}) => {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await Axios.get(`${IMPORT_BASE_PATH}/${importId}`, config);
+        const response = await Axios.get(
+          `${EXAM_MANAGER_BASE_PATH}/import/${importId}`,
+          config,
+        );
         setIsLoading(false);
         const data =
           response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data: data as QuestionImportSession, error: null, isSuccess: true };
+        return { data: data as ExamImportSession, error: null, isSuccess: true };
       } catch (err: any) {
         setIsLoading(false);
         const errorMsg =
@@ -75,34 +80,96 @@ export const useGetImportSessionAPI = () => {
     [],
   );
 
-  return { getImportSessionAPI, isLoading, error };
+  return { getExamImportSessionAPI, isLoading, error };
 };
 
-export const useGetImportRowsAPI = () => {
+export const useGetExamImportRowsAPI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getImportRowsAPI = useCallback(
+  const getExamImportRowsAPI = useCallback(
     async (
       importId: string,
-      params?: QuestionImportFilterParams,
+      params?: ExamImportFilterParams,
       config: AxiosRequestConfig = {},
     ) => {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await Axios.get(`${IMPORT_BASE_PATH}/${importId}/rows`, {
+        const response = await Axios.get(
+          `${EXAM_MANAGER_BASE_PATH}/import/${importId}/rows`,
+          { params, ...config },
+        );
+        setIsLoading(false);
+        const data =
+          response?.data?.data !== undefined ? response.data.data : response?.data;
+        return { data, error: null, isSuccess: true };
+      } catch (err: any) {
+        setIsLoading(false);
+        const errorMsg =
+          err?.response?.data?.message || err?.message || 'Failed to fetch import rows.';
+        setError(errorMsg);
+        return { data: null, error: errorMsg, isSuccess: false };
+      }
+    },
+    [],
+  );
+
+  return { getExamImportRowsAPI, isLoading, error };
+};
+
+export const useGetExamImportHistoryAPI = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const getExamImportHistoryAPI = useCallback(
+    async (params?: ExamImportFilterParams, config: AxiosRequestConfig = {}) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await Axios.get(
+          `${EXAM_MANAGER_BASE_PATH}/import-history`,
+          { params, ...config },
+        );
+        setIsLoading(false);
+        const data =
+          response?.data?.data !== undefined ? response.data.data : response?.data;
+        return { data, error: null, isSuccess: true };
+      } catch (err: any) {
+        setIsLoading(false);
+        const errorMsg =
+          err?.response?.data?.message || err?.message || 'Failed to fetch import history.';
+        setError(errorMsg);
+        return { data: null, error: errorMsg, isSuccess: false };
+      }
+    },
+    [],
+  );
+
+  return { getExamImportHistoryAPI, isLoading, error };
+};
+
+export const useGetExamsListAPI = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const getExamsListAPI = useCallback(
+    async (params?: any, config: AxiosRequestConfig = {}) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await Axios.get(`${EXAM_MANAGER_BASE_PATH}/exams`, {
           params,
           ...config,
         });
         setIsLoading(false);
         const data =
           response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data, error: null, isSuccess: true };
+        return { data: data as ExamItem[], error: null, isSuccess: true };
       } catch (err: any) {
         setIsLoading(false);
         const errorMsg =
-          err?.response?.data?.message || err?.message || 'Failed to fetch staging rows.';
+          err?.response?.data?.message || err?.message || 'Failed to fetch exams list.';
         setError(errorMsg);
         return { data: null, error: errorMsg, isSuccess: false };
       }
@@ -110,40 +177,30 @@ export const useGetImportRowsAPI = () => {
     [],
   );
 
-  return { getImportRowsAPI, isLoading, error };
+  return { getExamsListAPI, isLoading, error };
 };
 
-export const useUpdateImportRowAPI = () => {
+export const useGetExamDetailsAPI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const updateImportRowAPI = useCallback(
-    async (
-      importId: string,
-      rowId: string,
-      payload: {
-        rawData?: Record<string, any>;
-        action?: 'CREATE' | 'UPDATE' | 'NONE';
-        targetQuestionId?: string;
-      },
-      config: AxiosRequestConfig = {},
-    ) => {
+  const getExamDetailsAPI = useCallback(
+    async (examId: string, config: AxiosRequestConfig = {}) => {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await Axios.patch(
-          `${IMPORT_BASE_PATH}/${importId}/rows/${rowId}`,
-          payload,
+        const response = await Axios.get(
+          `${EXAM_MANAGER_BASE_PATH}/exams/${examId}`,
           config,
         );
         setIsLoading(false);
         const data =
           response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data: data as QuestionImportRow, error: null, isSuccess: true };
+        return { data: data as ExamItem, error: null, isSuccess: true };
       } catch (err: any) {
         setIsLoading(false);
         const errorMsg =
-          err?.response?.data?.message || err?.message || 'Failed to update row.';
+          err?.response?.data?.message || err?.message || 'Failed to fetch exam details.';
         setError(errorMsg);
         return { data: null, error: errorMsg, isSuccess: false };
       }
@@ -151,78 +208,14 @@ export const useUpdateImportRowAPI = () => {
     [],
   );
 
-  return { updateImportRowAPI, isLoading, error };
-};
-
-export const useConfirmImportAPI = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const confirmImportAPI = useCallback(
-    async (importId: string, config: AxiosRequestConfig = {}) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await Axios.post(
-          `${IMPORT_BASE_PATH}/${importId}/confirm`,
-          {},
-          config,
-        );
-        setIsLoading(false);
-        const data =
-          response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data, error: null, isSuccess: true };
-      } catch (err: any) {
-        setIsLoading(false);
-        const errorMsg =
-          err?.response?.data?.message || err?.message || 'Failed to confirm import.';
-        setError(errorMsg);
-        return { data: null, error: errorMsg, isSuccess: false };
-      }
-    },
-    [],
-  );
-
-  return { confirmImportAPI, isLoading, error };
-};
-
-export const useCancelImportAPI = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const cancelImportAPI = useCallback(
-    async (importId: string, config: AxiosRequestConfig = {}) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await Axios.post(
-          `${IMPORT_BASE_PATH}/${importId}/cancel`,
-          {},
-          config,
-        );
-        setIsLoading(false);
-        const data =
-          response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data: data as QuestionImportSession, error: null, isSuccess: true };
-      } catch (err: any) {
-        setIsLoading(false);
-        const errorMsg =
-          err?.response?.data?.message || err?.message || 'Failed to cancel import.';
-        setError(errorMsg);
-        return { data: null, error: errorMsg, isSuccess: false };
-      }
-    },
-    [],
-  );
-
-  return { cancelImportAPI, isLoading, error };
+  return { getExamDetailsAPI, isLoading, error };
 };
 
 /**
- * Direct file download helper for template
+ * Direct file download helper for Question Paper Template
  */
-export const downloadQuestionTemplate = async (format: 'xlsx' | 'csv' = 'xlsx') => {
-  const response = await Axios.get(`${IMPORT_BASE_PATH}/template`, {
+export const downloadQuestionPaperTemplate = async (format: 'xlsx' | 'csv' = 'xlsx') => {
+  const response = await Axios.get(`${EXAM_MANAGER_BASE_PATH}/template`, {
     params: { format },
     responseType: 'blob',
   });
@@ -237,7 +230,7 @@ export const downloadQuestionTemplate = async (format: 'xlsx' | 'csv' = 'xlsx') 
   const downloadUrl = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = downloadUrl;
-  link.download = `question_import_template.${format}`;
+  link.download = `question_paper_import_template.${format}`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -245,16 +238,19 @@ export const downloadQuestionTemplate = async (format: 'xlsx' | 'csv' = 'xlsx') 
 };
 
 /**
- * Direct file download helper for import error report
+ * Direct file download helper for Question Paper Import Error Report
  */
-export const downloadImportErrorReport = async (
+export const downloadQuestionPaperErrorReport = async (
   importId: string,
   format: 'xlsx' | 'csv' = 'xlsx',
 ) => {
-  const response = await Axios.get(`${IMPORT_BASE_PATH}/${importId}/errors/export`, {
-    params: { format },
-    responseType: 'blob',
-  });
+  const response = await Axios.get(
+    `${EXAM_MANAGER_BASE_PATH}/import/${importId}/errors/export`,
+    {
+      params: { format },
+      responseType: 'blob',
+    },
+  );
 
   const blob = new Blob([response.data], {
     type:
@@ -266,7 +262,7 @@ export const downloadImportErrorReport = async (
   const downloadUrl = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = downloadUrl;
-  link.download = `import_errors_${importId.slice(0, 8)}.${format}`;
+  link.download = `question_paper_errors_${importId.slice(0, 8)}.${format}`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

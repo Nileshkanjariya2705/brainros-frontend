@@ -58,6 +58,9 @@ const ImportQuestionsPage = lazyRoute(
 const LanguageManagementPage = lazyRoute(
   () => import('@/modules/RegionalLanguage/pages/LanguageManagementPage'),
 );
+const ImportTranslationsPage = lazyRoute(
+  () => import('@/modules/RegionalLanguage/pages/ImportTranslationsPage'),
+);
 const ExamBlueprintManagementPage = lazyRoute(
   () => import('@/modules/ExamGenerator/pages/ExamBlueprintManagementPage'),
 );
@@ -66,6 +69,15 @@ const ExamSchedulingManagementPage = lazyRoute(
 );
 const ExamManagementPage = lazyRoute(
   () => import('@/modules/ExamScheduling/pages/ExamManagementPage'),
+);
+const ExamManagerDashboardPage = lazyRoute(
+  () => import('@/modules/ExamManager/pages/ExamManagerDashboardPage'),
+);
+const UploadQuestionPaperPage = lazyRoute(
+  () => import('@/modules/ExamManager/pages/UploadQuestionPaperPage'),
+);
+const ImportHistoryPage = lazyRoute(
+  () => import('@/modules/ExamManager/pages/ImportHistoryPage'),
 );
 const StrategyRuleManagementPage = lazyRoute(
   () => import('@/modules/Analysis/pages/StrategyRuleManagementPage'),
@@ -263,6 +275,14 @@ const adminRoutes: RouteObject[] = [
         ),
       },
       {
+        path: 'languages/import',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.TRANSLATION_CREATE]}>
+            <ImportTranslationsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'exam-blueprints',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
@@ -279,10 +299,42 @@ const adminRoutes: RouteObject[] = [
         ),
       },
       {
+        path: 'mock-tests',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
+            <ExamManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'exams',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
             <ExamManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exam-manager',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
+            <ExamManagerDashboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exam-manager/upload',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE]}>
+            <UploadQuestionPaperPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exam-manager/history',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
+            <ImportHistoryPage />
           </ProtectedRoute>
         ),
       },
@@ -365,8 +417,13 @@ const superAdminRoutes: RouteObject[] = [
       { path: 'question-bank/import', element: <ImportQuestionsPage /> },
       { path: 'question-bank/:id/edit', element: <EditQuestionPage /> },
       { path: 'languages', element: <LanguageManagementPage /> },
+      { path: 'languages/import', element: <ImportTranslationsPage /> },
       { path: 'exam-blueprints', element: <ExamBlueprintManagementPage /> },
+      { path: 'mock-tests', element: <ExamManagementPage /> },
       { path: 'exams', element: <ExamManagementPage /> },
+      { path: 'exam-manager', element: <ExamManagerDashboardPage /> },
+      { path: 'exam-manager/upload', element: <UploadQuestionPaperPage /> },
+      { path: 'exam-manager/history', element: <ImportHistoryPage /> },
       { path: 'exam-scheduling', element: <ExamSchedulingManagementPage /> },
       { path: 'strategy-rules', element: <StrategyRuleManagementPage /> },
       { path: 'leaderboard', element: <AdminLeaderboardPage /> },
@@ -468,6 +525,14 @@ const legacyAndSharedRoutes: RouteObject[] = [
   {
     path: '/question-bank/create',
     element: <Navigate to={PRIVATE_NAVIGATION.adminCreateQuestion} replace />,
+  },
+  {
+    path: '/question-bank/import',
+    element: <Navigate to={PRIVATE_NAVIGATION.adminImportQuestions} replace />,
+  },
+  {
+    path: '/languages/import',
+    element: <Navigate to={PRIVATE_NAVIGATION.adminImportTranslations} replace />,
   },
   {
     path: '/exam-blueprints',

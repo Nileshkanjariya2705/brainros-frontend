@@ -1,11 +1,11 @@
 import LoginForm from '../components/LoginForm';
 import { APP_NAME } from '@config';
 import { Link, Navigate } from 'react-router-dom';
-import { ShieldCheck, Sparkles, ArrowRight, LockKeyhole } from 'lucide-react';
+import { ShieldCheck, GraduationCap, ArrowRight, LockKeyhole } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import PageLoader from '@/components/feedback/PageLoader';
 
-const LoginPage = () => {
+export const LoginPage = () => {
   const { isAuthenticated, isInitializing } = useAuth();
 
   if (isInitializing) {
@@ -15,63 +15,60 @@ const LoginPage = () => {
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }
+
   return (
-    <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in-95 duration-300">
-      {/* Top Badge & Header */}
+    <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in-95 duration-200">
+      {/* Top Header */}
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center space-x-2 rounded-full bg-indigo-500/10 px-3.5 py-1 text-xs font-semibold text-indigo-400 border border-indigo-500/20 shadow-sm">
-          <Sparkles className="h-3.5 w-3.5" />
-          <span>Unified Student Authentication</span>
+        <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3.5 py-1 text-xs font-bold text-indigo-700 border border-indigo-200/80 shadow-2xs">
+          <GraduationCap className="h-4 w-4 text-indigo-600" />
+          <span>Unified Examination Portal</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-          Welcome Back
+          Welcome to {APP_NAME}
         </h1>
-        <p className="text-sm text-slate-500 max-w-sm mx-auto">
-          Access your exams, performance analytics, and test series on{' '}
-          <span className="font-semibold text-slate-800">{APP_NAME}</span>
+        <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto font-medium">
+          Access your mock tests, academic analytics, and question papers
         </p>
       </div>
 
       {/* Main Form Card */}
-      <div className="bg-white p-6 sm:p-8 shadow-2xl shadow-black/60 rounded-2xl border border-slate-200 relative overflow-hidden text-slate-900">
-        {/* Subtle decorative glow line at top of card */}
-        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
-
+      <div className="bg-white p-6 sm:p-8 shadow-sm rounded-3xl border border-slate-200/80 relative overflow-hidden text-slate-900">
         <LoginForm />
       </div>
 
       {/* Trust & Security Highlights Grid */}
       <div className="grid grid-cols-2 gap-3 pt-1">
-        <div className="flex items-center space-x-2.5 rounded-xl bg-black/5 p-3 border border-slate-200 backdrop-blur-md">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
+        <div className="flex items-center space-x-2.5 rounded-2xl bg-white p-3.5 border border-slate-200/80 shadow-2xs">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
             <ShieldCheck className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-800">Bank-Grade RBAC</p>
-            <p className="text-[10px] text-slate-500">Argon2id & Rotated JWTs</p>
+            <p className="text-xs font-black text-slate-900">Encrypted Auth</p>
+            <p className="text-[10px] text-slate-400 font-semibold">Argon2id & JWTs</p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2.5 rounded-xl bg-black/5 p-3 border border-slate-200 backdrop-blur-md">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400">
+        <div className="flex items-center space-x-2.5 rounded-2xl bg-white p-3.5 border border-slate-200/80 shadow-2xs">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
             <LockKeyhole className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-800">Session Family</p>
-            <p className="text-[10px] text-slate-500">Active Reuse Detection</p>
+            <p className="text-xs font-black text-slate-900">Secure Sessions</p>
+            <p className="text-[10px] text-slate-400 font-semibold">Active Token Rotation</p>
           </div>
         </div>
       </div>
 
       {/* Footer Link to Register */}
-      <div className="text-center text-sm text-slate-500 pt-1">
-        <span>Don't have a student profile? </span>
+      <div className="text-center text-xs sm:text-sm text-slate-500 pt-1 font-medium">
+        <span>Don't have an account yet? </span>
         <Link
           to="/register"
-          className="inline-flex items-center font-bold text-indigo-400 hover:text-indigo-300 hover:underline transition-all group"
+          className="inline-flex items-center font-bold text-indigo-600 hover:text-indigo-700 hover:underline transition-all group ml-1"
         >
-          <span>Register Profile</span>
-          <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
+          <span>Register Candidate</span>
+          <ArrowRight className="h-3.5 w-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
         </Link>
       </div>
     </div>

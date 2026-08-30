@@ -2,20 +2,20 @@ import { useCallback, useState } from 'react';
 import type { AxiosRequestConfig } from 'axios';
 import { Axios } from '@/base-axios';
 import type {
-  QuestionImportSession,
-  QuestionImportRow,
-  QuestionImportFilterParams,
-} from '../types/questionImport.types';
+  TranslationImportSession,
+  TranslationImportRow,
+  TranslationImportFilterParams,
+} from '../types/translationImport.types';
 
-const IMPORT_BASE_PATH = '/questions/import';
+const TRANSLATION_IMPORT_BASE_PATH = '/translations/import';
 
-export const useUploadImportFileAPI = () => {
+export const useUploadTranslationImportFileAPI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const uploadImportFileAPI = useCallback(
+  const uploadTranslationImportFileAPI = useCallback(
     async (file: File, config: AxiosRequestConfig = {}) => {
       setIsLoading(true);
       setIsError(false);
@@ -26,7 +26,7 @@ export const useUploadImportFileAPI = () => {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await Axios.post(IMPORT_BASE_PATH, formData, {
+        const response = await Axios.post(TRANSLATION_IMPORT_BASE_PATH, formData, {
           ...config,
         });
 
@@ -34,12 +34,12 @@ export const useUploadImportFileAPI = () => {
         setIsSuccess(true);
         const data =
           response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data, error: null, isSuccess: true };
+        return { data: data as TranslationImportSession, error: null, isSuccess: true };
       } catch (err: any) {
         setIsLoading(false);
         setIsError(true);
         const errorMsg =
-          err?.response?.data?.message || err?.message || 'Failed to upload spreadsheet.';
+          err?.response?.data?.message || err?.message || 'Failed to upload translation file.';
         setError(errorMsg);
         return { data: null, error: errorMsg, isSuccess: false };
       }
@@ -47,27 +47,30 @@ export const useUploadImportFileAPI = () => {
     [],
   );
 
-  return { uploadImportFileAPI, isLoading, isError, isSuccess, error };
+  return { uploadTranslationImportFileAPI, isLoading, isError, isSuccess, error };
 };
 
-export const useGetImportSessionAPI = () => {
+export const useGetTranslationImportSessionAPI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getImportSessionAPI = useCallback(
+  const getTranslationImportSessionAPI = useCallback(
     async (importId: string, config: AxiosRequestConfig = {}) => {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await Axios.get(`${IMPORT_BASE_PATH}/${importId}`, config);
+        const response = await Axios.get(
+          `${TRANSLATION_IMPORT_BASE_PATH}/${importId}`,
+          config,
+        );
         setIsLoading(false);
         const data =
           response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data: data as QuestionImportSession, error: null, isSuccess: true };
+        return { data: data as TranslationImportSession, error: null, isSuccess: true };
       } catch (err: any) {
         setIsLoading(false);
         const errorMsg =
-          err?.response?.data?.message || err?.message || 'Failed to fetch import session.';
+          err?.response?.data?.message || err?.message || 'Failed to fetch translation session.';
         setError(errorMsg);
         return { data: null, error: errorMsg, isSuccess: false };
       }
@@ -75,26 +78,29 @@ export const useGetImportSessionAPI = () => {
     [],
   );
 
-  return { getImportSessionAPI, isLoading, error };
+  return { getTranslationImportSessionAPI, isLoading, error };
 };
 
-export const useGetImportRowsAPI = () => {
+export const useGetTranslationImportRowsAPI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getImportRowsAPI = useCallback(
+  const getTranslationImportRowsAPI = useCallback(
     async (
       importId: string,
-      params?: QuestionImportFilterParams,
+      params?: TranslationImportFilterParams,
       config: AxiosRequestConfig = {},
     ) => {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await Axios.get(`${IMPORT_BASE_PATH}/${importId}/rows`, {
-          params,
-          ...config,
-        });
+        const response = await Axios.get(
+          `${TRANSLATION_IMPORT_BASE_PATH}/${importId}/rows`,
+          {
+            params,
+            ...config,
+          },
+        );
         setIsLoading(false);
         const data =
           response?.data?.data !== undefined ? response.data.data : response?.data;
@@ -102,7 +108,7 @@ export const useGetImportRowsAPI = () => {
       } catch (err: any) {
         setIsLoading(false);
         const errorMsg =
-          err?.response?.data?.message || err?.message || 'Failed to fetch staging rows.';
+          err?.response?.data?.message || err?.message || 'Failed to fetch translation rows.';
         setError(errorMsg);
         return { data: null, error: errorMsg, isSuccess: false };
       }
@@ -110,14 +116,14 @@ export const useGetImportRowsAPI = () => {
     [],
   );
 
-  return { getImportRowsAPI, isLoading, error };
+  return { getTranslationImportRowsAPI, isLoading, error };
 };
 
-export const useUpdateImportRowAPI = () => {
+export const useUpdateTranslationImportRowAPI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const updateImportRowAPI = useCallback(
+  const updateTranslationImportRowAPI = useCallback(
     async (
       importId: string,
       rowId: string,
@@ -125,6 +131,7 @@ export const useUpdateImportRowAPI = () => {
         rawData?: Record<string, any>;
         action?: 'CREATE' | 'UPDATE' | 'NONE';
         targetQuestionId?: string;
+        targetLanguageId?: string;
       },
       config: AxiosRequestConfig = {},
     ) => {
@@ -132,18 +139,18 @@ export const useUpdateImportRowAPI = () => {
       setError(null);
       try {
         const response = await Axios.patch(
-          `${IMPORT_BASE_PATH}/${importId}/rows/${rowId}`,
+          `${TRANSLATION_IMPORT_BASE_PATH}/${importId}/rows/${rowId}`,
           payload,
           config,
         );
         setIsLoading(false);
         const data =
           response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data: data as QuestionImportRow, error: null, isSuccess: true };
+        return { data: data as TranslationImportRow, error: null, isSuccess: true };
       } catch (err: any) {
         setIsLoading(false);
         const errorMsg =
-          err?.response?.data?.message || err?.message || 'Failed to update row.';
+          err?.response?.data?.message || err?.message || 'Failed to update translation row.';
         setError(errorMsg);
         return { data: null, error: errorMsg, isSuccess: false };
       }
@@ -151,20 +158,20 @@ export const useUpdateImportRowAPI = () => {
     [],
   );
 
-  return { updateImportRowAPI, isLoading, error };
+  return { updateTranslationImportRowAPI, isLoading, error };
 };
 
-export const useConfirmImportAPI = () => {
+export const useConfirmTranslationImportAPI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const confirmImportAPI = useCallback(
+  const confirmTranslationImportAPI = useCallback(
     async (importId: string, config: AxiosRequestConfig = {}) => {
       setIsLoading(true);
       setError(null);
       try {
         const response = await Axios.post(
-          `${IMPORT_BASE_PATH}/${importId}/confirm`,
+          `${TRANSLATION_IMPORT_BASE_PATH}/${importId}/confirm`,
           {},
           config,
         );
@@ -175,7 +182,7 @@ export const useConfirmImportAPI = () => {
       } catch (err: any) {
         setIsLoading(false);
         const errorMsg =
-          err?.response?.data?.message || err?.message || 'Failed to confirm import.';
+          err?.response?.data?.message || err?.message || 'Failed to confirm translation import.';
         setError(errorMsg);
         return { data: null, error: errorMsg, isSuccess: false };
       }
@@ -183,31 +190,31 @@ export const useConfirmImportAPI = () => {
     [],
   );
 
-  return { confirmImportAPI, isLoading, error };
+  return { confirmTranslationImportAPI, isLoading, error };
 };
 
-export const useCancelImportAPI = () => {
+export const useCancelTranslationImportAPI = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const cancelImportAPI = useCallback(
+  const cancelTranslationImportAPI = useCallback(
     async (importId: string, config: AxiosRequestConfig = {}) => {
       setIsLoading(true);
       setError(null);
       try {
         const response = await Axios.post(
-          `${IMPORT_BASE_PATH}/${importId}/cancel`,
+          `${TRANSLATION_IMPORT_BASE_PATH}/${importId}/cancel`,
           {},
           config,
         );
         setIsLoading(false);
         const data =
           response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data: data as QuestionImportSession, error: null, isSuccess: true };
+        return { data: data as TranslationImportSession, error: null, isSuccess: true };
       } catch (err: any) {
         setIsLoading(false);
         const errorMsg =
-          err?.response?.data?.message || err?.message || 'Failed to cancel import.';
+          err?.response?.data?.message || err?.message || 'Failed to cancel translation import.';
         setError(errorMsg);
         return { data: null, error: errorMsg, isSuccess: false };
       }
@@ -215,14 +222,14 @@ export const useCancelImportAPI = () => {
     [],
   );
 
-  return { cancelImportAPI, isLoading, error };
+  return { cancelTranslationImportAPI, isLoading, error };
 };
 
 /**
- * Direct file download helper for template
+ * Direct file download helper for translation template
  */
-export const downloadQuestionTemplate = async (format: 'xlsx' | 'csv' = 'xlsx') => {
-  const response = await Axios.get(`${IMPORT_BASE_PATH}/template`, {
+export const downloadTranslationTemplate = async (format: 'xlsx' | 'csv' = 'xlsx') => {
+  const response = await Axios.get(`${TRANSLATION_IMPORT_BASE_PATH}/template`, {
     params: { format },
     responseType: 'blob',
   });
@@ -237,7 +244,7 @@ export const downloadQuestionTemplate = async (format: 'xlsx' | 'csv' = 'xlsx') 
   const downloadUrl = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = downloadUrl;
-  link.download = `question_import_template.${format}`;
+  link.download = `question_translation_template.${format}`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -245,16 +252,19 @@ export const downloadQuestionTemplate = async (format: 'xlsx' | 'csv' = 'xlsx') 
 };
 
 /**
- * Direct file download helper for import error report
+ * Direct file download helper for translation import error report
  */
-export const downloadImportErrorReport = async (
+export const downloadTranslationErrorReport = async (
   importId: string,
   format: 'xlsx' | 'csv' = 'xlsx',
 ) => {
-  const response = await Axios.get(`${IMPORT_BASE_PATH}/${importId}/errors/export`, {
-    params: { format },
-    responseType: 'blob',
-  });
+  const response = await Axios.get(
+    `${TRANSLATION_IMPORT_BASE_PATH}/${importId}/errors/export`,
+    {
+      params: { format },
+      responseType: 'blob',
+    },
+  );
 
   const blob = new Blob([response.data], {
     type:
@@ -266,7 +276,7 @@ export const downloadImportErrorReport = async (
   const downloadUrl = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = downloadUrl;
-  link.download = `import_errors_${importId.slice(0, 8)}.${format}`;
+  link.download = `translation_import_errors_${importId.slice(0, 8)}.${format}`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
