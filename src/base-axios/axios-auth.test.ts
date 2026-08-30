@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Axios, setAuthInterceptorCallbacks } from './index';
-import { tokenStorage } from '@/utils/token';
 
 vi.mock('axios', async (importOriginal) => {
   const actual: any = await importOriginal();
@@ -8,10 +7,11 @@ vi.mock('axios', async (importOriginal) => {
     ...actual,
     default: {
       ...actual.default,
-      create: vi.fn().mockImplementation(() => {
+      create: vi.fn().mockImplementation((config: any) => {
         const instance: any = vi.fn((reqConfig) =>
           Promise.resolve({ data: 'mock-response', config: reqConfig }),
         );
+        instance.defaults = config || { withCredentials: true };
         instance.interceptors = {
           request: {
             use: vi.fn((fn) => {
@@ -25,56 +25,33 @@ vi.mock('axios', async (importOriginal) => {
             }),
           },
         };
-        instance.post = vi.fn().mockResolvedValue({ data: { accessToken: 'new-refreshed-token' } });
+        instance.post = vi.fn().mockResolvedValue({ data: { message: 'Refreshed' } });
         return instance;
       }),
-      post: vi.fn(),
+      post: vi.fn().mockResolvedValue({ data: { message: 'Refreshed' } }),
     },
   };
 });
 
-describe('Axios Client & Auth Interceptors (Production Token Lifecycle)', () => {
+describe('Axios Client & Auth Interceptors (HttpOnly Cookie Lifecycle)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    tokenStorage.clear();
   });
 
   it('1. should be configured with withCredentials: true for HttpOnly cookies', () => {
     expect(Axios).toBeDefined();
+    expect(Axios.defaults.withCredentials).toBe(true);
   });
 
-  it('2. should manage token storage and clear properly', () => {
-    tokenStorage.set('test-access-token');
-    expect(tokenStorage.get()).toBe('test-access-token');
-    expect(localStorage.getItem('access_token')).toBe('test-access-token');
-
-    tokenStorage.clear();
-    expect(tokenStorage.get()).toBeNull();
-    expect(localStorage.getItem('access_token')).toBeNull();
-  });
-
-  it('3. should attach Authorization header to protected requests', async () => {
-    tokenStorage.set('test-jwt-token');
-
-    // Simulate request interceptor
+  it('2. should pass requests through without injecting bearer tokens from storage', async () => {
     const requestHandler = (Axios.interceptors.request as any).handlers?.[0]?.fulfilled;
     if (requestHandler) {
       const config = await requestHandler({ url: '/students/me', headers: {} });
-      expect(config.headers.Authorization).toBe('Bearer test-jwt-token');
-    }
-  });
-
-  it('4. should omit Authorization header from public auth endpoints', async () => {
-    tokenStorage.set('test-jwt-token');
-
-    const requestHandler = (Axios.interceptors.request as any).handlers?.[0]?.fulfilled;
-    if (requestHandler) {
-      const config = await requestHandler({ url: '/auth/login/verify-otp', headers: {} });
       expect(config.headers.Authorization).toBeUndefined();
     }
   });
 
-  it('5. should register and trigger store sync and logout callbacks', () => {
+  it('3. should register and trigger store sync and logout callbacks', () => {
     const onSyncStore = vi.fn();
     const onLogout = vi.fn();
 
@@ -82,7 +59,7 @@ describe('Axios Client & Auth Interceptors (Production Token Lifecycle)', () => 
     expect(true).toBe(true);
   });
 
-  it('6. should not retry non-401 errors (400, 404, 500)', async () => {
+  it('4. should not retry non-401 errors (400, 404, 500)', async () => {
     const errorHandler = (Axios.interceptors.response as any).handlers?.[0]?.rejected;
     if (errorHandler) {
       const error404 = {
@@ -95,7 +72,7 @@ describe('Axios Client & Auth Interceptors (Production Token Lifecycle)', () => 
     }
   });
 
-  it('7. should not retry already-retried 401 requests', async () => {
+  it('5. should not retry already-retried 401 requests', async () => {
     const errorHandler = (Axios.interceptors.response as any).handlers?.[0]?.rejected;
     if (errorHandler) {
       const error401Retried = {
@@ -104,6 +81,19 @@ describe('Axios Client & Auth Interceptors (Production Token Lifecycle)', () => 
       };
 
       await expect(errorHandler(error401Retried)).rejects.toEqual(error401Retried);
+    }
+  });
+
+  it('6. should not retry public auth endpoints on 401', async () => {
+    const errorHandler = (Axios.interceptors.response as any).handlers?.[0]?.rejected;
+    if (errorHandler) {
+      const errorLogin = {
+        config: { url: '/auth/login', _retry: false },
+        response: { status: 401, data: { message: 'Invalid credentials' } },
+      };
+
+      await expect(errorHandler(errorLogin)).rejects.toEqual(errorLogin);
+      expect(errorLogin.config._retry).toBe(false);
     }
   });
 });

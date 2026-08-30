@@ -102,8 +102,10 @@ const ExamSchedulingManagementPage: React.FC = () => {
     loadExams();
   };
 
-  const handleCancelExam = async (examId: string) => {
-    const reason = window.prompt('Enter cancellation reason (Audit log):');
+  const handleCancelExam = async (examId: string, examTitle?: string) => {
+    const reason = window.prompt(
+      `Cancel "${examTitle || 'this exam'}"?\n\nThis will cancel all live schedules and immediately notify all students.\n\nPlease enter the cancellation reason:`,
+    );
     if (reason === null) return;
 
     const { error } = await cancelExamAPI(examId, reason || undefined);
@@ -157,6 +159,19 @@ const ExamSchedulingManagementPage: React.FC = () => {
             activation
           </p>
         </div>
+
+        <Button
+          onClick={() => {
+            if (exams.length > 0) {
+              setActiveExam(exams[0]);
+            }
+            setIsScheduleOpen(true);
+          }}
+          className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200 shrink-0"
+        >
+          <CalendarClock size={16} />
+          <span>Schedule Exam</span>
+        </Button>
       </div>
 
       {/* KPI Stats Bar */}
@@ -262,6 +277,19 @@ const ExamSchedulingManagementPage: React.FC = () => {
                       size="sm"
                       onClick={() => {
                         setActiveExam(exam);
+                        setIsScheduleOpen(true);
+                      }}
+                      className="flex items-center gap-1.5 text-xs text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 border-indigo-200 font-bold"
+                    >
+                      <CalendarClock size={13} />
+                      <span>Schedule</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setActiveExam(exam);
                         setIsTimelineOpen(true);
                       }}
                       className="flex items-center gap-1.5 text-xs text-slate-700 bg-slate-50 hover:bg-slate-100 border-slate-200"
@@ -285,7 +313,7 @@ const ExamSchedulingManagementPage: React.FC = () => {
 
                     {stName !== 'CANCELLED' && stName !== 'COMPLETED' && (
                       <button
-                        onClick={() => handleCancelExam(exam.id)}
+                        onClick={() => handleCancelExam(exam.id, exam.title)}
                         className="rounded-xl border border-slate-200 p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors"
                         title="Cancel Exam"
                       >
@@ -446,10 +474,13 @@ const ExamSchedulingManagementPage: React.FC = () => {
       )}
 
       {/* Modals */}
-      {activeExam && (
+      {(activeExam || exams.length > 0) && (
         <ScheduleExamModal
-          examId={activeExam.id}
-          examTitle={activeExam.title}
+          examId={activeExam?.id || exams[0]?.id}
+          examTitle={activeExam?.title || exams[0]?.title}
+          examDuration={activeExam?.durationMinutes || exams[0]?.durationMinutes}
+          examsList={exams}
+          onSelectExam={setActiveExam}
           isOpen={isScheduleOpen}
           onClose={() => setIsScheduleOpen(false)}
           onScheduled={loadExams}

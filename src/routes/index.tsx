@@ -1,12 +1,15 @@
 // ** Packages **
 import { Suspense } from 'react';
-import { createBrowserRouter, RouterProvider, type RouteObject } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, type RouteObject, Navigate } from 'react-router-dom';
 
 // ** Guards & Layouts **
 import ProtectedRoute from './ProtectedRoute';
 import PublicRoute from './PublicRoute';
-import AppLayout from '@/components/layout/AppLayout';
 import AuthLayout from '@/components/layout/AuthLayout';
+import StudentLayout from '@/components/layouts/StudentLayout';
+import AdminLayout from '@/components/layouts/AdminLayout';
+import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
+import ParentLayout from '@/components/layouts/ParentLayout';
 import PageLoader from '@/components/feedback/PageLoader';
 import RouteErrorBoundary from '@/components/feedback/RouteErrorBoundary';
 
@@ -25,7 +28,21 @@ import { lazyRoute } from '@/utils/lazyRoute';
 const HomePage = lazyRoute(() => import('@/modules/Home/pages/HomePage'));
 const LoginPage = lazyRoute(() => import('@/modules/Auth/pages/LoginPage'));
 const RegisterPage = lazyRoute(() => import('@/modules/Auth/pages/RegisterPage'));
-const DashboardPage = lazyRoute(() => import('@/modules/Dashboard/pages/DashboardPage'));
+
+// Role Dashboards
+const StudentDashboardPage = lazyRoute(
+  () => import('@/modules/Dashboard/pages/StudentDashboardPage'),
+);
+const AdminDashboardPage = lazyRoute(() => import('@/modules/Dashboard/pages/AdminDashboardPage'));
+const SuperAdminDashboardPage = lazyRoute(
+  () => import('@/modules/Dashboard/pages/SuperAdminDashboardPage'),
+);
+const ParentDashboardLandingPage = lazyRoute(
+  () => import('@/modules/Dashboard/pages/ParentDashboardLandingPage'),
+);
+const DashboardDispatcher = lazyRoute(() => import('@/modules/Dashboard/pages/DashboardPage'));
+
+// Core Shared / Role Pages
 const AvailableExamsPage = lazyRoute(() => import('@/modules/Exams/pages/AvailableExamsPage'));
 const ExamInterfacePage = lazyRoute(() => import('@/modules/Exams/pages/ExamInterfacePage'));
 const ExamResultPage = lazyRoute(() => import('@/modules/Exams/pages/ExamResultPage'));
@@ -35,6 +52,9 @@ const CreateQuestionPage = lazyRoute(
   () => import('@/modules/QuestionBank/pages/CreateQuestionPage'),
 );
 const EditQuestionPage = lazyRoute(() => import('@/modules/QuestionBank/pages/EditQuestionPage'));
+const ImportQuestionsPage = lazyRoute(
+  () => import('@/modules/QuestionBank/pages/ImportQuestionsPage'),
+);
 const LanguageManagementPage = lazyRoute(
   () => import('@/modules/RegionalLanguage/pages/LanguageManagementPage'),
 );
@@ -43,6 +63,9 @@ const ExamBlueprintManagementPage = lazyRoute(
 );
 const ExamSchedulingManagementPage = lazyRoute(
   () => import('@/modules/ExamScheduling/pages/ExamSchedulingManagementPage'),
+);
+const ExamManagementPage = lazyRoute(
+  () => import('@/modules/ExamScheduling/pages/ExamManagementPage'),
 );
 const StrategyRuleManagementPage = lazyRoute(
   () => import('@/modules/Analysis/pages/StrategyRuleManagementPage'),
@@ -77,272 +100,388 @@ const AdminNotificationsPage = lazyRoute(
 );
 const ExamCalendarPage = lazyRoute(() => import('@/modules/ExamScheduling/pages/ExamCalendarPage'));
 const StudentProfilePage = lazyRoute(() => import('@/modules/Auth/pages/StudentProfilePage'));
+const StudentNotificationsPage = lazyRoute(
+  () => import('@/modules/Notification/pages/StudentNotificationsPage'),
+);
+const StudentExamDetailsPage = lazyRoute(
+  () => import('@/modules/Exams/pages/StudentExamDetailsPage'),
+);
+const StudentComparisonPage = lazyRoute(
+  () => import('@/modules/Analysis/pages/StudentComparisonPage'),
+);
 const NotFoundPage = lazyRoute(() => import('@/components/feedback/NotFoundPage'));
 
-// ** Public (unauthenticated-only) **
+// ══════════════════════════════════════════════════════════════════════════
+// 1. PUBLIC ROUTES (Unauthenticated Only)
+// ══════════════════════════════════════════════════════════════════════════
 const publicRoutes: RouteObject[] = [
   { path: PUBLIC_NAVIGATION.login, element: <LoginPage /> },
   { path: PUBLIC_NAVIGATION.register, element: <RegisterPage /> },
 ];
 
-// ** Protected inside standard AppLayout (with sidebar + top nav) **
-const protectedStandardRoutes: RouteObject[] = [
-  { path: PRIVATE_NAVIGATION.dashboard, element: <DashboardPage /> },
-  { path: PRIVATE_NAVIGATION.profile, element: <StudentProfilePage /> },
-
-  // Student & Academic Tests
+// ══════════════════════════════════════════════════════════════════════════
+// 2. STUDENT ROLE DASHBOARD & ROUTES (/student/*)
+// ══════════════════════════════════════════════════════════════════════════
+const studentRoutes: RouteObject[] = [
   {
-    path: PRIVATE_NAVIGATION.availableExams,
+    path: '/student',
     element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.EXAM_VIEW, PERMISSIONS.EXAM_ATTEMPT]}
-        roles={[ROLES.STUDENT, ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <AvailableExamsPage />
+      <ProtectedRoute roles={[ROLES.STUDENT, ROLES.ADMIN, ROLES.SUPER_ADMIN]}>
+        <StudentLayout />
       </ProtectedRoute>
     ),
+    children: [
+      { path: 'dashboard', element: <StudentDashboardPage /> },
+      {
+        path: 'exams',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW, PERMISSIONS.EXAM_ATTEMPT]}>
+            <AvailableExamsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exams/:examId',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
+            <StudentExamDetailsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'notifications',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.STUDENT_VIEW]}>
+            <StudentNotificationsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'history',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.ATTEMPT_VIEW, PERMISSIONS.RESULT_VIEW]}>
+            <HistoryPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exam-calendar',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
+            <ExamCalendarPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'performance-trends',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.ANALYSIS_VIEW, PERMISSIONS.TRENDS_VIEW]}>
+            <PerformanceTrendsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'comparison',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.ANALYSIS_VIEW, PERMISSIONS.TRENDS_VIEW]}>
+            <StudentComparisonPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'mock-comparison',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.ANALYSIS_VIEW, PERMISSIONS.TRENDS_VIEW]}>
+            <StudentComparisonPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'leaderboard',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.RANK_VIEW]}>
+            <AdminLeaderboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      { path: 'profile', element: <StudentProfilePage /> },
+    ],
   },
+];
+
+// ══════════════════════════════════════════════════════════════════════════
+// 3. ADMIN ROLE DASHBOARD & ROUTES (/admin/*)
+// ══════════════════════════════════════════════════════════════════════════
+const adminRoutes: RouteObject[] = [
+  {
+    path: '/admin',
+    element: (
+      <ProtectedRoute roles={[ROLES.ADMIN]}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: 'dashboard', element: <AdminDashboardPage /> },
+      {
+        path: 'question-bank',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.QUESTION_VIEW]}>
+            <QuestionBankPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'question-bank/create',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.QUESTION_CREATE]}>
+            <CreateQuestionPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'question-bank/import',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.QUESTION_CREATE]}>
+            <ImportQuestionsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'question-bank/:id/edit',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.QUESTION_UPDATE]}>
+            <EditQuestionPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'languages',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.TRANSLATION_VIEW]}>
+            <LanguageManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exam-blueprints',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
+            <ExamBlueprintManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exam-scheduling',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_SCHEDULE, PERMISSIONS.EXAM_VIEW]}>
+            <ExamSchedulingManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exams',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
+            <ExamManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'strategy-rules',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.STRATEGY_VIEW]}>
+            <StrategyRuleManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'leaderboard',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.RANK_VIEW]}>
+            <AdminLeaderboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'historical-datasets',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.ANALYSIS_VIEW]}>
+            <HistoricalDatasetsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'control-center',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.APPROVAL_VIEW, PERMISSIONS.USER_VIEW]}>
+            <AdminControlCenterPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'approval-queue',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.APPROVAL_VIEW]}>
+            <AdminApprovalQueuePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'audit-logs-page',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.AUDIT_VIEW]}>
+            <AdminAuditLogsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'notifications-page',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.NOTIFICATION_VIEW]}>
+            <AdminNotificationsPage />
+          </ProtectedRoute>
+        ),
+      },
+      { path: 'profile', element: <StudentProfilePage /> },
+    ],
+  },
+];
+
+// ══════════════════════════════════════════════════════════════════════════
+// 4. SUPER ADMIN ROLE DASHBOARD & ROUTES (/super-admin/*)
+// ══════════════════════════════════════════════════════════════════════════
+const superAdminRoutes: RouteObject[] = [
+  {
+    path: '/super-admin',
+    element: (
+      <ProtectedRoute roles={[ROLES.SUPER_ADMIN]}>
+        <SuperAdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: 'dashboard', element: <SuperAdminDashboardPage /> },
+      { path: 'question-bank', element: <QuestionBankPage /> },
+      { path: 'question-bank/create', element: <CreateQuestionPage /> },
+      { path: 'question-bank/import', element: <ImportQuestionsPage /> },
+      { path: 'question-bank/:id/edit', element: <EditQuestionPage /> },
+      { path: 'languages', element: <LanguageManagementPage /> },
+      { path: 'exam-blueprints', element: <ExamBlueprintManagementPage /> },
+      { path: 'exams', element: <ExamManagementPage /> },
+      { path: 'exam-scheduling', element: <ExamSchedulingManagementPage /> },
+      { path: 'strategy-rules', element: <StrategyRuleManagementPage /> },
+      { path: 'leaderboard', element: <AdminLeaderboardPage /> },
+      { path: 'historical-datasets', element: <HistoricalDatasetsPage /> },
+      { path: 'control-center', element: <AdminControlCenterPage /> },
+      { path: 'approval-queue', element: <AdminApprovalQueuePage /> },
+      { path: 'audit-logs', element: <AdminAuditLogsPage /> },
+      { path: 'notifications', element: <AdminNotificationsPage /> },
+      { path: 'institution', element: <InstitutionDashboardPage /> },
+      { path: 'institution/batches', element: <BatchManagementPage /> },
+      { path: 'institution/bulk-upload', element: <BulkUploadPage /> },
+      { path: 'institution/reports', element: <ReportsPage /> },
+      { path: 'profile', element: <StudentProfilePage /> },
+    ],
+  },
+];
+
+// ══════════════════════════════════════════════════════════════════════════
+// 5. PARENT ROLE DASHBOARD & ROUTES (/parent/*)
+// ══════════════════════════════════════════════════════════════════════════
+const parentRoutes: RouteObject[] = [
+  {
+    path: '/parent',
+    element: (
+      <ProtectedRoute roles={[ROLES.PARENT, ROLES.ADMIN, ROLES.SUPER_ADMIN]}>
+        <ParentLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: 'dashboard', element: <ParentDashboardLandingPage /> },
+      {
+        path: 'ward-progress',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.PARENT_VIEW, PERMISSIONS.STUDENT_VIEW]}>
+            <ParentDashboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      { path: 'profile', element: <StudentProfilePage /> },
+    ],
+  },
+];
+
+// ══════════════════════════════════════════════════════════════════════════
+// 6. LEGACY / SHARED ROUTES (Backward Compatibility + Direct Links)
+// ══════════════════════════════════════════════════════════════════════════
+const legacyAndSharedRoutes: RouteObject[] = [
+  // Legacy /dashboard -> routes to role-specific dashboard
+  { path: PRIVATE_NAVIGATION.dashboard, element: <DashboardDispatcher /> },
+  { path: PRIVATE_NAVIGATION.profile, element: <DashboardDispatcher /> },
+
+  // Exam Result
   {
     path: PRIVATE_NAVIGATION.examResult,
     element: (
       <ProtectedRoute permissions={[PERMISSIONS.RESULT_VIEW]}>
-        <ExamResultPage />
+        <StudentLayout />
       </ProtectedRoute>
     ),
+    children: [{ path: '', element: <ExamResultPage /> }],
+  },
+
+  // Legacy fallback redirects
+  {
+    path: '/notifications',
+    element: <Navigate to={PRIVATE_NAVIGATION.studentNotifications} replace />,
   },
   {
-    path: PRIVATE_NAVIGATION.myHistory,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.ATTEMPT_VIEW, PERMISSIONS.RESULT_VIEW]}
-        roles={[ROLES.STUDENT, ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <HistoryPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: PRIVATE_NAVIGATION.performanceTrends,
-    element: (
-      <ProtectedRoute permissions={[PERMISSIONS.ANALYSIS_VIEW, PERMISSIONS.TRENDS_VIEW]}>
-        <PerformanceTrendsPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: PRIVATE_NAVIGATION.academicCalendar,
+    path: '/exams/:examId',
     element: (
       <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
-        <ExamCalendarPage />
+        <StudentLayout />
       </ProtectedRoute>
     ),
+    children: [{ path: '', element: <StudentExamDetailsPage /> }],
   },
-
-  // Institution & B2B
+  { path: '/exams', element: <Navigate to={PRIVATE_NAVIGATION.studentExams} replace /> },
+  { path: '/history', element: <Navigate to={PRIVATE_NAVIGATION.studentHistory} replace /> },
   {
-    path: PRIVATE_NAVIGATION.parentDashboard,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.PARENT_VIEW, PERMISSIONS.STUDENT_VIEW]}
-        roles={[ROLES.PARENT, ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <ParentDashboardPage />
-      </ProtectedRoute>
-    ),
+    path: '/performance-trends',
+    element: <Navigate to={PRIVATE_NAVIGATION.studentTrends} replace />,
   },
   {
-    path: PRIVATE_NAVIGATION.institutionDashboard,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.INSTITUTION_VIEW]}
-        roles={[ROLES.INSTITUTION_ADMIN, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.SALES_AGENT]}
-      >
-        <InstitutionDashboardPage />
-      </ProtectedRoute>
-    ),
+    path: '/comparison',
+    element: <Navigate to={PRIVATE_NAVIGATION.studentComparison} replace />,
   },
   {
-    path: PRIVATE_NAVIGATION.institutionBatches,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.BATCH_MANAGE, PERMISSIONS.INSTITUTION_VIEW]}
-        roles={[ROLES.INSTITUTION_ADMIN, ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <BatchManagementPage />
-      </ProtectedRoute>
-    ),
+    path: '/mock-comparison',
+    element: <Navigate to={PRIVATE_NAVIGATION.studentComparison} replace />,
   },
   {
-    path: PRIVATE_NAVIGATION.institutionBulkUpload,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.BULK_UPLOAD, PERMISSIONS.INSTITUTION_MANAGE]}
-        roles={[ROLES.INSTITUTION_ADMIN, ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <BulkUploadPage />
-      </ProtectedRoute>
-    ),
+    path: '/parent-dashboard',
+    element: <Navigate to={PRIVATE_NAVIGATION.parentWardProgress} replace />,
   },
   {
-    path: PRIVATE_NAVIGATION.institutionReports,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.REPORT_VIEW]}
-        roles={[ROLES.INSTITUTION_ADMIN, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.SALES_AGENT]}
-      >
-        <ReportsPage />
-      </ProtectedRoute>
-    ),
-  },
-
-  // Governance & Admin Control Center
-  {
-    path: PRIVATE_NAVIGATION.adminControlCenter,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.APPROVAL_VIEW, PERMISSIONS.USER_VIEW]}
-        roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <AdminControlCenterPage />
-      </ProtectedRoute>
-    ),
+    path: '/question-bank',
+    element: <Navigate to={PRIVATE_NAVIGATION.adminQuestionBank} replace />,
   },
   {
-    path: PRIVATE_NAVIGATION.adminApprovalQueue,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.APPROVAL_VIEW]}
-        roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <AdminApprovalQueuePage />
-      </ProtectedRoute>
-    ),
+    path: '/question-bank/create',
+    element: <Navigate to={PRIVATE_NAVIGATION.adminCreateQuestion} replace />,
   },
   {
-    path: PRIVATE_NAVIGATION.adminAuditLogs,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.AUDIT_VIEW]}
-        roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <AdminAuditLogsPage />
-      </ProtectedRoute>
-    ),
+    path: '/exam-blueprints',
+    element: <Navigate to={PRIVATE_NAVIGATION.adminExamBlueprints} replace />,
   },
   {
-    path: PRIVATE_NAVIGATION.adminNotifications,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.NOTIFICATION_VIEW]}
-        roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <AdminNotificationsPage />
-      </ProtectedRoute>
-    ),
-  },
-
-  // Question & Translation Management
-  {
-    path: PRIVATE_NAVIGATION.questionBank,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.QUESTION_VIEW]}
-        roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <QuestionBankPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: PRIVATE_NAVIGATION.createQuestion,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.QUESTION_CREATE]}
-        roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <CreateQuestionPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: PRIVATE_NAVIGATION.editQuestion,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.QUESTION_UPDATE]}
-        roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <EditQuestionPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: PRIVATE_NAVIGATION.languages,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.TRANSLATION_VIEW]}
-        roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <LanguageManagementPage />
-      </ProtectedRoute>
-    ),
-  },
-
-  // Exam Blueprint & Scheduling Studio
-  {
-    path: PRIVATE_NAVIGATION.examBlueprints,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}
-        roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <ExamBlueprintManagementPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: PRIVATE_NAVIGATION.examScheduling,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.EXAM_SCHEDULE, PERMISSIONS.EXAM_VIEW]}
-        roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <ExamSchedulingManagementPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: PRIVATE_NAVIGATION.strategyRules,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.STRATEGY_VIEW]}
-        roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <StrategyRuleManagementPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: PRIVATE_NAVIGATION.leaderboard,
-    element: (
-      <ProtectedRoute permissions={[PERMISSIONS.RANK_VIEW]}>
-        <AdminLeaderboardPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: PRIVATE_NAVIGATION.historicalDatasets,
-    element: (
-      <ProtectedRoute
-        permissions={[PERMISSIONS.ANALYSIS_VIEW]}
-        roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}
-      >
-        <HistoricalDatasetsPage />
-      </ProtectedRoute>
-    ),
+    path: '/exam-scheduling',
+    element: <Navigate to={PRIVATE_NAVIGATION.adminExamScheduling} replace />,
   },
 ];
 
-// ** Protected full-screen routes (distraction-free exam test portal) **
+// ══════════════════════════════════════════════════════════════════════════
+// 7. FULL-SCREEN DISTRACTION-FREE EXAM PORTAL
+// ══════════════════════════════════════════════════════════════════════════
 const protectedFullScreenRoutes: RouteObject[] = [
   {
     path: PRIVATE_NAVIGATION.examInterface,
@@ -357,6 +496,9 @@ const protectedFullScreenRoutes: RouteObject[] = [
   },
 ];
 
+// ══════════════════════════════════════════════════════════════════════════
+// 8. MASTER ROUTER
+// ══════════════════════════════════════════════════════════════════════════
 const router = createBrowserRouter([
   {
     path: PUBLIC_NAVIGATION.home,
@@ -372,7 +514,11 @@ const router = createBrowserRouter([
     element: <ProtectedRoute />,
     errorElement: <RouteErrorBoundary />,
     children: [
-      { element: <AppLayout />, children: protectedStandardRoutes },
+      ...studentRoutes,
+      ...adminRoutes,
+      ...superAdminRoutes,
+      ...parentRoutes,
+      ...legacyAndSharedRoutes,
       ...protectedFullScreenRoutes,
     ],
   },

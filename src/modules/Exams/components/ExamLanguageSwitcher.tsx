@@ -95,7 +95,7 @@ export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         disabled={isSwitching || isLoadingLanguages}
-        className="group flex items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/90 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:border-indigo-500/80 hover:bg-slate-800 transition-all shadow-sm focus:outline-none"
+        className="group flex items-center gap-2 rounded-xl border border-slate-300/60 bg-slate-100/90 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:border-indigo-500/80 hover:bg-slate-100 transition-all shadow-sm focus:outline-none"
         title="Switch exam language (preserves all chosen answers)"
       >
         <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400">
@@ -103,17 +103,17 @@ export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
         </div>
 
         <div className="flex flex-col text-left">
-          <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold leading-none">
+          <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold leading-none">
             Language
           </span>
-          <span className="text-xs font-bold text-white leading-tight">
+          <span className="text-xs font-bold text-slate-900 leading-tight">
             {currentLang ? `${currentLang.nativeName || currentLang.name}` : 'English'}
           </span>
         </div>
 
         <ChevronDown
           size={14}
-          className={`text-slate-400 transition-transform duration-200 group-hover:text-indigo-300 ${
+          className={`text-slate-500 transition-transform duration-200 group-hover:text-indigo-300 ${
             isOpen ? 'rotate-180' : ''
           }`}
         />
@@ -121,13 +121,13 @@ export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
 
       {/* Language Selection Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 origin-top-right rounded-2xl border border-slate-700 bg-slate-900/95 p-1.5 text-white shadow-2xl backdrop-blur-xl ring-1 ring-black ring-opacity-5 z-50 animate-in fade-in zoom-in-95 duration-100">
-          <div className="px-3 py-2 border-b border-slate-800 mb-1">
+        <div className="absolute right-0 mt-2 w-64 origin-top-right rounded-2xl border border-slate-300 bg-white/95 p-1.5 text-slate-900 shadow-2xl backdrop-blur-xl ring-1 ring-black ring-opacity-5 z-50 animate-in fade-in zoom-in-95 duration-100">
+          <div className="px-3 py-2 border-b border-slate-200 mb-1">
             <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-indigo-400 uppercase tracking-wider">
               <Sparkles size={12} />
               <span>Switch Exam Language</span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-0.5">
+            <p className="text-[10px] text-slate-500 mt-0.5">
               Instantly change display language. Your answers & timer stay 100% safe.
             </p>
           </div>
@@ -147,20 +147,20 @@ export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
                     className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-medium transition-colors text-left ${
                       isSelected
                         ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                     }`}
                   >
                     <div className="flex flex-col">
-                      <span className="font-bold text-white text-xs">
+                      <span className="font-bold text-slate-900 text-xs">
                         {lang.nativeName || lang.name}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-mono">
+                      <span className="text-[10px] text-slate-500 font-mono">
                         {lang.name} ({lang.code?.toUpperCase()})
                       </span>
                     </div>
 
                     {isSelected && (
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-white">
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-slate-900">
                         <Check size={12} />
                       </div>
                     )}
@@ -168,7 +168,7 @@ export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
                 );
               })
             ) : (
-              <div className="p-3 text-center text-xs text-slate-400">
+              <div className="p-3 text-center text-xs text-slate-500">
                 All 9 Regional Languages Available
               </div>
             )}

@@ -291,7 +291,11 @@ const ExamResultPage = () => {
       )}
 
       {activeTab === 'recommendations' && (
-        <SmartRecommendationsView recommendations={recommendations} />
+        <SmartRecommendationsView
+          recommendations={recommendations}
+          chapters={chapters}
+          subjects={subjects}
+        />
       )}
 
       {activeTab === 'review' && (

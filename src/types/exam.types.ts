@@ -267,6 +267,23 @@ export interface ChapterAnalyticsItem {
   status: PerformanceStatus;
 }
 
+export interface QuestionTimeExtreme {
+  questionId: string;
+  examQuestionId: string;
+  displayOrder: number;
+  timeSeconds: number;
+  sectionName: string;
+  isCorrect: boolean;
+}
+
+export interface SubjectBenchmarkComparison {
+  subjectName: string;
+  actualSeconds: number;
+  recommendedSeconds: number;
+  deltaPercent: number;
+  observation: string;
+}
+
 export interface TimeAnalyticsReport {
   totalExamDurationMinutes: number;
   totalTimeUsedSeconds: number;
@@ -278,6 +295,9 @@ export interface TimeAnalyticsReport {
   avgTimeOnWrongSeconds: number;
   timeOnUnattemptedQuestionsSeconds: number;
   avgTimeOnUnattemptedSeconds: number;
+  timeWastedSeconds: number;
+  fastestQuestion: QuestionTimeExtreme | null;
+  slowestQuestion: QuestionTimeExtreme | null;
   pacingMetrics: {
     rushedCount: number;
     optimalPaceCount: number;
@@ -288,6 +308,7 @@ export interface TimeAnalyticsReport {
     timeSpentSeconds: number;
     percentageOfTotalTime: number;
   }[];
+  subjectBenchmarkComparisons: SubjectBenchmarkComparison[];
 }
 
 export interface AttemptStrategyReport {
@@ -303,6 +324,9 @@ export interface AttemptStrategyReport {
   attemptRatio: number;
   accuracyVsSpeedProfile: string;
   strategicTakeaways: string[];
+  overAttemptingWarning: string | null;
+  underAttemptingWarning: string | null;
+  potentialScoreGainMessage: string;
 }
 
 export interface ActionableRecommendation {
@@ -865,6 +889,27 @@ export interface ParentRecentTestItem {
   percentile: number | null;
 }
 
+export interface RecommendedRevisionItem {
+  subjectName: string;
+  topicName: string;
+  reason: string;
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+  recommendedActions: string[];
+  estimatedHours: number;
+}
+
+export interface ParentTrendPoint {
+  attemptId: string;
+  examName: string;
+  date: string;
+  score: number;
+  maxScore: number;
+  percentage: number;
+  accuracy: number;
+  rank: number | null;
+  percentile: number | null;
+}
+
 export interface ParentDashboardResponse {
   student: ParentStudentInfo;
   summary: ParentDashboardSummary;
@@ -873,6 +918,8 @@ export interface ParentDashboardResponse {
   timeManagement: ParentTimeManagementReport;
   rank: ParentRankSummary;
   recommendations: ParentRecommendationItem[];
+  recommendedRevisions?: RecommendedRevisionItem[];
+  trendHistory?: ParentTrendPoint[];
   recentTests: ParentRecentTestItem[];
 }
 
@@ -1250,4 +1297,354 @@ export interface NotificationTemplateItem {
   body: string;
   version: number;
   isActive: boolean;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// IN-APP NOTIFICATION & EXAM DETAILS TYPES
+// ═══════════════════════════════════════════════════════════════════
+
+export type NotificationType =
+  | 'EXAM_SCHEDULED'
+  | 'EXAM_RESCHEDULED'
+  | 'EXAM_CANCELLED'
+  | 'EXAM_STARTING_SOON'
+  | 'EXAM_ACTIVATED'
+  | 'EXAM_RESULT_PUBLISHED'
+  | 'RESULT_AVAILABLE'
+  | 'REPORT_READY'
+  | 'SECURITY_ALERT'
+  | string;
+
+export interface NotificationData {
+  entityType?: 'EXAM' | 'RESULT' | 'ATTEMPT' | 'REPORT' | string;
+  entityId?: string;
+  action?: 'VIEW' | 'ATTEMPT' | 'DOWNLOAD' | string;
+  examTitle?: string;
+  examTarget?: string;
+  startTime?: string | null;
+  durationMinutes?: number;
+  totalQuestions?: number;
+  totalMarks?: number;
+  [key: string]: any;
+}
+
+export interface InAppNotification {
+  id: string;
+  userId?: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  data: NotificationData | null;
+  isRead: boolean;
+  readAt: string | null;
+  priority?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface NotificationListResponse {
+  data: InAppNotification[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface UnreadCountResponse {
+  count: number;
+}
+
+export interface ExamDetailsResponse {
+  exam: Exam & {
+    languages?: Array<{ id: string; name: string; code?: string; nativeName?: string }>;
+    schedule?: {
+      id: string;
+      startTime: string;
+      endTime: string;
+      timezone: string;
+      status: string;
+    } | null;
+  };
+  accessDetails: {
+    accessStatus:
+      | 'AVAILABLE'
+      | 'NOT_YET_STARTED'
+      | 'ENDED'
+      | 'ALREADY_ATTEMPTED'
+      | 'IN_PROGRESS'
+      | 'CANCELLED';
+    canStart: boolean;
+    message: string;
+    serverTime: string;
+    startTime: string | null;
+    endTime: string | null;
+    waitSeconds: number;
+    existingAttempt?: {
+      id: string;
+      status: string;
+      createdAt: string;
+      submittedAt: string | null;
+      resultId: string | null;
+    } | null;
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STUDENT DASHBOARD & COMPARISON TYPES
+// ═══════════════════════════════════════════════════════════════════
+
+export interface StudentDashboardResponse {
+  student: {
+    studentId: string;
+    studentCode?: string | null;
+    name: string;
+    class: string;
+    examTarget: string;
+    preferredLanguage: string;
+    email?: string;
+    avatar?: string | null;
+  };
+  nextExam: {
+    examId: string;
+    title: string;
+    examTarget: string;
+    durationMinutes: number;
+    totalQuestions: number;
+    totalMarks: number;
+    startTime: string | null;
+    endTime: string | null;
+    status: string;
+    canStart: boolean;
+    waitSeconds: number;
+    accessStatus: string;
+    message: string;
+  } | null;
+  activeAttempt: {
+    attemptId: string;
+    examId: string;
+    examTitle: string;
+    startedAt: string;
+    serverEndTime: string | null;
+    timeRemainingSeconds: number;
+    currentQuestionNumber: number;
+    totalQuestions: number;
+    answeredCount: number;
+  } | null;
+  latestPerformance: {
+    latestScore: number;
+    maxScore: number;
+    percentage: number;
+    accuracy: number;
+    totalAttempts: number;
+    timeSpentSeconds: number;
+    correctCount: number;
+    incorrectCount: number;
+    unattemptedCount: number;
+  } | null;
+  rank: {
+    rank: number | null;
+    totalCandidates: number | null;
+    percentile: number | null;
+    stateRank?: number | null;
+    categoryRank?: number | null;
+  } | null;
+  predictedRank: {
+    predictedRankMin: number | null;
+    predictedRankMax: number | null;
+    confidence: 'HIGH' | 'MEDIUM' | 'LOW' | null;
+    modelVersion?: string | null;
+    isEstimated: boolean;
+  } | null;
+  subjects: Array<{
+    subjectId: string;
+    subjectName: string;
+    score: number;
+    maxScore: number;
+    accuracy: number;
+    status: 'EXCELLENT' | 'GOOD' | 'WEAK';
+    trendDelta?: number | null;
+  }>;
+  trendSummary: {
+    scoreTrend: 'IMPROVING' | 'STABLE' | 'DECLINING' | 'INSUFFICIENT_DATA';
+    accuracyTrend: 'IMPROVING' | 'STABLE' | 'DECLINING' | 'INSUFFICIENT_DATA';
+    rankTrend: 'IMPROVING' | 'STABLE' | 'DECLINING' | 'INSUFFICIENT_DATA';
+    percentileTrend: 'IMPROVING' | 'STABLE' | 'DECLINING' | 'INSUFFICIENT_DATA';
+    recentScores: Array<{
+      mockLabel: string;
+      score: number;
+      accuracy: number;
+      rank: number | null;
+      percentile: number | null;
+    }>;
+  };
+  weakAreas: Array<{
+    subjectName: string;
+    chapterName: string;
+    accuracy: number;
+    totalQuestions: number;
+    status: 'WEAK' | 'NEEDS_FOCUS';
+  }>;
+  recommendations: Array<{
+    id: string;
+    type: 'WARNING' | 'OPPORTUNITY' | 'STRENGTH' | 'TIP';
+    message: string;
+    actionLabel?: string;
+    actionType?: 'PRACTICE' | 'VIEW_STRATEGY' | 'VIEW_ANALYSIS' | 'VIEW_EXAMS';
+    targetUrl?: string;
+  }>;
+  timeManagement: {
+    averageTimePerQuestionSeconds: number;
+    timeUtilizationPercentage: number;
+    totalTimeUsedSeconds: number;
+    status: 'OPTIMAL' | 'NEEDS_IMPROVEMENT' | 'SLOW';
+  } | null;
+  attemptStrategy: {
+    riskLevel: 'LOW' | 'MODERATE' | 'HIGH';
+    highRiskAttemptsCount: number;
+    avoidableNegativeMarks: number;
+    scoreGainOpportunity: number;
+  } | null;
+  recentResults: Array<{
+    attemptId: string;
+    examId: string;
+    examTitle: string;
+    examType: string;
+    date: string;
+    score: number;
+    maxScore: number;
+    percentage: number;
+    accuracy: number;
+    rank: number | null;
+    totalCandidates: number | null;
+    percentile: number | null;
+  }>;
+  unreadNotificationCount: number;
+}
+
+export interface ComparisonAttemptItem {
+  attemptId: string;
+  examId: string;
+  examName: string;
+  examType: string;
+  date: string;
+  score: number;
+  maximumScore: number;
+  percentage: number;
+  accuracy: number;
+  rank: number | null;
+  totalCandidates: number | null;
+  percentile: number | null;
+  timeUsedSeconds: number | null;
+  averageTimePerQuestionSeconds: number | null;
+  correctCount: number;
+  wrongCount: number;
+  unattemptedCount: number;
+  status: string;
+}
+
+export interface DetailedComparisonResponse {
+  summary: {
+    totalAttempts: number;
+    first: {
+      attemptId: string;
+      label: string;
+      date: string;
+      score: number;
+      maximumScore: number;
+      percentage: number;
+      accuracy: number;
+      rank: number | null;
+      percentile: number | null;
+      timeUsedSeconds: number | null;
+    } | null;
+    latest: {
+      attemptId: string;
+      label: string;
+      date: string;
+      score: number;
+      maximumScore: number;
+      percentage: number;
+      accuracy: number;
+      rank: number | null;
+      percentile: number | null;
+      timeUsedSeconds: number | null;
+    } | null;
+    best: {
+      attemptId: string;
+      label: string;
+      score: number;
+      percentage: number;
+      accuracy: number;
+      rank: number | null;
+      percentile: number | null;
+    } | null;
+    scoreDelta: number;
+    percentageDelta: number;
+    accuracyDelta: number;
+    rankDelta: number | null;
+    rankImprovement: number | null;
+    percentileDelta: number | null;
+    timeUsedDeltaSeconds: number | null;
+    trendDirections: {
+      scoreTrend: 'IMPROVING' | 'STABLE' | 'DECLINING' | 'INSUFFICIENT_DATA';
+      accuracyTrend: 'IMPROVING' | 'STABLE' | 'DECLINING' | 'INSUFFICIENT_DATA';
+      rankTrend: 'IMPROVING' | 'STABLE' | 'DECLINING' | 'INSUFFICIENT_DATA';
+      percentileTrend: 'IMPROVING' | 'STABLE' | 'DECLINING' | 'INSUFFICIENT_DATA';
+    };
+  };
+  attempts: ComparisonAttemptItem[];
+  scoreTrend: Array<{
+    attemptId: string;
+    label: string;
+    date: string;
+    score: number;
+    maxScore: number;
+    percentage: number;
+  }>;
+  accuracyTrend: Array<{
+    attemptId: string;
+    label: string;
+    date: string;
+    accuracy: number;
+  }>;
+  rankTrend: Array<{
+    attemptId: string;
+    label: string;
+    date: string;
+    rank: number | null;
+    totalCandidates: number | null;
+    percentile: number | null;
+  }>;
+  percentileTrend: Array<{
+    attemptId: string;
+    label: string;
+    date: string;
+    percentile: number | null;
+  }>;
+  timeTrend: Array<{
+    attemptId: string;
+    label: string;
+    date: string;
+    timeUsedMinutes: number | null;
+    averageTimePerQuestionSeconds: number | null;
+  }>;
+  subjectComparison: Array<{
+    subjectId: string;
+    subjectName: string;
+    mockAccuracies: Record<string, number>;
+    mockScores: Record<string, number>;
+    trendDelta?: number;
+  }>;
+  subjectTrends: Array<{
+    subjectId: string;
+    subjectName: string;
+    data: Array<{
+      mockLabel: string;
+      accuracy: number;
+      score: number;
+    }>;
+  }>;
+  insights: string[];
 }

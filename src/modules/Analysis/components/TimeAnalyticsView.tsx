@@ -1,5 +1,15 @@
 import React from 'react';
-import { Timer, CheckCircle2, AlertTriangle, HelpCircle, BarChart3 } from 'lucide-react';
+import {
+  Timer,
+  CheckCircle2,
+  AlertTriangle,
+  HelpCircle,
+  BarChart3,
+  Zap,
+  Clock,
+  TrendingDown,
+} from 'lucide-react';
+import cn from 'classnames';
 import type { TimeAnalyticsReport } from '@/types/exam.types';
 
 interface Props {
@@ -7,13 +17,45 @@ interface Props {
 }
 
 export const TimeAnalyticsView: React.FC<Props> = ({ timeAnalysis }) => {
-  const totalRushed = timeAnalysis.pacingMetrics.rushedCount;
-  const totalOptimal = timeAnalysis.pacingMetrics.optimalPaceCount;
-  const totalOverthought = timeAnalysis.pacingMetrics.overthoughtCount;
+  const totalRushed = timeAnalysis.pacingMetrics?.rushedCount || 0;
+  const totalOptimal = timeAnalysis.pacingMetrics?.optimalPaceCount || 0;
+  const totalOverthought = timeAnalysis.pacingMetrics?.overthoughtCount || 0;
   const totalPacedQuestions = totalRushed + totalOptimal + totalOverthought || 1;
+
+  const timeWastedMins = Math.round((timeAnalysis.timeWastedSeconds || 0) / 60);
 
   return (
     <div className="space-y-6">
+      {/* ── Time Wasted Alert Callout Banner ──────────────────────── */}
+      {timeAnalysis.timeWastedSeconds > 0 && (
+        <div className="rounded-3xl border border-amber-300/80 bg-gradient-to-r from-amber-500/10 via-amber-50 to-orange-50 p-5 md:p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-amber-500/20 border border-amber-300 flex items-center justify-center text-amber-700 shrink-0">
+              <TrendingDown size={24} />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-amber-950 uppercase tracking-wide">
+                Time Investment Efficiency Alert
+              </h4>
+              <p className="text-xs text-amber-900/90 mt-0.5 max-w-xl leading-relaxed">
+                You spent ~
+                <strong>
+                  {timeWastedMins} minutes ({timeAnalysis.timeWastedSeconds}s)
+                </strong>{' '}
+                on questions that were answered incorrectly or skipped. Improving your
+                decision-speed will free up crucial minutes for high-scoring questions.
+              </p>
+            </div>
+          </div>
+          <div className="rounded-2xl bg-amber-600/10 border border-amber-300 px-4 py-2 text-center shrink-0 w-full sm:w-auto">
+            <span className="text-xl font-black text-amber-900 block">{timeWastedMins}m</span>
+            <span className="text-[10px] font-bold text-amber-700 uppercase">
+              Unproductive Time
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* ── 3 Outcome Time Cards ─────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-white p-6 shadow-sm">
@@ -70,6 +112,77 @@ export const TimeAnalyticsView: React.FC<Props> = ({ timeAnalysis }) => {
           </p>
         </div>
       </div>
+
+      {/* ── Speed Extremes: Fastest & Slowest Questions ─────────── */}
+      {(timeAnalysis.fastestQuestion || timeAnalysis.slowestQuestion) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {timeAnalysis.fastestQuestion && (
+            <div className="rounded-3xl border border-teal-200 bg-gradient-to-br from-teal-500/10 via-teal-50/40 to-white p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-teal-800 font-bold text-xs uppercase tracking-wider">
+                  <Zap size={16} className="text-teal-600" />
+                  <span>Fastest Answered Question</span>
+                </div>
+                <span
+                  className={cn(
+                    'rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide border',
+                    timeAnalysis.fastestQuestion.isCorrect
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      : 'bg-rose-100 text-rose-800 border-rose-300',
+                  )}
+                >
+                  {timeAnalysis.fastestQuestion.isCorrect ? 'Correct ✓' : 'Wrong ✗'}
+                </span>
+              </div>
+              <div className="mt-3 flex items-baseline gap-3">
+                <span className="text-3xl font-black text-slate-900">
+                  {timeAnalysis.fastestQuestion.timeSeconds}s
+                </span>
+                <span className="text-xs font-semibold text-slate-500">
+                  Question #{timeAnalysis.fastestQuestion.displayOrder} (
+                  {timeAnalysis.fastestQuestion.sectionName})
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-slate-600 leading-relaxed">
+                Quickest question attempt recorded during this test session.
+              </p>
+            </div>
+          )}
+
+          {timeAnalysis.slowestQuestion && (
+            <div className="rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-500/10 via-indigo-50/40 to-white p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-indigo-800 font-bold text-xs uppercase tracking-wider">
+                  <Clock size={16} className="text-indigo-600" />
+                  <span>Slowest Bottleneck Question</span>
+                </div>
+                <span
+                  className={cn(
+                    'rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide border',
+                    timeAnalysis.slowestQuestion.isCorrect
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      : 'bg-rose-100 text-rose-800 border-rose-300',
+                  )}
+                >
+                  {timeAnalysis.slowestQuestion.isCorrect ? 'Correct ✓' : 'Wrong ✗'}
+                </span>
+              </div>
+              <div className="mt-3 flex items-baseline gap-3">
+                <span className="text-3xl font-black text-slate-900">
+                  {timeAnalysis.slowestQuestion.timeSeconds}s
+                </span>
+                <span className="text-xs font-semibold text-slate-500">
+                  Question #{timeAnalysis.slowestQuestion.displayOrder} (
+                  {timeAnalysis.slowestQuestion.sectionName})
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-slate-600 leading-relaxed">
+                Longest question attempt. Evaluate whether time invested yielded positive marks.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Pacing Distribution Visual Bar ──────────────────────── */}
       <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
@@ -128,32 +241,79 @@ export const TimeAnalyticsView: React.FC<Props> = ({ timeAnalysis }) => {
         </div>
       </div>
 
-      {/* ── Subject Time Allocation Chart ───────────────────────── */}
+      {/* ── Subject Time Allocation & Benchmark Comparison ───────── */}
       <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
         <h3 className="text-base font-bold text-slate-900 mb-2 flex items-center gap-2">
           <BarChart3 size={18} className="text-indigo-600" />
-          Subject-wise Time Allocation
+          Subject-wise Time Allocation vs Recommended Benchmark
         </h3>
         <p className="text-xs text-slate-500 mb-6">
-          How your total test time of {Math.round(timeAnalysis.totalTimeUsedSeconds / 60)} minutes
-          was distributed across subjects.
+          Comparison between your actual time spent and the ideal recommended time distribution.
         </p>
 
-        <div className="space-y-4">
-          {timeAnalysis.subjectTimeDistribution.map((item) => (
-            <div key={item.subjectName} className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-slate-800">{item.subjectName}</span>
-                <span className="text-slate-600">
-                  {Math.round(item.timeSpentSeconds / 60)}m ({item.percentageOfTotalTime}%)
-                </span>
+        <div className="space-y-5">
+          {(timeAnalysis.subjectBenchmarkComparisons?.length
+            ? timeAnalysis.subjectBenchmarkComparisons
+            : timeAnalysis.subjectTimeDistribution.map((item) => ({
+                subjectName: item.subjectName,
+                actualSeconds: item.timeSpentSeconds,
+                recommendedSeconds: item.timeSpentSeconds,
+                deltaPercent: 0,
+                observation: `${Math.round(item.timeSpentSeconds / 60)}m spent (${item.percentageOfTotalTime}%)`,
+              }))
+          ).map((item) => (
+            <div
+              key={item.subjectName}
+              className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 space-y-2"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-slate-900">{item.subjectName}</span>
+                  {item.deltaPercent !== 0 && (
+                    <span
+                      className={cn(
+                        'rounded-full px-2 py-0.5 text-[10px] font-bold border',
+                        item.deltaPercent > 20
+                          ? 'bg-amber-100 text-amber-800 border-amber-300'
+                          : item.deltaPercent < -20
+                            ? 'bg-blue-100 text-blue-800 border-blue-300'
+                            : 'bg-emerald-100 text-emerald-800 border-emerald-300',
+                      )}
+                    >
+                      {item.deltaPercent > 0
+                        ? `+${item.deltaPercent}% time`
+                        : `${item.deltaPercent}% time`}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-slate-600 font-semibold">
+                  Actual:{' '}
+                  <strong className="text-slate-900">{Math.round(item.actualSeconds / 60)}m</strong>{' '}
+                  / Recommended: ~{Math.round(item.recommendedSeconds / 60)}m
+                </div>
               </div>
-              <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
+
+              <div className="h-2 w-full rounded-full bg-slate-200/80 overflow-hidden">
                 <div
-                  className="h-full bg-indigo-600 rounded-full transition-all duration-700"
-                  style={{ width: `${Math.min(100, Math.max(0, item.percentageOfTotalTime))}%` }}
+                  className={cn(
+                    'h-full rounded-full transition-all duration-700',
+                    item.deltaPercent > 20 ? 'bg-amber-500' : 'bg-indigo-600',
+                  )}
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.max(
+                        5,
+                        timeAnalysis.totalTimeUsedSeconds > 0
+                          ? (item.actualSeconds / timeAnalysis.totalTimeUsedSeconds) * 100
+                          : 33,
+                      ),
+                    )}%`,
+                  }}
                 />
               </div>
+
+              <p className="text-[11px] text-slate-500 leading-normal">{item.observation}</p>
             </div>
           ))}
         </div>

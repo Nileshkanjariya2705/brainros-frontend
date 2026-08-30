@@ -1,72 +1,40 @@
 /**
- * Centralized Token Storage with memory cache & persistent dual fallback.
- * Manages Access Token and Refresh Token across page reloads and cross-origin sessions.
+ * Token Storage Helper.
+ * Notice: Authentication now uses secure HTTP-only cookies managed by the browser.
+ * This helper provides safe cleanup routines to purge any legacy storage entries.
  */
 
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 
-let memoryAccessToken: string | null = null;
-let memoryRefreshToken: string | null = null;
-
 export const tokenStorage = {
   get(): string | null {
-    if (memoryAccessToken) return memoryAccessToken;
-    try {
-      const stored = localStorage.getItem(ACCESS_TOKEN_KEY);
-      if (stored) {
-        memoryAccessToken = stored;
-        return stored;
-      }
-    } catch (_error) {
-      return null;
-    }
     return null;
   },
 
-  set(token: string): void {
-    memoryAccessToken = token;
-    try {
-      localStorage.setItem(ACCESS_TOKEN_KEY, token);
-    } catch (_error) {
-      // Ignore storage errors in restricted contexts
-    }
+  set(_token: string): void {
+    // No-op: Tokens are stored exclusively in HttpOnly cookies
   },
 
   getRefreshToken(): string | null {
-    if (memoryRefreshToken) return memoryRefreshToken;
-    try {
-      const stored = localStorage.getItem(REFRESH_TOKEN_KEY);
-      if (stored) {
-        memoryRefreshToken = stored;
-        return stored;
-      }
-    } catch (_error) {
-      return null;
-    }
     return null;
   },
 
-  setRefreshToken(token: string): void {
-    memoryRefreshToken = token;
-    try {
-      if (token) {
-        localStorage.setItem(REFRESH_TOKEN_KEY, token);
-      }
-    } catch (_error) {
-      // Ignore storage errors in restricted contexts
-    }
+  setRefreshToken(_token: string): void {
+    // No-op: Tokens are stored exclusively in HttpOnly cookies
   },
 
   clear(): void {
-    memoryAccessToken = null;
-    memoryRefreshToken = null;
     try {
       localStorage.removeItem(ACCESS_TOKEN_KEY);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
       sessionStorage.removeItem(ACCESS_TOKEN_KEY);
       sessionStorage.removeItem(REFRESH_TOKEN_KEY);
-    } catch (_error) {
+      sessionStorage.removeItem('accessToken');
+      sessionStorage.removeItem('refreshToken');
+    } catch {
       // Ignore storage errors in restricted contexts
     }
   },

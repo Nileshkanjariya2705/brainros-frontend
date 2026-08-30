@@ -6,6 +6,7 @@ import { useGetLanguagesAPI } from '@/modules/RegionalLanguage/services/regional
 import type { ExamVersionItem, ExamVersionQuestionSnapshot } from '../types/examGenerator.types';
 import type { SupportedLanguage } from '@/modules/RegionalLanguage/types/regionalLanguage.types';
 import Button from '@/components/ui/Button';
+import { formatSubjectDisplayName } from '@/constants/subjects.constant';
 
 interface ExamVersionQuestionsModalProps {
   version: ExamVersionItem | null;
@@ -141,7 +142,7 @@ export const ExamVersionQuestionsModal: React.FC<ExamVersionQuestionsModalProps>
 
                       {q.subjectName && (
                         <span className="rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700 border border-indigo-100">
-                          {q.subjectName}
+                          {formatSubjectDisplayName(q.subjectName)}
                         </span>
                       )}
 

@@ -9,6 +9,7 @@ import type {
   GeneratedVersionResponse,
 } from '../types/examGenerator.types';
 import Button from '@/components/ui/Button';
+import { formatSubjectDisplayName } from '@/constants/subjects.constant';
 
 interface BlueprintValidationModalProps {
   blueprintId: string;
@@ -191,7 +192,7 @@ export const BlueprintValidationModal: React.FC<BlueprintValidationModalProps> =
                         key={subj}
                         className="flex items-center gap-2 rounded-xl bg-slate-100 border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-800"
                       >
-                        <span>{subj}</span>
+                        <span>{formatSubjectDisplayName(subj)}</span>
                         <span className="rounded-lg bg-white px-2 py-0.5 font-bold font-mono text-indigo-600 shadow-sm">
                           {count} Qs
                         </span>

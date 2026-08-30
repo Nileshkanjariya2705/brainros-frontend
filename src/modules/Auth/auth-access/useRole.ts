@@ -51,7 +51,7 @@ export const useRole = () => {
   );
 
   const isSuperAdmin = userRoles.includes(ROLES.SUPER_ADMIN);
-  const isAdmin = userRoles.includes(ROLES.ADMIN) || isSuperAdmin;
+  const isAdmin = userRoles.includes(ROLES.ADMIN);
   const isInstitutionAdmin = userRoles.includes(ROLES.INSTITUTION_ADMIN);
   const isSalesAgent = userRoles.includes(ROLES.SALES_AGENT);
   const isParent = userRoles.includes(ROLES.PARENT);

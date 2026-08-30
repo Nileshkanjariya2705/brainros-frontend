@@ -22,7 +22,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from '@/redux/store';
 import { setUserData } from '@/redux/slices/authSlice';
 import { Axios } from '@/base-axios';
-import { tokenStorage } from '@/utils/token';
 import {
   useRole,
   filterAccessibleMenuGroups,
@@ -42,12 +41,10 @@ const AppLayout = () => {
 
   const { roles, activeRole, activeRoleMeta, hasMultipleRoles, switchActiveRole } = useRole();
 
-  // Sync user profile & permissions on mount if token is present
+  // Sync user profile & permissions on mount if user is authenticated
   useEffect(() => {
     let active = true;
     const fetchUser = async () => {
-      const token = tokenStorage.get();
-      if (!token) return;
       try {
         const res = await Axios.get('/auth/me');
         if (active && res.data) {

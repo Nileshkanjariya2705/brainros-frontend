@@ -35,7 +35,7 @@ describe('authSlice', () => {
     );
 
     expect(next.isAuthenticated).toBe(true);
-    expect(next.token).toBe('jwt-123');
+    expect(next.token).toBeNull();
     expect(next.user?.email).toBe('v@x.com');
     expect(next.roles).toContain('STUDENT');
     expect(next.activeRole).toBe('STUDENT');

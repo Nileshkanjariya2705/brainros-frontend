@@ -1,10 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
-import axios from 'axios';
 import { useAppDispatch } from '@/redux/store';
 import { setCredentials, logout, setInitializing } from '@/redux/slices/authSlice';
-import { setAuthInterceptorCallbacks } from '@/base-axios';
-import { tokenStorage } from '@/utils/token';
-import { API_URL } from '@config';
+import { setAuthInterceptorCallbacks, Axios } from '@/base-axios';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -13,7 +10,7 @@ interface AuthProviderProps {
 /**
  * Enterprise AuthProvider:
  * 1. Synchronizes Redux auth state with Axios interceptor callbacks.
- * 2. Performs initial session bootstrap on app startup via HttpOnly refresh cookie + storage fallback.
+ * 2. Performs initial session bootstrap on app startup via GET /auth/me (auto-refreshed via HttpOnly cookie if needed).
  * 3. Prevents login page flicker by maintaining `isInitializing: true` until verified.
  */
 export const AuthProvider = ({ children }: AuthProviderProps) => {
@@ -23,40 +20,31 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // 1. Wire Redux store synchronization with Axios interceptor
     setAuthInterceptorCallbacks({
       onSyncStore: (payload) => {
-        dispatch(setCredentials(payload));
+        if (payload?.user) {
+          dispatch(setCredentials({ user: payload.user }));
+        }
       },
       onLogout: () => {
         dispatch(logout());
       },
     });
 
-    // 2. Initial Session Bootstrap: Call /auth/refresh with HttpOnly cookie & fallback header
+    // 2. Initial Session Bootstrap: Call GET /auth/me with HttpOnly cookies
     let active = true;
-    const storedRefreshToken = tokenStorage.getRefreshToken();
 
-    axios
-      .post(
-        `${API_URL}/auth/refresh`,
-        storedRefreshToken ? { refreshToken: storedRefreshToken } : {},
-        {
-          withCredentials: true,
-          headers: {
-            'Content-Type': 'application/json',
-            ...(storedRefreshToken ? { 'x-refresh-token': storedRefreshToken } : {}),
-          },
-        },
-      )
+    Axios.get('/auth/me')
       .then((res) => {
         if (!active) return;
         const payload = res.data?.data || res.data;
-        if (payload?.accessToken) {
-          dispatch(setCredentials(payload));
+        if (payload) {
+          dispatch(setCredentials({ user: payload }));
         } else {
           dispatch(setInitializing(false));
         }
       })
       .catch(() => {
         if (!active) return;
+        dispatch(logout());
         dispatch(setInitializing(false));
       });
 

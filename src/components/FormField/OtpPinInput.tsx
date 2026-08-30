@@ -115,11 +115,11 @@ export const OtpPinInput: React.FC<OtpPinInputProps> = ({
               onFocus={(e) => e.target.select()}
               className={`h-12 w-10 sm:h-14 sm:w-12 text-center text-xl sm:text-2xl font-black font-mono rounded-xl border transition-all duration-150 outline-none select-none ${
                 error
-                  ? 'border-red-500/80 bg-red-500/10 text-red-300 ring-1 ring-red-500/30'
+                  ? 'border-red-500 bg-red-50 text-red-600 ring-1 ring-red-500/30'
                   : isFilled
-                    ? 'border-indigo-500/80 bg-indigo-500/15 text-white shadow-lg shadow-indigo-500/20'
-                    : 'border-white/15 bg-white/5 text-slate-200 hover:border-white/25 hover:bg-white/10'
-              } focus:border-indigo-400 focus:bg-indigo-600/20 focus:text-white focus:ring-2 focus:ring-indigo-500/40 focus:scale-105`}
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-900 shadow-md shadow-indigo-500/20'
+                    : 'border-slate-300 bg-slate-50 text-slate-900 hover:border-slate-400 hover:bg-slate-100'
+              } focus:border-indigo-500 focus:bg-white focus:text-indigo-900 focus:ring-2 focus:ring-indigo-500/40 focus:scale-105`}
             />
           );
         })}

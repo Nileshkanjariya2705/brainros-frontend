@@ -42,6 +42,7 @@ export interface ExamBlueprintItem {
   totalQuestions: number;
   version: number;
   isActive: boolean;
+  isSystem?: boolean;
   rules: BlueprintRuleItem[];
   createdBy?: { id: string; email: string };
   _count?: { generatedVersions: number };

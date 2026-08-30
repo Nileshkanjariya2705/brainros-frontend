@@ -24,28 +24,28 @@ export const PublicNavbar: React.FC = () => {
   const isHomePage = location.pathname === PUBLIC_NAVIGATION.home;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/8 bg-[#090b14]/85 backdrop-blur-xl transition-all">
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/85 backdrop-blur-xl transition-all">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Left: Brand Identity */}
         <Link to="/" className="flex items-center gap-3 group">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-transform">
-            <BrainCircuit className="text-white" size={22} />
+            <BrainCircuit className="text-slate-900" size={22} />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-lg font-black tracking-tight text-white">BRAINROS</span>
+              <span className="text-lg font-black tracking-tight text-slate-900">BRAINROS</span>
               <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
                 MOCK LMS
               </span>
             </div>
-            <span className="block text-[10px] text-slate-400 tracking-wider font-medium hidden sm:block">
+            <span className="block text-[10px] text-slate-500 tracking-wider font-medium hidden sm:block">
               Multilingual Exam & Rank Engine
             </span>
           </div>
         </Link>
 
         {/* Center: Navigation Links */}
-        <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-300">
+        <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-600">
           <Link
             to={isHomePage ? '#test-series' : '/#test-series'}
             className="hover:text-indigo-400 transition-colors"
@@ -78,7 +78,7 @@ export const PublicNavbar: React.FC = () => {
           {isAuthenticated ? (
             <Link
               to={PRIVATE_NAVIGATION.dashboard}
-              className="flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-95"
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-xs font-bold text-slate-900 shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-95"
             >
               <GraduationCap size={15} />
               <span>Go to Dashboard</span>
@@ -89,8 +89,8 @@ export const PublicNavbar: React.FC = () => {
                 to={PUBLIC_NAVIGATION.login}
                 className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
                   isLoginPage
-                    ? 'bg-white/15 text-white border border-white/20 shadow-inner'
-                    : 'border border-white/10 bg-white/5 hover:bg-white/10 text-slate-200'
+                    ? 'bg-white/15 text-slate-900 border border-white/20 shadow-inner'
+                    : 'border border-slate-200 bg-black/5 hover:bg-black/10 text-slate-800'
                 }`}
               >
                 <LogIn size={13} className="text-indigo-400" />
@@ -98,7 +98,7 @@ export const PublicNavbar: React.FC = () => {
               </Link>
               <Link
                 to={PUBLIC_NAVIGATION.register}
-                className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white shadow-lg transition-all hover:scale-[1.02] active:scale-95 ${
+                className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-slate-900 shadow-lg transition-all hover:scale-[1.02] active:scale-95 ${
                   isRegisterPage
                     ? 'bg-gradient-to-r from-indigo-500 to-purple-500 shadow-indigo-500/30 ring-2 ring-indigo-400/40'
                     : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-indigo-500/25'

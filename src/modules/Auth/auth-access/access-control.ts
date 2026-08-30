@@ -101,16 +101,19 @@ export const getDefaultLandingRoute = (userContext: UserAuthContext | null | und
 
   switch (activeRole) {
     case ROLES.SUPER_ADMIN:
+      return PRIVATE_NAVIGATION.superAdminDashboard;
     case ROLES.ADMIN:
-      return PRIVATE_NAVIGATION.dashboard;
-    case ROLES.INSTITUTION_ADMIN:
-      return PRIVATE_NAVIGATION.institutionDashboard || PRIVATE_NAVIGATION.dashboard;
-    case ROLES.SALES_AGENT:
-      return PRIVATE_NAVIGATION.dashboard;
+      return PRIVATE_NAVIGATION.adminDashboard;
     case ROLES.PARENT:
-      return PRIVATE_NAVIGATION.parentDashboard || PRIVATE_NAVIGATION.dashboard;
+      return PRIVATE_NAVIGATION.parentDashboardHome;
+    case ROLES.INSTITUTION_ADMIN:
+      return (
+        PRIVATE_NAVIGATION.superAdminInstitutionDashboard || PRIVATE_NAVIGATION.studentDashboard
+      );
+    case ROLES.SALES_AGENT:
+      return PRIVATE_NAVIGATION.superAdminDashboard;
     case ROLES.STUDENT:
     default:
-      return PRIVATE_NAVIGATION.dashboard;
+      return PRIVATE_NAVIGATION.studentDashboard;
   }
 };

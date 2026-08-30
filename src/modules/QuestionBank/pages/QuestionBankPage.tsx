@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, FileQuestion, ChevronLeft, ChevronRight, Database } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Plus, FileQuestion, ChevronLeft, ChevronRight, Database, UploadCloud } from 'lucide-react';
 import {
   useGetQuestionsAPI,
   useGetQuestionStatsAPI,
@@ -175,13 +175,16 @@ const QuestionBankPage: React.FC = () => {
     handleFilterChange({ status: status as any, page: 1 });
   };
 
+  const location = useLocation();
+  const routePrefix = location.pathname.startsWith('/super-admin') ? '/super-admin' : '/admin';
+
   const handleInspect = (q: QuestionItem) => {
     setSelectedQuestion(q);
     setIsDetailsModalOpen(true);
   };
 
   const handleEdit = (q: QuestionItem) => {
-    navigate(`/question-bank/${q.id}/edit`);
+    navigate(`${routePrefix}/question-bank/${q.id}/edit`);
   };
 
   const handleSubmitQuestion = async (q: QuestionItem) => {
@@ -241,10 +244,19 @@ const QuestionBankPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Create Question CTA */}
+        {/* Action CTAs */}
         <div className="flex items-center gap-2.5">
           <Button
-            onClick={() => navigate('/question-bank/create')}
+            variant="outline"
+            onClick={() => navigate(`${routePrefix}/question-bank/import`)}
+            className="flex items-center gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+          >
+            <UploadCloud size={16} />
+            <span>Bulk Import (CSV/Excel)</span>
+          </Button>
+
+          <Button
+            onClick={() => navigate(`${routePrefix}/question-bank/create`)}
             className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200"
           >
             <Plus size={16} />

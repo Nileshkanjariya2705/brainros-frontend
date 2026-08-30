@@ -60,6 +60,49 @@ export const useGetAvailableExamsAPI = () => {
   return { getAvailableExamsAPI, ...state };
 };
 
+export const useGetExamDetailsAPI = () => {
+  const [get, state] = useAxiosGet();
+  const getExamDetailsAPI = useCallback(
+    (examId: string) =>
+      get<{
+        exam: Exam & {
+          languages?: Array<{ id: string; name: string; code?: string; nativeName?: string }>;
+          schedule?: {
+            id: string;
+            startTime: string;
+            endTime: string;
+            timezone: string;
+            status: string;
+          } | null;
+        };
+        accessDetails: {
+          accessStatus:
+            | 'AVAILABLE'
+            | 'NOT_YET_STARTED'
+            | 'ENDED'
+            | 'ALREADY_ATTEMPTED'
+            | 'IN_PROGRESS'
+            | 'CANCELLED';
+          canStart: boolean;
+          message: string;
+          serverTime: string;
+          startTime: string | null;
+          endTime: string | null;
+          waitSeconds: number;
+          existingAttempt?: {
+            id: string;
+            status: string;
+            createdAt: string;
+            submittedAt: string | null;
+            resultId: string | null;
+          } | null;
+        };
+      }>(`/exams/${examId}/details`),
+    [get],
+  );
+  return { getExamDetailsAPI, ...state };
+};
+
 export const useStartAttemptAPI = () => {
   const [post, state] = useAxiosPost();
   const startAttemptAPI = useCallback(

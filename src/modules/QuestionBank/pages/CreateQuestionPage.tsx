@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -26,14 +26,20 @@ import type { CreateQuestionPayload, NamedEntity } from '../types/questionBank.t
 import { QuestionDifficultyEnum, QuestionTypeEnum } from '../types/questionBank.types';
 import { QuestionPreviewCard } from '../components/QuestionPreviewCard';
 import Button from '@/components/ui/Button';
+import { isAllowedSubject, formatSubjectDisplayName } from '@/constants/subjects.constant';
 
 const CreateQuestionPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const routePrefix = location.pathname.startsWith('/super-admin') ? '/super-admin' : '/admin';
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // ─── Hierarchy State ──────────────────────────────────────────
   const [subjects, setSubjects] = useState<NamedEntity[]>([]);
+  const [allSubjects, setAllSubjects] = useState<any[]>([]);
+  const [examTargets, setExamTargets] = useState<NamedEntity[]>([]);
+  const [selectedTargetId, setSelectedTargetId] = useState<string>('');
   const [chapters, setChapters] = useState<NamedEntity[]>([]);
   const [topics, setTopics] = useState<NamedEntity[]>([]);
   const [subTopics, setSubTopics] = useState<NamedEntity[]>([]);
@@ -92,34 +98,83 @@ const CreateQuestionPage: React.FC = () => {
     },
   });
 
-  // Active translation tab in step 2
-  const [activeTranslationIndex, setActiveTranslationIndex] = useState(0);
-
-  // ─── Load Languages ──────────────────────────────────────────
+  // ─── Load Languages (Default: English) ────────────────────────
   useEffect(() => {
-    getLanguagesAPI().then(({ data }) => {
-      if (data && data.length > 0) {
-        setLanguages(data);
-        const defaultLang = (data as any[]).find((l) => l.isDefault || l.code === 'en') || data[0];
+    getLanguagesAPI().then((res) => {
+      const raw = res?.data;
+      const list = Array.isArray(raw)
+        ? raw
+        : Array.isArray((raw as any)?.data)
+          ? (raw as any).data
+          : [];
+      if (list && list.length > 0) {
+        setLanguages(list);
+        const englishLang =
+          list.find(
+            (l: any) => l.code === 'en' || l.name?.toUpperCase() === 'ENGLISH' || l.isDefault,
+          ) || list[0];
+
         setFormData((prev) => ({
           ...prev,
-          defaultLanguageId: prev.defaultLanguageId || defaultLang.id,
-          translations: prev.translations.map((t, idx) =>
-            idx === 0 && !t.languageId ? { ...t, languageId: defaultLang.id } : t,
-          ),
+          defaultLanguageId: englishLang.id,
+          translations: [
+            {
+              languageId: englishLang.id,
+              questionText: prev.translations[0]?.questionText || '',
+              passageText: prev.translations[0]?.passageText || '',
+              assertionText: prev.translations[0]?.assertionText || '',
+              reasonText: prev.translations[0]?.reasonText || '',
+              explanation: prev.translations[0]?.explanation || '',
+            },
+          ],
         }));
       }
     });
   }, [getLanguagesAPI]);
 
-  // ─── Load Hierarchy Cascades ──────────────────────────────────
+  // ─── Load Hierarchy Cascades (Filtered for Physics, Chemistry, Mathematics, Biology) ──
   useEffect(() => {
-    getSubjectsAPI().then(({ data }) => setSubjects(data || []));
+    getSubjectsAPI().then((res) => {
+      const raw = res?.data;
+      const list = Array.isArray(raw)
+        ? raw
+        : Array.isArray((raw as any)?.data)
+          ? (raw as any).data
+          : [];
+      const filtered = list.filter((s: any) => isAllowedSubject(s.name));
+
+      setAllSubjects(filtered);
+
+      const uniqueTargetsMap = new Map();
+      filtered.forEach((s: any) => {
+        if (s.examTarget) {
+          uniqueTargetsMap.set(s.examTarget.id, s.examTarget);
+        }
+      });
+      setExamTargets(Array.from(uniqueTargetsMap.values()));
+    });
   }, [getSubjectsAPI]);
 
   useEffect(() => {
+    if (selectedTargetId) {
+      const filtered = allSubjects.filter((s) => s.examTarget?.id === selectedTargetId);
+      setSubjects(filtered);
+    } else {
+      setSubjects([]);
+    }
+  }, [selectedTargetId, allSubjects]);
+
+  useEffect(() => {
     if (formData.subjectId) {
-      getChaptersAPI(formData.subjectId).then(({ data }) => setChapters(data || []));
+      getChaptersAPI(formData.subjectId).then((res) => {
+        const raw = res?.data;
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray((raw as any)?.data)
+            ? (raw as any).data
+            : [];
+        setChapters(list);
+      });
     } else {
       setChapters([]);
     }
@@ -127,7 +182,15 @@ const CreateQuestionPage: React.FC = () => {
 
   useEffect(() => {
     if (formData.chapterId) {
-      getTopicsAPI(formData.chapterId).then(({ data }) => setTopics(data || []));
+      getTopicsAPI(formData.chapterId).then((res) => {
+        const raw = res?.data;
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray((raw as any)?.data)
+            ? (raw as any).data
+            : [];
+        setTopics(list);
+      });
     } else {
       setTopics([]);
     }
@@ -135,7 +198,15 @@ const CreateQuestionPage: React.FC = () => {
 
   useEffect(() => {
     if (formData.topicId) {
-      getSubTopicsAPI(formData.topicId).then(({ data }) => setSubTopics(data || []));
+      getSubTopicsAPI(formData.topicId).then((res) => {
+        const raw = res?.data;
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray((raw as any)?.data)
+            ? (raw as any).data
+            : [];
+        setSubTopics(list);
+      });
     } else {
       setSubTopics([]);
     }
@@ -143,6 +214,7 @@ const CreateQuestionPage: React.FC = () => {
 
   // ─── Step 1 Validation ─────────────────────────────────────────
   const validateStep1 = () => {
+    if (!selectedTargetId) return 'Please select a Target Exam.';
     if (!formData.subjectId) return 'Please select a Subject.';
     if (!formData.chapterId) return 'Please select a Chapter.';
     if (!formData.defaultLanguageId) return 'Please select a Default Language.';
@@ -253,26 +325,6 @@ const CreateQuestionPage: React.FC = () => {
     });
   };
 
-  // ─── Translation Tab Helpers ───────────────────────────────────
-  const handleAddLanguageTab = (languageId: string) => {
-    if (formData.translations.some((t) => t.languageId === languageId)) return;
-    setFormData((prev) => ({
-      ...prev,
-      translations: [
-        ...prev.translations,
-        {
-          languageId,
-          questionText: '',
-          passageText: '',
-          assertionText: '',
-          reasonText: '',
-          explanation: '',
-        },
-      ],
-    }));
-    setActiveTranslationIndex(formData.translations.length);
-  };
-
   // ─── Save Question ─────────────────────────────────────────────
   const handleSave = async (submitForReview = false) => {
     setErrorMsg(null);
@@ -304,7 +356,7 @@ const CreateQuestionPage: React.FC = () => {
       await submitQuestionAPI(created.id, 'Submitted directly upon creation');
     }
 
-    navigate('/question-bank');
+    navigate(`${routePrefix}/question-bank`);
   };
 
   return (
@@ -313,7 +365,7 @@ const CreateQuestionPage: React.FC = () => {
       <div className="flex items-center justify-between border-b border-slate-200 pb-4">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/question-bank')}
+            onClick={() => navigate(`${routePrefix}/question-bank`)}
             className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50 transition-colors shadow-sm"
           >
             <ArrowLeft size={18} />
@@ -369,6 +421,34 @@ const CreateQuestionPage: React.FC = () => {
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {/* Target Exam */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">
+                Target Exam <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={selectedTargetId}
+                onChange={(e) => {
+                  setSelectedTargetId(e.target.value);
+                  setFormData((prev) => ({
+                    ...prev,
+                    subjectId: '',
+                    chapterId: '',
+                    topicId: '',
+                    subTopicId: '',
+                  }));
+                }}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              >
+                <option value="">Select Target Exam</option>
+                {examTargets.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Subject */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 block">
@@ -376,6 +456,7 @@ const CreateQuestionPage: React.FC = () => {
               </label>
               <select
                 value={formData.subjectId}
+                disabled={!selectedTargetId}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
@@ -385,12 +466,12 @@ const CreateQuestionPage: React.FC = () => {
                     subTopicId: '',
                   }))
                 }
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 disabled:opacity-50"
               >
                 <option value="">Select Subject</option>
                 {subjects.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name}
+                    {formatSubjectDisplayName(s.name)}
                   </option>
                 ))}
               </select>
@@ -573,56 +654,19 @@ const CreateQuestionPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Multilingual Translation Tabs */}
+          {/* Primary Language Info Banner & Question Text (English) */}
           <div className="space-y-3 pt-2">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
               <div className="flex items-center gap-2">
                 <Languages size={16} className="text-indigo-600" />
                 <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Question Text in Languages
+                  Question Statement & Content (English)
                 </span>
               </div>
-
-              {/* Add Language dropdown */}
-              <div className="flex items-center gap-1.5">
-                {languages.map((lang) => {
-                  const isAdded = formData.translations.some((t) => t.languageId === lang.id);
-                  if (isAdded) return null;
-                  return (
-                    <button
-                      type="button"
-                      key={lang.id}
-                      onClick={() => handleAddLanguageTab(lang.id)}
-                      className="rounded-lg bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700 hover:bg-indigo-100 transition-colors"
-                    >
-                      + Add {lang.name}
-                    </button>
-                  );
-                })}
+              <div className="flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700">
+                <span className="flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                <span>Default Language: English</span>
               </div>
-            </div>
-
-            {/* Language Tabs */}
-            <div className="flex gap-2">
-              {formData.translations.map((tr, idx) => {
-                const langName =
-                  languages.find((l) => l.id === tr.languageId)?.name || `Language ${idx + 1}`;
-                const isActive = activeTranslationIndex === idx;
-                return (
-                  <button
-                    type="button"
-                    key={idx}
-                    onClick={() => setActiveTranslationIndex(idx)}
-                    className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-colors ${
-                      isActive
-                        ? 'bg-slate-900 text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {langName}
-                  </button>
-                );
-              })}
             </div>
 
             {/* Case Based Passage (if active) */}
@@ -673,32 +717,32 @@ const CreateQuestionPage: React.FC = () => {
               </div>
             )}
 
-            {/* Question Text in active language */}
+            {/* Question Text in English */}
             <div className="space-y-1.5 pt-2">
               <label className="text-xs font-bold text-slate-800 block">
-                Question Statement (
-                {languages.find(
-                  (l) => l.id === formData.translations[activeTranslationIndex]?.languageId,
-                )?.name || 'Active Language'}
-                ) <span className="text-rose-500">*</span>
+                Question Statement (English) <span className="text-rose-500">*</span>
               </label>
               <textarea
                 rows={3}
-                value={formData.translations[activeTranslationIndex]?.questionText || ''}
+                value={formData.translations[0]?.questionText || ''}
                 onChange={(e) => {
                   const val = e.target.value;
                   setFormData((prev) => {
                     const trs = [...prev.translations];
-                    trs[activeTranslationIndex] = {
-                      ...trs[activeTranslationIndex],
+                    trs[0] = {
+                      ...trs[0],
                       questionText: val,
                     };
                     return { ...prev, translations: trs };
                   });
                 }}
-                placeholder="Enter the question text..."
+                placeholder="Enter the question text in English..."
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 leading-relaxed"
               />
+              <p className="text-[11px] text-slate-500">
+                Additional regional translations (Hindi, Kannada, Tamil, etc.) can be added after
+                saving.
+              </p>
             </div>
           </div>
 
@@ -878,37 +922,45 @@ const CreateQuestionPage: React.FC = () => {
             </div>
           </div>
 
-          {/* 9 Mandatory Languages Translation Status Checklist */}
+          {/* Authoring & Translation Status */}
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <Languages size={18} className="text-indigo-600" />
                 <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
-                  9 Mandatory Languages Completeness Status
+                  Authoring Language & Translation Status
                 </span>
               </div>
-              <span className="text-[11px] font-bold text-slate-500">
-                All 9 regional languages must be translated before publishing
+              <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
+                Primary: English
               </span>
             </div>
 
+            <p className="text-xs text-slate-600 leading-relaxed">
+              This question is authored in <strong>English (Default)</strong>. Additional regional
+              language translations (Kannada, Hindi, Tamil, Telugu, Marathi, Malayalam, Bengali,
+              Gujarati) can be added and managed after saving.
+            </p>
+
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 pt-1">
               {languages.map((lang) => {
+                const isEnglish =
+                  (lang as any).code === 'en' || lang.name?.toUpperCase() === 'ENGLISH';
                 const tr = formData.translations.find((t) => t.languageId === lang.id);
-                const isComplete = Boolean(tr?.questionText?.trim());
+                const isComplete = isEnglish ? Boolean(tr?.questionText?.trim()) : false;
                 return (
                   <div
                     key={lang.id}
                     className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border text-center transition-all ${
                       isComplete
                         ? 'border-emerald-200 bg-emerald-50/50 text-emerald-900 shadow-sm'
-                        : 'border-rose-200 bg-rose-50/30 text-rose-800'
+                        : 'border-slate-200 bg-slate-50/50 text-slate-600'
                     }`}
                   >
                     <span className="text-xs font-bold">{lang.name}</span>
-                    <span className="text-sm mt-0.5">{isComplete ? '✅' : '❌'}</span>
+                    <span className="text-sm mt-0.5">{isComplete ? '✅' : '⏳'}</span>
                     <span className="text-[9px] font-medium text-slate-500 mt-0.5">
-                      {isComplete ? 'Complete' : 'Missing'}
+                      {isComplete ? 'Authored' : 'Post-creation'}
                     </span>
                   </div>
                 );

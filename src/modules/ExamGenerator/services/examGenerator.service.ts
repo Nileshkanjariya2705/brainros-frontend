@@ -217,3 +217,29 @@ export const useGetExamVersionQuestionsAPI = () => {
 
   return { getExamVersionQuestionsAPI, ...state };
 };
+
+export const useCreateExamFromTemplateAPI = () => {
+  const [postReq, state] = useAxiosPost();
+
+  const createExamFromTemplateAPI = useCallback(
+    async (payload: { examTargetId: string; title: string; description?: string }) => {
+      return postReq<any>('/exams/create-from-template', payload);
+    },
+    [postReq],
+  );
+
+  return { createExamFromTemplateAPI, ...state };
+};
+
+export const useDeleteExamAPI = () => {
+  const [delReq, state] = useAxiosDelete();
+
+  const deleteExamAPI = useCallback(
+    async (examId: string) => {
+      return delReq<{ message: string }>(`/exams/${examId}`);
+    },
+    [delReq],
+  );
+
+  return { deleteExamAPI, ...state };
+};

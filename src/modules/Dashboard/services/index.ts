@@ -25,3 +25,32 @@ export const useGetStatsAPI = () => {
   );
   return { getStatsAPI, isLoading, isError, isSuccess };
 };
+
+export const useGetStudentDashboardAPI = () => {
+  const [get, state] = useAxiosGet();
+  const getStudentDashboardAPI = useCallback(
+    () => get<import('@/types/exam.types').StudentDashboardResponse>('/students/me/dashboard'),
+    [get],
+  );
+  return { getStudentDashboardAPI, ...state };
+};
+
+export const useGetStudentComparisonAPI = () => {
+  const [get, state] = useAxiosGet();
+  const getStudentComparisonAPI = useCallback(
+    (params?: {
+      examType?: string;
+      examSeriesId?: string;
+      from?: string;
+      to?: string;
+      limit?: number;
+      attemptIds?: string;
+    }) =>
+      get<import('@/types/exam.types').DetailedComparisonResponse>(
+        '/students/me/analytics/comparison',
+        { params },
+      ),
+    [get],
+  );
+  return { getStudentComparisonAPI, ...state };
+};

@@ -3,7 +3,6 @@ import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig 
 
 // ** Config / Utils **
 import { API_URL, API_TIMEOUT } from '@config';
-import { tokenStorage } from '@/utils/token';
 import { toast } from '@/utils/toast';
 
 // ** Types **
@@ -68,16 +67,10 @@ export const Axios: AxiosInstance = axios.create({
   },
 });
 
-// ─── REQUEST Interceptor: Attach Bearer token ──────────────────
+// ─── REQUEST Interceptor ──────────────────────────────────────
 Axios.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const isPublic = isPublicAuthUrl(config.url);
-    const token = tokenStorage.get();
-
-    if (token && !isPublic && !config.headers.Authorization) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
+    // With credentials enabled, HttpOnly cookies are automatically attached by the browser
     return config;
   },
   (error) => Promise.reject(error),
@@ -103,35 +96,25 @@ Axios.interceptors.response.use(
       try {
         // 2. Concurrency Lock: Ensure only ONE /auth/refresh call runs simultaneously
         if (!refreshPromise) {
-          const fallbackToken = tokenStorage.getRefreshToken();
-
           refreshPromise = axios
-            .post(`${API_URL}/auth/refresh`, fallbackToken ? { refreshToken: fallbackToken } : {}, {
-              withCredentials: true,
-              headers: {
-                'Content-Type': 'application/json',
-                ...(fallbackToken ? { 'x-refresh-token': fallbackToken } : {}),
+            .post(
+              `${API_URL}/auth/refresh`,
+              {},
+              {
+                withCredentials: true,
+                headers: {
+                  'Content-Type': 'application/json',
+                },
               },
-            })
+            )
             .then((refreshRes) => {
               const payload = refreshRes.data?.data || refreshRes.data;
-              const newAccessToken = payload?.accessToken;
-              const newRefreshToken = payload?.refreshToken;
-
-              if (newAccessToken) {
-                tokenStorage.set(newAccessToken);
-                if (newRefreshToken) {
-                  tokenStorage.setRefreshToken(newRefreshToken);
-                }
-                if (syncStoreCallback) {
-                  syncStoreCallback(payload);
-                }
-                return newAccessToken;
+              if (syncStoreCallback) {
+                syncStoreCallback(payload);
               }
-              throw new Error('No access token returned from refresh');
+              return 'refreshed';
             })
             .catch((refreshErr) => {
-              tokenStorage.clear();
               if (logoutCallback) {
                 logoutCallback();
               }
@@ -143,13 +126,10 @@ Axios.interceptors.response.use(
         }
 
         // 3. Await active refresh promise
-        const newAccessToken = await refreshPromise;
+        await refreshPromise;
 
-        if (newAccessToken) {
-          // 4. Retry original request ONLY ONCE with new access token
-          originalConfig.headers.Authorization = `Bearer ${newAccessToken}`;
-          return Axios(originalConfig);
-        }
+        // 4. Retry original request ONLY ONCE with updated cookies automatically sent by browser
+        return Axios(originalConfig);
       } catch (refreshErr) {
         toast.error('Session expired. Please log in again.');
         return Promise.reject(refreshErr);

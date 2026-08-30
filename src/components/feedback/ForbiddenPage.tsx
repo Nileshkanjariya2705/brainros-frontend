@@ -1,9 +1,8 @@
 import { ShieldAlert, Home, LogOut } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/hooks/useAuth';
-import { useRole } from '@/modules/Auth/auth-access';
-import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
+import { useRole, getDefaultLandingRoute } from '@/modules/Auth/auth-access';
 
 interface ForbiddenPageProps {
   requiredPermissions?: string[];
@@ -17,17 +16,36 @@ export const ForbiddenPage = ({
   customMessage,
 }: ForbiddenPageProps) => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { activeRole, roles, hasMultipleRoles, switchActiveRole } = useRole();
 
   const handleReturnHome = () => {
-    navigate(PRIVATE_NAVIGATION.dashboard);
+    const targetRoute = getDefaultLandingRoute(
+      user
+        ? {
+            id: user.id,
+            roles: user.roles,
+            permissions: (user as any).permissions,
+            activeRole,
+          }
+        : null,
+    );
+    navigate(targetRoute);
   };
 
   const handleSwitchRole = (role: string) => {
     switchActiveRole(role);
-    window.location.reload();
+    const targetRoute = getDefaultLandingRoute(
+      user
+        ? {
+            id: user.id,
+            roles: user.roles,
+            permissions: (user as any).permissions,
+            activeRole: role,
+          }
+        : null,
+    );
+    navigate(targetRoute);
   };
 
   return (

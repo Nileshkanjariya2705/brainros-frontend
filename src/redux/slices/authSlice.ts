@@ -2,22 +2,18 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 // ** Utils **
-import { tokenStorage } from '@/utils/token';
 import { getHighestPriorityRole, computeEffectivePermissions } from '@/modules/Auth/auth-access';
 
 // ** Types **
 import type { RootStateType } from '@/redux/store';
 import type { AuthState, LoginResponse, User } from '@/modules/Auth/types/auth.types';
 
-const savedToken = tokenStorage.get();
-const savedRefreshToken = tokenStorage.getRefreshToken();
-
 const initialState: AuthState = {
   user: null,
-  token: savedToken,
-  refreshToken: savedRefreshToken,
-  isAuthenticated: Boolean(savedToken),
-  isInitializing: !savedToken,
+  token: null,
+  refreshToken: null,
+  isAuthenticated: false,
+  isInitializing: true,
   roles: [],
   permissions: [],
   activeRole: null,
@@ -27,10 +23,11 @@ const slice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setCredentials: (state, action: PayloadAction<LoginResponse>) => {
-      const { accessToken, refreshToken, user } = action.payload;
-      state.token = accessToken;
-      state.refreshToken = refreshToken || state.refreshToken;
+    setCredentials: (
+      state,
+      action: PayloadAction<Partial<LoginResponse> & { user?: Partial<User> | null }>,
+    ) => {
+      const user = action.payload.user;
 
       if (user) {
         const roles = user.roles || [];
@@ -50,11 +47,6 @@ const slice = createSlice({
 
       state.isAuthenticated = true;
       state.isInitializing = false;
-
-      tokenStorage.set(accessToken);
-      if (refreshToken) {
-        tokenStorage.setRefreshToken(refreshToken);
-      }
     },
 
     setUserData: (state, action: PayloadAction<Partial<User>>) => {
@@ -110,7 +102,6 @@ const slice = createSlice({
       state.roles = [];
       state.permissions = [];
       state.activeRole = null;
-      tokenStorage.clear();
     },
   },
 });

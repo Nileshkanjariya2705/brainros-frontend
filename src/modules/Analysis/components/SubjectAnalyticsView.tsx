@@ -1,6 +1,6 @@
 import React from 'react';
 import cn from 'classnames';
-import { Flame, AlertTriangle, Clock } from 'lucide-react';
+import { Flame, AlertTriangle, Clock, BarChart2, ShieldCheck } from 'lucide-react';
 import type { SubjectAnalyticsItem, PerformanceStatus } from '@/types/exam.types';
 
 const getStatusBadge = (status: PerformanceStatus) => {
@@ -30,6 +30,21 @@ interface Props {
 
 export const SubjectAnalyticsView: React.FC<Props> = ({ subjects }) => {
   const { items, strongestSubject, weakestSubject } = subjects;
+
+  // SVG Radar coordinates computation
+  const numAxes = Math.max(3, items.length);
+  const center = 100;
+  const radius = 70;
+
+  const points = items.map((sub, i) => {
+    const angle = ((Math.PI * 2) / numAxes) * i - Math.PI / 2;
+    const r = (Math.min(100, Math.max(10, sub.accuracy)) / 100) * radius;
+    const x = center + r * Math.cos(angle);
+    const y = center + r * Math.sin(angle);
+    return { x, y, angle, ...sub };
+  });
+
+  const polygonPointsStr = points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 
   return (
     <div className="space-y-6">
@@ -104,6 +119,179 @@ export const SubjectAnalyticsView: React.FC<Props> = ({ subjects }) => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* ── Structured Tabular Layout & Balance Radar ───────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Table Column (Span 2) */}
+        <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm overflow-hidden flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <BarChart2 size={18} className="text-indigo-600" />
+                Subject Performance Breakdown
+              </h3>
+              <span className="text-xs text-slate-500 font-semibold">{items.length} Subjects</span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider">
+                    <th className="pb-3">Subject</th>
+                    <th className="pb-3 text-center">Correct</th>
+                    <th className="pb-3 text-center">Wrong</th>
+                    <th className="pb-3 text-center">Skipped</th>
+                    <th className="pb-3 text-center">Score</th>
+                    <th className="pb-3 text-right">Accuracy</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {items.map((sub) => (
+                    <tr key={sub.subjectId} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3.5 font-bold text-slate-900">
+                        <div className="flex items-center gap-2">
+                          <span>{sub.subjectName}</span>
+                          {sub.isStrongest && (
+                            <span className="rounded-md bg-emerald-100 text-emerald-800 text-[9px] font-black px-1.5 py-0.5">
+                              BEST
+                            </span>
+                          )}
+                          {sub.isWeakest && (
+                            <span className="rounded-md bg-rose-100 text-rose-800 text-[9px] font-black px-1.5 py-0.5">
+                              WEAK
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3.5 text-center font-bold text-emerald-600">
+                        {sub.correct}
+                      </td>
+                      <td className="py-3.5 text-center font-bold text-rose-600">{sub.wrong}</td>
+                      <td className="py-3.5 text-center font-medium text-slate-400">
+                        {sub.unattempted}
+                      </td>
+                      <td className="py-3.5 text-center font-bold text-slate-900">
+                        {sub.score}/{sub.maxScore}
+                      </td>
+                      <td className="py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="w-16 h-2 rounded-full bg-slate-100 overflow-hidden hidden sm:block">
+                            <div
+                              className={cn(
+                                'h-full rounded-full',
+                                sub.accuracy >= 75
+                                  ? 'bg-emerald-500'
+                                  : sub.accuracy >= 50
+                                    ? 'bg-amber-500'
+                                    : 'bg-rose-500',
+                              )}
+                              style={{ width: `${Math.min(100, Math.max(0, sub.accuracy))}%` }}
+                            />
+                          </div>
+                          <span className="font-extrabold text-indigo-700">
+                            {sub.accuracy.toFixed(0)}%
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+            <span>Accuracy is calculated on attempted questions per subject.</span>
+            <span className="font-semibold text-indigo-600">Dynamic Multi-Subject Matrix</span>
+          </div>
+        </div>
+
+        {/* Radar Chart Polygon Column */}
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col items-center justify-between">
+          <div className="w-full text-left mb-2">
+            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <ShieldCheck size={16} className="text-indigo-600" />
+              Subject Balance Radar
+            </h4>
+            <p className="text-[11px] text-slate-500">
+              Accuracy % balance across all tested subjects
+            </p>
+          </div>
+
+          {/* SVG Radar */}
+          <div className="relative w-48 h-48 my-2">
+            <svg viewBox="0 0 200 200" className="w-full h-full">
+              {/* Radar background rings */}
+              {[0.25, 0.5, 0.75, 1.0].map((ring) => (
+                <circle
+                  key={ring}
+                  cx={center}
+                  cy={center}
+                  r={radius * ring}
+                  fill="none"
+                  stroke="#e2e8f0"
+                  strokeDasharray={ring === 1.0 ? undefined : '2,2'}
+                  strokeWidth="1"
+                />
+              ))}
+
+              {/* Axis lines */}
+              {points.map((_, i) => {
+                const angle = ((Math.PI * 2) / numAxes) * i - Math.PI / 2;
+                const endX = center + radius * Math.cos(angle);
+                const endY = center + radius * Math.sin(angle);
+                return (
+                  <line
+                    key={i}
+                    x1={center}
+                    y1={center}
+                    x2={endX}
+                    y2={endY}
+                    stroke="#e2e8f0"
+                    strokeWidth="1"
+                  />
+                );
+              })}
+
+              {/* Polygon fill */}
+              {polygonPointsStr && (
+                <polygon
+                  points={polygonPointsStr}
+                  fill="rgba(79, 70, 229, 0.2)"
+                  stroke="#4f46e5"
+                  strokeWidth="2"
+                />
+              )}
+
+              {/* Data points */}
+              {points.map((p, i) => (
+                <circle
+                  key={i}
+                  cx={p.x}
+                  cy={p.y}
+                  r="3.5"
+                  className={cn(
+                    p.isStrongest
+                      ? 'fill-emerald-500 stroke-white'
+                      : p.isWeakest
+                        ? 'fill-rose-500 stroke-white'
+                        : 'fill-indigo-600 stroke-white',
+                  )}
+                  strokeWidth="1.5"
+                />
+              ))}
+            </svg>
+          </div>
+
+          <div className="w-full flex items-center justify-around text-[10px] font-bold text-slate-500 pt-2 border-t border-slate-100">
+            {items.map((sub) => (
+              <span key={sub.subjectId} className="truncate max-w-[80px]">
+                {sub.subjectName}: {Math.round(sub.accuracy)}%
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ── Subject Cards Grid ─────────────────────────────────── */}

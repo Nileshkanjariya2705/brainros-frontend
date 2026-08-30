@@ -196,6 +196,77 @@ export const AttemptStrategyView: React.FC<Props> = ({
         </div>
       </div>
 
+      {/* ── Negative Marking Impact & Recovery Callout ──────────────── */}
+      {(strategy?.potentialScoreGainMessage || negativeMarksLost >= 4) && (
+        <div className="rounded-3xl border border-indigo-200 bg-gradient-to-r from-indigo-900 via-indigo-950 to-purple-950 p-6 text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+          <div className="flex items-start gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+              <TrendingUp size={24} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-300">
+                  Negative Marking Score Recovery
+                </span>
+                <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-black px-2.5 py-0.5">
+                  +{Math.round(negativeMarksLost)} Marks Recovery Potential
+                </span>
+              </div>
+              <p className="text-sm text-indigo-100 font-medium mt-1 leading-relaxed max-w-2xl">
+                {strategy?.potentialScoreGainMessage ||
+                  `Score could improve by ~${Math.round(negativeMarksLost)} marks by eliminating low-confidence wrong guesses. Potential score: ${Math.round(overall.obtainedMarks + negativeMarksLost)}/${overall.totalMarks}.`}
+              </p>
+            </div>
+          </div>
+          <div className="rounded-2xl bg-white/10 border border-white/15 px-5 py-3 text-center shrink-0 w-full sm:w-auto">
+            <span className="text-2xl font-black text-emerald-400 block">
+              {Math.round(overall.obtainedMarks + negativeMarksLost)}
+              <span className="text-sm font-normal text-indigo-200">/{overall.totalMarks}</span>
+            </span>
+            <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wide">
+              Potential Net Score
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Attempt Behavior Warnings (Over/Under Attempting) ────────── */}
+      {(strategy?.overAttemptingWarning || strategy?.underAttemptingWarning) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {strategy?.overAttemptingWarning && (
+            <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-5 shadow-sm flex items-start gap-3.5">
+              <div className="h-9 w-9 rounded-xl bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-700 shrink-0 mt-0.5">
+                <ShieldAlert size={18} />
+              </div>
+              <div>
+                <h4 className="text-xs font-black uppercase text-rose-900 tracking-wider">
+                  Over-Attempting Behavior Detected
+                </h4>
+                <p className="text-xs text-rose-800 mt-1 leading-relaxed">
+                  {strategy.overAttemptingWarning}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {strategy?.underAttemptingWarning && (
+            <div className="rounded-3xl border border-amber-200 bg-amber-50/80 p-5 shadow-sm flex items-start gap-3.5">
+              <div className="h-9 w-9 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 shrink-0 mt-0.5">
+                <Info size={18} />
+              </div>
+              <div>
+                <h4 className="text-xs font-black uppercase text-amber-900 tracking-wider">
+                  Under-Attempting Behavior Detected
+                </h4>
+                <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                  {strategy.underAttemptingWarning}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── 2. Strategy Metrics KPI Strip ───────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm">

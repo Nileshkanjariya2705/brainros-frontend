@@ -10,6 +10,7 @@ import type {
   QuestionDifficultyEnum,
   QuestionTypeEnum,
 } from '../types/examGenerator.types';
+import { isAllowedSubject, formatSubjectDisplayName } from '@/constants/subjects.constant';
 import type { NamedEntity } from '@/modules/QuestionBank/types/questionBank.types';
 import Button from '@/components/ui/Button';
 
@@ -30,6 +31,7 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
 }) => {
   const [name, setName] = useState('');
   const [totalQuestions, setTotalQuestions] = useState<number>(180);
+  const [examType, setExamType] = useState<'' | 'JEE' | 'NEET' | 'CAT'>('');
   const [rules, setRules] = useState<CreateBlueprintRulePayload[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -52,11 +54,19 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    getSubjectsAPI().then(({ data }) => {
-      if (data) setSubjects(data);
+    getSubjectsAPI().then((res) => {
+      const data = res?.data;
+      if (data) {
+        const list = (Array.isArray(data) ? data : (data as any)?.data || []).filter((s: any) =>
+          isAllowedSubject(s.name),
+        );
+        setSubjects(list);
+      }
     });
     setName(`${examTitle || 'Exam'} Blueprint v1`);
     setRules([]);
+    setExamType('');
+    setTotalQuestions(180);
     setErrorMsg(null);
   }, [isOpen, examTitle, getSubjectsAPI]);
 
@@ -70,6 +80,144 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
       if (data) setChapters(data);
     });
   }, [ruleSubjectId, getChaptersAPI]);
+
+  const applyExamTemplate = (type: 'JEE' | 'NEET' | 'CAT') => {
+    setErrorMsg(null);
+    if (type === 'JEE') {
+      setName(`${examTitle || 'JEE Main'} Fixed Blueprint`);
+      setTotalQuestions(75);
+
+      const phy = subjects.find(
+        (s) => s.name.toLowerCase().includes('physics') && s.name.toLowerCase().includes('jee'),
+      );
+      const chem = subjects.find(
+        (s) => s.name.toLowerCase().includes('chemistry') && s.name.toLowerCase().includes('jee'),
+      );
+      const math = subjects.find((s) => s.name.toLowerCase().includes('math'));
+
+      const newRules: CreateBlueprintRulePayload[] = [];
+      let priority = 1;
+
+      if (phy) {
+        newRules.push({
+          subjectId: phy.id,
+          type: 'SINGLE_CORRECT' as any,
+          selectionCount: 20,
+          priority: priority++,
+        });
+        newRules.push({
+          subjectId: phy.id,
+          type: 'NUMERICAL' as any,
+          selectionCount: 5,
+          priority: priority++,
+        });
+      }
+      if (chem) {
+        newRules.push({
+          subjectId: chem.id,
+          type: 'SINGLE_CORRECT' as any,
+          selectionCount: 20,
+          priority: priority++,
+        });
+        newRules.push({
+          subjectId: chem.id,
+          type: 'NUMERICAL' as any,
+          selectionCount: 5,
+          priority: priority++,
+        });
+      }
+      if (math) {
+        newRules.push({
+          subjectId: math.id,
+          type: 'SINGLE_CORRECT' as any,
+          selectionCount: 20,
+          priority: priority++,
+        });
+        newRules.push({
+          subjectId: math.id,
+          type: 'NUMERICAL' as any,
+          selectionCount: 5,
+          priority: priority++,
+        });
+      }
+
+      setRules(newRules);
+    } else if (type === 'NEET') {
+      setName(`${examTitle || 'NEET UG'} Fixed Blueprint`);
+      setTotalQuestions(180);
+
+      const phy = subjects.find(
+        (s) => s.name.toLowerCase().includes('physics') && s.name.toLowerCase().includes('neet'),
+      );
+      const chem = subjects.find(
+        (s) => s.name.toLowerCase().includes('chemistry') && s.name.toLowerCase().includes('neet'),
+      );
+      const bot = subjects.find((s) => s.name.toLowerCase().includes('botany'));
+      const zoo = subjects.find((s) => s.name.toLowerCase().includes('zoology'));
+
+      const newRules: CreateBlueprintRulePayload[] = [];
+      let priority = 1;
+
+      if (phy) {
+        newRules.push({ subjectId: phy.id, selectionCount: 45, priority: priority++ });
+      }
+      if (chem) {
+        newRules.push({ subjectId: chem.id, selectionCount: 45, priority: priority++ });
+      }
+      if (bot) {
+        newRules.push({ subjectId: bot.id, selectionCount: 45, priority: priority++ });
+      }
+      if (zoo) {
+        newRules.push({ subjectId: zoo.id, selectionCount: 45, priority: priority++ });
+      }
+
+      setRules(newRules);
+    } else if (type === 'CAT') {
+      setName(`${examTitle || 'CAT Exam'} Fixed Blueprint`);
+      setTotalQuestions(68);
+
+      const varcSub = subjects.find(
+        (s) => s.name.toLowerCase().includes('physics') && s.name.toLowerCase().includes('cat'),
+      );
+      const dilrSub = subjects.find(
+        (s) => s.name.toLowerCase().includes('chemistry') && s.name.toLowerCase().includes('cat'),
+      );
+      const qaSub =
+        subjects.find(
+          (s) =>
+            s.name.toLowerCase().includes('mathematics') && s.name.toLowerCase().includes('cat'),
+        ) ||
+        subjects.find(
+          (s) => s.name.toLowerCase().includes('math') && s.name.toLowerCase().includes('cat'),
+        );
+
+      const newRules: CreateBlueprintRulePayload[] = [];
+      let priority = 1;
+
+      if (varcSub) {
+        newRules.push({ subjectId: varcSub.id, selectionCount: 24, priority: priority++ });
+      }
+      if (dilrSub) {
+        newRules.push({ subjectId: dilrSub.id, selectionCount: 22, priority: priority++ });
+      }
+      if (qaSub) {
+        newRules.push({ subjectId: qaSub.id, selectionCount: 22, priority: priority++ });
+      }
+
+      setRules(newRules);
+    }
+  };
+
+  const handleExamTypeChange = (type: '' | 'JEE' | 'NEET' | 'CAT') => {
+    setExamType(type);
+    if (!type) {
+      setRules([]);
+      setName(`${examTitle || 'Exam'} Blueprint v1`);
+      setTotalQuestions(180);
+      return;
+    }
+    applyExamTemplate(type);
+  };
 
   if (!isOpen) return null;
 
@@ -144,7 +292,10 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
     onClose();
   };
 
-  const getSubjectName = (id?: string) => subjects.find((s) => s.id === id)?.name || 'Any Subject';
+  const getSubjectName = (id?: string) => {
+    const raw = subjects.find((s) => s.id === id)?.name;
+    return raw ? formatSubjectDisplayName(raw) : 'Any Subject';
+  };
   const getChapterName = (id?: string) => chapters.find((c) => c.id === id)?.name || 'Any Chapter';
 
   return (
@@ -183,6 +334,23 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
             </div>
           )}
 
+          {/* Exam Template Selector */}
+          <div className="space-y-1.5 bg-slate-50/70 p-4 rounded-2xl border border-slate-200">
+            <label className="text-xs font-bold text-slate-700 block">
+              Select Exam Type / Template
+            </label>
+            <select
+              value={examType}
+              onChange={(e) => handleExamTypeChange(e.target.value as any)}
+              className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500"
+            >
+              <option value="">Custom (Build Rules Manually)</option>
+              <option value="JEE">JEE Main (Fixed Template - 75 Questions)</option>
+              <option value="NEET">NEET-UG (Fixed Template - 180 Questions)</option>
+              <option value="CAT">CAT Exam (Fixed Template - 68 Questions)</option>
+            </select>
+          </div>
+
           {/* Blueprint Name & Target Questions */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-200">
             <div className="sm:col-span-2 space-y-1.5">
@@ -201,8 +369,9 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
               <input
                 type="number"
                 value={totalQuestions}
+                disabled={!!examType}
                 onChange={(e) => setTotalQuestions(Number(e.target.value))}
-                className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500"
+                className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500 disabled:bg-slate-100 disabled:opacity-75"
               />
             </div>
           </div>
@@ -248,7 +417,7 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
                   <option value="">All Subjects</option>
                   {subjects.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name}
+                      {formatSubjectDisplayName(s.name)}
                     </option>
                   ))}
                 </select>

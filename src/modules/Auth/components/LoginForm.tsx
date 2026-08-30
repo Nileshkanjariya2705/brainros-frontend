@@ -302,9 +302,9 @@ const LoginForm = () => {
               <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
               <span>OTP Dispatched Successfully</span>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-slate-600 leading-relaxed">
               We sent a 6-digit verification code to your verified mobile ending in{' '}
-              <strong className="font-mono text-white font-bold">
+              <strong className="font-mono text-slate-900 font-bold">
                 {pendingLogin.mobileMasked}
               </strong>
               .
@@ -312,7 +312,7 @@ const LoginForm = () => {
           </div>
 
           <div className="space-y-3 py-1">
-            <label className="block text-xs font-bold text-slate-300 text-center uppercase tracking-wider">
+            <label className="block text-xs font-bold text-slate-600 text-center uppercase tracking-wider">
               Enter 6-Digit OTP Code
             </label>
             <OtpPinInput
@@ -328,7 +328,7 @@ const LoginForm = () => {
             variant="primary"
             size="lg"
             isLoading={isVerifyingOtp}
-            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold shadow-lg shadow-indigo-500/25"
+            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-slate-900 font-bold shadow-lg shadow-indigo-500/25"
           >
             <span>Verify & Sign In</span>
           </Button>
@@ -357,7 +357,7 @@ const LoginForm = () => {
               className={cn(
                 'inline-flex items-center font-bold transition-colors',
                 cooldownTime > 0
-                  ? 'text-slate-400 cursor-not-allowed'
+                  ? 'text-slate-500 cursor-not-allowed'
                   : 'text-brand-600 hover:text-brand-700 hover:underline',
               )}
             >
@@ -374,7 +374,7 @@ const LoginForm = () => {
           <div className="w-full border-t border-slate-200/80" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white px-2 text-slate-400 font-semibold">Or continue with</span>
+          <span className="bg-white px-2 text-slate-500 font-semibold">Or continue with</span>
         </div>
       </div>
 

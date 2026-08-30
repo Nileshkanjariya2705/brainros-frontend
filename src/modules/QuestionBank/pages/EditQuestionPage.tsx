@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -30,10 +30,13 @@ import {
 } from '../types/questionBank.types';
 import { QuestionPreviewCard } from '../components/QuestionPreviewCard';
 import Button from '@/components/ui/Button';
+import { isAllowedSubject, formatSubjectDisplayName } from '@/constants/subjects.constant';
 
 const EditQuestionPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const routePrefix = location.pathname.startsWith('/super-admin') ? '/super-admin' : '/admin';
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -42,6 +45,9 @@ const EditQuestionPage: React.FC = () => {
 
   // Hierarchy Data
   const [subjects, setSubjects] = useState<NamedEntity[]>([]);
+  const [allSubjects, setAllSubjects] = useState<any[]>([]);
+  const [examTargets, setExamTargets] = useState<NamedEntity[]>([]);
+  const [selectedTargetId, setSelectedTargetId] = useState<string>('');
   const [chapters, setChapters] = useState<NamedEntity[]>([]);
   const [topics, setTopics] = useState<NamedEntity[]>([]);
   const [subTopics, setSubTopics] = useState<NamedEntity[]>([]);
@@ -87,9 +93,15 @@ const EditQuestionPage: React.FC = () => {
 
   // Load languages
   useEffect(() => {
-    getLanguagesAPI().then(({ data }) => {
-      if (data && data.length > 0) {
-        setLanguages(data);
+    getLanguagesAPI().then((res) => {
+      const raw = res?.data;
+      const list = Array.isArray(raw)
+        ? raw
+        : Array.isArray((raw as any)?.data)
+          ? (raw as any).data
+          : [];
+      if (list && list.length > 0) {
+        setLanguages(list);
       }
     });
   }, [getLanguagesAPI]);
@@ -97,7 +109,8 @@ const EditQuestionPage: React.FC = () => {
   // 1. Fetch Question by ID
   useEffect(() => {
     if (!id) return;
-    getQuestionByIdAPI(id).then(({ data }) => {
+    getQuestionByIdAPI(id).then((res) => {
+      const data = (res?.data as any)?.data || res?.data;
       if (data) {
         setIsApprovedOriginal(data.status === QuestionStatus.APPROVED);
         setOriginalVersion(data.version);
@@ -117,7 +130,7 @@ const EditQuestionPage: React.FC = () => {
           reason: data.reason || '',
           translations:
             data.translations && data.translations.length > 0
-              ? data.translations.map((t) => ({
+              ? data.translations.map((t: any) => ({
                   languageId: t.languageId,
                   questionText: t.questionText,
                   passageText: t.passageText || '',
@@ -132,7 +145,7 @@ const EditQuestionPage: React.FC = () => {
                     explanation: '',
                   },
                 ],
-          options: data.options?.map((o) => ({
+          options: data.options?.map((o: any) => ({
             id: o.id,
             optionKey: o.optionKey,
             optionLabel: o.optionLabel || o.optionText || '',
@@ -164,26 +177,87 @@ const EditQuestionPage: React.FC = () => {
     });
   }, [id, getQuestionByIdAPI]);
 
-  // 2. Cascading Hierarchy Loaders
+  // 2. Cascading Hierarchy Loaders (Filtered for Physics, Chemistry, Mathematics, Biology)
   useEffect(() => {
-    getSubjectsAPI().then(({ data }) => setSubjects(data || []));
+    getSubjectsAPI().then((res) => {
+      const raw = res?.data;
+      const list = Array.isArray(raw)
+        ? raw
+        : Array.isArray((raw as any)?.data)
+          ? (raw as any).data
+          : [];
+      const filtered = list.filter((s: any) => isAllowedSubject(s.name));
+
+      setAllSubjects(filtered);
+
+      const uniqueTargetsMap = new Map();
+      filtered.forEach((s: any) => {
+        if (s.examTarget) {
+          uniqueTargetsMap.set(s.examTarget.id, s.examTarget);
+        }
+      });
+      setExamTargets(Array.from(uniqueTargetsMap.values()));
+    });
   }, [getSubjectsAPI]);
 
   useEffect(() => {
+    if (selectedTargetId) {
+      const filtered = allSubjects.filter((s) => s.examTarget?.id === selectedTargetId);
+      setSubjects(filtered);
+    } else {
+      setSubjects([]);
+    }
+  }, [selectedTargetId, allSubjects]);
+
+  // Auto-resolve selectedTargetId when formData.subjectId and allSubjects are available
+  useEffect(() => {
+    if (formData.subjectId && allSubjects.length > 0 && !selectedTargetId) {
+      const match = allSubjects.find((s) => s.id === formData.subjectId);
+      if (match && match.examTarget) {
+        setSelectedTargetId(match.examTarget.id);
+      }
+    }
+  }, [formData.subjectId, allSubjects, selectedTargetId]);
+
+  useEffect(() => {
     if (formData.subjectId) {
-      getChaptersAPI(formData.subjectId).then(({ data }) => setChapters(data || []));
+      getChaptersAPI(formData.subjectId).then((res) => {
+        const raw = res?.data;
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray((raw as any)?.data)
+            ? (raw as any).data
+            : [];
+        setChapters(list);
+      });
     }
   }, [formData.subjectId, getChaptersAPI]);
 
   useEffect(() => {
     if (formData.chapterId) {
-      getTopicsAPI(formData.chapterId).then(({ data }) => setTopics(data || []));
+      getTopicsAPI(formData.chapterId).then((res) => {
+        const raw = res?.data;
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray((raw as any)?.data)
+            ? (raw as any).data
+            : [];
+        setTopics(list);
+      });
     }
   }, [formData.chapterId, getTopicsAPI]);
 
   useEffect(() => {
     if (formData.topicId) {
-      getSubTopicsAPI(formData.topicId).then(({ data }) => setSubTopics(data || []));
+      getSubTopicsAPI(formData.topicId).then((res) => {
+        const raw = res?.data;
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray((raw as any)?.data)
+            ? (raw as any).data
+            : [];
+        setSubTopics(list);
+      });
     }
   }, [formData.topicId, getSubTopicsAPI]);
 
@@ -248,7 +322,7 @@ const EditQuestionPage: React.FC = () => {
       return;
     }
 
-    navigate('/question-bank');
+    navigate(`${routePrefix}/question-bank`);
   };
 
   if (isFetching) {
@@ -265,7 +339,7 @@ const EditQuestionPage: React.FC = () => {
       <div className="flex items-center justify-between border-b border-slate-200 pb-4">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/question-bank')}
+            onClick={() => navigate(`${routePrefix}/question-bank`)}
             className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50 transition-colors shadow-sm"
           >
             <ArrowLeft size={18} />
@@ -334,17 +408,57 @@ const EditQuestionPage: React.FC = () => {
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {/* Target Exam */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">Subject</label>
+              <label className="text-xs font-bold text-slate-700 block">
+                Target Exam <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={selectedTargetId}
+                onChange={(e) => {
+                  setSelectedTargetId(e.target.value);
+                  setFormData((prev) => ({
+                    ...prev,
+                    subjectId: '',
+                    chapterId: '',
+                    topicId: '',
+                    subTopicId: '',
+                  }));
+                }}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
+              >
+                <option value="">Select Target Exam</option>
+                {examTargets.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Subject */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">
+                Subject <span className="text-rose-500">*</span>
+              </label>
               <select
                 value={formData.subjectId}
-                onChange={(e) => setFormData((prev) => ({ ...prev, subjectId: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
+                disabled={!selectedTargetId}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    subjectId: e.target.value,
+                    chapterId: '',
+                    topicId: '',
+                    subTopicId: '',
+                  }))
+                }
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none disabled:opacity-50"
               >
                 <option value="">Select Subject</option>
                 {subjects.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name}
+                    {formatSubjectDisplayName(s.name)}
                   </option>
                 ))}
               </select>

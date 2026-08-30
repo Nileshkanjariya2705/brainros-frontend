@@ -23,15 +23,17 @@ const LoginPage = () => {
           <Sparkles className="h-3.5 w-3.5" />
           <span>Unified Student Authentication</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">Welcome Back</h1>
-        <p className="text-sm text-slate-400 max-w-sm mx-auto">
+        <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          Welcome Back
+        </h1>
+        <p className="text-sm text-slate-500 max-w-sm mx-auto">
           Access your exams, performance analytics, and test series on{' '}
-          <span className="font-semibold text-slate-200">{APP_NAME}</span>
+          <span className="font-semibold text-slate-800">{APP_NAME}</span>
         </p>
       </div>
 
       {/* Main Form Card */}
-      <div className="bg-[#121528] p-6 sm:p-8 shadow-2xl shadow-black/60 rounded-2xl border border-white/10 relative overflow-hidden text-slate-100">
+      <div className="bg-white p-6 sm:p-8 shadow-2xl shadow-black/60 rounded-2xl border border-slate-200 relative overflow-hidden text-slate-900">
         {/* Subtle decorative glow line at top of card */}
         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
 
@@ -40,29 +42,29 @@ const LoginPage = () => {
 
       {/* Trust & Security Highlights Grid */}
       <div className="grid grid-cols-2 gap-3 pt-1">
-        <div className="flex items-center space-x-2.5 rounded-xl bg-white/5 p-3 border border-white/8 backdrop-blur-md">
+        <div className="flex items-center space-x-2.5 rounded-xl bg-black/5 p-3 border border-slate-200 backdrop-blur-md">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
             <ShieldCheck className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-200">Bank-Grade RBAC</p>
-            <p className="text-[10px] text-slate-400">Argon2id & Rotated JWTs</p>
+            <p className="text-xs font-bold text-slate-800">Bank-Grade RBAC</p>
+            <p className="text-[10px] text-slate-500">Argon2id & Rotated JWTs</p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2.5 rounded-xl bg-white/5 p-3 border border-white/8 backdrop-blur-md">
+        <div className="flex items-center space-x-2.5 rounded-xl bg-black/5 p-3 border border-slate-200 backdrop-blur-md">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400">
             <LockKeyhole className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-200">Session Family</p>
-            <p className="text-[10px] text-slate-400">Active Reuse Detection</p>
+            <p className="text-xs font-bold text-slate-800">Session Family</p>
+            <p className="text-[10px] text-slate-500">Active Reuse Detection</p>
           </div>
         </div>
       </div>
 
       {/* Footer Link to Register */}
-      <div className="text-center text-sm text-slate-400 pt-1">
+      <div className="text-center text-sm text-slate-500 pt-1">
         <span>Don't have a student profile? </span>
         <Link
           to="/register"

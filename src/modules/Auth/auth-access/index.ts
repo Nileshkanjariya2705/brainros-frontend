@@ -6,4 +6,5 @@ export * from './usePermission';
 export * from './useRole';
 export * from './PermissionGuard';
 export * from './menu-config';
+export * from './role-menu-config';
 export * from './route-access.config';

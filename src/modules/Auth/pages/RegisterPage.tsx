@@ -255,24 +255,24 @@ const RegisterPage = () => {
   )?.name;
 
   return (
-    <div className="w-full max-w-2xl space-y-6 animate-in fade-in zoom-in-95 duration-300 text-slate-100">
+    <div className="w-full max-w-2xl space-y-6 animate-in fade-in zoom-in-95 duration-300 text-slate-900">
       {/* Page Header */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center space-x-2 rounded-full bg-indigo-500/10 px-3.5 py-1 text-xs font-semibold text-indigo-400 border border-indigo-500/20 shadow-sm">
           <Sparkles className="h-3.5 w-3.5" />
           <span>Student Onboarding Wizard</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
           Create Student Profile
         </h1>
-        <p className="text-sm text-slate-400 max-w-md mx-auto">
+        <p className="text-sm text-slate-500 max-w-md mx-auto">
           Complete the quick steps to register and generate your official Student ID via OTP
           verification
         </p>
       </div>
 
       {/* Main Form Card */}
-      <div className="bg-[#121528] p-6 sm:p-8 shadow-2xl shadow-black/60 rounded-2xl border border-white/10 space-y-6 relative overflow-hidden text-slate-100">
+      <div className="bg-white p-6 sm:p-8 shadow-2xl shadow-black/60 rounded-2xl border border-slate-200 space-y-6 relative overflow-hidden text-slate-900">
         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
 
         {/* ═══════════════════════════════════════════════════════════════ */}
@@ -303,7 +303,7 @@ const RegisterPage = () => {
 
             <form onSubmit={handleVerifyOtpSubmit} className="space-y-5">
               <div className="space-y-3 py-1">
-                <label className="block text-xs font-bold text-slate-300 text-center uppercase tracking-wider">
+                <label className="block text-xs font-bold text-slate-600 text-center uppercase tracking-wider">
                   6-Digit Verification Code
                 </label>
                 <OtpPinInput length={6} value={otpCode} onChange={setOtpCode} />
@@ -314,7 +314,7 @@ const RegisterPage = () => {
                 variant="primary"
                 size="lg"
                 isLoading={isVerifying}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold shadow-lg shadow-indigo-500/25"
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-slate-900 font-bold shadow-lg shadow-indigo-500/25"
               >
                 <span>Verify & Complete Registration</span>
               </Button>
@@ -336,7 +336,7 @@ const RegisterPage = () => {
                   className={cn(
                     'inline-flex items-center font-bold transition-colors',
                     cooldownTime > 0
-                      ? 'text-slate-400 cursor-not-allowed'
+                      ? 'text-slate-500 cursor-not-allowed'
                       : 'text-brand-600 hover:text-brand-700 hover:underline',
                   )}
                 >
@@ -355,7 +355,7 @@ const RegisterPage = () => {
             <RegisterStepper currentStep={step} totalSteps={3} />
 
             {isLoadingOptions ? (
-              <div className="py-12 flex flex-col items-center justify-center space-y-3 text-slate-400">
+              <div className="py-12 flex flex-col items-center justify-center space-y-3 text-slate-500">
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
                 <p className="text-xs font-semibold">Loading registration options...</p>
               </div>
@@ -617,7 +617,7 @@ const RegisterPage = () => {
       </div>
 
       {/* Footer Link to Login */}
-      <div className="text-center text-sm text-slate-400 pt-1">
+      <div className="text-center text-sm text-slate-500 pt-1">
         <span>Already have an account? </span>
         <Link
           to="/login"
