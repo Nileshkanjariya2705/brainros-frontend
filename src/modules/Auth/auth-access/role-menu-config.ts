@@ -31,8 +31,11 @@ import {
   UploadCloud,
   Languages,
   BookOpen,
+  Award,
+  Globe,
 } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
+import { FEATURES } from '@/constants/feature-flag.constant';
 import type { MenuGroupConfig } from './menu-config';
 
 // ─── STUDENT Menu Groups ───────────────────────────────────────────────────
@@ -136,18 +139,27 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Question Bank',
         to: PRIVATE_NAVIGATION.adminQuestionBank,
         icon: Database,
+        feature: FEATURES.QUESTION_BANK,
+      },
+      {
+        key: 'chapter-master',
+        label: 'Chapter Master',
+        to: PRIVATE_NAVIGATION.adminChapters,
+        icon: BookOpen,
       },
       {
         key: 'create-question',
         label: 'Add New Question',
         to: PRIVATE_NAVIGATION.adminCreateQuestion,
         icon: Plus,
+        feature: FEATURES.ADD_QUESTION,
       },
       {
         key: 'import-questions',
         label: 'Bulk Import Questions',
         to: PRIVATE_NAVIGATION.adminImportQuestions,
         icon: UploadCloud,
+        feature: FEATURES.BULK_IMPORT_QUESTION,
       },
       {
         key: 'regional-languages',
@@ -160,6 +172,7 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Bulk Import Translations',
         to: PRIVATE_NAVIGATION.adminImportTranslations,
         icon: Languages,
+        feature: FEATURES.BULK_IMPORT_TRANSLATION,
       },
     ],
   },
@@ -167,6 +180,12 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
     categoryKey: 'EXAM_STUDIO',
     categoryLabel: 'Mock Test Studio',
     items: [
+      {
+        key: 'auto-generate-exam',
+        label: 'Auto-Generate Exam Paper',
+        to: PRIVATE_NAVIGATION.adminAutoGenerateExam,
+        icon: Sparkles,
+      },
       {
         key: 'exam-blueprints',
         label: 'Blueprint Generator',
@@ -184,6 +203,12 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Mock Test Scheduling',
         to: PRIVATE_NAVIGATION.adminExamScheduling,
         icon: CalendarClock,
+      },
+      {
+        key: 'exam-results-publication',
+        label: 'Result Publication Center',
+        to: PRIVATE_NAVIGATION.adminExamResults,
+        icon: Award,
       },
     ],
   },
@@ -265,6 +290,31 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
       },
     ],
   },
+  {
+    categoryKey: 'LOCALIZATION',
+    categoryLabel: 'Regional Languages & Translations',
+    items: [
+      {
+        key: 'translation-management',
+        label: 'Translation Management',
+        to: PRIVATE_NAVIGATION.adminTranslations,
+        icon: Globe,
+      },
+      {
+        key: 'languages',
+        label: 'Language Master',
+        to: PRIVATE_NAVIGATION.adminLanguages,
+        icon: Languages,
+      },
+      {
+        key: 'import-translations',
+        label: 'Question Bank Translations',
+        to: PRIVATE_NAVIGATION.adminImportTranslations,
+        icon: UploadCloud,
+        feature: FEATURES.BULK_IMPORT_TRANSLATION,
+      },
+    ],
+  },
 ];
 
 // ─── SUPER ADMIN Menu Groups ───────────────────────────────────────────────
@@ -297,18 +347,27 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Question Bank',
         to: PRIVATE_NAVIGATION.superAdminQuestionBank,
         icon: Database,
+        feature: FEATURES.QUESTION_BANK,
+      },
+      {
+        key: 'chapter-master',
+        label: 'Chapter Master',
+        to: PRIVATE_NAVIGATION.superAdminChapters,
+        icon: BookOpen,
       },
       {
         key: 'create-question',
         label: 'Add New Question',
         to: PRIVATE_NAVIGATION.superAdminCreateQuestion,
         icon: Plus,
+        feature: FEATURES.ADD_QUESTION,
       },
       {
         key: 'import-questions',
         label: 'Bulk Import Questions',
         to: PRIVATE_NAVIGATION.superAdminImportQuestions,
         icon: UploadCloud,
+        feature: FEATURES.BULK_IMPORT_QUESTION,
       },
       {
         key: 'regional-languages',
@@ -321,6 +380,7 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Bulk Import Translations',
         to: PRIVATE_NAVIGATION.superAdminImportTranslations,
         icon: Languages,
+        feature: FEATURES.BULK_IMPORT_TRANSLATION,
       },
     ],
   },
@@ -328,6 +388,12 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
     categoryKey: 'EXAM_STUDIO',
     categoryLabel: 'Mock Test Studio',
     items: [
+      {
+        key: 'auto-generate-exam',
+        label: 'Auto-Generate Exam Paper',
+        to: PRIVATE_NAVIGATION.superAdminAutoGenerateExam,
+        icon: Sparkles,
+      },
       {
         key: 'exam-blueprints',
         label: 'Blueprint Generator',
@@ -345,6 +411,12 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Mock Test Scheduling',
         to: PRIVATE_NAVIGATION.superAdminExamScheduling,
         icon: CalendarClock,
+      },
+      {
+        key: 'super-admin-exam-results',
+        label: 'Result Publication Center',
+        to: PRIVATE_NAVIGATION.superAdminExamResults,
+        icon: Award,
       },
     ],
   },
@@ -397,36 +469,6 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
     ],
   },
   {
-    categoryKey: 'INSTITUTION_B2B',
-    categoryLabel: 'Institution & B2B Portal',
-    items: [
-      {
-        key: 'institution-dashboard',
-        label: 'Institution Overview',
-        to: PRIVATE_NAVIGATION.superAdminInstitutionDashboard,
-        icon: Building2,
-      },
-      {
-        key: 'institution-batches',
-        label: 'Batch Management',
-        to: PRIVATE_NAVIGATION.superAdminInstitutionBatches,
-        icon: Users,
-      },
-      {
-        key: 'institution-bulk-upload',
-        label: 'Student Bulk Upload',
-        to: PRIVATE_NAVIGATION.superAdminInstitutionBulkUpload,
-        icon: FileCheck,
-      },
-      {
-        key: 'institution-reports',
-        label: 'Institutional Reports',
-        to: PRIVATE_NAVIGATION.superAdminInstitutionReports,
-        icon: BarChart3,
-      },
-    ],
-  },
-  {
     categoryKey: 'GOVERNANCE',
     categoryLabel: 'Platform Governance',
     items: [
@@ -453,6 +495,31 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Notification Center',
         to: PRIVATE_NAVIGATION.superAdminNotifications,
         icon: Bell,
+      },
+    ],
+  },
+  {
+    categoryKey: 'LOCALIZATION',
+    categoryLabel: 'Regional Languages & Translations',
+    items: [
+      {
+        key: 'translation-management',
+        label: 'Translation Management',
+        to: PRIVATE_NAVIGATION.superAdminTranslations,
+        icon: Globe,
+      },
+      {
+        key: 'languages',
+        label: 'Language Master',
+        to: PRIVATE_NAVIGATION.superAdminLanguages,
+        icon: Languages,
+      },
+      {
+        key: 'import-translations',
+        label: 'Question Bank Translations',
+        to: PRIVATE_NAVIGATION.superAdminImportTranslations,
+        icon: UploadCloud,
+        feature: FEATURES.BULK_IMPORT_TRANSLATION,
       },
     ],
   },
@@ -486,3 +553,57 @@ export const PARENT_MENU_GROUPS: MenuGroupConfig[] = [
     ],
   },
 ];
+
+// ─── INSTITUTION & B2B PORTAL Menu Groups ──────────────────────────────────
+export const INSTITUTION_MENU_GROUPS: MenuGroupConfig[] = [
+  {
+    categoryKey: 'OVERVIEW',
+    categoryLabel: 'Overview',
+    items: [
+      {
+        key: 'dashboard',
+        label: 'Institution Dashboard',
+        to: PRIVATE_NAVIGATION.institutionDashboard,
+        icon: Building2,
+        end: true,
+      },
+      {
+        key: 'profile',
+        label: 'Institution Profile',
+        to: PRIVATE_NAVIGATION.institutionProfile,
+        icon: User,
+      },
+    ],
+  },
+  {
+    categoryKey: 'BATCH_STUDENT_MGMT',
+    categoryLabel: 'Batches & Candidate Management',
+    items: [
+      {
+        key: 'batches',
+        label: 'Batch Management',
+        to: PRIVATE_NAVIGATION.institutionBatches,
+        icon: Users,
+      },
+      {
+        key: 'bulk-upload',
+        label: 'Candidate Bulk Upload',
+        to: PRIVATE_NAVIGATION.institutionBulkUpload,
+        icon: FileCheck,
+      },
+    ],
+  },
+  {
+    categoryKey: 'ANALYTICS_REPORTS',
+    categoryLabel: 'Analytics & Reporting',
+    items: [
+      {
+        key: 'reports',
+        label: 'Institutional Reports',
+        to: PRIVATE_NAVIGATION.institutionReports,
+        icon: BarChart3,
+      },
+    ],
+  },
+];
+

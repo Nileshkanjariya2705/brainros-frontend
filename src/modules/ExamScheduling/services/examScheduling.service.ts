@@ -131,3 +131,26 @@ export const useCheckExamAccessAPI = () => {
 
   return { checkExamAccessAPI, ...state };
 };
+
+export const useGetSchedulingCandidatesAPI = () => {
+  const [getReq, state] = useAxiosGet();
+
+  const getSchedulingCandidatesAPI = useCallback(async () => {
+    return getReq<any[]>(`/super-admin/exams/scheduling-candidates`);
+  }, [getReq]);
+
+  return { getSchedulingCandidatesAPI, ...state };
+};
+
+export const useActivateExamDirectlyAPI = () => {
+  const [postReq, state] = useAxiosPost();
+
+  const activateExamDirectlyAPI = useCallback(
+    async (examId: string) => {
+      return postReq<any>(`/super-admin/exams/${examId}/activate`, {});
+    },
+    [postReq],
+  );
+
+  return { activateExamDirectlyAPI, ...state };
+};

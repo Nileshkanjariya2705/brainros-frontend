@@ -1,7 +1,17 @@
 // ** Packages **
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Search, Globe2, TrendingUp, Loader2, X, PlayCircle } from 'lucide-react';
+import {
+  FileText,
+  Search,
+  Globe2,
+  TrendingUp,
+  Loader2,
+  X,
+  PlayCircle,
+  Calendar,
+  Lock,
+} from 'lucide-react';
 
 // ** Services **
 import { useGetAvailableExamsAPI, useStartAttemptAPI } from '../services';
@@ -13,6 +23,7 @@ import { useAxiosGet } from '@/hooks/useAxios';
 // ** Components **
 import Loader from '@/components/feedback/Loader';
 import Button from '@/components/ui/Button';
+import { ExamStartLanguageModal } from '../components/ExamStartLanguageModal';
 
 // ** Types **
 import type { Exam } from '@/types/exam.types';
@@ -24,6 +35,38 @@ const getDifficultyLabel = (negMarks: number) => {
   return { label: 'Tough', color: 'rose' };
 };
 
+// ─── Format Schedule Date/Time (Asia/Kolkata) ────────────────
+const formatScheduleTime = (isoString?: string) => {
+  if (!isoString) return '';
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata',
+    });
+  } catch {
+    return '';
+  }
+};
+
+// ─── Format Countdown Seconds ────────────────────────────────
+const formatCountdown = (seconds: number) => {
+  if (seconds <= 0) return 'Live Now';
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+
+  if (d > 0) return `${d}d ${h}h ${m}m`;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  return `${m}m ${s}s`;
+};
+
 const AvailableExamsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -32,15 +75,14 @@ const AvailableExamsPage = () => {
   const { getAvailableExamsAPI, isLoading } = useGetAvailableExamsAPI();
   const { startAttemptAPI } = useStartAttemptAPI();
 
-  const [exams, setExams] = useState<Exam[]>([]);
+  const [exams, setExams] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [examTargets, setExamTargets] = useState<{ id: string; name: string }[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [languages, setLanguages] = useState<{ id: string; name: string }[]>([]);
-  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  const [categoryTab, setCategoryTab] = useState<'ALL' | 'MOCKS' | 'UPCOMING' | 'LIVE'>('ALL');
   const [startingExamId, setStartingExamId] = useState<string | null>(null);
   const [showLangModal, setShowLangModal] = useState<Exam | null>(null);
-  const [tempLang, setTempLang] = useState<string | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
 
   // Load options on mount
@@ -64,18 +106,12 @@ const AvailableExamsPage = () => {
           );
           if (target) setSelectedTarget(target.id);
         }
-        if (user?.studentProfile?.preferredLanguage) {
-          const lang = (opts.languages || []).find(
-            (l: any) => l.name === user.studentProfile?.preferredLanguage,
-          );
-          if (lang) setSelectedLanguage(lang.id);
-        }
       }
     })();
     return () => {
       active = false;
     };
-  }, [get, user?.studentProfile?.examTarget, user?.studentProfile?.preferredLanguage]);
+  }, [get, user?.studentProfile?.examTarget]);
 
   // Load exams
   useEffect(() => {
@@ -98,19 +134,27 @@ const AvailableExamsPage = () => {
     };
   }, [selectedTarget, getAvailableExamsAPI]);
 
-  const filteredExams = exams.filter((e) =>
-    e.title.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredExams = exams.filter((e) => {
+    const matchesSearch = e.title.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
 
-  const handleStartExam = async (exam: Exam) => {
-    setStartError(null);
-    const langToUse = selectedLanguage || languages[0]?.id;
-    if (!langToUse) {
-      setShowLangModal(exam);
-      setTempLang(languages[0]?.id || null);
+    const isMock = e.isMock ?? (e.title.toUpperCase().includes('MOCK') || (e.sections && e.sections.length === 1));
+    const isScheduled = e.status?.name === 'SCHEDULED';
+    const isActiveLive = e.status?.name === 'ACTIVE' && !isMock;
+
+    if (categoryTab === 'MOCKS') return isMock;
+    if (categoryTab === 'UPCOMING') return isScheduled;
+    if (categoryTab === 'LIVE') return isActiveLive;
+    return true;
+  });
+
+  const handleStartExam = async (exam: any) => {
+    if (!exam.canStart && exam.status?.name === 'SCHEDULED') {
+      alert('This exam is scheduled for a future live window. Please check the countdown timer and wait for the test to start.');
       return;
     }
-    await launchExam(exam.id, langToUse);
+    setStartError(null);
+    setShowLangModal(exam);
   };
 
   const launchExam = async (examId: string, languageId: string) => {
@@ -118,7 +162,6 @@ const AvailableExamsPage = () => {
     setStartError(null);
     const res = await startAttemptAPI(examId, languageId);
     setStartingExamId(null);
-    setShowLangModal(null);
 
     const payload: any = res.data;
     const raw: any = res.response?.data;
@@ -126,6 +169,7 @@ const AvailableExamsPage = () => {
     const attemptId = attemptData?.attemptId || attemptData?.id;
 
     if (attemptId) {
+      setShowLangModal(null);
       navigate(`/exam/${examId}/attempt/${attemptId}`);
     } else {
       const errMsg =
@@ -141,15 +185,14 @@ const AvailableExamsPage = () => {
         <div className="relative">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-300">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            Live Mock Tests Ready
+            Active Testing Engine
           </div>
 
           <h1 className="text-2xl font-black sm:text-3xl md:text-4xl">
             Available Examination Portal
           </h1>
           <p className="mt-2 max-w-xl text-xs sm:text-sm text-indigo-200 leading-relaxed">
-            Select a mock test below to practice. All tests are server-timed, auto-saved, and scored
-            instantly with detailed analytics.
+            Practice with self-paced Mock Tests or enter scheduled Live Exams. All tests are server-timed, auto-saved, and scored instantly.
           </p>
 
           <div className="mt-5 flex flex-wrap items-center gap-6 text-xs font-semibold">
@@ -159,11 +202,11 @@ const AvailableExamsPage = () => {
             </div>
             <div className="flex items-center gap-2 text-indigo-200">
               <Globe2 size={14} className="text-indigo-300" />
-              <span>{languages.length || 5} Languages</span>
+              <span>{languages.length || 5} Regional Languages</span>
             </div>
             <div className="flex items-center gap-2 text-indigo-200">
               <TrendingUp size={14} className="text-indigo-300" />
-              <span>Instant AI Performance Report</span>
+              <span>Instant AI Diagnostic Scorecard</span>
             </div>
           </div>
 
@@ -203,6 +246,28 @@ const AvailableExamsPage = () => {
         </div>
       </div>
 
+      {/* Category Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto text-xs font-bold">
+        {[
+          { key: 'ALL', label: 'All Examinations' },
+          { key: 'MOCKS', label: 'Available Mock Tests' },
+          { key: 'UPCOMING', label: 'Upcoming Live Exams' },
+          { key: 'LIVE', label: 'Live Now' },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setCategoryTab(tab.key as any)}
+            className={`rounded-2xl px-4 py-2 border transition-all shrink-0 ${
+              categoryTab === tab.key
+                ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm shadow-indigo-600/20'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Error alert if start attempt failed */}
       {startError && (
         <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center justify-between">
@@ -216,15 +281,14 @@ const AvailableExamsPage = () => {
       {/* Exam Grid */}
       {isLoading ? (
         <div className="py-16 flex justify-center">
-          <Loader label="Loading available exams..." />
+          <Loader label="Loading available examinations..." />
         </div>
       ) : filteredExams.length === 0 ? (
         <div className="p-12 text-center rounded-3xl border border-slate-200 bg-white space-y-3">
           <FileText className="h-10 w-10 text-slate-300 mx-auto" />
-          <h3 className="text-base font-bold text-slate-800">No Exams Available</h3>
+          <h3 className="text-base font-bold text-slate-800">No Examinations Found</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            No active mock tests found for the selected filter. Try selecting "All Target
-            Curriculums".
+            No examinations match the current filter. Try selecting "All Examinations".
           </p>
         </div>
       ) : (
@@ -232,6 +296,9 @@ const AvailableExamsPage = () => {
           {filteredExams.map((exam) => {
             const diff = getDifficultyLabel(exam.defaultNegativeMarks || 0);
             const isStarting = startingExamId === exam.id;
+            const isMock =
+              exam.isMock ?? (exam.title.toUpperCase().includes('MOCK') || (exam.sections && exam.sections.length === 1));
+            const isScheduled = exam.status?.name === 'SCHEDULED';
 
             return (
               <div
@@ -240,8 +307,16 @@ const AvailableExamsPage = () => {
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-100">
-                      {exam.examTarget?.name || 'Mock Test'}
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                        isMock
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
+                          : isScheduled
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      }`}
+                    >
+                      {isMock ? 'Mock Test' : isScheduled ? 'Upcoming Live' : 'Live Exam'}
                     </span>
                     <span
                       className={`px-2 py-0.5 rounded-md text-[10px] font-bold bg-${diff.color}-50 text-${diff.color}-700 border border-${diff.color}-200`}
@@ -258,6 +333,23 @@ const AvailableExamsPage = () => {
                     <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
                       {exam.description}
                     </p>
+                  )}
+
+                  {/* Scheduled Window Banner */}
+                  {isScheduled && exam.activeSchedule && (
+                    <div className="rounded-2xl bg-amber-50/70 border border-amber-200/80 p-3 text-xs space-y-1">
+                      <div className="flex items-center justify-between text-amber-900 font-bold">
+                        <span className="flex items-center gap-1">
+                          <Calendar size={13} className="text-amber-600" />
+                          Starts: {formatScheduleTime(exam.activeSchedule.startTime)}
+                        </span>
+                      </div>
+                      {exam.activeSchedule.startsInSeconds > 0 && (
+                        <p className="text-[11px] font-semibold text-amber-700">
+                          Starts in: <span className="font-bold">{formatCountdown(exam.activeSchedule.startsInSeconds)}</span>
+                        </p>
+                      )}
+                    </div>
                   )}
 
                   <div className="pt-2 grid grid-cols-3 gap-2 border-t border-slate-100 text-center">
@@ -284,88 +376,57 @@ const AvailableExamsPage = () => {
                   </div>
                 </div>
 
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={() => handleStartExam(exam)}
-                  disabled={isStarting}
-                  className="w-full flex items-center justify-center gap-2 font-bold shadow-sm"
-                >
-                  {isStarting ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Starting Test...</span>
-                    </>
-                  ) : (
-                    <>
-                      <PlayCircle size={16} />
-                      <span>Start Test Now</span>
-                    </>
-                  )}
-                </Button>
+                {isScheduled && !exam.canStart ? (
+                  <Button
+                    variant="outline"
+                    size="md"
+                    disabled
+                    className="w-full flex items-center justify-center gap-2 font-bold bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed"
+                  >
+                    <Lock size={15} />
+                    <span>Upcoming — Starts Soon</span>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={() => handleStartExam(exam)}
+                    disabled={isStarting}
+                    className="w-full flex items-center justify-center gap-2 font-bold shadow-sm"
+                  >
+                    {isStarting ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Starting Test...</span>
+                      </>
+                    ) : (
+                      <>
+                        <PlayCircle size={16} />
+                        <span>{isMock ? 'Start Mock Test' : 'Start Live Exam'}</span>
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             );
           })}
         </div>
       )}
 
-      {/* Language Selection Modal (fallback) */}
-      {showLangModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between">
-              <h4 className="text-base font-bold text-slate-900">Select Test Language</h4>
-              <button
-                onClick={() => setShowLangModal(null)}
-                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-500">
-              Choose your preferred language for <strong>{showLangModal.title}</strong>. You can
-              also switch languages during the test.
-            </p>
-
-            <div className="space-y-2">
-              {languages.map((l) => (
-                <button
-                  key={l.id}
-                  onClick={() => setTempLang(l.id)}
-                  className={`w-full p-3 rounded-2xl border text-xs font-bold text-left transition ${
-                    tempLang === l.id
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  {l.name}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowLangModal(null)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => tempLang && launchExam(showLangModal.id, tempLang)}
-                disabled={!tempLang || startingExamId !== null}
-                className="flex-1"
-              >
-                Start Test
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Language Selection Modal (Gate before starting attempt) ─ */}
+      <ExamStartLanguageModal
+        isOpen={Boolean(showLangModal)}
+        examId={showLangModal?.id || ''}
+        examTitle={showLangModal?.title}
+        onClose={() => setShowLangModal(null)}
+        onConfirmStart={async (chosenLangId) => {
+          if (showLangModal) {
+            await launchExam(showLangModal.id, chosenLangId);
+          }
+        }}
+        isStarting={startingExamId !== null}
+        startError={startError}
+      />
     </div>
   );
 };

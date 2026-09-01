@@ -4,14 +4,12 @@ export default {
   // Class-based dark mode (repo convention): toggle by adding `dark` to <html>.
   darkMode: 'class',
   theme: {
-    // Repo uses MAX-width breakpoints (desktop-first). Override defaults.
     screens: {
-      '2xl': { min: '1200px' },
-      xl: { max: '1199px' },
-      lg: { max: '991px' },
-      md: { max: '767px' },
-      sm: { max: '575px' },
-      xsm: { max: '374px' },
+      sm: '640px',
+      md: '768px',
+      lg: '1024px',
+      xl: '1280px',
+      '2xl': '1536px',
     },
     extend: {
       // Colors map to CSS variables (defined in src/styles/index.css :root / .dark)
@@ -28,6 +26,10 @@ export default {
         content: 'var(--content)',
         'content-muted': 'var(--content-muted)',
         border: 'var(--border-color)',
+      },
+      boxShadow: {
+        '2xs': '0 1px 2px 0 rgb(0 0 0 / 0.03)',
+        xs: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
       },
       zIndex: {
         1: '1',

@@ -11,15 +11,12 @@ import {
   Trash2,
   Eye,
   AlertTriangle,
-  Languages,
 } from 'lucide-react';
 import {
   useGetQuestionByIdAPI,
   useUpdateQuestionAPI,
   useGetSubjectsAPI,
   useGetChaptersAPI,
-  useGetTopicsAPI,
-  useGetSubTopicsAPI,
 } from '../services/questionBank.service';
 import { useGetLanguagesAPI } from '@/modules/RegionalLanguage/services/regionalLanguage.service';
 import type { CreateQuestionPayload, NamedEntity } from '../types/questionBank.types';
@@ -45,27 +42,22 @@ const EditQuestionPage: React.FC = () => {
 
   // Hierarchy Data
   const [subjects, setSubjects] = useState<NamedEntity[]>([]);
-  const [allSubjects, setAllSubjects] = useState<any[]>([]);
-  const [examTargets, setExamTargets] = useState<NamedEntity[]>([]);
-  const [selectedTargetId, setSelectedTargetId] = useState<string>('');
   const [chapters, setChapters] = useState<NamedEntity[]>([]);
-  const [topics, setTopics] = useState<NamedEntity[]>([]);
-  const [subTopics, setSubTopics] = useState<NamedEntity[]>([]);
   const [languages, setLanguages] = useState<Array<{ id: string; name: string }>>([]);
 
   const { getQuestionByIdAPI, isLoading: isFetching } = useGetQuestionByIdAPI();
   const { updateQuestionAPI, isLoading: isUpdating } = useUpdateQuestionAPI();
   const { getSubjectsAPI } = useGetSubjectsAPI();
-  const { getChaptersAPI } = useGetChaptersAPI();
-  const { getTopicsAPI } = useGetTopicsAPI();
-  const { getSubTopicsAPI } = useGetSubTopicsAPI();
+  const { getChaptersAPI, isLoading: isLoadingChapters } = useGetChaptersAPI();
   const { getLanguagesAPI } = useGetLanguagesAPI();
 
   const [formData, setFormData] = useState<CreateQuestionPayload>({
     subjectId: '',
     chapterId: '',
     topicId: '',
+    topicName: '',
     subTopicId: '',
+    subTopicName: '',
     difficultyLevel: QuestionDifficultyEnum.MEDIUM,
     type: QuestionTypeEnum.SINGLE_CORRECT,
     defaultLanguageId: '',
@@ -119,7 +111,9 @@ const EditQuestionPage: React.FC = () => {
           subjectId: data.subjectId,
           chapterId: data.chapterId,
           topicId: data.topicId || '',
+          topicName: data.topic?.name || '',
           subTopicId: data.subTopicId || '',
+          subTopicName: data.subTopic?.name || '',
           difficultyLevel: data.difficultyLevel,
           type: data.type,
           defaultLanguageId: data.defaultLanguageId,
@@ -149,35 +143,19 @@ const EditQuestionPage: React.FC = () => {
             id: o.id,
             optionKey: o.optionKey,
             optionLabel: o.optionLabel || o.optionText || '',
-            optionText: o.optionText || '',
+            optionText: o.optionText || o.optionLabel || '',
             isCorrect: o.isCorrect,
             displayOrder: o.displayOrder,
-          })),
-          answer: data.answer
-            ? {
-                answerType: data.answer.answerType,
-                correctOptionIds: data.answer.correctOptionIds || undefined,
-                numericalAnswer: data.answer.numericalAnswer ?? undefined,
-                numericalTolerance: data.answer.numericalTolerance ?? undefined,
-                numericalRangeStart: data.answer.numericalRangeStart ?? undefined,
-                numericalRangeEnd: data.answer.numericalRangeEnd ?? undefined,
-                matchPairs: data.answer.matchPairs,
-              }
-            : {},
-          explanation: data.explanation
-            ? {
-                explanation: data.explanation.explanation,
-                mediaUrl: data.explanation.mediaUrl || undefined,
-              }
-            : {
-                explanation: data.translations?.[0]?.explanation || '',
-              },
+            translations: o.translations || [],
+          })) || [],
+          answer: data.answer || {},
+          explanation: data.explanation || { explanation: '' },
         });
       }
     });
   }, [id, getQuestionByIdAPI]);
 
-  // 2. Cascading Hierarchy Loaders (Filtered for Physics, Chemistry, Mathematics, Biology)
+  // 2. Load Subjects directly (Filtered for Core Subjects)
   useEffect(() => {
     getSubjectsAPI().then((res) => {
       const raw = res?.data;
@@ -188,37 +166,21 @@ const EditQuestionPage: React.FC = () => {
           : [];
       const filtered = list.filter((s: any) => isAllowedSubject(s.name));
 
-      setAllSubjects(filtered);
-
-      const uniqueTargetsMap = new Map();
+      const uniqueSubjects: NamedEntity[] = [];
+      const seenNames = new Set<string>();
       filtered.forEach((s: any) => {
-        if (s.examTarget) {
-          uniqueTargetsMap.set(s.examTarget.id, s.examTarget);
+        const normalized = s.name.toUpperCase().trim();
+        if (!seenNames.has(normalized)) {
+          seenNames.add(normalized);
+          uniqueSubjects.push(s);
         }
       });
-      setExamTargets(Array.from(uniqueTargetsMap.values()));
+
+      setSubjects(uniqueSubjects);
     });
   }, [getSubjectsAPI]);
 
-  useEffect(() => {
-    if (selectedTargetId) {
-      const filtered = allSubjects.filter((s) => s.examTarget?.id === selectedTargetId);
-      setSubjects(filtered);
-    } else {
-      setSubjects([]);
-    }
-  }, [selectedTargetId, allSubjects]);
-
-  // Auto-resolve selectedTargetId when formData.subjectId and allSubjects are available
-  useEffect(() => {
-    if (formData.subjectId && allSubjects.length > 0 && !selectedTargetId) {
-      const match = allSubjects.find((s) => s.id === formData.subjectId);
-      if (match && match.examTarget) {
-        setSelectedTargetId(match.examTarget.id);
-      }
-    }
-  }, [formData.subjectId, allSubjects, selectedTargetId]);
-
+  // 3. Load Chapters dynamically for selected Subject
   useEffect(() => {
     if (formData.subjectId) {
       getChaptersAPI(formData.subjectId).then((res) => {
@@ -230,37 +192,12 @@ const EditQuestionPage: React.FC = () => {
             : [];
         setChapters(list);
       });
+    } else {
+      setChapters([]);
     }
   }, [formData.subjectId, getChaptersAPI]);
 
-  useEffect(() => {
-    if (formData.chapterId) {
-      getTopicsAPI(formData.chapterId).then((res) => {
-        const raw = res?.data;
-        const list = Array.isArray(raw)
-          ? raw
-          : Array.isArray((raw as any)?.data)
-            ? (raw as any).data
-            : [];
-        setTopics(list);
-      });
-    }
-  }, [formData.chapterId, getTopicsAPI]);
-
-  useEffect(() => {
-    if (formData.topicId) {
-      getSubTopicsAPI(formData.topicId).then((res) => {
-        const raw = res?.data;
-        const list = Array.isArray(raw)
-          ? raw
-          : Array.isArray((raw as any)?.data)
-            ? (raw as any).data
-            : [];
-        setSubTopics(list);
-      });
-    }
-  }, [formData.topicId, getSubTopicsAPI]);
-
+  // ─── Option Handlers ──────────────────────────────────────────
   const handleAddOption = () => {
     const nextKey = String.fromCharCode(65 + (formData.options?.length || 0));
     setFormData((prev) => ({
@@ -305,8 +242,8 @@ const EditQuestionPage: React.FC = () => {
 
     const payload: Partial<CreateQuestionPayload> = {
       ...formData,
-      topicId: formData.topicId || undefined,
-      subTopicId: formData.subTopicId || undefined,
+      topicName: formData.topicName?.trim() || undefined,
+      subTopicName: formData.subTopicName?.trim() || undefined,
       options: (formData.options || []).map((o, idx) => ({
         ...o,
         optionText: o.optionLabel || o.optionText,
@@ -408,34 +345,6 @@ const EditQuestionPage: React.FC = () => {
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {/* Target Exam */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">
-                Target Exam <span className="text-rose-500">*</span>
-              </label>
-              <select
-                value={selectedTargetId}
-                onChange={(e) => {
-                  setSelectedTargetId(e.target.value);
-                  setFormData((prev) => ({
-                    ...prev,
-                    subjectId: '',
-                    chapterId: '',
-                    topicId: '',
-                    subTopicId: '',
-                  }));
-                }}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
-              >
-                <option value="">Select Target Exam</option>
-                {examTargets.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Subject */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 block">
@@ -443,17 +352,16 @@ const EditQuestionPage: React.FC = () => {
               </label>
               <select
                 value={formData.subjectId}
-                disabled={!selectedTargetId}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
                     subjectId: e.target.value,
                     chapterId: '',
-                    topicId: '',
-                    subTopicId: '',
+                    topicName: '',
+                    subTopicName: '',
                   }))
                 }
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none disabled:opacity-50"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
               >
                 <option value="">Select Subject</option>
                 {subjects.map((s) => (
@@ -464,14 +372,31 @@ const EditQuestionPage: React.FC = () => {
               </select>
             </div>
 
+            {/* Chapter */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">Chapter</label>
+              <label className="text-xs font-bold text-slate-700 block">
+                Chapter <span className="text-rose-500">*</span>
+              </label>
               <select
                 value={formData.chapterId}
-                onChange={(e) => setFormData((prev) => ({ ...prev, chapterId: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
+                disabled={!formData.subjectId || isLoadingChapters}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    chapterId: e.target.value,
+                  }))
+                }
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 disabled:opacity-50 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
               >
-                <option value="">Select Chapter</option>
+                <option value="">
+                  {isLoadingChapters
+                    ? 'Loading chapters...'
+                    : !formData.subjectId
+                      ? 'Select Subject first'
+                      : chapters.length === 0
+                        ? 'No chapters available for this subject'
+                        : 'Select Chapter'}
+                </option>
                 {chapters.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -480,42 +405,47 @@ const EditQuestionPage: React.FC = () => {
               </select>
             </div>
 
+            {/* Topic (Text Field) */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 block">Topic (Optional)</label>
-              <select
-                value={formData.topicId}
-                onChange={(e) => setFormData((prev) => ({ ...prev, topicId: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
-              >
-                <option value="">Select Topic</option>
-                {topics.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
+              <input
+                type="text"
+                value={formData.topicName || ''}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    topicName: e.target.value,
+                    topicId: '',
+                  }))
+                }
+                placeholder="e.g., Kinematics, Chemical Bonding"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none placeholder:text-slate-400"
+              />
             </div>
 
+            {/* Sub-Topic (Text Field) */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 block">Sub-Topic (Optional)</label>
-              <select
-                value={formData.subTopicId}
-                onChange={(e) => setFormData((prev) => ({ ...prev, subTopicId: e.target.value }))}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
-              >
-                <option value="">Select Sub-Topic</option>
-                {subTopics.map((st) => (
-                  <option key={st.id} value={st.id}>
-                    {st.name}
-                  </option>
-                ))}
-              </select>
+              <input
+                type="text"
+                value={formData.subTopicName || ''}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    subTopicName: e.target.value,
+                    subTopicId: '',
+                  }))
+                }
+                placeholder="e.g., Projectile Motion, Hybridization"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none placeholder:text-slate-400"
+              />
             </div>
           </div>
 
           <div className="pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {/* Difficulty */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">Difficulty</label>
+              <label className="text-xs font-bold text-slate-700 block">Difficulty Level</label>
               <select
                 value={formData.difficultyLevel}
                 onChange={(e) =>
@@ -524,197 +454,185 @@ const EditQuestionPage: React.FC = () => {
                     difficultyLevel: e.target.value as QuestionDifficultyEnum,
                   }))
                 }
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-semibold text-slate-900 focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
               >
-                <option value={QuestionDifficultyEnum.EASY}>Easy</option>
-                <option value={QuestionDifficultyEnum.MEDIUM}>Medium</option>
-                <option value={QuestionDifficultyEnum.HARD}>Hard</option>
-                <option value={QuestionDifficultyEnum.VERY_HARD}>Very Hard</option>
+                {Object.values(QuestionDifficultyEnum).map((diff) => (
+                  <option key={diff} value={diff}>
+                    {diff}
+                  </option>
+                ))}
               </select>
             </div>
 
+            {/* Marks */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">Marks (+)</label>
+              <label className="text-xs font-bold text-slate-700 block">Correct Marks (+)</label>
               <input
                 type="number"
-                value={formData.marks}
+                min="0"
+                step="0.5"
+                value={formData.marks ?? 4}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, marks: Number(e.target.value) }))
+                  setFormData((prev) => ({ ...prev, marks: parseFloat(e.target.value) || 0 }))
                 }
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-semibold text-slate-900 focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
               />
             </div>
 
+            {/* Negative Marks */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 block">Negative Marks (-)</label>
               <input
                 type="number"
-                value={formData.negativeMarks}
+                min="0"
+                step="0.25"
+                value={formData.negativeMarks ?? 1}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, negativeMarks: Number(e.target.value) }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    negativeMarks: parseFloat(e.target.value) || 0,
+                  }))
                 }
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-semibold text-slate-900 focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
               />
             </div>
           </div>
 
-          <div className="flex justify-end pt-4 border-t border-slate-100">
-            <Button
-              onClick={() => setCurrentStep(2)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              Next: Content Editor →
+          <div className="flex justify-end pt-4">
+            <Button onClick={() => setCurrentStep(2)} className="px-6 py-2.5 bg-indigo-600 text-white font-bold">
+              Continue to Content & Options &rarr;
             </Button>
           </div>
         </div>
       )}
 
       {/* ═════════════════════════════════════════════════════════════ */}
-      {/* STEP 2: CONTENT & OPTIONS */}
+      {/* STEP 2: CONTENT & MULTI-LANGUAGE TRANSLATIONS */}
       {/* ═════════════════════════════════════════════════════════════ */}
       {currentStep === 2 && (
         <div className="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
-          <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-            <FileQuestion size={18} className="text-indigo-600" />
-            2. Question Content & Options
-          </h2>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+              <FileQuestion size={18} className="text-indigo-600" />
+              2. Question Content & Language Variants
+            </h2>
 
-          {/* Translation Tab Selection if multiple */}
-          {formData.translations.length > 1 && (
-            <div className="flex gap-2 pb-2 border-b border-slate-100">
-              {formData.translations.map((tr, idx) => {
-                const langName =
-                  languages.find((l) => l.id === tr.languageId)?.name || `Language ${idx + 1}`;
-                const isActive = activeTranslationIndex === idx;
+            {/* Language Tabs */}
+            <div className="flex items-center gap-1 overflow-x-auto p-1 bg-slate-100 rounded-xl">
+              {formData.translations.map((t, idx) => {
+                const lang = languages.find((l) => l.id === t.languageId);
                 return (
                   <button
-                    type="button"
                     key={idx}
+                    type="button"
                     onClick={() => setActiveTranslationIndex(idx)}
-                    className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-colors ${
-                      isActive
-                        ? 'bg-slate-900 text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      activeTranslationIndex === idx
+                        ? 'bg-white text-indigo-600 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    {langName}
+                    {lang?.name || `Lang #${idx + 1}`}
                   </button>
                 );
               })}
             </div>
-          )}
+          </div>
 
-          {/* Passage if case-based */}
-          {formData.type === QuestionTypeEnum.CASE_BASED && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-indigo-900 block">Passage Text</label>
-              <textarea
-                rows={3}
-                value={formData.passage}
-                onChange={(e) => setFormData((prev) => ({ ...prev, passage: e.target.value }))}
-                className="w-full rounded-2xl border border-indigo-200 bg-indigo-50/30 p-3 text-xs text-slate-900 focus:outline-none"
-              />
-            </div>
-          )}
-
-          {/* Assertion & Reason */}
-          {formData.type === QuestionTypeEnum.ASSERTION_REASON && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-amber-900 block">Assertion (A)</label>
-                <textarea
-                  rows={2}
-                  value={formData.assertion}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, assertion: e.target.value }))}
-                  className="w-full rounded-2xl border border-amber-200 bg-amber-50/30 p-3 text-xs text-slate-900 focus:outline-none"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-amber-900 block">Reason (R)</label>
-                <textarea
-                  rows={2}
-                  value={formData.reason}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, reason: e.target.value }))}
-                  className="w-full rounded-2xl border border-amber-200 bg-amber-50/30 p-3 text-xs text-slate-900 focus:outline-none"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Question Text */}
+          {/* Question Statement for Active Language */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-800 block">Question Statement</label>
+            <label className="text-xs font-bold text-slate-700 block">
+              Question Statement ({languages.find((l) => l.id === formData.translations[activeTranslationIndex]?.languageId)?.name || 'Active Language'})
+            </label>
             <textarea
-              rows={3}
+              rows={4}
               value={formData.translations[activeTranslationIndex]?.questionText || ''}
               onChange={(e) => {
                 const val = e.target.value;
                 setFormData((prev) => {
-                  const trs = [...prev.translations];
-                  trs[activeTranslationIndex] = {
-                    ...trs[activeTranslationIndex],
+                  const updated = [...prev.translations];
+                  updated[activeTranslationIndex] = {
+                    ...updated[activeTranslationIndex],
                     questionText: val,
                   };
-                  return { ...prev, translations: trs };
+                  return { ...prev, translations: updated };
                 });
               }}
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none leading-relaxed"
+              placeholder="Enter question statement here..."
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
             />
           </div>
 
-          {/* Options */}
-          {formData.options && formData.options.length > 0 && (
-            <div className="space-y-3 pt-4 border-t border-slate-100">
+          {/* Options Studio */}
+          {(formData.type === QuestionTypeEnum.SINGLE_CORRECT ||
+            formData.type === QuestionTypeEnum.MULTIPLE_CORRECT ||
+            formData.type === QuestionTypeEnum.ASSERTION_REASON) && (
+            <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Options & Correct Answer
+                <label className="text-xs font-bold text-slate-700">
+                  Answer Options (Click icon to mark correct)
                 </label>
-                <Button variant="outline" size="sm" onClick={handleAddOption} className="text-xs">
-                  <Plus size={13} className="mr-1" /> Add Option
-                </Button>
+                <button
+                  type="button"
+                  onClick={handleAddOption}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-700"
+                >
+                  <Plus size={14} /> Add Option
+                </button>
               </div>
 
-              <div className="space-y-3">
-                {formData.options.map((opt, idx) => (
+              <div className="space-y-2.5">
+                {(formData.options || []).map((opt, idx) => (
                   <div
                     key={idx}
-                    className={`flex items-center gap-3 rounded-2xl border p-3 transition-all ${
+                    className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
                       opt.isCorrect
-                        ? 'border-emerald-300 bg-emerald-50/60 ring-1 ring-emerald-400'
-                        : 'border-slate-200 bg-slate-50/50'
+                        ? 'border-emerald-500 bg-emerald-50/40 ring-1 ring-emerald-500/30'
+                        : 'border-slate-200 bg-slate-50/40'
                     }`}
                   >
                     <button
                       type="button"
                       onClick={() => handleSetOptionCorrect(idx)}
-                      className={`flex h-8 w-8 items-center justify-center rounded-xl font-bold text-xs transition-colors shrink-0 ${
+                      className={`h-7 w-7 rounded-xl flex items-center justify-center font-bold text-xs transition-all ${
                         opt.isCorrect
                           ? 'bg-emerald-600 text-white shadow-sm'
-                          : 'bg-white border border-slate-300 text-slate-600'
+                          : 'bg-white border border-slate-300 text-slate-600 hover:border-slate-400'
                       }`}
                     >
-                      {opt.optionKey}
+                      {opt.optionKey || String.fromCharCode(65 + idx)}
                     </button>
 
                     <input
                       type="text"
-                      value={opt.optionLabel || ''}
+                      value={opt.optionLabel || opt.optionText || ''}
                       onChange={(e) => {
                         const val = e.target.value;
                         setFormData((prev) => {
-                          const opts = [...(prev.options || [])];
-                          opts[idx] = { ...opts[idx], optionLabel: val, optionText: val };
-                          return { ...prev, options: opts };
+                          const updated = [...(prev.options || [])];
+                          updated[idx] = {
+                            ...updated[idx],
+                            optionLabel: val,
+                            optionText: val,
+                          };
+                          return { ...prev, options: updated };
                         });
                       }}
-                      className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-900 focus:outline-none"
+                      placeholder={`Option ${opt.optionKey || String.fromCharCode(65 + idx)} text...`}
+                      className="flex-1 rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
                     />
 
-                    {formData.options!.length > 2 && (
+                    {opt.isCorrect && (
+                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-lg">
+                        Correct Answer
+                      </span>
+                    )}
+
+                    {(formData.options || []).length > 2 && (
                       <button
                         type="button"
                         onClick={() => handleRemoveOption(idx)}
-                        className="rounded-lg p-1.5 text-slate-400 hover:text-rose-600"
+                        className="text-slate-400 hover:text-rose-500 p-1"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -727,109 +645,72 @@ const EditQuestionPage: React.FC = () => {
 
           <div className="flex items-center justify-between pt-4 border-t border-slate-100">
             <Button variant="outline" onClick={() => setCurrentStep(1)}>
-              ← Back to Step 1
+              &larr; Back to Hierarchy
             </Button>
-            <Button
-              onClick={() => setCurrentStep(3)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              Next: Solution & Preview →
+            <Button onClick={() => setCurrentStep(3)} className="bg-indigo-600 text-white font-bold px-6">
+              Continue to Solution & Simulation &rarr;
             </Button>
           </div>
         </div>
       )}
 
       {/* ═════════════════════════════════════════════════════════════ */}
-      {/* STEP 3: PREVIEW & SAVE */}
+      {/* STEP 3: EXPLANATION & LIVE SIMULATION */}
       {/* ═════════════════════════════════════════════════════════════ */}
       {currentStep === 3 && (
         <div className="space-y-6">
-          <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm space-y-6">
             <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
               <CheckCircle2 size={18} className="text-emerald-600" />
-              3. Solution & Preview
+              3. Solution Rationale & Student Preview
             </h2>
 
+            {/* Explanation Studio */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 block">
-                Solution & Explanation
+                Detailed Solution & Pedagogical Explanation
               </label>
               <textarea
-                rows={3}
+                rows={4}
                 value={formData.explanation?.explanation || ''}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    explanation: { ...prev.explanation, explanation: e.target.value },
+                    explanation: { explanation: e.target.value },
                   }))
                 }
-                placeholder="Enter detailed explanation..."
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-4 text-xs font-medium text-slate-900 focus:outline-none leading-relaxed"
+                placeholder="Provide a step-by-step breakdown explaining why the answer is correct..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
               />
             </div>
-          </div>
 
-          {/* 9 Mandatory Languages Translation Status Checklist */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Languages size={18} className="text-indigo-600" />
-                <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
-                  9 Mandatory Languages Completeness Status
-                </span>
-              </div>
-              <span className="text-[11px] font-bold text-slate-500">
-                All 9 regional languages must be translated before publishing
-              </span>
+            {/* Live Interactive Preview Box */}
+            <div className="space-y-2 pt-2">
+              <label className="text-xs font-bold text-slate-700 flex items-center gap-2">
+                <Eye size={15} className="text-indigo-600" />
+                Live Candidate Interface Preview
+              </label>
+              <QuestionPreviewCard
+                question={formData}
+                selectedLanguageId={formData.defaultLanguageId}
+                showSolution={true}
+              />
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 pt-1">
-              {languages.map((lang) => {
-                const tr = formData.translations.find((t) => t.languageId === lang.id);
-                const isComplete = Boolean(tr?.questionText?.trim());
-                return (
-                  <div
-                    key={lang.id}
-                    className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border text-center transition-all ${
-                      isComplete
-                        ? 'border-emerald-200 bg-emerald-50/50 text-emerald-900 shadow-sm'
-                        : 'border-rose-200 bg-rose-50/30 text-rose-800'
-                    }`}
-                  >
-                    <span className="text-xs font-bold">{lang.name}</span>
-                    <span className="text-sm mt-0.5">{isComplete ? '✅' : '❌'}</span>
-                    <span className="text-[9px] font-medium text-slate-500 mt-0.5">
-                      {isComplete ? 'Complete' : 'Missing'}
-                    </span>
-                  </div>
-                );
-              })}
+            {/* Actions Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 border-t border-slate-100">
+              <Button variant="outline" onClick={() => setCurrentStep(2)}>
+                &larr; Back to Question Editor
+              </Button>
+
+              <Button
+                onClick={handleSave}
+                disabled={isUpdating}
+                className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-md shadow-indigo-100 px-6 py-2.5"
+              >
+                <Save size={15} className="mr-2" /> Save Changes
+              </Button>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-600 uppercase tracking-wider px-1">
-              <Eye size={15} className="text-indigo-600" />
-              <span>Real-Time Simulation</span>
-            </div>
-            <QuestionPreviewCard question={formData} showSolution={true} />
-          </div>
-
-          <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-            <Button variant="outline" onClick={() => setCurrentStep(2)}>
-              ← Back to Step 2
-            </Button>
-
-            <Button
-              onClick={handleSave}
-              isLoading={isUpdating}
-              className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200"
-            >
-              <Save size={15} />
-              <span>
-                {isApprovedOriginal ? `Save as Version ${originalVersion + 1}` : 'Save Changes'}
-              </span>
-            </Button>
           </div>
         </div>
       )}

@@ -70,7 +70,15 @@ export const Axios: AxiosInstance = axios.create({
 // ─── REQUEST Interceptor ──────────────────────────────────────
 Axios.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // With credentials enabled, HttpOnly cookies are automatically attached by the browser
+    // If request payload is FormData, remove static application/json so browser / axios computes multipart boundary
+    if (config.data instanceof FormData && config.headers) {
+      if (typeof (config.headers as any).delete === 'function') {
+        (config.headers as any).delete('Content-Type');
+        (config.headers as any).delete('content-type');
+      }
+      delete (config.headers as any)['Content-Type'];
+      delete (config.headers as any)['content-type'];
+    }
     return config;
   },
   (error) => Promise.reject(error),

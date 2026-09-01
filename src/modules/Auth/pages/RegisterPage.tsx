@@ -24,7 +24,15 @@ import PageLoader from '@/components/feedback/PageLoader';
 
 // ** Hooks & Services **
 import { useRegisterStudent } from '../hooks/useRegisterStudent';
-import { useGetRegisterOptionsAPI } from '../services';
+import {
+  useGetRegisterOptionsAPI,
+  fetchAllStatesAPI,
+  fetchDistrictsByStateSlugAPI,
+  getStateSlug,
+  formatLocationName,
+  type ApiStateItem,
+  type ApiDistrictItem,
+} from '../services';
 import { useAuth } from '@/hooks/useAuth';
 
 // ** Validation **
@@ -33,7 +41,7 @@ import {
   STEP_FIELDS,
   type RegisterFormValues,
 } from '../validation-schema/register.schema';
-import type { OptionItem, State, District } from '../types/auth.types';
+import type { OptionItem } from '../types/auth.types';
 
 const RegisterPage = () => {
   const { isAuthenticated, isInitializing } = useAuth();
@@ -59,9 +67,15 @@ const RegisterPage = () => {
   const [classes, setClasses] = useState<OptionItem[]>([]);
   const [languages, setLanguages] = useState<OptionItem[]>([]);
   const [examTargets, setExamTargets] = useState<OptionItem[]>([]);
-  const [statesList, setStatesList] = useState<State[]>([]);
-  const [filteredDistricts, setFilteredDistricts] = useState<District[]>([]);
   const [optionsError, setOptionsError] = useState<string | null>(null);
+
+  // Dynamic Location API states
+  const [statesList, setStatesList] = useState<ApiStateItem[]>([]);
+  const [districtsList, setDistrictsList] = useState<ApiDistrictItem[]>([]);
+  const [isLoadingStates, setIsLoadingStates] = useState<boolean>(true);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState<boolean>(false);
+  const [statesError, setStatesError] = useState<string | null>(null);
+  const [districtsError, setDistrictsError] = useState<string | null>(null);
 
   // Form setup
   const {
@@ -91,7 +105,7 @@ const RegisterPage = () => {
 
   const watchedValues = watch();
 
-  // Fetch registration options (classes, targets, languages, states & districts)
+  // 1. Fetch registration options (classes, targets, languages)
   useEffect(() => {
     let isMounted = true;
     const fetchOptions = async () => {
@@ -101,9 +115,8 @@ const RegisterPage = () => {
         setClasses(data.classes || []);
         setLanguages(data.languages || []);
         setExamTargets(data.examTargets || []);
-        setStatesList(data.states || []);
       } else {
-        setOptionsError(error ?? 'Failed to load registration options.');
+        setOptionsError(error ?? 'Failed to load academic options.');
       }
     };
     fetchOptions();
@@ -111,6 +124,41 @@ const RegisterPage = () => {
       isMounted = false;
     };
   }, [getRegisterOptionsAPI]);
+
+  // 2. Fetch States list from India Pincode API on mount
+  const loadStates = async () => {
+    setIsLoadingStates(true);
+    setStatesError(null);
+    const { data, error } = await fetchAllStatesAPI();
+    setIsLoadingStates(false);
+    if (data && data.length > 0) {
+      setStatesList(data);
+    }
+    if (error) {
+      setStatesError(error);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    const initStates = async () => {
+      setIsLoadingStates(true);
+      setStatesError(null);
+      const { data, error } = await fetchAllStatesAPI();
+      if (!isMounted) return;
+      setIsLoadingStates(false);
+      if (data && data.length > 0) {
+        setStatesList(data);
+      }
+      if (error) {
+        setStatesError(error);
+      }
+    };
+    initStates();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Sync cooldown timer on pending registration
   useEffect(() => {
@@ -135,37 +183,52 @@ const RegisterPage = () => {
     return <Navigate to="/" replace />;
   }
 
-  // Handle State Selection -> filter districts dynamically
-  const handleStateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedStateId = e.target.value;
-    const stateObj = statesList.find((s) => s.id === selectedStateId || s.name === selectedStateId);
+  // Handle State Selection -> convert to slug & fetch cities/districts dynamically
+  const handleStateChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedStateName = e.target.value;
+    setValue('state', selectedStateName, { shouldValidate: true });
+    setValue('district', '', { shouldValidate: true });
+    setValue('stateId', '', { shouldValidate: false });
+    setValue('districtId', '', { shouldValidate: false });
+    setDistrictsList([]);
+    setDistrictsError(null);
 
-    if (stateObj) {
-      setValue('stateId', stateObj.id, { shouldValidate: true });
-      setValue('state', stateObj.name, { shouldValidate: true });
-      setFilteredDistricts(stateObj.districts || []);
-      setValue('districtId', '', { shouldValidate: true });
-      setValue('district', '', { shouldValidate: true });
+    if (!selectedStateName) {
+      return;
+    }
+
+    const stateSlug = getStateSlug(selectedStateName);
+    setIsLoadingDistricts(true);
+    const { data, error } = await fetchDistrictsByStateSlugAPI(stateSlug);
+    setIsLoadingDistricts(false);
+
+    if (!error && data) {
+      setDistrictsList(data);
     } else {
-      setValue('stateId', '', { shouldValidate: true });
-      setValue('state', selectedStateId, { shouldValidate: true });
-      setFilteredDistricts([]);
+      setDistrictsError(error ?? 'Failed to load districts for the selected state.');
+    }
+  };
+
+  // Retry loading districts for currently selected state
+  const handleRetryDistricts = async () => {
+    if (!watchedValues.state) return;
+    const stateSlug = getStateSlug(watchedValues.state);
+    setIsLoadingDistricts(true);
+    setDistrictsError(null);
+    const { data, error } = await fetchDistrictsByStateSlugAPI(stateSlug);
+    setIsLoadingDistricts(false);
+    if (!error && data) {
+      setDistrictsList(data);
+    } else {
+      setDistrictsError(error ?? 'Failed to load districts for the selected state.');
     }
   };
 
   // Handle District Selection
   const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedDistrictId = e.target.value;
-    const districtObj = filteredDistricts.find(
-      (d) => d.id === selectedDistrictId || d.name === selectedDistrictId,
-    );
-    if (districtObj) {
-      setValue('districtId', districtObj.id, { shouldValidate: true });
-      setValue('district', districtObj.name, { shouldValidate: true });
-    } else {
-      setValue('districtId', '', { shouldValidate: true });
-      setValue('district', selectedDistrictId, { shouldValidate: true });
-    }
+    const selectedDistrict = e.target.value;
+    setValue('district', selectedDistrict, { shouldValidate: true });
+    setValue('districtId', '', { shouldValidate: false });
   };
 
   // Step Navigation Validation Handler
@@ -219,31 +282,25 @@ const RegisterPage = () => {
     }
   };
 
-  const classOptions = (classes || []).map((c) => ({ label: c.name, value: c.id }));
+  const classOptions = (classes || [])
+    .filter(
+      (c) =>
+        !c.name?.toLowerCase().includes('foundation') &&
+        !c.code?.toLowerCase().includes('foundation'),
+    )
+    .map((c) => ({ label: c.name, value: c.id }));
   const languageOptions = (languages || []).map((l) => ({ label: l.name, value: l.id }));
   const examTargetOptions = (examTargets || []).map((e) => ({ label: e.name, value: e.id }));
 
-  const stateOptions =
-    statesList.length > 0
-      ? statesList.map((s) => ({ label: s.name, value: s.id }))
-      : [
-          { label: 'Karnataka', value: 'Karnataka' },
-          { label: 'Maharashtra', value: 'Maharashtra' },
-          { label: 'Gujarat', value: 'Gujarat' },
-          { label: 'Tamil Nadu', value: 'Tamil Nadu' },
-          { label: 'Delhi', value: 'Delhi' },
-        ];
+  const stateOptions = statesList.map((s) => {
+    const formatted = formatLocationName(s.name);
+    return { label: formatted, value: formatted };
+  });
 
-  const districtOptions =
-    filteredDistricts.length > 0
-      ? filteredDistricts.map((d) => ({ label: d.name, value: d.id }))
-      : [
-          { label: 'Bengaluru Urban', value: 'Bengaluru Urban' },
-          { label: 'Bengaluru Rural', value: 'Bengaluru Rural' },
-          { label: 'Mysuru', value: 'Mysuru' },
-          { label: 'Mumbai', value: 'Mumbai' },
-          { label: 'Pune', value: 'Pune' },
-        ];
+  const districtOptions = districtsList.map((d) => {
+    const formatted = formatLocationName(d.name);
+    return { label: formatted, value: formatted };
+  });
 
   // Helper labels for summary view
   const selectedClassName = (classes || []).find((c) => c.id === watchedValues.classId)?.name;
@@ -253,6 +310,7 @@ const RegisterPage = () => {
   const selectedExamTargetName = (examTargets || []).find(
     (e) => e.id === watchedValues.examTargetId,
   )?.name;
+
 
   return (
     <div className="w-full max-w-2xl space-y-6 animate-in fade-in zoom-in-95 duration-300 text-slate-900">
@@ -431,10 +489,23 @@ const RegisterPage = () => {
                       <div>
                         <h2 className="text-sm font-bold text-slate-800">Location & School</h2>
                         <p className="text-xs text-slate-500">
-                          Select your state, district, and current educational institute
+                          Select your state, city/district, and current educational institute
                         </p>
                       </div>
                     </div>
+
+                    {statesError && (
+                      <div className="rounded-xl bg-amber-50 p-3 border border-amber-200 flex items-center justify-between text-xs text-amber-800">
+                        <span>{statesError}</span>
+                        <button
+                          type="button"
+                          onClick={loadStates}
+                          className="font-bold underline text-amber-900 hover:text-amber-700 ml-2"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <SelectField
@@ -443,27 +514,48 @@ const RegisterPage = () => {
                         errors={errors}
                         label="State"
                         options={stateOptions}
-                        placeholder="Select State"
+                        isLoading={isLoadingStates}
+                        placeholder={isLoadingStates ? 'Loading states...' : 'Select State'}
                         selectProps={{
-                          value: watchedValues.stateId || watchedValues.state,
+                          value: watchedValues.state,
                           onChange: handleStateChange,
                         }}
                       />
 
-                      <SelectField
-                        name="district"
-                        register={register}
-                        errors={errors}
-                        label="District"
-                        options={districtOptions}
-                        placeholder={
-                          filteredDistricts.length > 0 ? 'Select District' : 'Select State first'
-                        }
-                        selectProps={{
-                          value: watchedValues.districtId || watchedValues.district,
-                          onChange: handleDistrictChange,
-                        }}
-                      />
+                      <div className="space-y-1">
+                        <SelectField
+                          name="district"
+                          register={register}
+                          errors={errors}
+                          label="City / District"
+                          options={districtOptions}
+                          disabled={!watchedValues.state || isLoadingDistricts}
+                          isLoading={isLoadingDistricts}
+                          placeholder={
+                            !watchedValues.state
+                              ? 'Select State first'
+                              : isLoadingDistricts
+                                ? 'Loading cities...'
+                                : 'Select City / District'
+                          }
+                          selectProps={{
+                            value: watchedValues.district,
+                            onChange: handleDistrictChange,
+                          }}
+                        />
+                        {districtsError && (
+                          <div className="flex items-center justify-between text-[11px] text-red-600 pt-0.5 px-0.5">
+                            <span>{districtsError}</span>
+                            <button
+                              type="button"
+                              onClick={handleRetryDistricts}
+                              className="font-bold underline text-red-700 hover:text-red-800 ml-1"
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <InputField
@@ -544,6 +636,12 @@ const RegisterPage = () => {
                           State:{' '}
                           <span className="font-semibold text-slate-900">
                             {watchedValues.state || '—'}
+                          </span>
+                        </div>
+                        <div>
+                          City / District:{' '}
+                          <span className="font-semibold text-slate-900">
+                            {watchedValues.district || '—'}
                           </span>
                         </div>
                         <div>

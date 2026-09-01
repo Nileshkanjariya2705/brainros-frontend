@@ -13,6 +13,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import { toast } from '@/utils/toast';
 import {
   useUploadQuestionPaperAPI,
   downloadQuestionPaperTemplate,
@@ -114,6 +115,7 @@ export const UploadQuestionPaperPage: React.FC = () => {
   const handleUpload = async () => {
     if (!file) {
       setUploadError('Please select a question paper file to upload.');
+      toast.error('Please select a question paper file to upload.');
       return;
     }
 
@@ -123,16 +125,23 @@ export const UploadQuestionPaperPage: React.FC = () => {
     const { data, error } = await uploadQuestionPaperAPI(file);
 
     if (error) {
-      setUploadError(
+      const errorMsg =
         typeof error === 'string'
           ? error
-          : (error as any).message || 'Failed to process question paper.',
-      );
+          : (error as any).message || 'Failed to process question paper.';
+      setUploadError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
     const payload = (data as any)?.data || data;
     setUploadResult(payload);
+
+    if (payload?.success) {
+      toast.success(payload.message || 'Exam created successfully!');
+    } else {
+      toast.error(payload?.message || 'Question paper validation failed. Please check errors below.');
+    }
   };
 
   // ─── Template Download ─────────────────────────────────────────
@@ -140,8 +149,9 @@ export const UploadQuestionPaperPage: React.FC = () => {
     try {
       setIsDownloadingTemplate(true);
       await downloadQuestionPaperTemplate(format);
+      toast.success(`Question paper ${format.toUpperCase()} template downloaded.`);
     } catch {
-      alert('Failed to download template. Please try again.');
+      toast.error('Failed to download template. Please try again.');
     } finally {
       setIsDownloadingTemplate(false);
     }
@@ -153,8 +163,9 @@ export const UploadQuestionPaperPage: React.FC = () => {
     try {
       setIsDownloadingErrors(true);
       await downloadQuestionPaperErrorReport(uploadResult.importId, format);
+      toast.success('Error report workbook downloaded.');
     } catch {
-      alert('Failed to download error report.');
+      toast.error('Failed to download error report.');
     } finally {
       setIsDownloadingErrors(false);
     }

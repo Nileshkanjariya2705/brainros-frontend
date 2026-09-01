@@ -284,6 +284,10 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
     permissions: [PERMISSIONS.REPORT_VIEW],
     roles: [ROLES.INSTITUTION_ADMIN, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.SALES_AGENT],
   },
+  [PRIVATE_NAVIGATION.institutionProfile]: {
+    path: PRIVATE_NAVIGATION.institutionProfile,
+    roles: [ROLES.INSTITUTION_ADMIN, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.SALES_AGENT],
+  },
 
   // Parent Portal
   [PRIVATE_NAVIGATION.parentDashboard]: {

@@ -133,6 +133,17 @@ body {
   @apply rounded-full bg-slate-200 hover:bg-slate-300 transition-colors;
 }
 
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
 /*
  * ==========================================================================
  * Exam Question Palette States (Accessible Dual Indicator)
@@ -175,13 +186,17 @@ body {
  * ==========================================================================
  */
 .brainros-card {
-  @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-all;
+  @apply rounded-3xl border border-slate-200/80 bg-white shadow-sm transition-all duration-200;
 }
 
 .brainros-card-hover {
-  @apply hover:border-slate-300 hover:shadow-md;
+  @apply hover:border-indigo-200 hover:shadow-md hover:-translate-y-0.5;
 }
 
 .brainros-badge {
-  @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold transition-all;
+  @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all;
+}
+
+.glass-panel {
+  @apply bg-white/80 backdrop-blur-md border border-white/40 shadow-sm;
 }

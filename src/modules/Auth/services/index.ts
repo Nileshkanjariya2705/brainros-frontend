@@ -313,3 +313,7 @@ export const useResendOtpAPI = () => {
   );
   return { resendOtpAPI, isLoading, isError, isSuccess };
 };
+
+// ** Location & Pincode Services **
+export * from './location.service';
+

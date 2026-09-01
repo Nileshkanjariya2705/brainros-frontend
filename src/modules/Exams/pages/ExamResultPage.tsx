@@ -1,5 +1,5 @@
 // ** Packages **
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import {
@@ -14,14 +14,14 @@ import {
   XCircle,
   BrainCircuit,
   Award,
-  ChevronDown,
-  ChevronUp,
   CheckCircle2,
+  Calendar,
+  RefreshCw,
 } from 'lucide-react';
 
 // ** Services **
 import {
-  useCalculateResultAPI,
+  useGetAttemptResultStatusAPI,
   useGetFullAnalysisAPI,
   useGetAnswerReviewAPI,
   useGetAttemptStrategyAPI,
@@ -48,6 +48,7 @@ import type {
   QuestionReviewItem,
   DetailedStrategyAnalysis,
   MyRanksResponse,
+  ResultStatusResponse,
 } from '@/types/exam.types';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 
@@ -55,16 +56,25 @@ const ExamResultPage = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
 
-  const { calculateResultAPI } = useCalculateResultAPI();
-  const { getFullAnalysisAPI, isLoading: isAnalysisLoading } = useGetFullAnalysisAPI();
-  const { getAnswerReviewAPI, isLoading: isReviewLoading } = useGetAnswerReviewAPI();
+  // API Hooks
+  const { getAttemptResultStatusAPI } = useGetAttemptResultStatusAPI();
+  const { getFullAnalysisAPI, isLoading: isAnalysisLoading } =
+    useGetFullAnalysisAPI();
+  const { getAnswerReviewAPI } = useGetAnswerReviewAPI();
   const { getAttemptStrategyAPI } = useGetAttemptStrategyAPI();
   const { recalculateStrategyAPI, isLoading: isRecalculatingStrategy } =
     useRecalculateStrategyAPI();
   const { getMyRanksAPI, isLoading: isRanksLoading } = useGetMyRanksAPI();
 
+  // Lifecycle & Status State
+  const [resultStatusData, setResultStatusData] =
+    useState<ResultStatusResponse | null>(null);
+  const [isPolling, setIsPolling] = useState(true);
+
+  // Analysis State
   const [analysis, setAnalysis] = useState<FullAnalysisReport | null>(null);
-  const [detailedStrategy, setDetailedStrategy] = useState<DetailedStrategyAnalysis | null>(null);
+  const [detailedStrategy, setDetailedStrategy] =
+    useState<DetailedStrategyAnalysis | null>(null);
   const [ranks, setRanks] = useState<MyRanksResponse | null>(null);
   const [reviewItems, setReviewItems] = useState<QuestionReviewItem[]>([]);
   const [activeTab, setActiveTab] = useState<
@@ -77,51 +87,65 @@ const ExamResultPage = () => {
     | 'recommendations'
     | 'review'
   >('overview');
-  const [expandedReviewIdx, setExpandedReviewIdx] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  useEffect(() => {
+  // ─── 1. Check Result Status & Poll if in processing ─────────────
+  const checkStatus = useCallback(async () => {
     if (!attemptId) return;
-    let isMounted = true;
+    try {
+      const res = await getAttemptResultStatusAPI(attemptId);
+      if (res.data) {
+        setResultStatusData(res.data);
 
-    (async () => {
-      // 1. Ensure result calculated
-      await calculateResultAPI(attemptId);
-
-      // 2. Fetch full Brainros Analysis Engine report (with auto-retry)
-      let aRes = await getFullAnalysisAPI(attemptId);
-      if (!aRes.data && aRes.error) {
-        // Retry once after 600ms in case calculation was in-flight
-        await new Promise((resolve) => setTimeout(resolve, 600));
-        aRes = await getFullAnalysisAPI(attemptId);
+        // If Published or Ready, stop polling and load full analysis
+        if (
+          res.data.availability === 'PUBLISHED' ||
+          res.data.resultStatus === 'PUBLISHED'
+        ) {
+          setIsPolling(false);
+          loadPublishedReport();
+        } else if (res.data.availability === 'RESULT_PENDING') {
+          setIsPolling(false);
+        }
       }
+    } catch {
+      // Non-blocking status retry
+    }
+  }, [attemptId, getAttemptResultStatusAPI]);
 
-      if (!isMounted) return;
-      if (aRes.error && !aRes.data) {
-        setErrorMsg(aRes.error);
-        return;
-      }
-      if (aRes.data) {
-        setAnalysis(aRes.data);
-      }
+  // Load published results
+  const loadPublishedReport = useCallback(async () => {
+    if (!attemptId) return;
+    const aRes = await getFullAnalysisAPI(attemptId);
+    if (aRes.data) {
+      setAnalysis(aRes.data);
+    } else if (aRes.error) {
+      setErrorMsg(aRes.error);
+    }
 
-      // 3. Fetch detailed Attempt Strategy
-      const sRes = await getAttemptStrategyAPI(attemptId);
-      if (isMounted && sRes.data) {
-        setDetailedStrategy(sRes.data);
-      }
+    const sRes = await getAttemptStrategyAPI(attemptId);
+    if (sRes.data) {
+      setDetailedStrategy(sRes.data);
+    }
 
-      // 4. Fetch official Ranks & Percentiles
-      const rRes = await getMyRanksAPI(attemptId);
-      if (isMounted && rRes.data) {
-        setRanks(rRes.data);
-      }
-    })();
+    const rRes = await getMyRanksAPI(attemptId);
+    if (rRes.data) {
+      setRanks(rRes.data);
+    }
+  }, [attemptId, getFullAnalysisAPI, getAttemptStrategyAPI, getMyRanksAPI]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [attemptId, calculateResultAPI, getFullAnalysisAPI, getAttemptStrategyAPI, getMyRanksAPI]);
+  useEffect(() => {
+    checkStatus();
+  }, [checkStatus]);
+
+  // Periodic polling while in PROCESSING state
+  useEffect(() => {
+    if (!isPolling) return;
+    const interval = setInterval(() => {
+      checkStatus();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [isPolling, checkStatus]);
 
   const handleRecalculateStrategy = async () => {
     if (!attemptId) return;
@@ -156,24 +180,127 @@ const ExamResultPage = () => {
     }
   };
 
-  if (isAnalysisLoading) {
+  // ─── Case 1: LIVE EXAM Awaiting Super Admin Publication ──────────
+  if (resultStatusData?.availability === 'RESULT_PENDING') {
     return (
-      <div className="flex h-96 flex-col items-center justify-center gap-4">
-        <div className="h-16 w-16 rounded-3xl bg-indigo-600/10 flex items-center justify-center text-indigo-600 shadow-inner">
-          <BrainCircuit size={32} className="animate-pulse" />
+      <div className="max-w-2xl mx-auto py-12 px-4 space-y-6">
+        <div className="rounded-3xl bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-900/50 p-8 text-center shadow-xl shadow-indigo-100/30 dark:shadow-none">
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-300 dark:shadow-none mb-6">
+            <CheckCircle2 size={40} />
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 mb-3">
+            <Calendar size={13} /> Live Examination Submitted
+          </div>
+
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+            Responses Successfully Evaluated
+          </h1>
+
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-lg mx-auto">
+            {resultStatusData.message}
+          </p>
+
+          <div className="mt-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-left space-y-2 text-xs">
+            <div className="flex justify-between text-slate-600 dark:text-slate-400">
+              <span>Exam Title:</span>
+              <span className="font-semibold text-slate-900 dark:text-white">
+                {resultStatusData.examTitle}
+              </span>
+            </div>
+            <div className="flex justify-between text-slate-600 dark:text-slate-400">
+              <span>Evaluation Status:</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                Automated Scoring Completed ✓
+              </span>
+            </div>
+            <div className="flex justify-between text-slate-600 dark:text-slate-400">
+              <span>Official Publication:</span>
+              <span className="font-semibold text-amber-600 dark:text-amber-400">
+                Pending Super Admin Release
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Button
+              variant="outline"
+              onClick={checkStatus}
+              className="w-full sm:w-auto"
+            >
+              <RefreshCw size={15} className="mr-2" /> Check for Publication
+            </Button>
+            <Button
+              onClick={() => navigate(PRIVATE_NAVIGATION.dashboard)}
+              className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white font-semibold"
+            >
+              Return to Dashboard
+            </Button>
+          </div>
         </div>
-        <Loader label="Brainros Analysis Engine is generating diagnostic insights…" />
       </div>
     );
   }
 
+  // ─── Case 2: In-flight Processing (Mock or Live calculation) ─────
+  if (
+    isPolling ||
+    resultStatusData?.availability === 'PROCESSING' ||
+    (isAnalysisLoading && !analysis)
+  ) {
+    return (
+      <div className="max-w-lg mx-auto py-20 px-4 text-center space-y-6">
+        <div className="w-20 h-20 mx-auto rounded-3xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-inner">
+          <BrainCircuit size={40} className="animate-spin text-indigo-600" />
+        </div>
+
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+            Processing Your Exam Result
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Our asynchronous evaluation engine is scoring questions, generating diagnostic insights, and compiling percentile benchmarks.
+          </p>
+        </div>
+
+        {/* Multi-step progress visual */}
+        <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 text-left space-y-3 text-xs shadow-sm">
+          <div className="flex items-center gap-2 text-emerald-600 font-semibold">
+            <CheckCircle2 size={16} /> Answers Safely Saved & Locked
+          </div>
+          <div className="flex items-center gap-2 text-indigo-600 font-semibold animate-pulse">
+            <Clock size={16} className="animate-spin" /> Automated Question-Level Evaluation
+          </div>
+          <div className="flex items-center gap-2 text-slate-400 font-medium">
+            <Clock size={16} /> Strategy & Time Management Diagnostics
+          </div>
+          <div className="flex items-center gap-2 text-slate-400 font-medium">
+            <Clock size={16} /> Percentile & Official Ranking Snapshot
+          </div>
+        </div>
+
+        <div className="pt-2">
+          <Loader label="Auto-refreshing in real time..." />
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Case 3: Error State ────────────────────────────────────────
   if (errorMsg) {
     return (
-      <div className="rounded-3xl bg-white p-8 text-center shadow-sm border border-slate-200 max-w-lg mx-auto mt-10">
+      <div className="rounded-3xl bg-white dark:bg-slate-800 p-8 text-center shadow-sm border border-slate-200 dark:border-slate-700 max-w-lg mx-auto mt-10">
         <XCircle className="mx-auto text-rose-500 mb-4" size={48} />
-        <h2 className="text-xl font-bold text-slate-900">Analysis Not Ready</h2>
-        <p className="mt-2 text-sm text-slate-600">{errorMsg}</p>
-        <Button className="mt-6 w-full" onClick={() => navigate(PRIVATE_NAVIGATION.dashboard)}>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+          Analysis Not Ready
+        </h2>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+          {errorMsg}
+        </p>
+        <Button
+          className="mt-6 w-full"
+          onClick={() => navigate(PRIVATE_NAVIGATION.dashboard)}
+        >
           Return to Dashboard
         </Button>
       </div>
@@ -182,24 +309,34 @@ const ExamResultPage = () => {
 
   if (!analysis) return null;
 
-  const { overall, subjects, chapters, timeAnalysis, attemptStrategy, recommendations } = analysis;
+  const {
+    overall,
+    subjects,
+    chapters,
+    timeAnalysis,
+    attemptStrategy,
+    recommendations,
+  } = analysis;
 
+  // ─── Case 4: Complete Published Brainros Diagnostic Report ──────
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* ── Top Header Navigation ────────────────────────────── */}
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(PRIVATE_NAVIGATION.dashboard)}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors"
         >
           <ArrowLeft size={16} />
           Back to Dashboard
         </button>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-500">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
             Exam Target:{' '}
-            <span className="text-indigo-600 font-bold">{analysis.examTargetName}</span>
+            <span className="text-indigo-600 dark:text-indigo-400 font-bold">
+              {analysis.examTargetName}
+            </span>
           </span>
         </div>
       </div>
@@ -212,7 +349,7 @@ const ExamResultPage = () => {
       />
 
       {/* ── Tab Navigation Bar ───────────────────────────────── */}
-      <div className="flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm scrollbar-none">
+      <div className="flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1.5 shadow-sm scrollbar-none">
         {[
           { id: 'overview', label: 'Overall Overview', icon: Trophy },
           { id: 'ranks', label: 'Ranks & Percentile', icon: Award },
@@ -234,8 +371,8 @@ const ExamResultPage = () => {
             className={cn(
               'flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-200',
               activeTab === tab.id
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none'
+                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white',
             )}
           >
             <tab.icon size={15} />
@@ -260,7 +397,10 @@ const ExamResultPage = () => {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           <SubjectAnalyticsView subjects={subjects} />
-          <ChapterDiagnosisView chapters={chapters} thresholds={analysis.thresholdsUsed} />
+          <ChapterDiagnosisView chapters={chapters} />
+          <TimeAnalyticsView timeAnalysis={timeAnalysis} />
+          <AttemptStrategyView attemptStrategy={attemptStrategy} />
+          <SmartRecommendationsView recommendations={recommendations} />
         </div>
       )}
 
@@ -274,16 +414,13 @@ const ExamResultPage = () => {
 
       {activeTab === 'subjects' && <SubjectAnalyticsView subjects={subjects} />}
 
-      {activeTab === 'chapters' && (
-        <ChapterDiagnosisView chapters={chapters} thresholds={analysis.thresholdsUsed} />
-      )}
+      {activeTab === 'chapters' && <ChapterDiagnosisView chapters={chapters} />}
 
       {activeTab === 'time' && <TimeAnalyticsView timeAnalysis={timeAnalysis} />}
 
       {activeTab === 'strategy' && (
         <AttemptStrategyView
-          strategy={attemptStrategy}
-          overall={overall}
+          attemptStrategy={attemptStrategy}
           detailedStrategy={detailedStrategy}
           onRecalculate={handleRecalculateStrategy}
           isRecalculating={isRecalculatingStrategy}
@@ -291,133 +428,105 @@ const ExamResultPage = () => {
       )}
 
       {activeTab === 'recommendations' && (
-        <SmartRecommendationsView
-          recommendations={recommendations}
-          chapters={chapters}
-          subjects={subjects}
-        />
+        <SmartRecommendationsView recommendations={recommendations} />
       )}
 
       {activeTab === 'review' && (
-        <div className="space-y-3">
-          {isReviewLoading ? (
-            <Loader label="Loading detailed answer reviews…" />
-          ) : reviewItems.length === 0 ? (
-            <p className="text-center text-sm text-slate-500 py-8">
-              No review questions available.
-            </p>
-          ) : (
-            reviewItems.map((item, idx) => {
-              const isExpanded = expandedReviewIdx === idx;
-              return (
-                <div
-                  key={idx}
-                  className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden"
-                >
-                  <button
-                    onClick={() => setExpandedReviewIdx(isExpanded ? null : idx)}
-                    className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50/80 transition-colors"
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-white">
+              Official Question Solutions & Answer Review
+            </h3>
+            <span className="text-xs text-slate-500 font-medium">
+              {reviewItems.length} Questions Evaluated
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {reviewItems.map((item, idx) => (
+              <div
+                key={idx}
+                className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {idx + 1}
+                    </span>
+                    <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                      {item.sectionName}
+                    </span>
+                  </div>
+
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 rounded text-[11px] font-bold',
+                      item.isCorrect
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                        : item.isAttempted
+                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
+                    )}
                   >
-                    <div className="flex items-center gap-3.5">
-                      <span
-                        className={cn(
-                          'flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold text-white shadow-sm',
-                          item.isCorrect
-                            ? 'bg-emerald-500'
-                            : item.isAttempted
-                              ? 'bg-rose-500'
-                              : 'bg-slate-400',
-                        )}
-                      >
-                        {item.displayOrder}
-                      </span>
-                      <div>
-                        <span className="text-sm font-bold text-slate-900">
-                          Question {item.displayOrder}
-                        </span>
-                        <span className="ml-2 text-xs text-slate-500 font-medium">
-                          {item.sectionName} • {item.questionType?.name}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          'rounded-full px-3 py-1 text-[10px] font-bold uppercase',
-                          item.isCorrect
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : item.isAttempted
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                              : 'bg-slate-100 text-slate-500 border border-slate-200',
-                        )}
-                      >
-                        {item.isCorrect ? 'Correct' : item.isAttempted ? 'Wrong' : 'Skipped'}
-                      </span>
-                      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </div>
-                  </button>
-
-                  {isExpanded && (
-                    <div className="border-t border-slate-100 p-6 bg-slate-50/40">
-                      <p className="text-sm font-medium text-slate-900 leading-relaxed mb-4">
-                        {item.questionText}
-                      </p>
-                      <div className="space-y-2.5">
-                        {item.options.map((opt) => {
-                          const isStudentChoice = item.studentAnswer?.selectedOptionId === opt.id;
-                          return (
-                            <div
-                              key={opt.id}
-                              className={cn(
-                                'flex items-center gap-3 rounded-2xl border p-3.5 text-sm transition-all',
-                                opt.isCorrect
-                                  ? 'border-emerald-300 bg-emerald-50 text-emerald-950 font-semibold'
-                                  : isStudentChoice
-                                    ? 'border-rose-300 bg-rose-50 text-rose-950 font-semibold'
-                                    : 'border-slate-200 bg-white text-slate-700',
-                              )}
-                            >
-                              <span
-                                className={cn(
-                                  'flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold shrink-0',
-                                  opt.isCorrect
-                                    ? 'bg-emerald-600 text-white'
-                                    : isStudentChoice
-                                      ? 'bg-rose-600 text-white'
-                                      : 'bg-slate-200 text-slate-600',
-                                )}
-                              >
-                                {opt.optionLabel}
-                              </span>
-                              <span className="flex-1 leading-relaxed">{opt.optionText}</span>
-                              {opt.isCorrect && (
-                                <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
-                              )}
-                              {isStudentChoice && !opt.isCorrect && (
-                                <XCircle size={18} className="text-rose-600 shrink-0" />
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {item.explanation && (
-                        <div className="mt-5 rounded-2xl bg-indigo-50/70 border border-indigo-100 p-4">
-                          <span className="text-[11px] font-extrabold text-indigo-700 uppercase tracking-wider block mb-1">
-                            Explanation & Key Learning
-                          </span>
-                          <p className="text-xs text-indigo-950 leading-relaxed">
-                            {item.explanation}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    {item.isCorrect
+                      ? 'Correct'
+                      : item.isAttempted
+                        ? 'Incorrect'
+                        : 'Unattempted'}
+                  </span>
                 </div>
-              );
-            })
-          )}
+
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  {item.questionText}
+                </p>
+
+                {/* Options List */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                  {item.options.map((opt) => {
+                    const isStudentPick =
+                      item.studentAnswer?.selectedOptionId === opt.id;
+                    const isCorrectOpt = opt.isCorrect;
+
+                    return (
+                      <div
+                        key={opt.id}
+                        className={cn(
+                          'p-3 rounded-xl border text-xs font-medium flex items-center justify-between',
+                          isCorrectOpt
+                            ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200'
+                            : isStudentPick
+                              ? 'border-rose-400 bg-rose-50/70 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200'
+                              : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300',
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold">{opt.optionLabel}.</span>
+                          <span>{opt.optionText}</span>
+                        </div>
+                        {isCorrectOpt && (
+                          <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                            Correct Answer
+                          </span>
+                        )}
+                        {isStudentPick && !isCorrectOpt && (
+                          <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400">
+                            Your Choice
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {item.explanation && (
+                  <div className="mt-3 p-3 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-xl border border-indigo-100 dark:border-indigo-900/40 text-xs text-indigo-950 dark:text-indigo-200">
+                    <span className="font-bold block mb-1">Explanation:</span>
+                    {item.explanation}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

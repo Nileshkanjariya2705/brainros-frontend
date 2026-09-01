@@ -10,22 +10,17 @@ import {
   Calendar,
   Layers,
   ArrowLeft,
-  Globe,
-  Loader2,
-  X,
   TrendingUp,
 } from 'lucide-react';
 import cn from 'classnames';
 import { useGetExamDetailsAPI, useStartAttemptAPI } from '../services';
-import { useAuth } from '@/hooks/useAuth';
+import { ExamStartLanguageModal } from '../components/ExamStartLanguageModal';
 import Loader from '@/components/feedback/Loader';
-import Button from '@/components/ui/Button';
 import type { Exam } from '@/types/exam.types';
 
 export const StudentExamDetailsPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const { getExamDetailsAPI, isLoading: isDetailsLoading } = useGetExamDetailsAPI();
   const { startAttemptAPI, isLoading: isStarting } = useStartAttemptAPI();
@@ -67,7 +62,6 @@ export const StudentExamDetailsPage: React.FC = () => {
 
   const [countdown, setCountdown] = useState<number>(0);
   const [showLangModal, setShowLangModal] = useState<boolean>(false);
-  const [selectedLanguageId, setSelectedLanguageId] = useState<string>('');
   const [startError, setStartError] = useState<string | null>(null);
 
   const fetchExamDetails = useCallback(async () => {
@@ -79,16 +73,8 @@ export const StudentExamDetailsPage: React.FC = () => {
       if (data.accessDetails?.waitSeconds > 0) {
         setCountdown(data.accessDetails.waitSeconds);
       }
-      // Pre-select student preferred language
-      const langs = data.exam.languages || [];
-      if (langs.length > 0) {
-        const studentPrefLang = langs.find(
-          (l) => l.name === user?.studentProfile?.preferredLanguage,
-        );
-        setSelectedLanguageId(studentPrefLang ? studentPrefLang.id : langs[0].id);
-      }
     }
-  }, [examId, getExamDetailsAPI, user?.studentProfile?.preferredLanguage]);
+  }, [examId, getExamDetailsAPI]);
 
   useEffect(() => {
     fetchExamDetails();
@@ -115,20 +101,6 @@ export const StudentExamDetailsPage: React.FC = () => {
     const mins = Math.floor((totalSec % 3600) / 60);
     const secs = totalSec % 60;
     return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  };
-
-  const handleStartExam = async () => {
-    if (!examId || !selectedLanguageId) return;
-    setStartError(null);
-
-    const res = await startAttemptAPI(examId, selectedLanguageId);
-    const createdAttemptId = res.data?.attemptId || (res.data as any)?.id;
-    if (createdAttemptId) {
-      navigate(`/exam/${examId}/attempt/${createdAttemptId}`);
-    } else {
-      const err = (res.response?.data as any)?.message || 'Failed to start examination.';
-      setStartError(err);
-    }
   };
 
   if (isDetailsLoading || !examData) {
@@ -391,81 +363,31 @@ export const StudentExamDetailsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Language Selection Modal ───────────────────────────────── */}
-      {showLangModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2 text-indigo-700 font-extrabold text-sm">
-                <Globe size={18} />
-                <span>Select Examination Language</span>
-              </div>
-              <button
-                onClick={() => setShowLangModal(false)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-500">
-              Choose your primary language for reading questions. You can also toggle translations
-              dynamically during the test.
-            </p>
-
-            <div className="space-y-2 max-h-56 overflow-y-auto">
-              {(exam.languages || [{ id: 'default', name: 'English', nativeName: 'English' }]).map(
-                (lang) => (
-                  <button
-                    key={lang.id}
-                    onClick={() => setSelectedLanguageId(lang.id)}
-                    className={cn(
-                      'w-full flex items-center justify-between rounded-2xl border p-3.5 text-left text-xs font-bold transition-all',
-                      selectedLanguageId === lang.id
-                        ? 'border-indigo-600 bg-indigo-50/60 text-indigo-900 ring-2 ring-indigo-500/20'
-                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700',
-                    )}
-                  >
-                    <span>{lang.name}</span>
-                    {lang.nativeName && (
-                      <span className="text-[11px] text-slate-400 font-normal">
-                        ({lang.nativeName})
-                      </span>
-                    )}
-                  </button>
-                ),
-              )}
-            </div>
-
-            {startError && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 font-semibold">
-                {startError}
-              </div>
-            )}
-
-            <div className="flex items-center gap-3 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setShowLangModal(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                className="flex-1"
-                onClick={handleStartExam}
-                disabled={isStarting || !selectedLanguageId}
-              >
-                {isStarting ? (
-                  <span className="flex items-center gap-1.5">
-                    <Loader2 size={14} className="animate-spin" />
-                    Launching...
-                  </span>
-                ) : (
-                  'Launch Test'
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Language Selection Modal (Gate before starting attempt) ─ */}
+      <ExamStartLanguageModal
+        isOpen={showLangModal}
+        examId={examId || ''}
+        examTitle={exam.title}
+        onClose={() => setShowLangModal(false)}
+        onConfirmStart={async (chosenLangId) => {
+          if (!examId) return;
+          setStartError(null);
+          const res = await startAttemptAPI(examId, chosenLangId);
+          const createdAttemptId =
+            res.data?.attemptId || (res.data as any)?.id;
+          if (createdAttemptId) {
+            setShowLangModal(false);
+            navigate(`/exam/${examId}/attempt/${createdAttemptId}`);
+          } else {
+            const err =
+              (res.response?.data as any)?.message ||
+              'Failed to start examination.';
+            setStartError(err);
+          }
+        }}
+        isStarting={isStarting}
+        startError={startError}
+      />
     </div>
   );
 };

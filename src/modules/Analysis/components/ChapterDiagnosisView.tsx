@@ -31,10 +31,20 @@ interface Props {
     revisionNeeded: ChapterAnalyticsItem[];
     criticalFocus: ChapterAnalyticsItem[];
   };
-  thresholds: PerformanceThresholds;
+  thresholds?: PerformanceThresholds;
 }
 
-export const ChapterDiagnosisView: React.FC<Props> = ({ chapters, thresholds }) => {
+const DEFAULT_THRESHOLDS: PerformanceThresholds = {
+  excellent: 80,
+  strong: 65,
+  good: 50,
+  weak: 35,
+};
+
+export const ChapterDiagnosisView: React.FC<Props> = ({
+  chapters,
+  thresholds = DEFAULT_THRESHOLDS,
+}) => {
   const [filter, setFilter] = useState<'ALL' | 'CRITICAL' | 'REVISION' | 'MASTERED'>('ALL');
   const [search, setSearch] = useState('');
   const [subjectFilter, setSubjectFilter] = useState<string>('ALL');

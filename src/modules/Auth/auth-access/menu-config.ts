@@ -22,6 +22,7 @@ import {
   FileCheck,
 } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
+import { type FeatureKey } from '@/constants/feature-flag.constant';
 import { PERMISSIONS, type PermissionCode } from './permission.constants';
 import { ROLES, type RoleType } from './roles.constants';
 import {
@@ -37,6 +38,7 @@ export interface MenuItemConfig {
   to: string;
   icon: any;
   end?: boolean;
+  feature?: FeatureKey;
   permission?: PermissionCode;
   permissions?: PermissionCode[];
   roles?: RoleType[];

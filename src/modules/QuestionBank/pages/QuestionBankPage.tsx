@@ -25,6 +25,8 @@ import { VersionHistoryModal } from '../components/VersionHistoryModal';
 import { QuestionTranslationsModal } from '../components/QuestionTranslationsModal';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/hooks/useAuth';
+import { FeatureGuard } from '@/components/guards/FeatureGuard';
+import { FEATURES } from '@/constants/feature-flag.constant';
 
 const QuestionBankPage: React.FC = () => {
   const navigate = useNavigate();
@@ -246,22 +248,26 @@ const QuestionBankPage: React.FC = () => {
 
         {/* Action CTAs */}
         <div className="flex items-center gap-2.5">
-          <Button
-            variant="outline"
-            onClick={() => navigate(`${routePrefix}/question-bank/import`)}
-            className="flex items-center gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
-          >
-            <UploadCloud size={16} />
-            <span>Bulk Import (CSV/Excel)</span>
-          </Button>
+          <FeatureGuard feature={FEATURES.BULK_IMPORT_QUESTION}>
+            <Button
+              variant="outline"
+              onClick={() => navigate(`${routePrefix}/question-bank/import`)}
+              className="flex items-center gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+            >
+              <UploadCloud size={16} />
+              <span>Bulk Import (CSV/Excel)</span>
+            </Button>
+          </FeatureGuard>
 
-          <Button
-            onClick={() => navigate(`${routePrefix}/question-bank/create`)}
-            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200"
-          >
-            <Plus size={16} />
-            <span>Create New Question</span>
-          </Button>
+          <FeatureGuard feature={FEATURES.ADD_QUESTION}>
+            <Button
+              onClick={() => navigate(`${routePrefix}/question-bank/create`)}
+              className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200"
+            >
+              <Plus size={16} />
+              <span>Create New Question</span>
+            </Button>
+          </FeatureGuard>
         </div>
       </div>
 

@@ -1648,3 +1648,66 @@ export interface DetailedComparisonResponse {
   }>;
   insights: string[];
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// RESULT PUBLICATION & LIFECYCLE TYPES
+// ═══════════════════════════════════════════════════════════════════
+
+export interface PublicationDashboardItem {
+  examId: string;
+  examTitle: string;
+  examTarget: string;
+  examStatus: string;
+  examType: 'MOCK' | 'LIVE';
+  totalCandidates: number;
+  finalizedAttempts: number;
+  evaluatedAttempts: number;
+  analyticsCompletedAttempts: number;
+  rankingCompleted: boolean;
+  securityReviewCompleted: boolean;
+  publicationStatus: 'NOT_READY' | 'PROCESSING' | 'READY_TO_PUBLISH' | 'PUBLISHED' | 'WITHHELD';
+  isReadyToPublish: boolean;
+  notReadyReason: string | null;
+  publishedAt: string | null;
+  publishedBy: string | null;
+  publicationVersion: number;
+  lastSchedule?: {
+    startTime: string;
+    endTime: string;
+    status: string;
+  } | null;
+}
+
+export interface PublicationPreviewResponse {
+  examId: string;
+  examTitle: string;
+  examTarget: string;
+  examStatus: string;
+  examType: 'MOCK' | 'LIVE';
+  publicationStatus: string;
+  isReadyToPublish: boolean;
+  notReadyReason: string | null;
+  totalCandidates: number;
+  finalizedAttempts: number;
+  evaluatedAttempts: number;
+  analyticsCompleted: number;
+  rankingStatus: string;
+  securityStatus: string;
+  flaggedAttempts: number;
+  disqualifiedAttempts: number;
+  currentPublicationVersion: number;
+  publishedAt: string | null;
+  publishedBy: string | null;
+}
+
+export interface ResultStatusResponse {
+  availability: 'PROCESSING' | 'RESULT_PENDING' | 'RESULT_READY' | 'PUBLISHED' | 'WITHHELD' | 'DISQUALIFIED' | 'FAILED';
+  resultStatus: string;
+  examType: 'MOCK' | 'LIVE';
+  message: string;
+  attemptId: string;
+  examTitle: string;
+  submittedAt: string | null;
+  publishedAt?: string | null;
+}
+

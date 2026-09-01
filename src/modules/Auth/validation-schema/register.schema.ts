@@ -31,7 +31,7 @@ export const step1Schema = yup.object({
 // Step 2: Location & Institution
 export const step2Schema = yup.object({
   state: yup.string().trim().required('State is required'),
-  district: yup.string().trim().required('District is required'),
+  district: yup.string().trim().required('City / District is required'),
   stateId: yup.string().optional(),
   districtId: yup.string().optional(),
   schoolCollege: yup.string().trim().required('School/PUC/College name is required'),

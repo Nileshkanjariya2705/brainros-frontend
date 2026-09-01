@@ -107,11 +107,9 @@ export const getDefaultLandingRoute = (userContext: UserAuthContext | null | und
     case ROLES.PARENT:
       return PRIVATE_NAVIGATION.parentDashboardHome;
     case ROLES.INSTITUTION_ADMIN:
-      return (
-        PRIVATE_NAVIGATION.superAdminInstitutionDashboard || PRIVATE_NAVIGATION.studentDashboard
-      );
+      return PRIVATE_NAVIGATION.institutionDashboard;
     case ROLES.SALES_AGENT:
-      return PRIVATE_NAVIGATION.superAdminDashboard;
+      return PRIVATE_NAVIGATION.institutionDashboard;
     case ROLES.STUDENT:
     default:
       return PRIVATE_NAVIGATION.studentDashboard;

@@ -10,11 +10,13 @@ import StudentLayout from '@/components/layouts/StudentLayout';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
 import ParentLayout from '@/components/layouts/ParentLayout';
+import InstitutionLayout from '@/components/layouts/InstitutionLayout';
 import PageLoader from '@/components/feedback/PageLoader';
 import RouteErrorBoundary from '@/components/feedback/RouteErrorBoundary';
 
 // ** Access Control & Constants **
 import { PERMISSIONS, ROLES } from '@/modules/Auth/auth-access';
+import { FEATURES } from '@/constants/feature-flag.constant';
 import {
   PUBLIC_NAVIGATION,
   PRIVATE_NAVIGATION,
@@ -48,6 +50,9 @@ const ExamInterfacePage = lazyRoute(() => import('@/modules/Exams/pages/ExamInte
 const ExamResultPage = lazyRoute(() => import('@/modules/Exams/pages/ExamResultPage'));
 const HistoryPage = lazyRoute(() => import('@/modules/Exams/pages/HistoryPage'));
 const QuestionBankPage = lazyRoute(() => import('@/modules/QuestionBank/pages/QuestionBankPage'));
+const ChapterManagementPage = lazyRoute(
+  () => import('@/modules/Admin/pages/ChapterManagementPage'),
+);
 const CreateQuestionPage = lazyRoute(
   () => import('@/modules/QuestionBank/pages/CreateQuestionPage'),
 );
@@ -58,11 +63,17 @@ const ImportQuestionsPage = lazyRoute(
 const LanguageManagementPage = lazyRoute(
   () => import('@/modules/RegionalLanguage/pages/LanguageManagementPage'),
 );
+const AdminTranslationManagementPage = lazyRoute(
+  () => import('@/modules/RegionalLanguage/pages/AdminTranslationManagementPage'),
+);
 const ImportTranslationsPage = lazyRoute(
   () => import('@/modules/RegionalLanguage/pages/ImportTranslationsPage'),
 );
 const ExamBlueprintManagementPage = lazyRoute(
   () => import('@/modules/ExamGenerator/pages/ExamBlueprintManagementPage'),
+);
+const AutoGenerateExamPage = lazyRoute(
+  () => import('@/modules/ExamGenerator/pages/AutoGenerateExamPage'),
 );
 const ExamSchedulingManagementPage = lazyRoute(
   () => import('@/modules/ExamScheduling/pages/ExamSchedulingManagementPage'),
@@ -120,6 +131,9 @@ const StudentExamDetailsPage = lazyRoute(
 );
 const StudentComparisonPage = lazyRoute(
   () => import('@/modules/Analysis/pages/StudentComparisonPage'),
+);
+const SuperAdminExamResultsPage = lazyRoute(
+  () => import('@/modules/Admin/pages/SuperAdminExamResultsPage'),
 );
 const NotFoundPage = lazyRoute(() => import('@/components/feedback/NotFoundPage'));
 
@@ -237,15 +251,29 @@ const adminRoutes: RouteObject[] = [
       {
         path: 'question-bank',
         element: (
-          <ProtectedRoute permissions={[PERMISSIONS.QUESTION_VIEW]}>
+          <ProtectedRoute
+            feature={FEATURES.QUESTION_BANK}
+            permissions={[PERMISSIONS.QUESTION_VIEW]}
+          >
             <QuestionBankPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'chapters',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.QUESTION_VIEW]}>
+            <ChapterManagementPage />
           </ProtectedRoute>
         ),
       },
       {
         path: 'question-bank/create',
         element: (
-          <ProtectedRoute permissions={[PERMISSIONS.QUESTION_CREATE]}>
+          <ProtectedRoute
+            feature={FEATURES.ADD_QUESTION}
+            permissions={[PERMISSIONS.QUESTION_CREATE]}
+          >
             <CreateQuestionPage />
           </ProtectedRoute>
         ),
@@ -253,7 +281,10 @@ const adminRoutes: RouteObject[] = [
       {
         path: 'question-bank/import',
         element: (
-          <ProtectedRoute permissions={[PERMISSIONS.QUESTION_CREATE]}>
+          <ProtectedRoute
+            feature={FEATURES.BULK_IMPORT_QUESTION}
+            permissions={[PERMISSIONS.QUESTION_CREATE]}
+          >
             <ImportQuestionsPage />
           </ProtectedRoute>
         ),
@@ -261,7 +292,10 @@ const adminRoutes: RouteObject[] = [
       {
         path: 'question-bank/:id/edit',
         element: (
-          <ProtectedRoute permissions={[PERMISSIONS.QUESTION_UPDATE]}>
+          <ProtectedRoute
+            feature={FEATURES.QUESTION_BANK}
+            permissions={[PERMISSIONS.QUESTION_UPDATE]}
+          >
             <EditQuestionPage />
           </ProtectedRoute>
         ),
@@ -275,9 +309,28 @@ const adminRoutes: RouteObject[] = [
         ),
       },
       {
+        path: 'translations',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.TRANSLATION_VIEW]}>
+            <AdminTranslationManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'languages/translations',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.TRANSLATION_VIEW]}>
+            <AdminTranslationManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'languages/import',
         element: (
-          <ProtectedRoute permissions={[PERMISSIONS.TRANSLATION_CREATE]}>
+          <ProtectedRoute
+            feature={FEATURES.BULK_IMPORT_TRANSLATION}
+            permissions={[PERMISSIONS.TRANSLATION_CREATE]}
+          >
             <ImportTranslationsPage />
           </ProtectedRoute>
         ),
@@ -287,6 +340,14 @@ const adminRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
             <ExamBlueprintManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exams/generate',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
+            <AutoGenerateExamPage />
           </ProtectedRoute>
         ),
       },
@@ -311,6 +372,14 @@ const adminRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
             <ExamManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exams/results',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.RESULT_VIEW]}>
+            <SuperAdminExamResultsPage />
           </ProtectedRoute>
         ),
       },
@@ -412,15 +481,55 @@ const superAdminRoutes: RouteObject[] = [
     ),
     children: [
       { path: 'dashboard', element: <SuperAdminDashboardPage /> },
-      { path: 'question-bank', element: <QuestionBankPage /> },
-      { path: 'question-bank/create', element: <CreateQuestionPage /> },
-      { path: 'question-bank/import', element: <ImportQuestionsPage /> },
-      { path: 'question-bank/:id/edit', element: <EditQuestionPage /> },
+      {
+        path: 'question-bank',
+        element: (
+          <ProtectedRoute feature={FEATURES.QUESTION_BANK}>
+            <QuestionBankPage />
+          </ProtectedRoute>
+        ),
+      },
+      { path: 'chapters', element: <ChapterManagementPage /> },
+      {
+        path: 'question-bank/create',
+        element: (
+          <ProtectedRoute feature={FEATURES.ADD_QUESTION}>
+            <CreateQuestionPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'question-bank/import',
+        element: (
+          <ProtectedRoute feature={FEATURES.BULK_IMPORT_QUESTION}>
+            <ImportQuestionsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'question-bank/:id/edit',
+        element: (
+          <ProtectedRoute feature={FEATURES.QUESTION_BANK}>
+            <EditQuestionPage />
+          </ProtectedRoute>
+        ),
+      },
       { path: 'languages', element: <LanguageManagementPage /> },
-      { path: 'languages/import', element: <ImportTranslationsPage /> },
+      { path: 'translations', element: <AdminTranslationManagementPage /> },
+      { path: 'languages/translations', element: <AdminTranslationManagementPage /> },
+      {
+        path: 'languages/import',
+        element: (
+          <ProtectedRoute feature={FEATURES.BULK_IMPORT_TRANSLATION}>
+            <ImportTranslationsPage />
+          </ProtectedRoute>
+        ),
+      },
       { path: 'exam-blueprints', element: <ExamBlueprintManagementPage /> },
+      { path: 'exams/generate', element: <AutoGenerateExamPage /> },
       { path: 'mock-tests', element: <ExamManagementPage /> },
       { path: 'exams', element: <ExamManagementPage /> },
+      { path: 'exams/results', element: <SuperAdminExamResultsPage /> },
       { path: 'exam-manager', element: <ExamManagerDashboardPage /> },
       { path: 'exam-manager/upload', element: <UploadQuestionPaperPage /> },
       { path: 'exam-manager/history', element: <ImportHistoryPage /> },
@@ -432,10 +541,6 @@ const superAdminRoutes: RouteObject[] = [
       { path: 'approval-queue', element: <AdminApprovalQueuePage /> },
       { path: 'audit-logs', element: <AdminAuditLogsPage /> },
       { path: 'notifications', element: <AdminNotificationsPage /> },
-      { path: 'institution', element: <InstitutionDashboardPage /> },
-      { path: 'institution/batches', element: <BatchManagementPage /> },
-      { path: 'institution/bulk-upload', element: <BulkUploadPage /> },
-      { path: 'institution/reports', element: <ReportsPage /> },
       { path: 'profile', element: <StudentProfilePage /> },
     ],
   },
@@ -468,7 +573,31 @@ const parentRoutes: RouteObject[] = [
 ];
 
 // ══════════════════════════════════════════════════════════════════════════
-// 6. LEGACY / SHARED ROUTES (Backward Compatibility + Direct Links)
+// 6. INSTITUTION & B2B PORTAL DASHBOARD & ROUTES (/institution/*)
+// ══════════════════════════════════════════════════════════════════════════
+const institutionRoutes: RouteObject[] = [
+  {
+    path: '/institution',
+    element: (
+      <ProtectedRoute
+        roles={[ROLES.INSTITUTION_ADMIN, ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SALES_AGENT]}
+      >
+        <InstitutionLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: '', element: <Navigate to="dashboard" replace /> },
+      { path: 'dashboard', element: <InstitutionDashboardPage /> },
+      { path: 'batches', element: <BatchManagementPage /> },
+      { path: 'bulk-upload', element: <BulkUploadPage /> },
+      { path: 'reports', element: <ReportsPage /> },
+      { path: 'profile', element: <StudentProfilePage /> },
+    ],
+  },
+];
+
+// ══════════════════════════════════════════════════════════════════════════
+// 7. LEGACY / SHARED ROUTES (Backward Compatibility + Direct Links)
 // ══════════════════════════════════════════════════════════════════════════
 const legacyAndSharedRoutes: RouteObject[] = [
   // Legacy /dashboard -> routes to role-specific dashboard
@@ -545,7 +674,7 @@ const legacyAndSharedRoutes: RouteObject[] = [
 ];
 
 // ══════════════════════════════════════════════════════════════════════════
-// 7. FULL-SCREEN DISTRACTION-FREE EXAM PORTAL
+// 8. FULL-SCREEN DISTRACTION-FREE EXAM PORTAL
 // ══════════════════════════════════════════════════════════════════════════
 const protectedFullScreenRoutes: RouteObject[] = [
   {
@@ -562,7 +691,7 @@ const protectedFullScreenRoutes: RouteObject[] = [
 ];
 
 // ══════════════════════════════════════════════════════════════════════════
-// 8. MASTER ROUTER
+// 9. MASTER ROUTER
 // ══════════════════════════════════════════════════════════════════════════
 const router = createBrowserRouter([
   {
@@ -583,6 +712,7 @@ const router = createBrowserRouter([
       ...adminRoutes,
       ...superAdminRoutes,
       ...parentRoutes,
+      ...institutionRoutes,
       ...legacyAndSharedRoutes,
       ...protectedFullScreenRoutes,
     ],

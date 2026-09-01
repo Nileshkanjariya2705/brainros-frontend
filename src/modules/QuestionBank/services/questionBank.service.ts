@@ -193,15 +193,117 @@ export const useGetSubjectsAPI = () => {
   return { getSubjectsAPI, ...state };
 };
 
+export const useCreateSubjectAPI = () => {
+  const [post, state] = useAxiosPost();
+  const createSubjectAPI = useCallback(
+    async (payload: any, config: AxiosRequestConfig = {}) => {
+      return post<any>(`${ACADEMIC_BASE_PATH}/subjects`, payload, config);
+    },
+    [post],
+  );
+  return { createSubjectAPI, ...state };
+};
+
+export const useGetExamTargetsAPI = () => {
+  const [get, state] = useAxiosGet();
+  const getExamTargetsAPI = useCallback(
+    async (config: AxiosRequestConfig = {}) => {
+      return get<NamedEntity[]>(`${ACADEMIC_BASE_PATH}/exam-targets`, config);
+    },
+    [get],
+  );
+  return { getExamTargetsAPI, ...state };
+};
+
 export const useGetChaptersAPI = () => {
   const [get, state] = useAxiosGet();
   const getChaptersAPI = useCallback(
-    async (subjectId: string, config: AxiosRequestConfig = {}) => {
-      return get<NamedEntity[]>(`${ACADEMIC_BASE_PATH}/subjects/${subjectId}/chapters`, config);
+    async (
+      subjectId: string,
+      includeInactive: boolean = false,
+      config: AxiosRequestConfig = {},
+    ) => {
+      return get<NamedEntity[]>(`${ACADEMIC_BASE_PATH}/subjects/${subjectId}/chapters`, {
+        params: includeInactive ? { includeInactive: true } : {},
+        ...config,
+      });
     },
     [get],
   );
   return { getChaptersAPI, ...state };
+};
+
+export const useGetAllChaptersAPI = () => {
+  const [get, state] = useAxiosGet();
+  const getAllChaptersAPI = useCallback(
+    async (params?: any, config: AxiosRequestConfig = {}) => {
+      return get<any>(`${ACADEMIC_BASE_PATH}/chapters`, {
+        params,
+        ...config,
+      });
+    },
+    [get],
+  );
+  return { getAllChaptersAPI, ...state };
+};
+
+export const useGetChapterByIdAPI = () => {
+  const [get, state] = useAxiosGet();
+  const getChapterByIdAPI = useCallback(
+    async (id: string, config: AxiosRequestConfig = {}) => {
+      return get<any>(`${ACADEMIC_BASE_PATH}/chapters/${id}`, config);
+    },
+    [get],
+  );
+  return { getChapterByIdAPI, ...state };
+};
+
+export const useCreateChapterAPI = () => {
+  const [post, state] = useAxiosPost();
+  const createChapterAPI = useCallback(
+    async (payload: any, config: AxiosRequestConfig = {}) => {
+      return post<any>(`${ACADEMIC_BASE_PATH}/chapters`, payload, config);
+    },
+    [post],
+  );
+  return { createChapterAPI, ...state };
+};
+
+export const useUpdateChapterAPI = () => {
+  const [patch, state] = useAxiosPatch();
+  const updateChapterAPI = useCallback(
+    async (id: string, payload: any, config: AxiosRequestConfig = {}) => {
+      return patch<any>(`${ACADEMIC_BASE_PATH}/chapters/${id}`, payload, config);
+    },
+    [patch],
+  );
+  return { updateChapterAPI, ...state };
+};
+
+export const useDeleteChapterAPI = () => {
+  const [del, state] = useAxiosDelete();
+  const deleteChapterAPI = useCallback(
+    async (id: string, config: AxiosRequestConfig = {}) => {
+      return del<any>(`${ACADEMIC_BASE_PATH}/chapters/${id}`, config);
+    },
+    [del],
+  );
+  return { deleteChapterAPI, ...state };
+};
+
+export const useReorderChaptersAPI = () => {
+  const [patch, state] = useAxiosPatch();
+  const reorderChaptersAPI = useCallback(
+    async (subjectId: string, chapterIds: string[], config: AxiosRequestConfig = {}) => {
+      return patch<any>(
+        `${ACADEMIC_BASE_PATH}/subjects/${subjectId}/chapters/reorder`,
+        { chapterIds },
+        config,
+      );
+    },
+    [patch],
+  );
+  return { reorderChaptersAPI, ...state };
 };
 
 export const useGetTopicsAPI = () => {
@@ -247,3 +349,4 @@ export const useGetQuestionTypesAPI = () => {
   );
   return { getQuestionTypesAPI, ...state };
 };
+

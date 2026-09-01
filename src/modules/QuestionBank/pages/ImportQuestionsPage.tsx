@@ -18,6 +18,10 @@ import {
   FileText,
   Save,
   Layers,
+  FileCheck,
+  Clock,
+  Award,
+  X,
 } from 'lucide-react';
 import {
   useUploadImportFileAPI,
@@ -29,6 +33,7 @@ import {
   downloadQuestionTemplate,
   downloadImportErrorReport,
 } from '../services/questionImport.service';
+import { useGenerateExamFromImportAPI } from '@/modules/ExamGenerator/services/autoExamGenerator.service';
 import type {
   QuestionImportSession,
   QuestionImportRow,
@@ -85,6 +90,64 @@ export const ImportQuestionsPage: React.FC = () => {
   const { updateImportRowAPI } = useUpdateImportRowAPI();
   const { confirmImportAPI, isLoading: isConfirming } = useConfirmImportAPI();
   const { cancelImportAPI } = useCancelImportAPI();
+
+  // ─── Instant Exam Generation From This File Modal State ───────
+  const [isExamModalOpen, setIsExamModalOpen] = useState<boolean>(false);
+  const [examTitleInput, setExamTitleInput] = useState<string>('');
+  const [examDurationInput, setExamDurationInput] = useState<number>(180);
+  const [examMarksInput, setExamMarksInput] = useState<number>(4);
+  const [examNegativeInput, setExamNegativeInput] = useState<number>(1);
+  const [examPublishImmediately, setExamPublishImmediately] =
+    useState<boolean>(true);
+  const [createdExamResult, setCreatedExamResult] = useState<any>(null);
+  const [examCreateError, setExamCreateError] = useState<string | null>(null);
+
+  const { generateExamFromImportAPI, isLoading: isCreatingExam } =
+    useGenerateExamFromImportAPI();
+
+  const handleOpenCreateExamModal = () => {
+    if (!activeImport) return;
+    const baseName =
+      activeImport.fileName?.replace(/\.[^/.]+$/, '') || 'Imported Exam';
+    const today = new Date().toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    setExamTitleInput(`${baseName} - ${today}`);
+    setExamCreateError(null);
+    setCreatedExamResult(null);
+    setIsExamModalOpen(true);
+  };
+
+  const handleConfirmCreateExamFromImport = async () => {
+    if (!activeImport) return;
+    if (!examTitleInput.trim()) {
+      setExamCreateError('Please provide an exam title.');
+      return;
+    }
+    setExamCreateError(null);
+    const { data, error } = await generateExamFromImportAPI(activeImport.id, {
+      title: examTitleInput.trim(),
+      durationMinutes: examDurationInput,
+      defaultMarksPerQuestion: examMarksInput,
+      defaultNegativeMarks: examNegativeInput,
+      publishImmediately: examPublishImmediately,
+    });
+
+    if (error) {
+      setExamCreateError(
+        typeof error === 'string'
+          ? error
+          : (error as any).message || 'Failed to create exam from file',
+      );
+      return;
+    }
+
+    if (data) {
+      setCreatedExamResult(data);
+    }
+  };
 
   const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1705,17 +1768,40 @@ export const ImportQuestionsPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Highlighted Banner: Instant Exam Creation from Uploaded File */}
+          <div className="rounded-3xl border-2 border-indigo-300 bg-gradient-to-br from-indigo-50/80 via-purple-50/60 to-white p-6 shadow-md shadow-indigo-100/50 flex flex-col sm:flex-row items-center justify-between gap-5">
+            <div className="space-y-1 text-center sm:text-left">
+              <div className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-2.5 py-0.5 text-[10px] font-black text-white uppercase tracking-wider">
+                <Sparkles size={12} /> Instant Paper Creation
+              </div>
+              <h3 className="text-lg font-black text-slate-900 tracking-tight">
+                Create Exam Paper From This Uploaded File
+              </h3>
+              <p className="text-xs text-slate-600 max-w-xl">
+                Instantly compile all questions from this spreadsheet into a full examination test paper with automatic subject sections, custom duration, and marks.
+              </p>
+            </div>
+
+            <Button
+              onClick={handleOpenCreateExamModal}
+              className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white font-extrabold text-xs px-6 py-3 shadow-lg shadow-indigo-200 shrink-0 flex items-center justify-center gap-2"
+            >
+              <FileCheck size={16} />
+              <span>Create Exam Paper From This File</span>
+            </Button>
+          </div>
+
           {/* Action CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 border-t border-slate-100">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 border-t border-slate-100 flex-wrap">
             {activeImport.invalidRows > 0 && (
               <Button
                 variant="outline"
                 onClick={() => handleDownloadErrors('xlsx')}
                 disabled={isDownloadingErrors}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto text-xs font-bold"
               >
-                <Download size={15} className="mr-1.5" />
-                <span>Download Error Report (.xlsx)</span>
+                <Download size={14} className="mr-1.5" />
+                <span>Download Error Report</span>
               </Button>
             )}
 
@@ -1726,19 +1812,209 @@ export const ImportQuestionsPage: React.FC = () => {
                 setFile(null);
                 setCurrentStep(1);
               }}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto text-xs font-bold"
             >
-              <UploadCloud size={15} className="mr-1.5" />
+              <UploadCloud size={14} className="mr-1.5" />
               <span>Import Another File</span>
             </Button>
 
             <Button
+              variant="outline"
               onClick={() => navigate(`${routePrefix}/question-bank`)}
-              className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200"
+              className="w-full sm:w-auto text-xs font-bold text-slate-700"
             >
-              <Database size={15} className="mr-1.5" />
-              <span>Go to Question Bank →</span>
+              <Database size={14} className="mr-1.5" />
+              <span>View Question Bank</span>
             </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => navigate(`${routePrefix}/exams/generate`)}
+              className="w-full sm:w-auto text-xs font-bold text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+            >
+              <Sparkles size={14} className="mr-1.5" />
+              <span>Filter-Based Generator Wizard →</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ═════════════════════════════════════════════════════════════ */}
+      {/* MODAL: CREATE EXAM PAPER DIRECTLY FROM UPLOADED FILE        */}
+      {/* ═════════════════════════════════════════════════════════════ */}
+      {isExamModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-2xl space-y-6">
+            {!createdExamResult ? (
+              <>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+                      <Sparkles size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-black text-slate-900">
+                        Create Exam from Uploaded File
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        Generate a test paper containing all questions in {activeImport?.fileName}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setIsExamModalOpen(false)}
+                    className="rounded-xl p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {examCreateError && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700">
+                    {examCreateError}
+                  </div>
+                )}
+
+                <div className="space-y-4 text-xs font-bold">
+                  {/* Exam Title */}
+                  <div className="space-y-1">
+                    <label className="text-slate-700 uppercase tracking-wider text-[10px]">
+                      Exam Test Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={examTitleInput}
+                      onChange={(e) => setExamTitleInput(e.target.value)}
+                      placeholder="e.g. NEET Grand Mock Test - Phase 1"
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  {/* Duration & Marks Grid */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-slate-700 uppercase tracking-wider text-[10px] flex items-center gap-1">
+                        <Clock size={11} className="text-indigo-600" /> Duration (Mins)
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={examDurationInput}
+                        onChange={(e) => setExamDurationInput(Number(e.target.value))}
+                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 font-mono text-center"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-700 uppercase tracking-wider text-[10px] flex items-center gap-1">
+                        <Award size={11} className="text-emerald-600" /> Marks / Q
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={examMarksInput}
+                        onChange={(e) => setExamMarksInput(Number(e.target.value))}
+                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 font-mono text-center"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-slate-700 uppercase tracking-wider text-[10px] flex items-center gap-1">
+                        <Award size={11} className="text-rose-600" /> Negative
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={examNegativeInput}
+                        onChange={(e) => setExamNegativeInput(Number(e.target.value))}
+                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 font-mono text-center"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Publish Immediately Toggle */}
+                  <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 cursor-pointer hover:bg-slate-100">
+                    <input
+                      type="checkbox"
+                      checked={examPublishImmediately}
+                      onChange={(e) => setExamPublishImmediately(e.target.checked)}
+                      className="rounded text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="text-slate-800 text-xs font-bold">
+                      Publish immediately to Exam Studio (Active)
+                    </span>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsExamModalOpen(false)}
+                    className="text-xs font-bold"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleConfirmCreateExamFromImport}
+                    isLoading={isCreatingExam}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-5 py-2.5 shadow-md shadow-indigo-100"
+                  >
+                    <Check size={14} className="mr-1.5" />
+                    <span>Create Exam Now</span>
+                  </Button>
+                </div>
+              </>
+            ) : (
+              /* Success Screen inside Modal */
+              <div className="text-center space-y-5 py-2 animate-in fade-in">
+                <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-100 text-emerald-600 mx-auto shadow-lg shadow-emerald-100">
+                  <CheckCircle2 size={36} />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-xl font-black text-slate-900">
+                    Exam Paper Created!
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    "{createdExamResult.title}" has been saved into the database with {createdExamResult.totalQuestions} questions and {createdExamResult.totalMarks} total marks.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-50 p-3 text-left font-mono text-xs border border-slate-200">
+                  <div>
+                    <span className="text-[9px] text-slate-400 uppercase font-bold block">Questions</span>
+                    <strong className="text-slate-900 text-sm">{createdExamResult.totalQuestions}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-400 uppercase font-bold block">Total Marks</span>
+                    <strong className="text-slate-900 text-sm">{createdExamResult.totalMarks}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-400 uppercase font-bold block">Duration</span>
+                    <strong className="text-slate-900 text-sm">{createdExamResult.durationMinutes}m</strong>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  <Button
+                    onClick={() => {
+                      setIsExamModalOpen(false);
+                      navigate(`${routePrefix}/mock-tests`);
+                    }}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs py-2.5"
+                  >
+                    Open Exam in Studio →
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsExamModalOpen(false)}
+                    className="w-full text-xs font-bold"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

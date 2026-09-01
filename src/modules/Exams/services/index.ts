@@ -36,6 +36,9 @@ import type {
   ParentDashboardResponse,
   ParentStudentOverviewItem,
   ParentStudentInfo,
+  PublicationDashboardItem,
+  PublicationPreviewResponse,
+  ResultStatusResponse,
 } from '@/types/exam.types';
 
 export const useGetPublicExamsAPI = () => {
@@ -101,6 +104,30 @@ export const useGetExamDetailsAPI = () => {
     [get],
   );
   return { getExamDetailsAPI, ...state };
+};
+
+export interface ExamAvailableLanguagesResponse {
+  examId: string;
+  languages: Array<{
+    id: string;
+    code: string;
+    name: string;
+    nativeName: string;
+    isDefault: boolean;
+    isPreferred: boolean;
+  }>;
+  defaultLanguageId?: string;
+  studentPreferredLanguageId?: string | null;
+}
+
+export const useGetAvailableExamLanguagesAPI = () => {
+  const [get, state] = useAxiosGet();
+  const getAvailableExamLanguagesAPI = useCallback(
+    (examId: string) =>
+      get<ExamAvailableLanguagesResponse>(`/exams/${examId}/available-languages`),
+    [get],
+  );
+  return { getAvailableExamLanguagesAPI, ...state };
 };
 
 export const useStartAttemptAPI = () => {
@@ -640,3 +667,59 @@ export const useGetParentChildTrendsAPI = () => {
   );
   return { getParentChildTrendsAPI, ...state };
 };
+
+// ═══════════════════════════════════════════════════════════════════
+// RESULT STATUS & PUBLICATION HOOKS
+// ═══════════════════════════════════════════════════════════════════
+
+export const useGetAttemptResultStatusAPI = () => {
+  const [get, state] = useAxiosGet();
+  const getAttemptResultStatusAPI = useCallback(
+    (attemptId: string) => get<ResultStatusResponse>(`/results/${attemptId}/status`),
+    [get],
+  );
+  return { getAttemptResultStatusAPI, ...state };
+};
+
+export const useGetPublicationDashboardAPI = () => {
+  const [get, state] = useAxiosGet();
+  const getPublicationDashboardAPI = useCallback(
+    () =>
+      get<{
+        statusCode: number;
+        message: string;
+        data: PublicationDashboardItem[];
+      }>('/admin/exams/results/publication-dashboard'),
+    [get],
+  );
+  return { getPublicationDashboardAPI, ...state };
+};
+
+export const useGetPublicationPreviewAPI = () => {
+  const [get, state] = useAxiosGet();
+  const getPublicationPreviewAPI = useCallback(
+    (examId: string) =>
+      get<{
+        statusCode: number;
+        message: string;
+        data: PublicationPreviewResponse;
+      }>(`/super-admin/exams/${examId}/results/preview`),
+    [get],
+  );
+  return { getPublicationPreviewAPI, ...state };
+};
+
+export const usePublishExamResultsAPI = () => {
+  const [post, state] = useAxiosPost();
+  const publishExamResultsAPI = useCallback(
+    (examId: string) =>
+      post<{
+        statusCode: number;
+        message: string;
+        data: any;
+      }>(`/super-admin/exams/${examId}/results/publish`, {}),
+    [post],
+  );
+  return { publishExamResultsAPI, ...state };
+};
+

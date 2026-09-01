@@ -8,3 +8,5 @@ export * from './PermissionGuard';
 export * from './menu-config';
 export * from './role-menu-config';
 export * from './route-access.config';
+export * from './useFeature';
+export * from './canAccessFeature';

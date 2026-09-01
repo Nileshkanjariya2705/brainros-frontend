@@ -2,128 +2,132 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   FileSpreadsheet,
   Plus,
-  LoaderCircle,
-  Clock,
+  Search,
+  Globe,
   Layers,
-  AlertCircle,
-  Sparkles,
+  Clock,
+  Send,
   Trash2,
+  Sparkles,
+  Atom,
+  Languages,
+  BookOpen,
 } from 'lucide-react';
-import {
-  useGetAllExamsAPI,
-  useCreateExamFromTemplateAPI,
-  useDeleteExamAPI,
-} from '@/modules/ExamGenerator/services/examGenerator.service';
+import { useGetTranslationTargetsAPI, type TranslationTargetItem } from '@/modules/RegionalLanguage/services/examTranslation.service';
+import { useDeleteExamAPI } from '@/modules/ExamGenerator/services/examGenerator.service';
+import { useSubmitExamAPI } from '../services/examScheduling.service';
 import { useAxiosGet } from '@/hooks/useAxios';
 import Button from '@/components/ui/Button';
+import ExamTranslationManager from '@/modules/RegionalLanguage/components/ExamTranslationManager';
+import { CreateMockTestModal } from '../components/CreateMockTestModal';
+import { CreateSubjectMockModal } from '../components/CreateSubjectMockModal';
+import { MockTestDetailsModal } from '../components/MockTestDetailsModal';
+import { toast } from '@/utils/toast';
 
 export const ExamManagementPage: React.FC = () => {
-  const [exams, setExams] = useState<any[]>([]);
-  const [examTargets, setExamTargets] = useState<any[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [items, setItems] = useState<TranslationTargetItem[]>([]);
 
-  // Form states
-  const [title, setTitle] = useState('');
-  const [selectedTargetId, setSelectedTargetId] = useState('');
-  const [description, setDescription] = useState('');
-  const [formError, setFormError] = useState<string | null>(null);
+  // Filters & State
+  const [search, setSearch] = useState('');
+  const [selectedType, setSelectedType] = useState<string>('ALL');
+  const [selectedSubject, setSelectedSubject] = useState<string>('ALL');
+  const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
+  const [examTargets, setExamTargets] = useState<any[]>([]);
+  const [availableLanguages, setAvailableLanguages] = useState<any[]>([]);
+
+  // Modals
+  const [isCreateMockOpen, setIsCreateMockOpen] = useState(false);
+  const [isCreateSubjectMockOpen, setIsCreateSubjectMockOpen] = useState(false);
+  const [selectedMockForDetails, setSelectedMockForDetails] = useState<any | null>(null);
+  const [detailsInitialTab, setDetailsInitialTab] = useState<'OVERVIEW' | 'QUESTIONS' | 'TRANSLATIONS' | 'APPROVAL'>('OVERVIEW');
+  const [drilldownTranslationExam, setDrilldownTranslationExam] = useState<any | null>(null);
 
   // APIs
-  const { getAllExamsAPI, isLoading: isLoadingExams } = useGetAllExamsAPI();
-  const { createExamFromTemplateAPI, isLoading: isCreating } = useCreateExamFromTemplateAPI();
+  const { getTranslationTargetsAPI, isLoading } = useGetTranslationTargetsAPI();
   const { deleteExamAPI } = useDeleteExamAPI();
+  const { submitExamAPI } = useSubmitExamAPI();
   const [getReq] = useAxiosGet();
 
-  const loadExams = useCallback(async () => {
-    const { data } = await getAllExamsAPI();
-    if (data) setExams(data);
-  }, [getAllExamsAPI]);
-
-  // Load options & initial exams list
+  // Load Target Curriculums & Languages
   useEffect(() => {
-    loadExams();
-
-    // Fetch exam targets from options API
     getReq<any>('/auth/options').then(({ data }) => {
       const opts = data?.examTargets ? data : (data as any)?.data || {};
-      if (opts.examTargets) {
-        setExamTargets(opts.examTargets);
-      }
+      if (opts.examTargets) setExamTargets(opts.examTargets);
+      if (opts.languages) setAvailableLanguages(opts.languages);
     });
-  }, [loadExams, getReq]);
+  }, [getReq]);
 
-  // Dynamic Polling: if any exam is in GENERATING status, poll every 3 seconds
+  // Load Mock Tests
+  const loadMockTests = useCallback(async () => {
+    const { data } = await getTranslationTargetsAPI({
+      type: selectedType === 'ALL' ? undefined : (selectedType as any),
+      search: search.trim() || undefined,
+      status: selectedStatus === 'ALL' ? undefined : selectedStatus,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      limit: 100,
+    });
+
+    if (data) {
+      // Exclude live exams if type is ALL, show MOCK and SUBJECT_MOCK
+      const allItems = data.items || [];
+      const mockList = selectedType === 'ALL'
+        ? allItems.filter((i) => i.type !== 'LIVE_EXAM')
+        : allItems;
+      setItems(mockList);
+    }
+  }, [getTranslationTargetsAPI, selectedType, search, selectedStatus]);
+
   useEffect(() => {
-    const hasGenerating = exams.some((e) => e.status?.name === 'GENERATING');
-    if (!hasGenerating) return;
+    loadMockTests();
+  }, [loadMockTests]);
 
-    const interval = setInterval(() => {
-      loadExams();
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [exams, loadExams]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
-
-    if (!title.trim()) {
-      setFormError('Please enter an exam title.');
+  const handleSubmitForApproval = async (examId: string, title: string) => {
+    if (!window.confirm(`Submit mock test "${title}" for Super Admin review and approval?`)) {
       return;
     }
-    if (!selectedTargetId) {
-      setFormError('Please select an exam target type.');
-      return;
-    }
-
-    const { error } = await createExamFromTemplateAPI({
-      title: title.trim(),
-      examTargetId: selectedTargetId,
-      description: description.trim() || undefined,
+    const { error } = await submitExamAPI(examId, {
+      comment: 'Mock test created and submitted by Admin.',
     });
-
     if (error) {
-      setFormError(typeof error === 'string' ? error : 'Failed to generate exam');
+      toast.error(typeof error === 'string' ? error : 'Failed to submit mock test');
       return;
     }
-
-    // Success! Reset form & close modal
-    setTitle('');
-    setSelectedTargetId('');
-    setDescription('');
-    setIsModalOpen(false);
-    loadExams();
+    toast.success('Submitted for approval!');
+    loadMockTests();
   };
 
-  const handleDeleteExam = async (examId: string, examTitle: string) => {
-    if (!window.confirm(`Are you sure you want to delete exam "${examTitle}"?`)) {
+  const handleDeleteMock = async (examId: string, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) {
       return;
     }
     const { error } = await deleteExamAPI(examId);
     if (error) {
-      alert(typeof error === 'string' ? error : 'Failed to delete exam');
+      toast.error(typeof error === 'string' ? error : 'Failed to delete mock test');
       return;
     }
-    loadExams();
+    toast.success('Mock test deleted successfully');
+    loadMockTests();
   };
 
-  // Status badging styles
-  const getStatusBadge = (statusName: string) => {
-    switch (statusName) {
-      case 'GENERATING':
-        return 'bg-amber-100 text-amber-800 border-amber-300 ring-2 ring-amber-400/20';
+  // Filter items by subject locally if selected
+  const filteredItems = items.filter((item) => {
+    if (selectedSubject === 'ALL') return true;
+    const subName = (item.subjectsSummary || item.subject?.name || '').toUpperCase();
+    return subName.includes(selectedSubject.toUpperCase());
+  });
+
+  const getStatusBadge = (st: string) => {
+    switch (st) {
       case 'ACTIVE':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-300 ring-2 ring-emerald-500/20';
-      case 'SCHEDULED':
-        return 'bg-purple-100 text-purple-800 border-purple-300';
+        return 'bg-emerald-100 text-emerald-800 border-emerald-300';
       case 'APPROVED':
         return 'bg-indigo-100 text-indigo-800 border-indigo-300';
       case 'SUBMITTED':
         return 'bg-blue-100 text-blue-800 border-blue-300';
       case 'DRAFT':
         return 'bg-slate-100 text-slate-700 border-slate-300';
+      case 'REJECTED':
       case 'CANCELLED':
         return 'bg-rose-100 text-rose-800 border-rose-300';
       default:
@@ -131,102 +135,166 @@ export const ExamManagementPage: React.FC = () => {
     }
   };
 
-  const filteredExams = exams.filter((exam) => {
-    const stName = exam.status?.name || 'DRAFT';
-    if (statusFilter === 'ALL') return true;
-    return stName === statusFilter;
-  });
+  // Drilldown to full translation manager view
+  if (drilldownTranslationExam) {
+    return (
+      <div className="max-w-7xl mx-auto pb-16">
+        <ExamTranslationManager
+          examId={drilldownTranslationExam.id}
+          examTitle={drilldownTranslationExam.title}
+          onBack={() => setDrilldownTranslationExam(null)}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-16">
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-7xl mx-auto space-y-6 pb-16 animate-in fade-in duration-200">
+      {/* ── Header Banner ────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700 ring-1 ring-inset ring-indigo-500/20 mb-2">
             <Sparkles size={13} className="text-indigo-600 animate-pulse" />
-            <span>Predefined Blueprints & Background Generator</span>
+            <span>Mock Test Workspace & Translation Manager</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Mock Test Manager
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Instantly generate and manage multi-subject mock tests from academic blueprints
+            Create full and subject-wise mock tests via Question CSV/Excel upload with multi-language translations.
           </p>
         </div>
 
-        <Button
-          onClick={() => {
-            setFormError(null);
-            setIsModalOpen(true);
-          }}
-          className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200"
-        >
-          <Plus size={16} />
-          <span>Generate Mock Test from Blueprint</span>
-        </Button>
+        {/* Primary Actions */}
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="primary"
+            onClick={() => setIsCreateMockOpen(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200 font-bold"
+          >
+            <Plus size={16} />
+            <span>Create Mock Test</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => setIsCreateSubjectMockOpen(true)}
+            className="flex items-center gap-2 border-indigo-300 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100 font-bold"
+          >
+            <Atom size={16} className="text-indigo-600" />
+            <span>Create Subject-wise Mock Test</span>
+          </Button>
+        </div>
       </div>
 
-      {/* KPI Stats Bar */}
+      {/* ── KPI Summary Cards ────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xs">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-            Total Generated
+            Total Mock Tests
           </span>
-          <span className="text-2xl font-black text-slate-900 mt-1 block">{exams.length}</span>
-        </div>
-
-        <div className="rounded-3xl border border-amber-100 bg-amber-50/20 p-5 shadow-sm">
-          <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block">
-            Generating In Background
-          </span>
-          <span className="text-2xl font-black text-amber-900 mt-1 block flex items-center gap-2">
-            {exams.filter((e) => e.status?.name === 'GENERATING').length}
-            {exams.some((e) => e.status?.name === 'GENERATING') && (
-              <LoaderCircle size={18} className="animate-spin text-amber-600" />
-            )}
+          <span className="text-2xl font-black text-slate-900 mt-1 block">
+            {items.length}
           </span>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-slate-50/50 p-5 shadow-sm">
-          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-            Draft Presets
+        <div className="rounded-3xl border border-indigo-100 bg-indigo-50/30 p-5 shadow-xs">
+          <span className="text-xs font-bold text-indigo-800 uppercase tracking-wider block">
+            Subject-wise Mocks
           </span>
-          <span className="text-2xl font-black text-slate-700 mt-1 block">
-            {exams.filter((e) => e.status?.name === 'DRAFT').length}
+          <span className="text-2xl font-black text-indigo-900 mt-1 block">
+            {items.filter((i) => i.type === 'SUBJECT_MOCK').length}
           </span>
         </div>
 
-        <div className="rounded-3xl border border-emerald-100 bg-emerald-50/40 p-5 shadow-sm">
+        <div className="rounded-3xl border border-purple-100 bg-purple-50/30 p-5 shadow-xs">
+          <span className="text-xs font-bold text-purple-800 uppercase tracking-wider block">
+            Full Mock Tests
+          </span>
+          <span className="text-2xl font-black text-purple-900 mt-1 block">
+            {items.filter((i) => i.type === 'MOCK').length}
+          </span>
+        </div>
+
+        <div className="rounded-3xl border border-emerald-100 bg-emerald-50/40 p-5 shadow-xs">
           <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block">
-            Active Tests
+            Approved / Live
           </span>
           <span className="text-2xl font-black text-emerald-900 mt-1 block">
-            {exams.filter((e) => e.status?.name === 'ACTIVE').length}
+            {items.filter((i) => ['APPROVED', 'ACTIVE'].includes(i.status)).length}
           </span>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-bold">
-        {['ALL', 'GENERATING', 'DRAFT', 'SUBMITTED', 'APPROVED', 'ACTIVE', 'CANCELLED'].map(
-          (st) => (
-            <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`rounded-2xl px-4 py-2 border transition-all shrink-0 ${
-                statusFilter === st
-                  ? 'bg-slate-900 border-slate-900 text-white shadow-sm shadow-slate-950/10'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              }`}
+      {/* ── Filters & Search Toolbar ────────────────────────────── */}
+      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+          {/* Search Box */}
+          <div className="relative flex-1 min-w-[220px]">
+            <Search
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+              size={15}
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search mock tests by name, subject..."
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 pl-10 pr-4 py-2 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            />
+          </div>
+
+          {/* Subject Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400 font-bold shrink-0">Subject:</span>
+            <select
+              value={selectedSubject}
+              onChange={(e) => setSelectedSubject(e.target.value)}
+              className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             >
-              {st}
-            </button>
-          ),
-        )}
+              <option value="ALL">All Subjects</option>
+              <option value="PHYSICS">Physics</option>
+              <option value="CHEMISTRY">Chemistry</option>
+              <option value="MATHEMATICS">Mathematics</option>
+              <option value="BIOLOGY">Biology</option>
+            </select>
+          </div>
+
+          {/* Mock Type Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400 font-bold shrink-0">Type:</span>
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="ALL">All Mock Types</option>
+              <option value="MOCK">Full Mock Tests</option>
+              <option value="SUBJECT_MOCK">Subject-wise Mocks</option>
+            </select>
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400 font-bold shrink-0">Status:</span>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="DRAFT">Draft</option>
+              <option value="SUBMITTED">Submitted (Pending Review)</option>
+              <option value="APPROVED">Approved</option>
+              <option value="ACTIVE">Active</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      {/* Exams Grid */}
-      {isLoadingExams && exams.length === 0 ? (
+      {/* ── Mock Tests List Table & Responsive Cards ─────────────── */}
+      {isLoading && items.length === 0 ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
             <div
@@ -235,77 +303,154 @@ export const ExamManagementPage: React.FC = () => {
             />
           ))}
         </div>
-      ) : filteredExams.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-slate-50/30 py-16 px-4 text-center">
-          <FileSpreadsheet size={38} className="text-slate-400 mb-3" />
-          <h3 className="text-base font-extrabold text-slate-800">No Exams Found</h3>
-          <p className="text-xs text-slate-500 max-w-sm mt-1">
-            Create a mock exam using the JEE, NEET, or CAT templates above to get started.
+      ) : filteredItems.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white py-16 px-4 text-center space-y-3">
+          <FileSpreadsheet size={40} className="text-slate-300 mx-auto" />
+          <h3 className="text-base font-extrabold text-slate-800">No Mock Tests Found</h3>
+          <p className="text-xs text-slate-500 max-w-sm">
+            No mock tests match your current filter criteria. Create your first Mock Test or Subject-wise Mock above.
           </p>
+          <div className="pt-2 flex gap-3">
+            <Button size="sm" onClick={() => setIsCreateMockOpen(true)}>
+              Create Mock Test
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setIsCreateSubjectMockOpen(true)}>
+              Create Subject Mock
+            </Button>
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredExams.map((exam) => {
-            const isGenerating = exam.status?.name === 'GENERATING';
+        <div className="grid grid-cols-1 gap-4">
+          {filteredItems.map((mock) => {
+            const isSubMock = mock.type === 'SUBJECT_MOCK';
+            const formattedDate = mock.createdAt
+              ? new Date(mock.createdAt).toLocaleDateString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                })
+              : 'N/A';
+
             return (
               <div
-                key={exam.id}
-                className={`rounded-3xl border bg-white p-6 shadow-sm hover:border-indigo-200 transition-all flex flex-col justify-between gap-4 ${
-                  isGenerating ? 'border-amber-200 bg-amber-50/5' : 'border-slate-200/80'
-                }`}
+                key={mock.id}
+                className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xs hover:shadow-md hover:border-indigo-200 transition-all flex flex-col md:flex-row md:items-center justify-between gap-5"
               >
-                <div>
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="rounded-xl bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700 border border-indigo-100">
-                      {exam.examTarget?.name || 'TARGET'}
-                    </span>
+                {/* Left Metadata */}
+                <div className="space-y-2 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold ${getStatusBadge(
-                        exam.status?.name,
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                        isSubMock
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
+                          : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                      }`}
+                    >
+                      {isSubMock ? 'Subject Mock' : 'Mock Test'}
+                    </span>
+
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                      {mock.subjectsSummary || mock.subject?.name || 'All Subjects'}
+                    </span>
+
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadge(
+                        mock.status,
                       )}`}
                     >
-                      {isGenerating && (
-                        <LoaderCircle size={12} className="animate-spin text-amber-600" />
-                      )}
-                      {exam.status?.name || 'DRAFT'}
+                      {mock.status}
                     </span>
                   </div>
 
-                  <h3 className="text-lg font-extrabold text-slate-900 tracking-tight mt-3">
-                    {exam.title}
+                  <h3 className="text-base font-black text-slate-900 leading-snug">
+                    {mock.title}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">
-                    {exam.description || 'No description provided.'}
-                  </p>
+
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 font-medium">
+                    <span className="flex items-center gap-1">
+                      <Layers size={13} className="text-indigo-600" />
+                      <b>{mock.totalQuestions || 50}</b> Questions
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock size={13} className="text-indigo-600" />
+                      <b>{mock.durationMinutes || 60}m</b> Duration
+                    </span>
+                    <span className="text-slate-400">
+                      Created: <b>{formattedDate}</b>
+                    </span>
+                  </div>
+
+                  {/* Translation Coverage Badges */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1 mr-1">
+                      <Globe size={12} className="text-indigo-500" /> Translations:
+                    </span>
+                    {mock.translationCoverage && Object.keys(mock.translationCoverage).length > 0 ? (
+                      Object.entries(mock.translationCoverage).map(([code, pct]) => (
+                        <span
+                          key={code}
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${
+                            pct >= 100
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : pct > 0
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-slate-50 text-slate-500 border-slate-200'
+                          }`}
+                        >
+                          {code} {pct}%
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-slate-400 italic">English only (100%)</span>
+                    )}
+                  </div>
                 </div>
 
-                <div className="border-t border-slate-100 pt-4 flex flex-wrap justify-between items-center gap-3 text-xs">
-                  <div className="flex items-center gap-4 text-slate-500 font-medium">
-                    <span className="flex items-center gap-1.5">
-                      <Layers size={13} />
-                      {exam.totalQuestions} Questions
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Clock size={13} />
-                      {exam.durationMinutes} Mins
-                    </span>
-                  </div>
+                {/* Right Action Toolbar */}
+                <div className="flex items-center gap-2 border-t md:border-t-0 pt-3 md:pt-0 border-slate-100 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedMockForDetails(mock);
+                      setDetailsInitialTab('OVERVIEW');
+                    }}
+                    className="flex items-center gap-1.5 text-xs font-bold border-slate-200 hover:bg-slate-50 text-slate-700"
+                  >
+                    <BookOpen size={13} />
+                    <span>Manage</span>
+                  </Button>
 
-                  <div className="flex items-center gap-2">
-                    {isGenerating && (
-                      <span className="text-[10px] font-bold text-amber-600 animate-pulse bg-amber-50 border border-amber-100 rounded-lg px-2 py-0.5">
-                        BullMQ Queueing...
-                      </span>
-                    )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDrilldownTranslationExam(mock)}
+                    className="flex items-center gap-1.5 text-xs font-bold border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100"
+                  >
+                    <Languages size={13} />
+                    <span>Translations</span>
+                  </Button>
 
-                    <button
-                      onClick={() => handleDeleteExam(exam.id, exam.title)}
-                      className="rounded-xl border border-slate-200 p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors"
-                      title="Delete Exam"
+                  {mock.status === 'DRAFT' && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleSubmitForApproval(mock.id, mock.title)}
+                      className="flex items-center gap-1.5 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
                     >
-                      <Trash2 size={15} />
+                      <Send size={13} />
+                      <span>Submit</span>
+                    </Button>
+                  )}
+
+                  {mock.status === 'DRAFT' && (
+                    <button
+                      onClick={() => handleDeleteMock(mock.id, mock.title)}
+                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl border border-slate-200 transition"
+                      title="Delete Mock Test"
+                    >
+                      <Trash2 size={14} />
                     </button>
-                  </div>
+                  )}
                 </div>
               </div>
             );
@@ -313,113 +458,39 @@ export const ExamManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Creation Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
-            onClick={() => !isCreating && setIsModalOpen(false)}
-          />
+      {/* ── Create Full Mock Test Modal ─────────────────────────── */}
+      <CreateMockTestModal
+        isOpen={isCreateMockOpen}
+        onClose={() => setIsCreateMockOpen(false)}
+        onSuccess={() => {
+          loadMockTests();
+          setIsCreateMockOpen(false);
+        }}
+        examTargets={examTargets}
+        availableLanguages={availableLanguages}
+      />
 
-          <div className="relative w-full max-w-lg transform overflow-hidden rounded-3xl bg-white p-6 shadow-2xl transition-all border border-slate-100 space-y-4">
-            <h2 className="text-xl font-extrabold text-slate-950 flex items-center gap-2">
-              <Sparkles size={20} className="text-indigo-600 animate-pulse" />
-              <span>Create Mock Exam from Preset</span>
-            </h2>
-            <p className="text-xs text-slate-500">
-              Select one of the default standard templates. The backend worker will automatically
-              choose the blueprint, randomize questions, and build the sections in the background.
-            </p>
+      {/* ── Create Subject-wise Mock Test Modal ─────────────────── */}
+      <CreateSubjectMockModal
+        isOpen={isCreateSubjectMockOpen}
+        onClose={() => setIsCreateSubjectMockOpen(false)}
+        onSuccess={() => {
+          loadMockTests();
+          setIsCreateSubjectMockOpen(false);
+        }}
+        availableLanguages={availableLanguages}
+      />
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Exam Title</label>
-                <input
-                  type="text"
-                  placeholder="e.g. NEET-UG 2026 Grand Mock Test 1"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  disabled={isCreating}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold focus:border-indigo-500 focus:outline-none disabled:bg-slate-50"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">
-                  Select Exam Presets / Target
-                </label>
-                <select
-                  value={selectedTargetId}
-                  onChange={(e) => setSelectedTargetId(e.target.value)}
-                  disabled={isCreating}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold focus:border-indigo-500 focus:outline-none disabled:bg-slate-50 bg-white"
-                  required
-                >
-                  <option value="">-- Choose Exam Target --</option>
-                  {examTargets.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} (Preset:{' '}
-                      {t.name === 'JEE'
-                        ? '75 Qs / 3 Hrs'
-                        : t.name === 'NEET'
-                          ? '180 Qs / 3.3 Hrs'
-                          : '68 Qs / 2 Hrs'}
-                      )
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">
-                  Description (Optional)
-                </label>
-                <textarea
-                  placeholder="Enter brief description or instructions..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  disabled={isCreating}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold focus:border-indigo-500 focus:outline-none disabled:bg-slate-50 h-20 resize-none"
-                />
-              </div>
-
-              {formError && (
-                <div className="rounded-2xl bg-rose-50 border border-rose-100 p-3.5 flex items-start gap-2.5 text-xs text-rose-700 font-bold">
-                  <AlertCircle size={15} className="shrink-0 mt-0.5 text-rose-600" />
-                  <span>{formError}</span>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  disabled={isCreating}
-                  className="rounded-2xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <Button
-                  type="submit"
-                  disabled={isCreating}
-                  className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl px-5 py-2 text-xs font-bold shadow-md shadow-slate-900/10"
-                >
-                  {isCreating ? (
-                    <>
-                      <LoaderCircle size={14} className="animate-spin" />
-                      <span>Submitting to Queue...</span>
-                    </>
-                  ) : (
-                    <span>Create & Generate</span>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ── Mock Details Modal (with Embedded Translation Tab) ──── */}
+      <MockTestDetailsModal
+        isOpen={Boolean(selectedMockForDetails)}
+        onClose={() => setSelectedMockForDetails(null)}
+        exam={selectedMockForDetails}
+        initialTab={detailsInitialTab}
+        onUpdate={loadMockTests}
+      />
     </div>
   );
 };
+
 export default ExamManagementPage;

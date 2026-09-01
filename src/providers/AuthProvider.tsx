@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { useAppDispatch } from '@/redux/store';
 import { setCredentials, logout, setInitializing } from '@/redux/slices/authSlice';
 import { setAuthInterceptorCallbacks, Axios } from '@/base-axios';
+import { fetchAndSyncFeatureFlags } from '@/services/featureFlag.service';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -10,14 +11,18 @@ interface AuthProviderProps {
 /**
  * Enterprise AuthProvider:
  * 1. Synchronizes Redux auth state with Axios interceptor callbacks.
- * 2. Performs initial session bootstrap on app startup via GET /auth/me (auto-refreshed via HttpOnly cookie if needed).
- * 3. Prevents login page flicker by maintaining `isInitializing: true` until verified.
+ * 2. Bootstraps environment feature flags via GET /config/features.
+ * 3. Performs initial session bootstrap on app startup via GET /auth/me (auto-refreshed via HttpOnly cookie if needed).
+ * 4. Prevents login page flicker by maintaining `isInitializing: true` until verified.
  */
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    // 1. Wire Redux store synchronization with Axios interceptor
+    // 1. Fetch & sync environment feature flags
+    fetchAndSyncFeatureFlags();
+
+    // 2. Wire Redux store synchronization with Axios interceptor
     setAuthInterceptorCallbacks({
       onSyncStore: (payload) => {
         if (payload?.user) {
@@ -29,7 +34,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       },
     });
 
-    // 2. Initial Session Bootstrap: Call GET /auth/me with HttpOnly cookies
+    // 3. Initial Session Bootstrap: Call GET /auth/me with HttpOnly cookies
     let active = true;
 
     Axios.get('/auth/me')

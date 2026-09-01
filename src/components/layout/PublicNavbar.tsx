@@ -29,7 +29,7 @@ export const PublicNavbar: React.FC = () => {
         {/* Left: Brand Identity */}
         <Link to="/" className="flex items-center gap-3 group">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-transform">
-            <BrainCircuit className="text-slate-900" size={22} />
+            <BrainCircuit className="text-white" size={22} />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
@@ -78,7 +78,7 @@ export const PublicNavbar: React.FC = () => {
           {isAuthenticated ? (
             <Link
               to={PRIVATE_NAVIGATION.dashboard}
-              className="flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-xs font-bold text-slate-900 shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] active:scale-95"
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-bold text-white shadow-md shadow-indigo-200 transition-all hover:scale-[1.02] active:scale-95"
             >
               <GraduationCap size={15} />
               <span>Go to Dashboard</span>
@@ -89,19 +89,19 @@ export const PublicNavbar: React.FC = () => {
                 to={PUBLIC_NAVIGATION.login}
                 className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
                   isLoginPage
-                    ? 'bg-white/15 text-slate-900 border border-white/20 shadow-inner'
-                    : 'border border-slate-200 bg-black/5 hover:bg-black/10 text-slate-800'
+                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs'
+                    : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-800'
                 }`}
               >
-                <LogIn size={13} className="text-indigo-400" />
+                <LogIn size={13} className="text-indigo-600" />
                 <span>Sign In</span>
               </Link>
               <Link
                 to={PUBLIC_NAVIGATION.register}
-                className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-slate-900 shadow-lg transition-all hover:scale-[1.02] active:scale-95 ${
+                className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white shadow-md transition-all hover:scale-[1.02] active:scale-95 ${
                   isRegisterPage
-                    ? 'bg-gradient-to-r from-indigo-500 to-purple-500 shadow-indigo-500/30 ring-2 ring-indigo-400/40'
-                    : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-indigo-500/25'
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 shadow-indigo-200 ring-2 ring-indigo-400/40'
+                    : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-indigo-200'
                 }`}
               >
                 <UserPlus size={13} />

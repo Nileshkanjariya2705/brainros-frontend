@@ -33,6 +33,9 @@ import {
   useSubmitAttemptAPI,
   useStartQuestionTimingAPI,
 } from '../services';
+import { useExamSecurity } from '../hooks/useExamSecurity';
+import { ExamSecurityWarningModal } from '../components/ExamSecurityWarningModal';
+import type { SecurityProfile } from '../services/security.service';
 import { useAuth } from '@/hooks/useAuth';
 
 // ** Components **
@@ -119,6 +122,9 @@ const ExamInterfacePage = () => {
   const [examId, setExamId] = useState<string>('');
   const [examTitle, setExamTitle] = useState<string>('Competitive Mock Examination');
   const [currentLanguageId, setCurrentLanguageId] = useState<string>('');
+  const [securityProfile, setSecurityProfile] = useState<SecurityProfile | null>(null);
+  const [warningModalOpen, setWarningModalOpen] = useState(false);
+  const [securityWarningMessage, setSecurityWarningMessage] = useState('');
 
   // Active answer editing state
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
@@ -131,7 +137,7 @@ const ExamInterfacePage = () => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error' | 'syncing'>(
     'idle',
   );
-  const [isPaletteOpen, setIsPaletteOpen] = useState(true);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true,
   );
@@ -141,6 +147,28 @@ const ExamInterfacePage = () => {
   const debounceSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const sequenceCounterRef = useRef<number>(1);
   const isInitialLoadDoneRef = useRef(false);
+
+  // ─── Exam Security Engine Integration ────────────────────────
+  const {
+    enterFullscreen: enterSecFullscreen,
+    recordEvent: recordSecEvent,
+  } = useExamSecurity({
+    attemptId,
+    examId,
+    securityProfile,
+    isExamActive: !isSubmitting && questions.length > 0,
+    onViolationWarning: (msg) => {
+      setSecurityWarningMessage(msg);
+      setWarningModalOpen(true);
+    },
+    onMultipleSessionsDetected: () => {
+      setSecurityWarningMessage('Multiple active exam sessions detected. Only one active window is allowed.');
+      setWarningModalOpen(true);
+    },
+    onAutoSubmitTriggered: () => {
+      handleAutoSubmit();
+    },
+  });
 
   // ─── Network Interruption Recovery Listeners ──────────────────
   useEffect(() => {
@@ -247,6 +275,7 @@ const ExamInterfacePage = () => {
           }
           if (sData.languageId) setCurrentLanguageId(sData.languageId);
           if (sData.serverEndTime) setServerEndTime(sData.serverEndTime);
+          if (sData.securityProfile) setSecurityProfile(sData.securityProfile);
 
           // Server-authoritative timer sync
           if (sData.serverEndTime) {
@@ -588,6 +617,7 @@ const ExamInterfacePage = () => {
   // ─── In-Flight Language Switch Handler ────────────────────────
   const handleLanguageChanged = async (newLangId: string) => {
     setCurrentLanguageId(newLangId);
+    recordSecEvent('LANGUAGE_CHANGED', 0, { languageId: newLangId });
     // Instantly renders translation from in-memory dictionary.
     // Asynchronously persists chosen language to attempt on server.
     if (attemptId) {
@@ -1310,6 +1340,15 @@ const ExamInterfacePage = () => {
           </div>
         </div>
       )}
+
+      {/* Security Policy Alert Modal */}
+      <ExamSecurityWarningModal
+        isOpen={warningModalOpen}
+        message={securityWarningMessage}
+        onDismiss={() => setWarningModalOpen(false)}
+        onReEnterFullscreen={enterSecFullscreen}
+        requiresFullscreen={Boolean(securityProfile?.fullscreenRequired)}
+      />
     </div>
   );
 };

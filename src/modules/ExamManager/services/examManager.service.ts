@@ -4,52 +4,262 @@ import { Axios } from '@/base-axios';
 import type {
   ExamImportSession,
   ExamImportFilterParams,
-  ExamItem,
+  BlueprintItem,
+  ComprehensiveExamValidationResult,
+  CreateExamFromUploadPayload,
+  ExamManagerFilterParams,
+  ExamListResponse,
 } from '../types/examManager.types';
 
 const EXAM_MANAGER_BASE_PATH = '/admin/exam-manager';
 
-export const useUploadQuestionPaperAPI = () => {
+// ─── 1. Get Predefined / Active Blueprints ───────────────────────
+export const useGetBlueprintsAPI = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [isError, setIsError] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const uploadQuestionPaperAPI = useCallback(
-    async (file: File, config: AxiosRequestConfig = {}) => {
+  const getBlueprintsAPI = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await Axios.get(`${EXAM_MANAGER_BASE_PATH}/blueprints`);
+      setIsLoading(false);
+      const data = response?.data?.data !== undefined ? response.data.data : response?.data;
+      return { data: data as BlueprintItem[], error: null };
+    } catch (err: any) {
+      setIsLoading(false);
+      const errorMsg =
+        err?.response?.data?.message || err?.message || 'Failed to fetch blueprints.';
+      setError(errorMsg);
+      return { data: null, error: errorMsg };
+    }
+  }, []);
+
+  return { getBlueprintsAPI, isLoading, error };
+};
+
+// ─── 2. Validate Question Paper + Multiple Simultaneous Translations ─
+export const useValidateExamUploadAPI = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const validateExamUploadAPI = useCallback(
+    async (
+      questionFile: File,
+      blueprintId: string,
+      translationFiles: Array<{ file: File; languageId: string }> = [],
+    ) => {
       setIsLoading(true);
-      setIsError(false);
-      setIsSuccess(false);
       setError(null);
 
       try {
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('questionFile', questionFile);
+        formData.append('blueprintId', blueprintId);
+
+        translationFiles.forEach((tf) => {
+          formData.append(`translation_${tf.languageId}`, tf.file);
+        });
 
         const response = await Axios.post(
-          `${EXAM_MANAGER_BASE_PATH}/import`,
+          `${EXAM_MANAGER_BASE_PATH}/validate`,
           formData,
-          config,
+          {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          },
         );
 
         setIsLoading(false);
-        setIsSuccess(true);
-        const data =
-          response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data, error: null, isSuccess: true };
+        const data = response?.data?.data !== undefined ? response.data.data : response?.data;
+        return { data: data as ComprehensiveExamValidationResult, error: null };
       } catch (err: any) {
         setIsLoading(false);
-        setIsError(true);
         const errorMsg =
-          err?.response?.data?.message || err?.message || 'Failed to upload question paper.';
+          err?.response?.data?.message || err?.message || 'Failed to validate uploaded files.';
         setError(errorMsg);
-        return { data: null, error: errorMsg, isSuccess: false };
+        return { data: null, error: errorMsg };
       }
     },
     [],
   );
 
-  return { uploadQuestionPaperAPI, isLoading, isError, isSuccess, error };
+  return { validateExamUploadAPI, isLoading, error };
+};
+
+// ─── 3. Create Exam From Upload ──────────────────────────────────
+export const useCreateExamFromUploadAPI = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const createExamFromUploadAPI = useCallback(
+    async (
+      payload: CreateExamFromUploadPayload,
+      questionFile: File,
+      translationFiles: Array<{ file: File; languageId: string }> = [],
+    ) => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const formData = new FormData();
+        formData.append('title', payload.title);
+        formData.append('blueprintId', payload.blueprintId);
+        if (payload.description) formData.append('description', payload.description);
+        if (payload.durationMinutes)
+          formData.append('durationMinutes', String(payload.durationMinutes));
+        if (payload.defaultMarksPerQuestion)
+          formData.append(
+            'defaultMarksPerQuestion',
+            String(payload.defaultMarksPerQuestion),
+          );
+        if (payload.defaultNegativeMarks)
+          formData.append(
+            'defaultNegativeMarks',
+            String(payload.defaultNegativeMarks),
+          );
+        if (payload.instructions)
+          formData.append('instructions', payload.instructions);
+
+        formData.append('questionFile', questionFile);
+
+        translationFiles.forEach((tf) => {
+          formData.append(`translation_${tf.languageId}`, tf.file);
+        });
+
+        const response = await Axios.post(
+          `${EXAM_MANAGER_BASE_PATH}/create-from-upload`,
+          formData,
+          {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          },
+        );
+
+        setIsLoading(false);
+        const data = response?.data?.data !== undefined ? response.data.data : response?.data;
+        return { data, error: null };
+      } catch (err: any) {
+        setIsLoading(false);
+        const errorMsg =
+          err?.response?.data?.message || err?.message || 'Failed to create exam from upload.';
+        setError(errorMsg);
+        return { data: null, error: errorMsg };
+      }
+    },
+    [],
+  );
+
+  return { createExamFromUploadAPI, isLoading, error };
+};
+
+// ─── 4. Get All Exams List With Filters & Pagination ─────────────
+export const useGetExamsListAPI = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const getExamsListAPI = useCallback(
+    async (params: ExamManagerFilterParams = {}) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const queryParts: string[] = [];
+        if (params.search && params.search.trim())
+          queryParts.push(`search=${encodeURIComponent(params.search.trim())}`);
+        if (params.type && params.type !== 'ALL') queryParts.push(`type=${params.type}`);
+        if (params.status && params.status !== 'ALL')
+          queryParts.push(`status=${params.status}`);
+        if (params.page) queryParts.push(`page=${params.page}`);
+        if (params.limit) queryParts.push(`limit=${params.limit}`);
+        if (params.sortBy) queryParts.push(`sortBy=${params.sortBy}`);
+        if (params.sortOrder) queryParts.push(`sortOrder=${params.sortOrder}`);
+
+        const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+        const response = await Axios.get(`${EXAM_MANAGER_BASE_PATH}/exams${queryString}`);
+        setIsLoading(false);
+        const data = response?.data?.data !== undefined ? response.data.data : response?.data;
+        return { data: data as ExamListResponse, error: null };
+      } catch (err: any) {
+        setIsLoading(false);
+        const errorMsg =
+          err?.response?.data?.message || err?.message || 'Failed to fetch exams list.';
+        setError(errorMsg);
+        return { data: null, error: errorMsg };
+      }
+    },
+    [],
+  );
+
+  return { getExamsListAPI, isLoading, error };
+};
+
+// ─── 5. Download Question Paper Template ─────────────────────────
+export const downloadQuestionPaperTemplate = async (
+  format: 'xlsx' | 'csv' = 'xlsx',
+) => {
+  const response = await Axios.get(
+    `${EXAM_MANAGER_BASE_PATH}/template?format=${format}`,
+    { responseType: 'blob' },
+  );
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `question_paper_template.${format}`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+// ─── 6. Download Error Report ───────────────────────────────────
+export const downloadQuestionPaperErrorReport = async (
+  importId: string,
+  format: 'xlsx' | 'csv' = 'xlsx',
+) => {
+  const response = await Axios.get(
+    `${EXAM_MANAGER_BASE_PATH}/import/${importId}/errors/export?format=${format}`,
+    { responseType: 'blob' },
+  );
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `question_paper_errors_${importId.slice(0, 8)}.${format}`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+// ─── 7. Legacy Single-file Upload (retained for backward compatibility) ─
+export const useUploadQuestionPaperAPI = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const uploadQuestionPaperAPI = useCallback(
+    async (file: File, config: AxiosRequestConfig = {}) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await Axios.post(
+          `${EXAM_MANAGER_BASE_PATH}/import`,
+          formData,
+          config,
+        );
+        setIsLoading(false);
+        const data = response?.data?.data !== undefined ? response.data.data : response?.data;
+        return { data, error: null };
+      } catch (err: any) {
+        setIsLoading(false);
+        const errorMsg =
+          err?.response?.data?.message || err?.message || 'Failed to upload question paper.';
+        setError(errorMsg);
+        return { data: null, error: errorMsg };
+      }
+    },
+    [],
+  );
+
+  return { uploadQuestionPaperAPI, isLoading, error };
 };
 
 export const useGetExamImportSessionAPI = () => {
@@ -66,15 +276,14 @@ export const useGetExamImportSessionAPI = () => {
           config,
         );
         setIsLoading(false);
-        const data =
-          response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data: data as ExamImportSession, error: null, isSuccess: true };
+        const data = response?.data?.data !== undefined ? response.data.data : response?.data;
+        return { data: data as ExamImportSession, error: null };
       } catch (err: any) {
         setIsLoading(false);
         const errorMsg =
           err?.response?.data?.message || err?.message || 'Failed to fetch import session.';
         setError(errorMsg);
-        return { data: null, error: errorMsg, isSuccess: false };
+        return { data: null, error: errorMsg };
       }
     },
     [],
@@ -88,28 +297,23 @@ export const useGetExamImportRowsAPI = () => {
   const [error, setError] = useState<string | null>(null);
 
   const getExamImportRowsAPI = useCallback(
-    async (
-      importId: string,
-      params?: ExamImportFilterParams,
-      config: AxiosRequestConfig = {},
-    ) => {
+    async (importId: string, params?: ExamImportFilterParams, config: AxiosRequestConfig = {}) => {
       setIsLoading(true);
       setError(null);
       try {
         const response = await Axios.get(
           `${EXAM_MANAGER_BASE_PATH}/import/${importId}/rows`,
-          { params, ...config },
+          { ...config, params },
         );
         setIsLoading(false);
-        const data =
-          response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data, error: null, isSuccess: true };
+        const data = response?.data?.data !== undefined ? response.data.data : response?.data;
+        return { data, error: null };
       } catch (err: any) {
         setIsLoading(false);
         const errorMsg =
           err?.response?.data?.message || err?.message || 'Failed to fetch import rows.';
         setError(errorMsg);
-        return { data: null, error: errorMsg, isSuccess: false };
+        return { data: null, error: errorMsg };
       }
     },
     [],
@@ -129,142 +333,21 @@ export const useGetExamImportHistoryAPI = () => {
       try {
         const response = await Axios.get(
           `${EXAM_MANAGER_BASE_PATH}/import-history`,
-          { params, ...config },
+          { ...config, params },
         );
         setIsLoading(false);
-        const data =
-          response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data, error: null, isSuccess: true };
+        const data = response?.data?.data !== undefined ? response.data.data : response?.data;
+        return { data, error: null };
       } catch (err: any) {
         setIsLoading(false);
         const errorMsg =
           err?.response?.data?.message || err?.message || 'Failed to fetch import history.';
         setError(errorMsg);
-        return { data: null, error: errorMsg, isSuccess: false };
+        return { data: null, error: errorMsg };
       }
     },
     [],
   );
 
   return { getExamImportHistoryAPI, isLoading, error };
-};
-
-export const useGetExamsListAPI = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const getExamsListAPI = useCallback(
-    async (params?: any, config: AxiosRequestConfig = {}) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await Axios.get(`${EXAM_MANAGER_BASE_PATH}/exams`, {
-          params,
-          ...config,
-        });
-        setIsLoading(false);
-        const data =
-          response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data: data as ExamItem[], error: null, isSuccess: true };
-      } catch (err: any) {
-        setIsLoading(false);
-        const errorMsg =
-          err?.response?.data?.message || err?.message || 'Failed to fetch exams list.';
-        setError(errorMsg);
-        return { data: null, error: errorMsg, isSuccess: false };
-      }
-    },
-    [],
-  );
-
-  return { getExamsListAPI, isLoading, error };
-};
-
-export const useGetExamDetailsAPI = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const getExamDetailsAPI = useCallback(
-    async (examId: string, config: AxiosRequestConfig = {}) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await Axios.get(
-          `${EXAM_MANAGER_BASE_PATH}/exams/${examId}`,
-          config,
-        );
-        setIsLoading(false);
-        const data =
-          response?.data?.data !== undefined ? response.data.data : response?.data;
-        return { data: data as ExamItem, error: null, isSuccess: true };
-      } catch (err: any) {
-        setIsLoading(false);
-        const errorMsg =
-          err?.response?.data?.message || err?.message || 'Failed to fetch exam details.';
-        setError(errorMsg);
-        return { data: null, error: errorMsg, isSuccess: false };
-      }
-    },
-    [],
-  );
-
-  return { getExamDetailsAPI, isLoading, error };
-};
-
-/**
- * Direct file download helper for Question Paper Template
- */
-export const downloadQuestionPaperTemplate = async (format: 'xlsx' | 'csv' = 'xlsx') => {
-  const response = await Axios.get(`${EXAM_MANAGER_BASE_PATH}/template`, {
-    params: { format },
-    responseType: 'blob',
-  });
-
-  const blob = new Blob([response.data], {
-    type:
-      format === 'xlsx'
-        ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        : 'text/csv',
-  });
-
-  const downloadUrl = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = downloadUrl;
-  link.download = `question_paper_import_template.${format}`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.URL.revokeObjectURL(downloadUrl);
-};
-
-/**
- * Direct file download helper for Question Paper Import Error Report
- */
-export const downloadQuestionPaperErrorReport = async (
-  importId: string,
-  format: 'xlsx' | 'csv' = 'xlsx',
-) => {
-  const response = await Axios.get(
-    `${EXAM_MANAGER_BASE_PATH}/import/${importId}/errors/export`,
-    {
-      params: { format },
-      responseType: 'blob',
-    },
-  );
-
-  const blob = new Blob([response.data], {
-    type:
-      format === 'xlsx'
-        ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        : 'text/csv',
-  });
-
-  const downloadUrl = window.URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = downloadUrl;
-  link.download = `question_paper_errors_${importId.slice(0, 8)}.${format}`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.URL.revokeObjectURL(downloadUrl);
 };

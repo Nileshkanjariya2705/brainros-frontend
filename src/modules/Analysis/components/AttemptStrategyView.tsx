@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Compass,
   Zap,
   Bookmark,
   CheckCircle2,
@@ -24,7 +23,8 @@ import type {
 
 interface Props {
   strategy?: AttemptStrategyReport;
-  overall: OverallPerformanceMetrics;
+  attemptStrategy?: AttemptStrategyReport;
+  overall?: OverallPerformanceMetrics;
   detailedStrategy?: DetailedStrategyAnalysis | null;
   onRecalculate?: () => void;
   isRecalculating?: boolean;
@@ -49,34 +49,52 @@ const getClassificationConfig = (code: StrategyClassificationCode | string) => {
         badge: 'bg-amber-100 text-amber-800 border-amber-300',
         icon: <Zap size={20} className="text-amber-600" />,
         description:
-          'Negative marking materially reduced your overall score. Reducing unvalidated guesses on uncertain questions will directly raise net marks.',
+          'Losses due to incorrect choices materially impacted your total score. Skipping low-confidence questions would yield higher net marks.',
       };
-    case 'OVER_ATTEMPTING':
+    case 'OVERCONFIDENT_SPEED':
       return {
-        label: 'Over-Attempting Pattern',
+        label: 'Overconfident Speed',
         bg: 'bg-orange-50 border-orange-200 text-orange-800',
         badge: 'bg-orange-100 text-orange-800 border-orange-300',
-        icon: <TrendingUp size={20} className="text-orange-600" />,
+        icon: <Clock size={20} className="text-orange-600" />,
         description:
-          'Attempt coverage was very high, but error frequency led to preventable score deductions. Emphasize verification over attempt volume.',
+          'Rapid answering on moderate questions resulted in avoidable errors. Slowing down slightly improves precision.',
       };
-    case 'UNDER_ATTEMPTING':
+    case 'TIME_STARVED_RUSHING':
       return {
-        label: 'Under-Attempting Pattern',
-        bg: 'bg-blue-50 border-blue-200 text-blue-800',
-        badge: 'bg-blue-100 text-blue-800 border-blue-300',
-        icon: <Compass size={20} className="text-blue-600" />,
-        description:
-          'Accuracy was high on attempted questions, but a substantial share of questions remained unattempted. Gradually expanding question coverage can unlock more marks.',
-      };
-    case 'TIME_HEAVY':
-      return {
-        label: 'Time-Heavy Inefficient Attempts',
+        label: 'Time-Starved End Rushing',
         bg: 'bg-purple-50 border-purple-200 text-purple-800',
         badge: 'bg-purple-100 text-purple-800 border-purple-300',
         icon: <Clock size={20} className="text-purple-600" />,
         description:
-          'Several questions consumed extensive time yet resulted in incorrect answers. Implementing a prompt skip threshold will safeguard exam time.',
+          'A significant drop in accuracy occurred in the final 20% of exam time. Improving pacing prevents end-game rushing.',
+      };
+    case 'SELECTIVE_PRECISION':
+      return {
+        label: 'Selective Precision',
+        bg: 'bg-blue-50 border-blue-200 text-blue-800',
+        badge: 'bg-blue-100 text-blue-800 border-blue-300',
+        icon: <Sparkles size={20} className="text-blue-600" />,
+        description:
+          'High accuracy achieved on attempted items, though overall attempt count was conservative. Expanding attempt coverage can unlock additional marks.',
+      };
+    case 'EFFECTIVE_REVIEW_MANAGEMENT':
+      return {
+        label: 'Effective Review Management',
+        bg: 'bg-teal-50 border-teal-200 text-teal-800',
+        badge: 'bg-teal-100 text-teal-800 border-teal-300',
+        icon: <Bookmark size={20} className="text-teal-600" />,
+        description:
+          'Questions marked for review and revisited showed a positive accuracy conversion rate.',
+      };
+    case 'INEFFECTIVE_REVIEW_DOUBT':
+      return {
+        label: 'Ineffective Review Revisions',
+        bg: 'bg-indigo-50 border-indigo-200 text-indigo-800',
+        badge: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+        icon: <RotateCw size={20} className="text-indigo-600" />,
+        description:
+          'Reviewing items caused second-guessing that converted initially correct answers to incorrect options.',
       };
     case 'BALANCED':
     default:
@@ -107,12 +125,32 @@ const getSeverityBadgeClass = (severity: StrategySeverity) => {
 };
 
 export const AttemptStrategyView: React.FC<Props> = ({
-  strategy,
-  overall,
+  strategy: propStrategy,
+  attemptStrategy,
+  overall: propOverall,
   detailedStrategy,
   onRecalculate,
   isRecalculating,
 }) => {
+  const strategy = propStrategy || attemptStrategy;
+  const overall: OverallPerformanceMetrics = propOverall || {
+    totalMarks: 0,
+    obtainedMarks: 0,
+    percentage: 0,
+    accuracy: 0,
+    correctCount: 0,
+    wrongCount: 0,
+    unattemptedCount: 0,
+    totalQuestions: 0,
+    timeUsedSeconds: 0,
+    formattedTimeUsed: '00:00',
+    averageTimePerQuestionSeconds: 0,
+    negativeMarksLost: 0,
+    potentialMarks: 0,
+    overallStatus: 'NOT_ATTEMPTED' as any,
+    speedAccuracyQuadrant: 'SLOW_AND_STRUGGLING',
+  };
+
   const [avoidedGuessesCount, setAvoidedGuessesCount] = useState<number>(
     overall.wrongCount > 0 ? Math.min(3, overall.wrongCount) : 0,
   );
