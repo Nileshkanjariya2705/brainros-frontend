@@ -17,6 +17,10 @@ import {
   CheckCircle2,
   Calendar,
   RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  X,
 } from 'lucide-react';
 
 // ** Services **
@@ -89,29 +93,12 @@ const ExamResultPage = () => {
   >('overview');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // ─── 1. Check Result Status & Poll if in processing ─────────────
-  const checkStatus = useCallback(async () => {
-    if (!attemptId) return;
-    try {
-      const res = await getAttemptResultStatusAPI(attemptId);
-      if (res.data) {
-        setResultStatusData(res.data);
-
-        // If Published or Ready, stop polling and load full analysis
-        if (
-          res.data.availability === 'PUBLISHED' ||
-          res.data.resultStatus === 'PUBLISHED'
-        ) {
-          setIsPolling(false);
-          loadPublishedReport();
-        } else if (res.data.availability === 'RESULT_PENDING') {
-          setIsPolling(false);
-        }
-      }
-    } catch {
-      // Non-blocking status retry
-    }
-  }, [attemptId, getAttemptResultStatusAPI]);
+  // Question review pagination and filtering
+  const [reviewFilter, setReviewFilter] = useState<
+    'ALL' | 'CORRECT' | 'INCORRECT' | 'UNATTEMPTED'
+  >('ALL');
+  const [reviewPage, setReviewPage] = useState<number>(1);
+  const reviewPageSize = 5;
 
   // Load published results
   const loadPublishedReport = useCallback(async () => {
@@ -132,7 +119,59 @@ const ExamResultPage = () => {
     if (rRes.data) {
       setRanks(rRes.data);
     }
-  }, [attemptId, getFullAnalysisAPI, getAttemptStrategyAPI, getMyRanksAPI]);
+
+    const revRes = await getAnswerReviewAPI(attemptId);
+    if (revRes.data) {
+      setReviewItems(revRes.data);
+    }
+  }, [
+    attemptId,
+    getFullAnalysisAPI,
+    getAttemptStrategyAPI,
+    getMyRanksAPI,
+    getAnswerReviewAPI,
+  ]);
+
+  // ─── 1. Check Result Status & Poll if in processing ─────────────
+  const checkStatus = useCallback(async () => {
+    if (!attemptId) return;
+    try {
+      const res = await getAttemptResultStatusAPI(attemptId);
+      if (res.data) {
+        setResultStatusData(res.data);
+
+        // If Result is evaluated, calculated, published, or available, stop polling and load report immediately
+        const isReady =
+          res.data.availability === 'PUBLISHED' ||
+          res.data.availability === 'RESULT_READY' ||
+          res.data.resultStatus === 'PUBLISHED' ||
+          res.data.resultStatus === 'COMPLETED' ||
+          res.data.resultStatus === 'EVALUATED' ||
+          (res.data as any).status === 'EVALUATED' ||
+          (res.data as any).attemptStatus === 'EVALUATED' ||
+          res.data.reportAvailable === true ||
+          res.data.resultAvailable === true;
+
+        if (isReady) {
+          setIsPolling(false);
+          loadPublishedReport();
+        } else if (res.data.availability === 'RESULT_PENDING') {
+          setIsPolling(false);
+        } else if (
+          res.data.availability === 'FAILED' ||
+          res.data.processingStatus === 'FAILED'
+        ) {
+          setIsPolling(false);
+          setErrorMsg(
+            res.data.message ||
+              'We could not calculate your result. Please try again later.',
+          );
+        }
+      }
+    } catch {
+      // Non-blocking status retry
+    }
+  }, [attemptId, getAttemptResultStatusAPI, loadPublishedReport]);
 
   useEffect(() => {
     checkStatus();
@@ -242,11 +281,21 @@ const ExamResultPage = () => {
     );
   }
 
+  // ─── Case 1.5: Report is Available, Data is Loading ────────────
+  if (!analysis && isAnalysisLoading) {
+    return (
+      <div className="max-w-lg mx-auto py-24 px-4 text-center space-y-4">
+        <Loader label="Loading your exam result report..." />
+      </div>
+    );
+  }
+
   // ─── Case 2: In-flight Processing (Mock or Live calculation) ─────
   if (
-    isPolling ||
-    resultStatusData?.availability === 'PROCESSING' ||
-    (isAnalysisLoading && !analysis)
+    !analysis &&
+    (isPolling ||
+      resultStatusData?.availability === 'PROCESSING' ||
+      resultStatusData?.processingStatus === 'PROCESSING')
   ) {
     return (
       <div className="max-w-lg mx-auto py-20 px-4 text-center space-y-6">
@@ -277,6 +326,29 @@ const ExamResultPage = () => {
           <div className="flex items-center gap-2 text-slate-400 font-medium">
             <Clock size={16} /> Percentile & Official Ranking Snapshot
           </div>
+        </div>
+
+        <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Button
+            onClick={() => window.location.reload()}
+            className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white font-semibold flex items-center justify-center gap-2"
+          >
+            <RefreshCw size={15} /> Reload Page
+          </Button>
+          <Button
+            variant="outline"
+            onClick={checkStatus}
+            className="w-full sm:w-auto flex items-center justify-center gap-2"
+          >
+            <RefreshCw size={15} /> Check Result
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => navigate(PRIVATE_NAVIGATION.dashboard)}
+            className="w-full sm:w-auto text-slate-600 dark:text-slate-300"
+          >
+            Return to Dashboard
+          </Button>
         </div>
 
         <div className="pt-2">
@@ -431,104 +503,305 @@ const ExamResultPage = () => {
         <SmartRecommendationsView recommendations={recommendations} />
       )}
 
-      {activeTab === 'review' && (
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-              Official Question Solutions & Answer Review
-            </h3>
-            <span className="text-xs text-slate-500 font-medium">
-              {reviewItems.length} Questions Evaluated
-            </span>
-          </div>
+      {activeTab === 'review' && (() => {
+        const filteredReviewItems = reviewItems.filter((item) => {
+          if (reviewFilter === 'CORRECT') return item.isCorrect;
+          if (reviewFilter === 'INCORRECT') return item.isAttempted && !item.isCorrect;
+          if (reviewFilter === 'UNATTEMPTED') return !item.isAttempted;
+          return true;
+        });
 
-          <div className="space-y-3">
-            {reviewItems.map((item, idx) => (
-              <div
-                key={idx}
-                className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {idx + 1}
-                    </span>
-                    <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                      {item.sectionName}
-                    </span>
-                  </div>
+        const totalReviewPages = Math.ceil(filteredReviewItems.length / reviewPageSize) || 1;
+        const paginatedReviewItems = filteredReviewItems.slice(
+          (reviewPage - 1) * reviewPageSize,
+          reviewPage * reviewPageSize,
+        );
 
-                  <span
+        const reviewStats = {
+          total: reviewItems.length,
+          correct: reviewItems.filter((i) => i.isCorrect).length,
+          incorrect: reviewItems.filter((i) => i.isAttempted && !i.isCorrect).length,
+          unattempted: reviewItems.filter((i) => !i.isAttempted).length,
+        };
+
+        return (
+          <div className="space-y-4">
+            {/* Review Header & Filter Chips */}
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Official Question Solutions & Answer Review
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Verify correct answers against your submitted responses.
+                </p>
+              </div>
+
+              {/* Status Filter Chips */}
+              <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
+                {[
+                  { key: 'ALL', label: `All (${reviewStats.total})` },
+                  { key: 'CORRECT', label: `Correct (${reviewStats.correct})` },
+                  { key: 'INCORRECT', label: `Incorrect (${reviewStats.incorrect})` },
+                  { key: 'UNATTEMPTED', label: `Unattempted (${reviewStats.unattempted})` },
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => {
+                      setReviewFilter(f.key as any);
+                      setReviewPage(1);
+                    }}
                     className={cn(
-                      'px-2 py-0.5 rounded text-[11px] font-bold',
-                      item.isCorrect
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                        : item.isAttempted
-                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
-                          : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
+                      'px-2.5 py-1 rounded-lg text-xs font-bold transition-all',
+                      reviewFilter === f.key
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
                     )}
                   >
-                    {item.isCorrect
-                      ? 'Correct'
-                      : item.isAttempted
-                        ? 'Incorrect'
-                        : 'Unattempted'}
-                  </span>
-                </div>
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                  {item.questionText}
+            {/* Questions List */}
+            {filteredReviewItems.length === 0 ? (
+              <div className="p-8 text-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800">
+                <p className="text-xs font-bold text-slate-500">
+                  No questions match the selected filter.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {paginatedReviewItems.map((item, localIdx) => {
+                  const questionGlobalIdx =
+                    (reviewPage - 1) * reviewPageSize + localIdx + 1;
+
+                  const studentChosenOpt = item.options.find(
+                    (o) => o.id === item.studentAnswer?.selectedOptionId,
+                  );
+                  const correctOpt = item.options.find((o) => o.isCorrect);
+
+                  return (
+                    <div
+                      key={item.displayOrder || questionGlobalIdx}
+                      className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm space-y-4"
+                    >
+                      {/* Question Card Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300">
+                            {questionGlobalIdx}
+                          </span>
+                          <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                            {item.sectionName}
+                          </span>
+                        </div>
+
+                        <span
+                          className={cn(
+                            'px-2.5 py-1 rounded-full text-[11px] font-extrabold flex items-center gap-1',
+                            item.isCorrect
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                              : item.isAttempted
+                                ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
+                                : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
+                          )}
+                        >
+                          {item.isCorrect ? (
+                            <>
+                              <Check size={12} /> Correct
+                            </>
+                          ) : item.isAttempted ? (
+                            <>
+                              <X size={12} /> Incorrect
+                            </>
+                          ) : (
+                            'Unattempted'
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Question Text */}
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 leading-relaxed">
+                        {item.questionText}
+                      </p>
+
+                      {/* Quick Answer Summary Bar (shows BOTH user selected & correct answer) */}
+                      <div className="flex flex-wrap items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/60 text-xs">
+                        {/* Student Choice Summary */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-slate-500 dark:text-slate-400">
+                            Your Selected Answer:
+                          </span>
+                          {studentChosenOpt ? (
+                            <span
+                              className={cn(
+                                'font-bold px-2 py-0.5 rounded-md flex items-center gap-1',
+                                item.isCorrect
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                  : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300',
+                              )}
+                            >
+                              Option{' '}
+                              {studentChosenOpt.optionLabel ||
+                                (studentChosenOpt as any).optionKey}{' '}
+                              ({studentChosenOpt.optionText})
+                              {item.isCorrect ? <Check size={11} /> : <X size={11} />}
+                            </span>
+                          ) : (
+                            <span className="font-medium px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                              Not Attempted
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="h-3.5 w-px bg-slate-300 dark:bg-slate-700 hidden sm:block" />
+
+                        {/* Official Correct Answer Summary */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-slate-500 dark:text-slate-400">
+                            Correct Answer:
+                          </span>
+                          {correctOpt ? (
+                            <span className="font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 flex items-center gap-1">
+                              <Check size={11} />
+                              Option{' '}
+                              {correctOpt.optionLabel || (correctOpt as any).optionKey}{' '}
+                              ({correctOpt.optionText})
+                            </span>
+                          ) : (
+                            <span className="font-medium text-slate-400">N/A</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Options List */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                        {item.options.map((opt, oIdx) => {
+                          const isStudentPick =
+                            item.studentAnswer?.selectedOptionId === opt.id;
+                          const isCorrectOpt = opt.isCorrect;
+                          const label =
+                            opt.optionLabel ||
+                            (opt as any).optionKey ||
+                            String.fromCharCode(65 + oIdx);
+                          const text =
+                            opt.optionText || (opt as any).text || `Option ${label}`;
+
+                          return (
+                            <div
+                              key={opt.id || oIdx}
+                              className={cn(
+                                'p-3 rounded-xl border text-xs font-medium flex items-center justify-between transition-all',
+                                isCorrectOpt && isStudentPick
+                                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 ring-1 ring-emerald-500/20'
+                                  : isStudentPick && !isCorrectOpt
+                                    ? 'border-rose-400 bg-rose-50 dark:bg-rose-950/40 text-rose-950 dark:text-rose-100 ring-1 ring-rose-400/20'
+                                    : isCorrectOpt && !isStudentPick
+                                      ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/20 text-emerald-950 dark:text-emerald-100'
+                                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-slate-700 dark:text-slate-300',
+                              )}
+                            >
+                              <div className="flex items-center gap-2.5 pr-2">
+                                <span
+                                  className={cn(
+                                    'h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0',
+                                    isCorrectOpt
+                                      ? 'bg-emerald-500 text-white'
+                                      : isStudentPick
+                                        ? 'bg-rose-500 text-white'
+                                        : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200',
+                                  )}
+                                >
+                                  {label}
+                                </span>
+                                <span className="font-semibold">{text}</span>
+                              </div>
+
+                              {/* Badges on the right */}
+                              <div className="flex items-center gap-1 shrink-0">
+                                {isStudentPick && (
+                                  <span
+                                    className={cn(
+                                      'px-2 py-0.5 rounded text-[10px] font-extrabold flex items-center gap-1',
+                                      isCorrectOpt
+                                        ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-200'
+                                        : 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200',
+                                    )}
+                                  >
+                                    Your Choice
+                                  </span>
+                                )}
+
+                                {isCorrectOpt && (
+                                  <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-200 text-emerald-900 dark:bg-emerald-800 dark:text-emerald-100 flex items-center gap-1">
+                                    <Check size={11} /> Correct
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Review Pagination Controls */}
+            {totalReviewPages > 1 && (
+              <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
+                <p className="text-xs text-slate-500 font-medium">
+                  Showing {(reviewPage - 1) * reviewPageSize + 1} to{' '}
+                  {Math.min(reviewPage * reviewPageSize, filteredReviewItems.length)} of{' '}
+                  {filteredReviewItems.length} questions
                 </p>
 
-                {/* Options List */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                  {item.options.map((opt) => {
-                    const isStudentPick =
-                      item.studentAnswer?.selectedOptionId === opt.id;
-                    const isCorrectOpt = opt.isCorrect;
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={reviewPage <= 1}
+                    onClick={() => setReviewPage((p) => Math.max(1, p - 1))}
+                    className="rounded-xl text-xs flex items-center gap-1 py-1 px-2.5"
+                  >
+                    <ChevronLeft size={13} /> Previous
+                  </Button>
 
-                    return (
-                      <div
-                        key={opt.id}
+                  {Array.from({ length: totalReviewPages }, (_, i) => i + 1).map(
+                    (pageNum) => (
+                      <button
+                        key={pageNum}
+                        onClick={() => setReviewPage(pageNum)}
                         className={cn(
-                          'p-3 rounded-xl border text-xs font-medium flex items-center justify-between',
-                          isCorrectOpt
-                            ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200'
-                            : isStudentPick
-                              ? 'border-rose-400 bg-rose-50/70 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200'
-                              : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300',
+                          'h-7 w-7 rounded-lg text-xs font-bold transition-all',
+                          reviewPage === pageNum
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200',
                         )}
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold">{opt.optionLabel}.</span>
-                          <span>{opt.optionText}</span>
-                        </div>
-                        {isCorrectOpt && (
-                          <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
-                            Correct Answer
-                          </span>
-                        )}
-                        {isStudentPick && !isCorrectOpt && (
-                          <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400">
-                            Your Choice
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                        {pageNum}
+                      </button>
+                    ),
+                  )}
 
-                {item.explanation && (
-                  <div className="mt-3 p-3 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-xl border border-indigo-100 dark:border-indigo-900/40 text-xs text-indigo-950 dark:text-indigo-200">
-                    <span className="font-bold block mb-1">Explanation:</span>
-                    {item.explanation}
-                  </div>
-                )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={reviewPage >= totalReviewPages}
+                    onClick={() => setReviewPage((p) => Math.min(totalReviewPages, p + 1))}
+                    className="rounded-xl text-xs flex items-center gap-1 py-1 px-2.5"
+                  >
+                    Next <ChevronRight size={13} />
+                  </Button>
+                </div>
               </div>
-            ))}
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

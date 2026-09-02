@@ -63,6 +63,158 @@ export const useGetAvailableExamsAPI = () => {
   return { getAvailableExamsAPI, ...state };
 };
 
+export interface StudentExamItem {
+  id: string;
+  title: string;
+  description?: string;
+  examTarget: string;
+  totalQuestions: number;
+  totalMarks: number;
+  durationMinutes: number;
+  status: 'UPCOMING' | 'LIVE' | 'COMPLETED';
+  rawStatus?: string;
+  canStart: boolean;
+  canResume?: boolean;
+  isInProgress: boolean;
+  activeAttemptId?: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  scheduleId?: string | null;
+  attempt?: {
+    id: string;
+    status: string;
+    startedAt?: string;
+    submittedAt?: string;
+    result?: {
+      id: string;
+      totalScore: number;
+      maxScore: number;
+      percentage: number;
+      accuracy: number;
+      resultStatus: string;
+      publishedAt?: string;
+    } | null;
+  } | null;
+  subjects: string[];
+  createdAt: string;
+}
+
+export interface StudentMockTestItem {
+  id: string;
+  title: string;
+  description?: string;
+  examTarget: string;
+  primarySubject: string;
+  subjects: string[];
+  totalQuestions: number;
+  totalMarks: number;
+  durationMinutes: number;
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  attemptStatus: 'NOT_ATTEMPTED' | 'ATTEMPTED' | 'IN_PROGRESS';
+  attemptsCount: number;
+  activeAttemptId?: string | null;
+  latestAttemptId?: string | null;
+  bestScore?: number | null;
+  bestPercentage?: number | null;
+  latestResult?: any;
+  createdAt: string;
+}
+
+export interface StudentPaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export const useGetStudentExamsAPI = () => {
+  const [get, state] = useAxiosGet();
+  const getStudentExamsAPI = useCallback(
+    (params?: Record<string, any>) =>
+      get<StudentExamItem[]>('/students/me/exams', { params }),
+    [get],
+  );
+  return { getStudentExamsAPI, ...state };
+};
+
+export const useGetStudentMockTestsAPI = () => {
+  const [get, state] = useAxiosGet();
+  const getStudentMockTestsAPI = useCallback(
+    (params?: Record<string, any>) =>
+      get<StudentMockTestItem[]>('/students/me/mock-tests', { params }),
+    [get],
+  );
+  return { getStudentMockTestsAPI, ...state };
+};
+
+export interface MockTestAttemptItem {
+  attemptId: string;
+  attemptNumber: number;
+  status: string;
+  isCompleted: boolean;
+  isInProgress: boolean;
+  startedAt: string;
+  submittedAt: string | null;
+  score: number | null;
+  maxScore: number;
+  percentage: number | null;
+  accuracy: number | null;
+  correctCount: number | null;
+  wrongCount: number | null;
+  unattemptedCount: number | null;
+  timeUsedSeconds: number | null;
+  rank: number | null;
+  percentile: number | null;
+  isResultAvailable: boolean;
+  isBest?: boolean;
+  isLatest?: boolean;
+}
+
+export interface MockTestAttemptsSummary {
+  mockTestId: string;
+  title: string;
+  description?: string;
+  examTarget: string;
+  subjects: string[];
+  totalQuestions: number;
+  totalMarks: number;
+  durationMinutes: number;
+  totalAttempts: number;
+  completedAttempts: number;
+  bestScore: number | null;
+  latestScore: number | null;
+  activeAttempt?: {
+    attemptId: string;
+    attemptNumber: number;
+    startedAt: string;
+    serverEndTime?: string | null;
+  } | null;
+  canTakeAgain: boolean;
+}
+
+export interface MockTestAttemptsResponse {
+  data: MockTestAttemptItem[];
+  summary: MockTestAttemptsSummary;
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export const useGetMockTestAttemptsAPI = () => {
+  const [get, state] = useAxiosGet();
+  const getMockTestAttemptsAPI = useCallback(
+    (mockTestId: string, params?: Record<string, any>) =>
+      get<MockTestAttemptsResponse>(`/students/me/mock-tests/${mockTestId}/attempts`, {
+        params,
+      }),
+    [get],
+  );
+  return { getMockTestAttemptsAPI, ...state };
+};
+
 export const useGetExamDetailsAPI = () => {
   const [get, state] = useAxiosGet();
   const getExamDetailsAPI = useCallback(
@@ -234,6 +386,15 @@ export const useGetMyAttemptsAPI = () => {
   const [get, state] = useAxiosGet();
   const getMyAttemptsAPI = useCallback(() => get<AttemptSummary[]>('/attempts/my-history'), [get]);
   return { getMyAttemptsAPI, ...state };
+};
+
+export const useGetStudentMockHistoryAPI = () => {
+  const [get, state] = useAxiosGet();
+  const getStudentMockHistoryAPI = useCallback(
+    (params?: any) => get<AttemptSummary[]>('/students/me/mock-history', { params }),
+    [get],
+  );
+  return { getStudentMockHistoryAPI, ...state };
 };
 
 export const useGetFullAnalysisAPI = () => {

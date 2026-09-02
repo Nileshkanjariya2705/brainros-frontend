@@ -1,6 +1,6 @@
 // ** Packages **
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import {
   Clock,
   ChevronLeft,
@@ -35,6 +35,8 @@ import {
 } from '../services';
 import { useExamSecurity } from '../hooks/useExamSecurity';
 import { ExamSecurityWarningModal } from '../components/ExamSecurityWarningModal';
+import { ExamLeaveWarningModal } from '../components/ExamLeaveWarningModal';
+import { ExamSessionConflictModal } from '../components/ExamSessionConflictModal';
 import type { SecurityProfile } from '../services/security.service';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -134,6 +136,15 @@ const ExamInterfacePage = () => {
 
   // UI & Network state
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const hasSubmittedRef = useRef(false);
+
+  const isExamInProgress =
+    !hasSubmittedRef.current &&
+    !isSubmitting &&
+    questions.length > 0 &&
+    timeLeft !== 0;
+
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error' | 'syncing'>(
     'idle',
   );
@@ -148,27 +159,77 @@ const ExamInterfacePage = () => {
   const sequenceCounterRef = useRef<number>(1);
   const isInitialLoadDoneRef = useRef(false);
 
+  // ─── Native BeforeUnload Guard (Tab / Window Close & Page Refresh) ──
+  useEffect(() => {
+    if (!isExamInProgress) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isExamInProgress]);
+
+  // ─── Cross-Tab Active Exam Synchronization ────────────────────────
+  useEffect(() => {
+    if (attemptId && examId && isExamInProgress) {
+      localStorage.setItem(
+        'brainros_active_exam',
+        JSON.stringify({
+          attemptId,
+          examId,
+          examTitle,
+          serverEndTime,
+          startedAt: new Date().toISOString(),
+        }),
+      );
+    }
+  }, [attemptId, examId, examTitle, serverEndTime, isExamInProgress]);
+
   // ─── Exam Security Engine Integration ────────────────────────
   const {
+    sessionConflict,
+    isTransferring,
+    transferActiveSession,
     enterFullscreen: enterSecFullscreen,
     recordEvent: recordSecEvent,
   } = useExamSecurity({
     attemptId,
     examId,
     securityProfile,
-    isExamActive: !isSubmitting && questions.length > 0,
+    isExamActive: isExamInProgress,
     onViolationWarning: (msg) => {
       setSecurityWarningMessage(msg);
       setWarningModalOpen(true);
     },
     onMultipleSessionsDetected: () => {
-      setSecurityWarningMessage('Multiple active exam sessions detected. Only one active window is allowed.');
-      setWarningModalOpen(true);
+      // Captured via sessionConflict modal
     },
     onAutoSubmitTriggered: () => {
       handleAutoSubmit();
     },
   });
+
+  // React Router Navigation Blocker (intercepts Back/Forward, sidebar links, route changes)
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      isExamInProgress && !sessionConflict && currentLocation.pathname !== nextLocation.pathname,
+  );
+
+  // Track navigation blocked and leave modal events
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      recordSecEvent('NAVIGATION_BLOCKED', 0, {
+        targetLocation: blocker.location?.pathname,
+      });
+      recordSecEvent('LEAVE_WARNING_SHOWN');
+    }
+  }, [blocker.state, blocker.location, recordSecEvent]);
 
   // ─── Network Interruption Recovery Listeners ──────────────────
   useEffect(() => {
@@ -392,7 +453,9 @@ const ExamInterfacePage = () => {
   // ─── Authoritative Countdown Timer & Background Tab Sync ──────
   const handleAutoSubmit = useCallback(async () => {
     if (!attemptId) return;
+    hasSubmittedRef.current = true;
     setSaveStatus('saving');
+    recordSecEvent('EXAM_SUBMITTED', 0, { trigger: 'FINAL_SUBMISSION' }, true);
     try {
       // Flush currently selected answer before submitting
       const currentQ = questions[currentIdx];
@@ -410,10 +473,12 @@ const ExamInterfacePage = () => {
         });
       }
       await submitAttemptAPI(attemptId);
+      localStorage.removeItem('brainros_active_exam');
     } catch {
       // Non-blocking
     } finally {
       setShowSubmitModal(false);
+      setShowLeaveModal(false);
       navigate(PRIVATE_NAVIGATION.examResult.replace(':attemptId', attemptId));
     }
   }, [
@@ -427,7 +492,25 @@ const ExamInterfacePage = () => {
     selectedOptions,
     isMarkedForReview,
     persistAnswer,
+    recordSecEvent,
   ]);
+
+  const handleLeaveAndSubmit = useCallback(async () => {
+    if (!attemptId) return;
+    hasSubmittedRef.current = true;
+    recordSecEvent('LEAVE_CONFIRMED', 0, { reason: 'USER_LEAVE' }, true);
+    try {
+      await handleAutoSubmit();
+      localStorage.removeItem('brainros_active_exam');
+      if (blocker.state === 'blocked') {
+        blocker.proceed();
+      }
+    } catch (err) {
+      console.error('Failed to submit on leave:', err);
+    } finally {
+      setShowLeaveModal(false);
+    }
+  }, [attemptId, handleAutoSubmit, blocker, recordSecEvent]);
 
   useEffect(() => {
     if (!serverEndTime) return;
@@ -718,7 +801,22 @@ const ExamInterfacePage = () => {
       {/* ══ HEADER BAR ════════════════════════════════════════════════ */}
       <header className="relative z-20 flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 shadow-xs">
         {/* Left: Brand & Exam Meta */}
-        <div className="flex items-center gap-3">
+        <div
+          className={cn(
+            'flex items-center gap-3 transition-opacity',
+            isExamInProgress && 'cursor-pointer hover:opacity-90',
+          )}
+          onClick={() => {
+            if (isExamInProgress) {
+              setShowLeaveModal(true);
+            }
+          }}
+          title={
+            isExamInProgress
+              ? 'Exam is currently active. Click to view submission/leave options.'
+              : undefined
+          }
+        >
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-200">
             <GraduationCap size={20} />
           </div>
@@ -1348,6 +1446,49 @@ const ExamInterfacePage = () => {
         onDismiss={() => setWarningModalOpen(false)}
         onReEnterFullscreen={enterSecFullscreen}
         requiresFullscreen={Boolean(securityProfile?.fullscreenRequired)}
+      />
+
+      {/* Exam Leave & Navigation Warning Modal */}
+      <ExamLeaveWarningModal
+        isOpen={blocker.state === 'blocked' || showLeaveModal}
+        timeLeft={timeLeft}
+        totalQuestions={questions.length}
+        answeredCount={
+          questions.filter((q) => {
+            const st = getQuestionStatus(q);
+            return st === 'ANSWERED' || st === 'ANS_MARKED';
+          }).length
+        }
+        unansweredCount={questions.filter((q) => getQuestionStatus(q) === 'NOT_ANSWERED').length}
+        markedForReviewCount={
+          questions.filter((q) => {
+            const st = getQuestionStatus(q);
+            return st === 'MARKED' || st === 'ANS_MARKED';
+          }).length
+        }
+        onStay={() => {
+          recordSecEvent('LEAVE_CANCELLED');
+          if (blocker.state === 'blocked') {
+            blocker.reset();
+          }
+          setShowLeaveModal(false);
+        }}
+        onLeaveAndSubmit={handleLeaveAndSubmit}
+        isSubmitting={isSubmitting}
+      />
+
+      {/* Multi-Tab & Device Session Conflict Modal */}
+      <ExamSessionConflictModal
+        isOpen={Boolean(sessionConflict)}
+        onTransferSession={transferActiveSession}
+        isTransferring={isTransferring}
+        onCloseTab={() => {
+          localStorage.removeItem('brainros_active_exam');
+          try {
+            window.close();
+          } catch {}
+          navigate('/student/dashboard', { replace: true });
+        }}
       />
     </div>
   );

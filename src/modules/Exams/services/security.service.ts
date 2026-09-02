@@ -67,8 +67,22 @@ export const useAcceptSecurityPolicyAPI = () => {
 export const useCreateExamSessionAPI = () => {
   const [post, state] = useAxiosPost();
   const createExamSessionAPI = useCallback(
-    (attemptId: string, deviceMetadata?: Record<string, any>) =>
-      post<{ id: string; status: string }>(`/attempts/${attemptId}/session`, { deviceMetadata }),
+    (
+      attemptId: string,
+      deviceMetadata?: Record<string, any>,
+      transferSession?: boolean,
+      sessionId?: string,
+    ) =>
+      post<{
+        id: string;
+        status: string;
+        conflict?: boolean;
+        message?: string;
+      }>(`/attempts/${attemptId}/session`, {
+        deviceMetadata,
+        transferSession,
+        sessionId,
+      }),
     [post],
   );
   return { createExamSessionAPI, ...state };
@@ -77,7 +91,16 @@ export const useCreateExamSessionAPI = () => {
 export const useSendHeartbeatAPI = () => {
   const [post, state] = useAxiosPost();
   const sendHeartbeatAPI = useCallback(
-    (attemptId: string, payload: { sessionId?: string; isFullscreen?: boolean; isOnline?: boolean; deviceMetadata?: any }) =>
+    (
+      attemptId: string,
+      payload: {
+        sessionId?: string;
+        isFullscreen?: boolean;
+        isOnline?: boolean;
+        visibilityState?: string;
+        deviceMetadata?: any;
+      },
+    ) =>
       post<SecurityHeartbeatResponse>(`/attempts/${attemptId}/heartbeat`, {
         ...payload,
         clientTimestamp: new Date().toISOString(),

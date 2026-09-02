@@ -46,9 +46,11 @@ const DashboardDispatcher = lazyRoute(() => import('@/modules/Dashboard/pages/Da
 
 // Core Shared / Role Pages
 const AvailableExamsPage = lazyRoute(() => import('@/modules/Exams/pages/AvailableExamsPage'));
+const StudentMockTestsPage = lazyRoute(() => import('@/modules/Exams/pages/StudentMockTestsPage'));
 const ExamInterfacePage = lazyRoute(() => import('@/modules/Exams/pages/ExamInterfacePage'));
 const ExamResultPage = lazyRoute(() => import('@/modules/Exams/pages/ExamResultPage'));
 const HistoryPage = lazyRoute(() => import('@/modules/Exams/pages/HistoryPage'));
+const MockHistoryPage = lazyRoute(() => import('@/modules/Exams/pages/MockHistoryPage'));
 const QuestionBankPage = lazyRoute(() => import('@/modules/QuestionBank/pages/QuestionBankPage'));
 const ChapterManagementPage = lazyRoute(
   () => import('@/modules/Admin/pages/ChapterManagementPage'),
@@ -167,6 +169,14 @@ const studentRoutes: RouteObject[] = [
         ),
       },
       {
+        path: 'mock-tests',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW, PERMISSIONS.EXAM_ATTEMPT]}>
+            <StudentMockTestsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'exams/:examId',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
@@ -187,6 +197,22 @@ const studentRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.ATTEMPT_VIEW, PERMISSIONS.RESULT_VIEW]}>
             <HistoryPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'mock-history',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.ATTEMPT_VIEW, PERMISSIONS.RESULT_VIEW]}>
+            <MockHistoryPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'mock-tests/history',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.ATTEMPT_VIEW, PERMISSIONS.RESULT_VIEW]}>
+            <MockHistoryPage />
           </ProtectedRoute>
         ),
       },
@@ -631,6 +657,7 @@ const legacyAndSharedRoutes: RouteObject[] = [
   },
   { path: '/exams', element: <Navigate to={PRIVATE_NAVIGATION.studentExams} replace /> },
   { path: '/history', element: <Navigate to={PRIVATE_NAVIGATION.studentHistory} replace /> },
+  { path: '/mock-history', element: <Navigate to={PRIVATE_NAVIGATION.studentMockHistory} replace /> },
   {
     path: '/performance-trends',
     element: <Navigate to={PRIVATE_NAVIGATION.studentTrends} replace />,

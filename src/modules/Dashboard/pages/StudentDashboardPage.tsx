@@ -10,6 +10,7 @@ import {
   Calendar,
   Layers,
   ChevronRight,
+  ChevronLeft,
   ArrowRight,
   CheckCircle2,
   Flame,
@@ -22,6 +23,285 @@ import { useGetStudentDashboardAPI } from '../services';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 import Loader from '@/components/feedback/Loader';
 import type { StudentDashboardResponse } from '@/types/exam.types';
+
+// ── Upcoming Exams Slider Component ──────────────────────────────────────────
+interface UpcomingExamsSliderProps {
+  exams: Array<{
+    examId: string;
+    title: string;
+    examTarget: string;
+    durationMinutes: number;
+    totalQuestions: number;
+    totalMarks: number;
+    startTime: string | null;
+    endTime: string | null;
+    status: string;
+    canStart: boolean;
+    waitSeconds: number;
+    accessStatus: string;
+    message: string;
+  }>;
+}
+
+const UpcomingExamsSlider: React.FC<UpcomingExamsSliderProps> = ({ exams }) => {
+  const navigate = useNavigate();
+  const sliderRef = React.useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(exams.length > 1);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  const checkScrollState = useCallback(() => {
+    if (sliderRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = sliderRef.current;
+      setCanScrollLeft(scrollLeft > 10);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+      const cardWidth = 360;
+      const index = Math.round(scrollLeft / cardWidth);
+      setActiveSlide(Math.max(0, Math.min(exams.length - 1, index)));
+    }
+  }, [exams.length]);
+
+  useEffect(() => {
+    checkScrollState();
+  }, [checkScrollState, exams]);
+
+  const slide = (direction: 'prev' | 'next') => {
+    if (sliderRef.current) {
+      const cardWidth = 360;
+      sliderRef.current.scrollBy({
+        left: direction === 'prev' ? -cardWidth : cardWidth,
+        behavior: 'smooth',
+      });
+    }
+  };
+
+  const jumpToSlide = (index: number) => {
+    if (sliderRef.current) {
+      const cardWidth = 360;
+      sliderRef.current.scrollTo({
+        left: index * cardWidth,
+        behavior: 'smooth',
+      });
+    }
+  };
+
+  if (!exams || exams.length === 0) {
+    return (
+      <div className="rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 p-6 text-center shadow-sm">
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 mx-auto mb-2">
+          <Calendar size={18} />
+        </div>
+        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+          No Upcoming Exams Scheduled
+        </p>
+        <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+          All your targeted mock exams are up to date. You can practice with standalone mock tests or check the calendar.
+        </p>
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <button
+            onClick={() => navigate(PRIVATE_NAVIGATION.studentMockTests)}
+            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 transition-all shadow-sm"
+          >
+            Browse Mock Tests
+          </button>
+          <button
+            onClick={() => navigate(PRIVATE_NAVIGATION.studentExams)}
+            className="text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+          >
+            All Examinations
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-3xl border border-indigo-100/80 dark:border-slate-800 bg-gradient-to-br from-indigo-50/40 via-white to-slate-50 dark:from-slate-900/80 dark:via-slate-900 dark:to-slate-850 p-5 md:p-6 shadow-sm space-y-4">
+      {/* Slider Header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none">
+            <Calendar size={18} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white">
+                Upcoming & Live Examinations
+              </h2>
+              <span className="rounded-full bg-indigo-100 dark:bg-indigo-950 px-2.5 py-0.5 text-[10px] font-black text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900">
+                {exams.length} {exams.length === 1 ? 'Exam' : 'Exams'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
+              Swipe or navigate through your scheduled mocks and live assessments
+            </p>
+          </div>
+        </div>
+
+        {/* Action / Slider Controls */}
+        <div className="flex items-center gap-2">
+          <Link
+            to={PRIVATE_NAVIGATION.studentExams}
+            className="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 mr-2"
+          >
+            <span>All Exams</span>
+            <ChevronRight size={14} />
+          </Link>
+
+          <button
+            onClick={() => slide('prev')}
+            disabled={!canScrollLeft}
+            aria-label="Previous Slide"
+            className={cn(
+              'flex h-8 w-8 items-center justify-center rounded-xl border transition-all',
+              canScrollLeft
+                ? 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 shadow-sm active:scale-95'
+                : 'border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed',
+            )}
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          <button
+            onClick={() => slide('next')}
+            disabled={!canScrollRight}
+            aria-label="Next Slide"
+            className={cn(
+              'flex h-8 w-8 items-center justify-center rounded-xl border transition-all',
+              canScrollRight
+                ? 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 shadow-sm active:scale-95'
+                : 'border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed',
+            )}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Horizontal Carousel Track */}
+      <div
+        ref={sliderRef}
+        onScroll={checkScrollState}
+        className="flex gap-4 overflow-x-auto scroll-smooth pb-2 pt-1 no-scrollbar snap-x snap-mandatory"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {exams.map((exam, idx) => {
+          const isLive = exam.canStart || exam.status === 'ACTIVE';
+
+          return (
+            <div
+              key={exam.examId || idx}
+              className={cn(
+                'min-w-[280px] sm:min-w-[340px] md:min-w-[370px] max-w-[400px] shrink-0 snap-start flex flex-col justify-between rounded-3xl p-5 border transition-all duration-300 hover:shadow-lg',
+                isLive
+                  ? 'border-emerald-300 dark:border-emerald-800 bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/40 dark:from-slate-800 dark:to-emerald-950/20 shadow-emerald-500/5'
+                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-slate-200/50 dark:shadow-none',
+              )}
+            >
+              <div className="space-y-3">
+                {/* Top Badge Row */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded-lg bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 text-[11px] font-black text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900">
+                    {exam.examTarget || 'General'}
+                  </span>
+
+                  {isLive ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 text-[10px] font-black text-emerald-700 dark:text-emerald-300 border border-emerald-300/60 animate-pulse">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      LIVE NOW
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                      <Clock size={11} />
+                      {exam.message && exam.message.includes('Starts in')
+                        ? exam.message
+                        : 'Scheduled'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Exam Title */}
+                <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white line-clamp-1">
+                  {exam.title}
+                </h3>
+
+                {/* Metrics Pill Grid */}
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 flex-wrap">
+                  <span className="flex items-center gap-1 rounded-md bg-slate-50 dark:bg-slate-700/50 px-2 py-1 border border-slate-100 dark:border-slate-700">
+                    <Clock size={12} className="text-indigo-500" />
+                    {exam.durationMinutes} mins
+                  </span>
+                  <span className="rounded-md bg-slate-50 dark:bg-slate-700/50 px-2 py-1 border border-slate-100 dark:border-slate-700">
+                    {exam.totalQuestions} Qs
+                  </span>
+                  <span className="rounded-md bg-slate-50 dark:bg-slate-700/50 px-2 py-1 border border-slate-100 dark:border-slate-700">
+                    {exam.totalMarks} Marks
+                  </span>
+                </div>
+
+                {/* Date & Time */}
+                <div className="flex items-center gap-2 text-[11px] font-medium text-slate-600 dark:text-slate-400 rounded-xl bg-slate-50/80 dark:bg-slate-900/60 px-3 py-2 border border-slate-100 dark:border-slate-800">
+                  <Calendar size={13} className="text-slate-400 shrink-0" />
+                  <span className="truncate">
+                    {exam.startTime
+                      ? new Date(exam.startTime).toLocaleString('en-IN', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                          timeZone: 'Asia/Kolkata',
+                        })
+                      : 'Flexible Schedule'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60">
+                <button
+                  onClick={() => navigate(`/student/exams/${exam.examId}`)}
+                  className={cn(
+                    'w-full inline-flex items-center justify-center gap-2 rounded-2xl py-2.5 text-xs font-black text-white shadow-md active:scale-95 transition-all',
+                    isLive
+                      ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 dark:shadow-none'
+                      : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200 dark:shadow-none',
+                  )}
+                >
+                  {isLive ? <PlayCircle size={15} /> : <Calendar size={15} />}
+                  <span>{isLive ? 'Start Live Exam' : 'View Details & Blueprint'}</span>
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Slide Position Dots (only if multiple exams) */}
+      {exams.length > 1 && (
+        <div className="flex items-center justify-center gap-1.5 pt-1">
+          {exams.map((_, dotIdx) => (
+            <button
+              key={dotIdx}
+              onClick={() => jumpToSlide(dotIdx)}
+              aria-label={`Go to slide ${dotIdx + 1}`}
+              className={cn(
+                'h-1.5 rounded-full transition-all duration-300',
+                activeSlide === dotIdx
+                  ? 'w-6 bg-indigo-600 dark:bg-indigo-400'
+                  : 'w-1.5 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400',
+              )}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const round2 = (val: number | string | null | undefined): string => {
+  if (val === null || val === undefined || val === '') return '0';
+  const num = Number(val);
+  if (isNaN(num)) return '0';
+  return (Math.round(num * 100) / 100).toString();
+};
 
 export const StudentDashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -121,7 +401,7 @@ export const StudentDashboardPage: React.FC = () => {
           {/* Quick Nav Shortcut Buttons */}
           <div className="flex items-center gap-2.5 flex-wrap self-start md:self-auto">
             <button
-              onClick={() => navigate(PRIVATE_NAVIGATION.studentExams)}
+              onClick={() => navigate(PRIVATE_NAVIGATION.studentMockTests)}
               className="inline-flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-indigo-500 active:scale-95 transition-all"
             >
               <BookOpen size={15} />
@@ -138,8 +418,8 @@ export const StudentDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ── 2. Prominent Resume Exam Card (if active) OR Next Exam Card ── */}
-      {activeAttempt ? (
+      {/* ── 2. Active Attempt in Progress (if any) ────────────────── */}
+      {activeAttempt && (
         <div className="relative overflow-hidden rounded-3xl border-2 border-emerald-500 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 p-6 md:p-8 shadow-md animate-in fade-in">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2">
@@ -179,78 +459,18 @@ export const StudentDashboardPage: React.FC = () => {
             </button>
           </div>
         </div>
-      ) : nextExam ? (
-        <div className="relative overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-r from-indigo-50/70 via-white to-purple-50/70 p-6 md:p-8 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    'rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider border',
-                    nextExam.canStart
-                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                      : 'bg-amber-100 text-amber-800 border-amber-300',
-                  )}
-                >
-                  {nextExam.canStart ? '● Exam Live Now' : 'Upcoming Scheduled Mock'}
-                </span>
-                <span className="text-xs font-semibold text-slate-500">{nextExam.examTarget}</span>
-              </div>
+      )}
 
-              <h2 className="text-xl md:text-2xl font-black text-slate-900">{nextExam.title}</h2>
-
-              <div className="flex items-center gap-4 text-xs font-semibold text-slate-600 flex-wrap">
-                <span className="flex items-center gap-1">
-                  <Clock size={14} className="text-indigo-600" />
-                  {nextExam.durationMinutes} mins
-                </span>
-                <span>•</span>
-                <span>{nextExam.totalQuestions} Questions</span>
-                <span>•</span>
-                <span>{nextExam.totalMarks} Marks</span>
-                {nextExam.startTime && (
-                  <>
-                    <span>•</span>
-                    <span>
-                      {new Date(nextExam.startTime).toLocaleString('en-IN', {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                        timeZone: 'Asia/Kolkata',
-                      })}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 shrink-0">
-              {!nextExam.canStart && countdownSec > 0 && (
-                <div className="text-right hidden sm:block">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">
-                    Starts In
-                  </span>
-                  <span className="text-xl font-black text-slate-900 font-mono">
-                    {formatTimer(countdownSec)}
-                  </span>
-                </div>
-              )}
-
-              <button
-                onClick={() => navigate(`/student/exams/${nextExam.examId}`)}
-                className={cn(
-                  'inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-black text-white shadow-lg active:scale-95 transition-all',
-                  nextExam.canStart
-                    ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200'
-                    : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200',
-                )}
-              >
-                {nextExam.canStart ? <PlayCircle size={18} /> : <Calendar size={18} />}
-                <span>{nextExam.canStart ? 'Start Test' : 'View Blueprint'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {/* ── 3. Upcoming & Live Examinations Slider ────────────────── */}
+      <UpcomingExamsSlider
+        exams={
+          data?.upcomingExams && data.upcomingExams.length > 0
+            ? data.upcomingExams
+            : nextExam
+              ? [nextExam]
+              : []
+        }
+      />
 
       {/* ── 3. Performance Summary Metric Cards ─────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -266,7 +486,7 @@ export const StudentDashboardPage: React.FC = () => {
             <span className="text-xs font-bold text-slate-400">/ {perf ? perf.maxScore : 720}</span>
           </div>
           <span className="text-[11px] font-semibold text-slate-500 mt-1 block">
-            {perf ? `${perf.percentage}% Score Rate` : 'No mock attempted yet'}
+            {perf ? `${round2(perf.percentage)}% Score Rate` : 'No mock attempted yet'}
           </span>
         </div>
 
@@ -277,7 +497,7 @@ export const StudentDashboardPage: React.FC = () => {
           </div>
           <div className="flex items-baseline gap-1.5">
             <span className="text-2xl sm:text-3xl font-black text-slate-900">
-              {perf ? `${perf.accuracy}%` : '—'}
+              {perf ? `${round2(perf.accuracy)}%` : '—'}
             </span>
           </div>
           <span className="text-[11px] font-semibold text-emerald-600 mt-1 block">
@@ -384,16 +604,16 @@ export const StudentDashboardPage: React.FC = () => {
               let subDisplay = '';
               if (trendMetric === 'SCORE') {
                 valDisplay = `${item.score}`;
-                subDisplay = `${item.accuracy}% acc`;
+                subDisplay = `${round2(item.accuracy)}% acc`;
               } else if (trendMetric === 'ACCURACY') {
-                valDisplay = `${item.accuracy}%`;
+                valDisplay = `${round2(item.accuracy)}%`;
                 subDisplay = `${item.score} pts`;
               } else if (trendMetric === 'RANK') {
                 valDisplay = item.rank ? `#${item.rank}` : '—';
-                subDisplay = item.percentile ? `${item.percentile}%ile` : '';
+                subDisplay = item.percentile ? `${round2(item.percentile)}%ile` : '';
               } else {
-                valDisplay = item.percentile ? `${item.percentile}` : '—';
-                subDisplay = `${item.accuracy}% acc`;
+                valDisplay = item.percentile ? `${round2(item.percentile)}` : '—';
+                subDisplay = `${round2(item.accuracy)}% acc`;
               }
 
               const isLatest = idx === trend.recentScores.length - 1;
@@ -481,7 +701,7 @@ export const StudentDashboardPage: React.FC = () => {
                           : 'bg-rose-100 text-rose-800 border-rose-200',
                     )}
                   >
-                    {sub.accuracy}% {sub.status}
+                    {round2(sub.accuracy)}% {sub.status}
                   </span>
                 </div>
               </div>
@@ -515,7 +735,7 @@ export const StudentDashboardPage: React.FC = () => {
 
                   <div className="text-right">
                     <span className="text-sm font-black text-rose-600 block">
-                      {area.accuracy}% Acc
+                      {round2(area.accuracy)}% Acc
                     </span>
                     <span className="text-[11px] font-semibold text-slate-500">
                       {area.totalQuestions} Questions Tested
@@ -557,7 +777,21 @@ export const StudentDashboardPage: React.FC = () => {
               >
                 <p className="text-xs font-bold text-slate-800 leading-relaxed">{rec.message}</p>
 
-                {rec.actionLabel && (
+                {rec.mockTestId ? (
+                  <button
+                    onClick={() => {
+                      navigate(rec.targetUrl || `/student/mock-tests?mockTestId=${rec.mockTestId}`);
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 self-start bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-xl transition-all shadow-xs"
+                  >
+                    <span>{rec.actionLabel || `Practice ${rec.subjectName || ''} Mock Test`}</span>
+                    <ArrowRight size={13} />
+                  </button>
+                ) : rec.fallbackMessage ? (
+                  <span className="text-[11px] font-semibold text-slate-400 italic">
+                    {rec.fallbackMessage}
+                  </span>
+                ) : rec.actionLabel && rec.targetUrl ? (
                   <button
                     onClick={() => {
                       if (rec.targetUrl) navigate(rec.targetUrl);
@@ -567,7 +801,7 @@ export const StudentDashboardPage: React.FC = () => {
                     <span>{rec.actionLabel}</span>
                     <ArrowRight size={13} />
                   </button>
-                )}
+                ) : null}
               </div>
             ))}
           </div>
@@ -648,12 +882,14 @@ export const StudentDashboardPage: React.FC = () => {
             <h3 className="text-base font-bold text-slate-900">Recent Completed Mocks</h3>
             <p className="text-xs text-slate-500">Detailed records of your evaluated sessions.</p>
           </div>
-          <Link
-            to={PRIVATE_NAVIGATION.studentHistory}
-            className="text-xs font-bold text-indigo-600 hover:text-indigo-800"
-          >
-            View All History →
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to={PRIVATE_NAVIGATION.studentMockHistory}
+              className="text-xs font-bold text-indigo-600 hover:text-indigo-800"
+            >
+              View Mock Test History →
+            </Link>
+          </div>
         </div>
 
         {recentResults.length > 0 ? (
@@ -679,7 +915,7 @@ export const StudentDashboardPage: React.FC = () => {
                       {row.score} / {row.maxScore}
                     </td>
                     <td className="py-3.5 px-3 text-right text-emerald-600 font-bold">
-                      {row.accuracy}%
+                      {round2(row.accuracy)}%
                     </td>
                     <td className="py-3.5 px-3 text-right font-mono">
                       {row.rank ? `#${row.rank.toLocaleString('en-IN')}` : '—'}

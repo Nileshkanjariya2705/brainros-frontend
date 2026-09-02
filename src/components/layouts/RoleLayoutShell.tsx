@@ -6,6 +6,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 
 // ** Components **
 import Button from '@/components/ui/Button';
+import { ActiveExamBanner } from './ActiveExamBanner';
 
 // ** Hooks & Auth Access **
 import { useAuth } from '@/hooks/useAuth';
@@ -517,6 +518,9 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
             </Button>
           </div>
         </header>
+
+        {/* Active Examination In-Progress Banner */}
+        <ActiveExamBanner />
 
         {/* Main Application Content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">

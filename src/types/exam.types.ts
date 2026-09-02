@@ -106,14 +106,48 @@ export interface AttemptSummary {
   status: ExamStatus;
   startedAt: string;
   submittedAt?: string;
+  serverStartTime?: string;
+  serverEndTime?: string;
   result?: {
+    id?: string;
     totalScore: number;
     maxScore: number;
     percentage: number;
+    accuracy?: number;
     correctAnswers: number;
     wrongAnswers: number;
     unattempted: number;
+    timeUsedSeconds?: number;
+    averageTimePerQuestion?: number;
+    resultStatus?: string;
+    subjectResults?: Array<{
+      id: string;
+      subjectId: string;
+      subject: { id: string; name: string };
+      score: number;
+      maxScore: number;
+      accuracy?: number;
+      correctAnswers?: number;
+      wrongAnswers?: number;
+      unattempted?: number;
+    }>;
   };
+  candidateRanks?: Array<{
+    rank: number;
+    totalCandidates: number;
+    percentile: number;
+    rankType?: string;
+  }>;
+  timeAnalyses?: Array<{
+    averageTimePerQuestionSeconds: number;
+    timeUtilizationPercentage: number;
+    totalTimeUsedSeconds: number;
+  }>;
+  strategyAnalyses?: Array<{
+    primaryClassification: string;
+    avoidableNegativeMarks: number;
+    projectedScore: number;
+  }>;
 }
 
 export interface ExamResult {
@@ -1421,6 +1455,21 @@ export interface StudentDashboardResponse {
     accessStatus: string;
     message: string;
   } | null;
+  upcomingExams?: Array<{
+    examId: string;
+    title: string;
+    examTarget: string;
+    durationMinutes: number;
+    totalQuestions: number;
+    totalMarks: number;
+    startTime: string | null;
+    endTime: string | null;
+    status: string;
+    canStart: boolean;
+    waitSeconds: number;
+    accessStatus: string;
+    message: string;
+  }>;
   activeAttempt: {
     attemptId: string;
     examId: string;
@@ -1490,9 +1539,14 @@ export interface StudentDashboardResponse {
     id: string;
     type: 'WARNING' | 'OPPORTUNITY' | 'STRENGTH' | 'TIP';
     message: string;
-    actionLabel?: string;
-    actionType?: 'PRACTICE' | 'VIEW_STRATEGY' | 'VIEW_ANALYSIS' | 'VIEW_EXAMS';
-    targetUrl?: string;
+    actionLabel?: string | null;
+    actionType?: 'PRACTICE' | 'PRACTICE_MOCK' | 'VIEW_STRATEGY' | 'VIEW_ANALYSIS' | 'VIEW_EXAMS';
+    targetUrl?: string | null;
+    subjectId?: string | null;
+    subjectName?: string | null;
+    mockTestId?: string | null;
+    mockTestName?: string | null;
+    fallbackMessage?: string | null;
   }>;
   timeManagement: {
     averageTimePerQuestionSeconds: number;
@@ -1709,5 +1763,12 @@ export interface ResultStatusResponse {
   examTitle: string;
   submittedAt: string | null;
   publishedAt?: string | null;
+  processingStatus?: string;
+  publicationStatus?: string;
+  resultAvailable?: boolean;
+  reportAvailable?: boolean;
+  onlineReportAvailable?: boolean;
+  pdfReportStatus?: string;
 }
+
 

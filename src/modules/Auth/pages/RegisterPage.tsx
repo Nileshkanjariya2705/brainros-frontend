@@ -112,7 +112,7 @@ const RegisterPage = () => {
       const { data, error } = await getRegisterOptionsAPI();
       if (!isMounted) return;
       if (!error && data) {
-        setClasses(data.classes || []);
+        setClasses((data.classes || []).filter((c: any) => !c.name?.toLowerCase().includes('foundation')));
         setLanguages(data.languages || []);
         setExamTargets(data.examTargets || []);
       } else {

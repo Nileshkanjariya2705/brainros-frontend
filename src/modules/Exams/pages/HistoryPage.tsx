@@ -1,7 +1,20 @@
 // ** Packages **
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { BookOpen, Clock, ArrowRight, Calendar, FileText, Filter, Search } from 'lucide-react';
+import {
+  BookOpen,
+  Clock,
+  ArrowRight,
+  Calendar,
+  FileText,
+  Filter,
+  Search,
+  Award,
+  TrendingUp,
+  Percent,
+  RotateCcw,
+  Zap,
+} from 'lucide-react';
 import cn from 'classnames';
 
 // ** Services & Constants **
@@ -22,6 +35,7 @@ const HistoryPage = () => {
   const [attempts, setAttempts] = useState<AttemptSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [targetFilter, setTargetFilter] = useState('ALL');
 
   useEffect(() => {
     let active = true;
@@ -44,6 +58,47 @@ const HistoryPage = () => {
     };
   }, []);
 
+  const availableTargets = useMemo(() => {
+    const targets = new Set<string>();
+    attempts.forEach((a) => {
+      const t = a.exam?.examTarget?.name;
+      if (t) targets.add(t);
+    });
+    return Array.from(targets);
+  }, [attempts]);
+
+  const summaryStats = useMemo(() => {
+    const completed = attempts.filter((a) =>
+      ['SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED', 'COMPLETED'].includes(a.status?.name),
+    );
+
+    if (completed.length === 0) {
+      return { total: 0, avgScore: 0, bestScore: 0, avgAccuracy: 0 };
+    }
+
+    let totalScorePerc = 0;
+    let bestPerc = 0;
+    let totalAcc = 0;
+    let accCount = 0;
+
+    completed.forEach((a) => {
+      const p = a.result?.percentage ?? 0;
+      totalScorePerc += p;
+      if (p > bestPerc) bestPerc = p;
+      if (a.result?.accuracy !== undefined && a.result.accuracy !== null) {
+        totalAcc += a.result.accuracy;
+        accCount++;
+      }
+    });
+
+    return {
+      total: completed.length,
+      avgScore: Math.round((totalScorePerc / completed.length) * 10) / 10,
+      bestScore: Math.round(bestPerc * 10) / 10,
+      avgAccuracy: accCount > 0 ? Math.round((totalAcc / accCount) * 10) / 10 : 0,
+    };
+  }, [attempts]);
+
   const filteredAttempts = attempts.filter((attempt) => {
     const matchesSearch = (attempt.exam?.title || '')
       .toLowerCase()
@@ -54,26 +109,99 @@ const HistoryPage = () => {
         : statusFilter === 'COMPLETED'
           ? ['SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED', 'COMPLETED'].includes(attempt.status?.name)
           : attempt.status?.name === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesTarget =
+      targetFilter === 'ALL'
+        ? true
+        : (attempt.exam?.examTarget?.name || '').toLowerCase() === targetFilter.toLowerCase();
+    return matchesSearch && matchesStatus && matchesTarget;
   });
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-6 pb-12">
+      {/* Navigation Tabs Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">My Exam History</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Exam History</h1>
+            <div className="flex rounded-xl bg-slate-100 p-1 text-xs font-bold">
+              <span className="rounded-lg bg-white px-3 py-1 text-indigo-700 shadow-2xs">
+                Exams
+              </span>
+              <Link
+                to={PRIVATE_NAVIGATION.studentMockHistory}
+                className="rounded-lg px-3 py-1 text-slate-600 hover:text-slate-900 transition-colors"
+              >
+                Mock Tests
+              </Link>
+            </div>
+          </div>
           <p className="mt-1 text-sm text-slate-500">
             Review your past test attempts, overall scores, and in-depth performance analytics.
           </p>
         </div>
-        <Link
-          to={PRIVATE_NAVIGATION.availableExams}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-indigo-700 transition-all"
-        >
-          <FileText size={16} />
-          Take a New Test
-        </Link>
+
+        <div className="flex items-center gap-2.5">
+          <Link
+            to={PRIVATE_NAVIGATION.studentMockHistory}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/70 px-3.5 py-2.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-all"
+          >
+            <Award size={15} />
+            Mock Test History
+          </Link>
+
+          <Link
+            to={PRIVATE_NAVIGATION.availableExams}
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-indigo-700 transition-all"
+          >
+            <Zap size={16} />
+            Take a New Test
+          </Link>
+        </div>
+      </div>
+
+      {/* Summary KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-500 mb-1">
+            <span className="text-xs font-semibold">Total Completed</span>
+            <BookOpen size={16} className="text-indigo-600" />
+          </div>
+          <div className="text-2xl font-black text-slate-900">{summaryStats.total}</div>
+          <div className="mt-0.5 text-[11px] text-slate-400">Recorded test sessions</div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-500 mb-1">
+            <span className="text-xs font-semibold">Average Score</span>
+            <Percent size={16} className="text-emerald-600" />
+          </div>
+          <div className="text-2xl font-black text-slate-900">
+            {summaryStats.total > 0 ? `${summaryStats.avgScore}%` : '—'}
+          </div>
+          <div className="mt-0.5 text-[11px] text-slate-400">Across completed tests</div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-500 mb-1">
+            <span className="text-xs font-semibold">Highest Score</span>
+            <Award size={16} className="text-purple-600" />
+          </div>
+          <div className="text-2xl font-black text-purple-700">
+            {summaryStats.total > 0 ? `${summaryStats.bestScore}%` : '—'}
+          </div>
+          <div className="mt-0.5 text-[11px] text-slate-400">Peak performance</div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-500 mb-1">
+            <span className="text-xs font-semibold">Average Accuracy</span>
+            <TrendingUp size={16} className="text-sky-600" />
+          </div>
+          <div className="text-2xl font-black text-sky-700">
+            {summaryStats.avgAccuracy > 0 ? `${summaryStats.avgAccuracy}%` : '—'}
+          </div>
+          <div className="mt-0.5 text-[11px] text-slate-400">Answer precision</div>
+        </div>
       </div>
 
       {/* Filter / Search Bar */}
@@ -89,7 +217,7 @@ const HistoryPage = () => {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Filter size={16} className="text-slate-400" />
           <select
             value={statusFilter}
@@ -100,6 +228,21 @@ const HistoryPage = () => {
             <option value="COMPLETED">Completed</option>
             <option value="IN_PROGRESS">In Progress</option>
           </select>
+
+          {availableTargets.length > 1 && (
+            <select
+              value={targetFilter}
+              onChange={(e) => setTargetFilter(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:bg-white focus:outline-none"
+            >
+              <option value="ALL">All Targets</option>
+              {availableTargets.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -113,41 +256,64 @@ const HistoryPage = () => {
           <p className="mt-1 text-sm text-slate-500">
             {searchTerm || statusFilter !== 'ALL'
               ? 'Try adjusting your search query or filters.'
-              : 'You have not taken any mock tests yet.'}
+              : 'You have not taken any exams or tests yet.'}
           </p>
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <Link
+              to={PRIVATE_NAVIGATION.availableExams}
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-indigo-700 transition-all"
+            >
+              View Available Exams
+            </Link>
+            <Link
+              to={PRIVATE_NAVIGATION.studentMockTests}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"
+            >
+              Browse Mock Tests
+            </Link>
+          </div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           {filteredAttempts.map((attempt) => {
             const isCompleted = ['SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED', 'COMPLETED'].includes(
               attempt.status?.name,
             );
+            const isInProgress = attempt.status?.name === 'IN_PROGRESS';
             const scorePerc = attempt.result?.percentage ?? 0;
-            const scoreColor = scorePerc >= 80 ? 'emerald' : scorePerc >= 50 ? 'amber' : 'rose';
+            const accuracy = attempt.result?.accuracy;
+            const rankRecord = attempt.candidateRanks?.find((r) => r.rankType === 'OVERALL') || attempt.candidateRanks?.[0];
+            const subjectResults = attempt.result?.subjectResults || [];
 
             return (
               <div
                 key={attempt.id}
+                className={cn(
+                  'group flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all sm:flex-row sm:items-center sm:justify-between',
+                  isCompleted && 'hover:border-indigo-300 hover:shadow-md cursor-pointer',
+                )}
                 onClick={() => {
                   if (isCompleted) {
                     navigate(PRIVATE_NAVIGATION.examResult.replace(':attemptId', attempt.id));
                   }
                 }}
-                className={cn(
-                  'group flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all sm:flex-row sm:items-center sm:justify-between',
-                  isCompleted && 'hover:border-indigo-300 hover:shadow-md cursor-pointer',
-                )}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-start sm:items-center gap-4">
                   {/* Score pill */}
                   <div
                     className={cn(
                       'flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl font-extrabold text-white shadow-sm',
-                      isCompleted ? `bg-${scoreColor}-500` : 'bg-slate-400',
+                      isCompleted
+                        ? scorePerc >= 80
+                          ? 'bg-emerald-500'
+                          : scorePerc >= 50
+                            ? 'bg-amber-500'
+                            : 'bg-rose-500'
+                        : 'bg-amber-500',
                     )}
                   >
                     <span className="text-base leading-none">
-                      {isCompleted ? `${scorePerc.toFixed(0)}%` : '—'}
+                      {isCompleted ? `${scorePerc.toFixed(0)}%` : 'LIVE'}
                     </span>
                     <span className="text-[9px] font-semibold tracking-wider uppercase opacity-80 mt-0.5">
                       {isCompleted ? 'Score' : 'Active'}
@@ -155,9 +321,27 @@ const HistoryPage = () => {
                   </div>
 
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                      {attempt.exam?.title ?? 'Exam'}
-                    </h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                        {attempt.exam?.title ?? 'Exam'}
+                      </h3>
+
+                      {attempt.exam?.examTarget?.name && (
+                        <span className="rounded-md bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+                          {attempt.exam.examTarget.name}
+                        </span>
+                      )}
+
+                      {rankRecord && (
+                        <span className="rounded-md bg-purple-50 border border-purple-200 px-2 py-0.5 text-[10px] font-bold text-purple-700">
+                          Rank #{rankRecord.rank}
+                          {rankRecord.percentile !== undefined
+                            ? ` (${rankRecord.percentile.toFixed(1)}%ile)`
+                            : ''}
+                        </span>
+                      )}
+                    </div>
+
                     <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-slate-500">
                       <span className="flex items-center gap-1">
                         <Calendar size={13} />
@@ -171,14 +355,33 @@ const HistoryPage = () => {
                         <FileText size={13} />
                         {attempt.exam?.totalQuestions ?? '—'} Questions
                       </span>
+                      {accuracy !== undefined && accuracy !== null && (
+                        <span className="text-indigo-600 font-semibold">
+                          {Math.round(accuracy)}% Accuracy
+                        </span>
+                      )}
                     </div>
+
+                    {/* Subject Pills preview if available */}
+                    {subjectResults.length > 0 && (
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        {subjectResults.slice(0, 4).map((sr) => (
+                          <span
+                            key={sr.subjectId || sr.id}
+                            className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md"
+                          >
+                            {sr.subject?.name}: {sr.score}/{sr.maxScore}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Score Summary Metrics & Action Button */}
-                <div className="flex items-center justify-between sm:justify-end gap-5 border-t border-slate-100 pt-3 sm:border-0 sm:pt-0">
+                <div className="flex items-center justify-between sm:justify-end gap-4 border-t border-slate-100 pt-3 sm:border-0 sm:pt-0">
                   {isCompleted && attempt.result && (
-                    <div className="flex items-center gap-4 text-xs font-semibold">
+                    <div className="flex items-center gap-3.5 text-xs font-semibold">
                       <div className="text-center">
                         <span className="block text-emerald-600">
                           {attempt.result.correctAnswers}
@@ -190,7 +393,7 @@ const HistoryPage = () => {
                         <span className="text-[10px] text-slate-400 font-normal">Wrong</span>
                       </div>
                       <div className="text-center">
-                        <span className="block text-slate-600">
+                        <span className="block text-slate-700 font-bold">
                           {attempt.result.totalScore}/{attempt.result.maxScore}
                         </span>
                         <span className="text-[10px] text-slate-400 font-normal">Marks</span>
@@ -209,7 +412,23 @@ const HistoryPage = () => {
                     {attempt.status?.name?.replace('_', ' ')}
                   </span>
 
-                  {isCompleted && (
+                  {isInProgress ? (
+                    <Button
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(
+                          PRIVATE_NAVIGATION.examInterface
+                            .replace(':examId', attempt.exam.id)
+                            .replace(':attemptId', attempt.id),
+                        );
+                      }}
+                      className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                    >
+                      <RotateCcw size={14} className="mr-1" />
+                      Resume
+                    </Button>
+                  ) : isCompleted ? (
                     <Button
                       variant="outline"
                       size="sm"
@@ -218,7 +437,7 @@ const HistoryPage = () => {
                       View Report
                       <ArrowRight size={14} className="ml-1" />
                     </Button>
-                  )}
+                  ) : null}
                 </div>
               </div>
             );

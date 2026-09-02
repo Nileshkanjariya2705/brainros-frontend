@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   GraduationCap,
   User,
@@ -22,8 +22,16 @@ import Button from '@/components/ui/Button';
 
 // ** Hooks & Services **
 import { useStudentProfile } from '../hooks/useStudentProfile';
-import { useGetRegisterOptionsAPI } from '../services';
-import type { OptionItem, State, District } from '../types/auth.types';
+import {
+  useGetRegisterOptionsAPI,
+  fetchAllStatesAPI,
+  fetchDistrictsByStateSlugAPI,
+  getStateSlug,
+  formatLocationName,
+  type StateItem,
+  type DistrictItem,
+} from '../services';
+import type { OptionItem } from '../types/auth.types';
 
 const StudentProfilePage = () => {
   const { profile, isLoading, error, successMessage, updateProfile, fetchProfile } =
@@ -33,66 +41,137 @@ const StudentProfilePage = () => {
   const [classes, setClasses] = useState<OptionItem[]>([]);
   const [languages, setLanguages] = useState<OptionItem[]>([]);
   const [examTargets, setExamTargets] = useState<OptionItem[]>([]);
-  const [statesList, setStatesList] = useState<State[]>([]);
-  const [filteredDistricts, setFilteredDistricts] = useState<District[]>([]);
+  const [statesList, setStatesList] = useState<StateItem[]>([]);
+  const [districtsList, setDistrictsList] = useState<DistrictItem[]>([]);
+  const [isLoadingStates, setIsLoadingStates] = useState(false);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
+  const [statesError, setStatesError] = useState<string | null>(null);
+  const [districtsError, setDistrictsError] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
 
   // Form editable state
   const [name, setName] = useState('');
   const [schoolCollege, setSchoolCollege] = useState('');
-  const [stateId, setStateId] = useState('');
-  const [districtId, setDistrictId] = useState('');
+  const [selectedState, setSelectedState] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
   const [classId, setClassId] = useState('');
   const [examTargetId, setExamTargetId] = useState('');
   const [preferredLanguageId, setPreferredLanguageId] = useState('');
 
+  // 1. Fetch States list from India Pincode API on mount
   useEffect(() => {
-    if (profile) {
-      setName(profile.name || '');
-      setSchoolCollege(profile.schoolCollege || '');
+    let isMounted = true;
+    const initStates = async () => {
+      setIsLoadingStates(true);
+      setStatesError(null);
+      const { data, error: sErr } = await fetchAllStatesAPI();
+      if (!isMounted) return;
+      setIsLoadingStates(false);
+      if (data && data.length > 0) {
+        setStatesList(data);
+      }
+      if (sErr) setStatesError(sErr);
+    };
+    initStates();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-      const resolvedStateId =
-        profile.stateId ||
-        (profile as any).stateRef?.id ||
-        statesList.find((s) => s.name === profile.state)?.id ||
-        '';
-      setStateId(resolvedStateId);
-
-      const resolvedDistrictId = profile.districtId || (profile as any).districtRef?.id || '';
-      setDistrictId(resolvedDistrictId);
-
-      setClassId(profile.classId || (profile as any).studentClass?.id || '');
-      setExamTargetId(profile.examTargetId || (profile as any).examTarget?.id || '');
-      setPreferredLanguageId(
-        profile.preferredLanguageId || (profile as any).preferredLanguage?.id || '',
-      );
-    }
-  }, [profile, statesList]);
-
+  // 2. Fetch options (classes, targets, languages) - Exclude FOUNDATION, include DROPPER
   useEffect(() => {
     const fetchOptions = async () => {
       const { data } = await getRegisterOptionsAPI();
       if (data) {
-        setClasses(data.classes || []);
+        setClasses(
+          (data.classes || []).filter(
+            (c: any) =>
+              !c.name?.toLowerCase().includes('foundation') &&
+              !c.code?.toLowerCase().includes('foundation'),
+          ),
+        );
         setLanguages(data.languages || []);
         setExamTargets(data.examTargets || []);
-        setStatesList(data.states || []);
       }
     };
     fetchOptions();
   }, [getRegisterOptionsAPI]);
 
-  // Filter districts when state changes
+  // 3. Initialize profile data on load with database values
   useEffect(() => {
-    if (stateId && statesList.length > 0) {
-      const selected = statesList.find((s) => s.id === stateId || s.name === stateId);
-      if (selected) {
-        setFilteredDistricts(selected.districts || []);
-      } else {
-        setFilteredDistricts([]);
+    if (profile) {
+      setName(profile.name || '');
+      setSchoolCollege(profile.schoolCollege || '');
+
+      const rawState = profile.state || (profile as any).stateRef?.name || '';
+      const rawDistrict = profile.district || (profile as any).districtRef?.name || '';
+      const st = formatLocationName(rawState);
+      const dt = formatLocationName(rawDistrict);
+
+      setSelectedState(st);
+      setSelectedDistrict(dt);
+
+      // Auto-load districts if state is present
+      if (st) {
+        const slug = getStateSlug(st);
+        setIsLoadingDistricts(true);
+        setDistrictsError(null);
+        fetchDistrictsByStateSlugAPI(slug).then(({ data, error: dErr }) => {
+          setIsLoadingDistricts(false);
+          if (data && data.length > 0) {
+            setDistrictsList(data);
+            const matched = data.find(
+              (d) =>
+                formatLocationName(d.name).toLowerCase() === dt.toLowerCase() ||
+                d.name.toLowerCase() === dt.toLowerCase(),
+            );
+            if (matched) {
+              setSelectedDistrict(formatLocationName(matched.name));
+            }
+          }
+          if (dErr) setDistrictsError(dErr);
+        });
       }
+
+      const currentClassId = profile.classId || (profile as any).studentClass?.id || '';
+      setClassId(currentClassId);
+      setExamTargetId(profile.examTargetId || (profile as any).examTarget?.id || '');
+      setPreferredLanguageId(
+        profile.preferredLanguageId || (profile as any).preferredLanguage?.id || '',
+      );
     }
-  }, [stateId, statesList]);
+  }, [profile]);
+
+  // Normalized dropdown options using Title Case matching registration flow
+  const stateOptions = useMemo(() => {
+    const opts = statesList.map((s) => {
+      const formatted = formatLocationName(s.name);
+      return { label: formatted, value: formatted };
+    });
+    // Ensure the state loaded from DB is selectable even before external API completes
+    if (
+      selectedState &&
+      !opts.some((o) => o.value.toLowerCase() === selectedState.toLowerCase())
+    ) {
+      opts.unshift({ label: selectedState, value: selectedState });
+    }
+    return opts;
+  }, [statesList, selectedState]);
+
+  const districtOptions = useMemo(() => {
+    const opts = districtsList.map((d) => {
+      const formatted = formatLocationName(d.name);
+      return { label: formatted, value: formatted };
+    });
+    // Ensure the city loaded from DB is selectable immediately without showing blank
+    if (
+      selectedDistrict &&
+      !opts.some((o) => o.value.toLowerCase() === selectedDistrict.toLowerCase())
+    ) {
+      opts.unshift({ label: selectedDistrict, value: selectedDistrict });
+    }
+    return opts;
+  }, [districtsList, selectedDistrict]);
 
   const handleCopyCode = () => {
     const code = profile?.studentCode || profile?.studentId || '';
@@ -103,10 +182,33 @@ const StudentProfilePage = () => {
     }
   };
 
-  const handleStateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedStateId = e.target.value;
-    setStateId(selectedStateId);
-    setDistrictId('');
+  // Dynamic State Change -> Clear City & load new cities
+  const handleStateChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextState = e.target.value;
+    setSelectedState(nextState);
+    setSelectedDistrict(''); // Clear previous district immediately
+    setDistrictsList([]);
+    setDistrictsError(null);
+
+    if (!nextState) return;
+
+    const matchedState = statesList.find(
+      (s) =>
+        s.name.toLowerCase() === nextState.toLowerCase() ||
+        formatLocationName(s.name).toLowerCase() === nextState.toLowerCase(),
+    );
+    const slug = matchedState?.slug || getStateSlug(nextState);
+
+    setIsLoadingDistricts(true);
+    const { data, error: dErr } = await fetchDistrictsByStateSlugAPI(slug);
+    setIsLoadingDistricts(false);
+
+    if (data && data.length > 0) {
+      setDistrictsList(data);
+    }
+    if (dErr) {
+      setDistrictsError(dErr);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -114,8 +216,8 @@ const StudentProfilePage = () => {
     await updateProfile({
       name: name.trim(),
       schoolCollege: schoolCollege.trim(),
-      stateId: stateId || undefined,
-      districtId: districtId || undefined,
+      state: selectedState || undefined,
+      district: selectedDistrict || undefined,
       classId: classId || undefined,
       examTargetId: examTargetId || undefined,
       preferredLanguageId: preferredLanguageId || undefined,
@@ -253,44 +355,68 @@ const StudentProfilePage = () => {
             </div>
           </div>
 
-          {/* Section 2: Location */}
+          {/* Section 2: Location (India Pincode API) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <MapPin className="h-4 w-4 text-slate-400" />
-                <span>State</span>
+              <label className="block text-xs font-bold text-slate-700 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4 text-slate-400" />
+                  <span>State</span>
+                </span>
+                {isLoadingStates && (
+                  <span className="text-[11px] text-slate-400 font-normal">Loading states...</span>
+                )}
               </label>
               <select
-                value={stateId}
+                value={selectedState}
                 onChange={handleStateChange}
+                disabled={isLoadingStates}
                 className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-xs focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10 transition"
               >
                 <option value="">Select State</option>
-                {statesList.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
+                {stateOptions.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
                   </option>
                 ))}
               </select>
+              {statesError && (
+                <p className="text-[11px] text-red-500 font-medium">{statesError}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <MapPin className="h-4 w-4 text-slate-400" />
-                <span>District</span>
+              <label className="block text-xs font-bold text-slate-700 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Building2 className="h-4 w-4 text-slate-400" />
+                  <span>City / District</span>
+                </span>
+                {isLoadingDistricts && (
+                  <span className="text-[11px] text-slate-400 font-normal">Loading cities...</span>
+                )}
               </label>
               <select
-                value={districtId}
-                onChange={(e) => setDistrictId(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-xs focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10 transition"
+                value={selectedDistrict}
+                onChange={(e) => setSelectedDistrict(e.target.value)}
+                disabled={!selectedState || isLoadingDistricts}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-xs focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/10 transition disabled:bg-slate-50 disabled:text-slate-400"
               >
-                <option value="">Select District</option>
-                {filteredDistricts.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
+                <option value="">
+                  {!selectedState
+                    ? 'Select State first'
+                    : isLoadingDistricts
+                      ? 'Loading cities...'
+                      : 'Select City / District'}
+                </option>
+                {districtOptions.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
                   </option>
                 ))}
               </select>
+              {districtsError && (
+                <p className="text-[11px] text-red-500 font-medium">{districtsError}</p>
+              )}
             </div>
           </div>
 

@@ -13,6 +13,9 @@ export interface ApiDistrictItem {
   officeCount?: number;
 }
 
+export type StateItem = ApiStateItem;
+export type DistrictItem = ApiDistrictItem;
+
 export interface ApiStateDetailsResponse {
   name: string;
   slug: string;

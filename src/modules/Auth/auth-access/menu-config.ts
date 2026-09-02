@@ -100,6 +100,13 @@ export const MENU_GROUPS: MenuGroupConfig[] = [
         permissions: [PERMISSIONS.ATTEMPT_VIEW, PERMISSIONS.RESULT_VIEW],
       },
       {
+        key: 'mock-history',
+        label: 'Mock Test History',
+        to: PRIVATE_NAVIGATION.studentMockHistory,
+        icon: History,
+        permissions: [PERMISSIONS.ATTEMPT_VIEW, PERMISSIONS.RESULT_VIEW],
+      },
+      {
         key: 'exam-calendar',
         label: 'Academic Calendar',
         to: PRIVATE_NAVIGATION.academicCalendar,

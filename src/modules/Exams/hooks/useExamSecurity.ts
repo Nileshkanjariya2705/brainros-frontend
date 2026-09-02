@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { toast } from '@/utils/toast';
 import {
   useSendHeartbeatAPI,
   useIngestSecurityEventsAPI,
@@ -33,8 +34,11 @@ export const useExamSecurity = ({
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionConflict, setSessionConflict] = useState<boolean>(false);
+  const [isTransferring, setIsTransferring] = useState<boolean>(false);
   const [violationsCount, setViolationsCount] = useState<number>(0);
 
+  const sessionInitializedRef = useRef<boolean>(false);
   const eventBufferRef = useRef<SecurityEventPayload[]>([]);
   const sequenceNumberRef = useRef<number>(1);
   const hiddenStartTimeRef = useRef<number | null>(null);
@@ -142,11 +146,13 @@ export const useExamSecurity = ({
     }
   }, []);
 
-  // ─── 1. Initialize Active Exam Session ─────────────────────────────
-  useEffect(() => {
-    if (!attemptId || !isExamActive) return;
-
-    const initSession = async () => {
+  /**
+   * Transfer active session to this window/device
+   */
+  const transferActiveSession = useCallback(async () => {
+    if (!attemptId) return;
+    setIsTransferring(true);
+    try {
       const deviceMeta = {
         examId,
         screenWidth: window.screen.width,
@@ -154,14 +160,67 @@ export const useExamSecurity = ({
         platform: navigator.platform,
         language: navigator.language,
       };
-      const res = await createExamSessionAPI(attemptId, deviceMeta);
+      const res = await createExamSessionAPI(attemptId, deviceMeta, true);
       if (res.data?.id) {
         setSessionId(res.data.id);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(`exam_session_${attemptId}`, res.data.id);
+        }
+        setSessionConflict(false);
+        sessionInitializedRef.current = true;
+        toast.success('Active session successfully transferred to this window.');
+      } else if (res.error) {
+        toast.error(res.error || 'Failed to transfer session.');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to transfer session.');
+    } finally {
+      setIsTransferring(false);
+    }
+  }, [attemptId, examId, createExamSessionAPI]);
+
+  // ─── 1. Initialize Active Exam Session ─────────────────────────────
+  useEffect(() => {
+    if (!attemptId || !isExamActive || sessionInitializedRef.current) return;
+    sessionInitializedRef.current = true;
+
+    const initSession = async () => {
+      const storedSessionId =
+        typeof window !== 'undefined'
+          ? sessionStorage.getItem(`exam_session_${attemptId}`) || undefined
+          : undefined;
+
+      const deviceMeta = {
+        examId,
+        screenWidth: window.screen.width,
+        screenHeight: window.screen.height,
+        platform: navigator.platform,
+        language: navigator.language,
+      };
+
+      const res = await createExamSessionAPI(
+        attemptId,
+        deviceMeta,
+        false,
+        storedSessionId,
+      );
+
+      if (res.data?.conflict) {
+        setSessionConflict(true);
+        if (onMultipleSessionsDetected) {
+          onMultipleSessionsDetected();
+        }
+      } else if (res.data?.id) {
+        setSessionId(res.data.id);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(`exam_session_${attemptId}`, res.data.id);
+        }
+        setSessionConflict(false);
       }
     };
 
     initSession();
-  }, [attemptId, examId, isExamActive, createExamSessionAPI]);
+  }, [attemptId, examId, isExamActive, createExamSessionAPI, onMultipleSessionsDetected]);
 
   // ─── 2. Periodic Event Buffer Flush ────────────────────────────────
   useEffect(() => {
@@ -177,21 +236,25 @@ export const useExamSecurity = ({
     };
   }, [attemptId, isExamActive, flushEvents]);
 
-  // ─── 3. Periodic Heartbeat ─────────────────────────────────────────
+  // ─── 3. Periodic Heartbeat (every 12 seconds) ──────────────────────
   useEffect(() => {
     if (!attemptId || !isExamActive) return;
 
-    const intervalSec = securityProfile?.heartbeatIntervalSeconds || 30;
+    const intervalSec = Math.min(12, securityProfile?.heartbeatIntervalSeconds || 12);
     heartbeatTimerRef.current = setInterval(async () => {
       const res = await sendHeartbeatAPI(attemptId, {
         sessionId: sessionId || undefined,
         isFullscreen: Boolean(document.fullscreenElement),
         isOnline: navigator.onLine,
+        visibilityState: document.visibilityState,
       });
 
-      if (res.data?.multipleSessionDetected && onMultipleSessionsDetected) {
-        recordEvent('MULTIPLE_SESSION_DETECTED', 0, {}, true);
-        onMultipleSessionsDetected();
+      if (res.data?.multipleSessionDetected) {
+        setSessionConflict(true);
+        if (onMultipleSessionsDetected) {
+          recordEvent('MULTIPLE_SESSION_DETECTED', 0, {}, true);
+          onMultipleSessionsDetected();
+        }
       }
     }, intervalSec * 1000);
 
@@ -379,6 +442,9 @@ export const useExamSecurity = ({
     isFullscreen,
     isOnline,
     violationsCount,
+    sessionConflict,
+    isTransferring,
+    transferActiveSession,
     enterFullscreen,
     exitFullscreen,
     recordEvent,

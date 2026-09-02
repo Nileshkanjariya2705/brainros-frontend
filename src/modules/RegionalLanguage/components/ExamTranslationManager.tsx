@@ -7,13 +7,13 @@ import {
   CheckCircle2,
   AlertTriangle,
   RefreshCw,
-  Check,
-  XCircle,
-  Clock,
-  ChevronRight,
   ArrowLeft,
   Search,
   FileDown,
+  Loader2,
+  Plus,
+  MinusCircle,
+  RotateCw,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
@@ -23,11 +23,9 @@ import {
   useGetExamTranslationCoverageAPI,
   downloadExamTranslationTemplate,
   exportExamTranslations,
-  useValidateExamTranslationFileAPI,
   useImportExamTranslationsAPI,
   type ExamTranslationCoverageResponse,
   type ExamLanguageCoverageItem,
-  type ExamTranslationValidationResponse,
 } from '../services/examTranslation.service';
 import { useFeature } from '@/modules/Auth/auth-access/useFeature';
 import { FEATURES } from '@/constants/feature-flag.constant';
@@ -48,8 +46,6 @@ export const ExamTranslationManager: React.FC<Props> = ({
   // ─── API Hooks ───────────────────────────────────────────────────────
   const { getExamTranslationCoverageAPI, isLoading: isCoverageLoading } =
     useGetExamTranslationCoverageAPI();
-  const { validateExamTranslationFileAPI, isLoading: isValidating } =
-    useValidateExamTranslationFileAPI();
   const { importExamTranslationsAPI, isLoading: isImporting } =
     useImportExamTranslationsAPI();
 
@@ -57,17 +53,16 @@ export const ExamTranslationManager: React.FC<Props> = ({
   const [coverageData, setCoverageData] =
     useState<ExamTranslationCoverageResponse | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'COMPLETE' | 'IN_PROGRESS' | 'NOT_STARTED'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<
+    'ALL' | 'COMPLETED' | 'PROCESSING' | 'NOT_ADDED' | 'FAILED'
+  >('ALL');
 
   // Modal State for Upload
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedLanguage, setSelectedLanguage] =
     useState<ExamLanguageCoverageItem | null>(null);
-  const [uploadStep, setUploadStep] = useState<1 | 2>(1);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [replaceMode, setReplaceMode] = useState(false);
-  const [validationResult, setValidationResult] =
-    useState<ExamTranslationValidationResponse | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,14 +80,29 @@ export const ExamTranslationManager: React.FC<Props> = ({
     loadCoverage();
   }, [loadCoverage]);
 
+  // ─── Dynamic Background Polling while any job is PROCESSING ─────────
+  const hasProcessingJobs = coverageData?.languages?.some(
+    (l) => l.status === 'PROCESSING',
+  );
+
+  useEffect(() => {
+    if (!hasProcessingJobs) return;
+    const interval = setInterval(() => {
+      loadCoverage();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [hasProcessingJobs, loadCoverage]);
+
   // ─── Handlers ────────────────────────────────────────────────────────
   const handleOpenUploadModal = (lang: ExamLanguageCoverageItem) => {
+    if (lang.status === 'PROCESSING') {
+      toast.info('Translation upload is already processing for this language.');
+      return;
+    }
     setSelectedLanguage(lang);
     setSelectedFile(null);
     setReplaceMode(false);
-    setValidationResult(null);
     setUploadError(null);
-    setUploadStep(1);
     setIsUploadModalOpen(true);
   };
 
@@ -104,30 +114,13 @@ export const ExamTranslationManager: React.FC<Props> = ({
     }
   };
 
-  const handleValidateFile = async () => {
+  const handleUploadTranslation = async () => {
     if (!examId || !selectedLanguage || !selectedFile) {
-      setUploadError('Please select a valid translation file.');
+      setUploadError('Please select a CSV or Excel translation file.');
       return;
     }
 
     setUploadError(null);
-    const { data, error } = await validateExamTranslationFileAPI(
-      examId,
-      selectedLanguage.languageId,
-      selectedFile,
-    );
-
-    if (error || !data) {
-      setUploadError(error || 'Validation failed. Please check your file.');
-      return;
-    }
-
-    setValidationResult(data);
-    setUploadStep(2);
-  };
-
-  const handleExecuteImport = async () => {
-    if (!examId || !selectedLanguage || !selectedFile) return;
 
     const { data, error } = await importExamTranslationsAPI(
       examId,
@@ -137,19 +130,34 @@ export const ExamTranslationManager: React.FC<Props> = ({
     );
 
     if (error || !data) {
-      toast.error(error || 'Failed to import translations.');
+      setUploadError(error || 'Failed to start translation upload.');
       return;
     }
 
-    toast.success(data.message || 'Translations successfully imported!');
+    // Immediately show notification to user
+    toast.success(
+      data.message || 'Translation upload started. Processing in background...',
+    );
+
+    // Close modal immediately
     setIsUploadModalOpen(false);
     setSelectedFile(null);
-    setValidationResult(null);
-    if (data.coverage) {
-      setCoverageData(data.coverage);
-    } else {
-      loadCoverage();
-    }
+
+    // Immediately mark row as PROCESSING in local state
+    setCoverageData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        languages: prev.languages.map((l) =>
+          l.languageId === selectedLanguage.languageId
+            ? { ...l, status: 'PROCESSING' }
+            : l,
+        ),
+      };
+    });
+
+    // Refresh data in background
+    loadCoverage();
   };
 
   const handleDownloadTemplate = async (lang: ExamLanguageCoverageItem) => {
@@ -178,8 +186,14 @@ export const ExamTranslationManager: React.FC<Props> = ({
       l.languageCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
       l.nativeName.toLowerCase().includes(searchQuery.toLowerCase());
 
+    const isComplete = l.status === 'COMPLETED' || l.status === 'COMPLETE';
+    const isNotAdded = l.status === 'NOT_ADDED' || l.status === 'NOT_STARTED';
+
     const matchesStatus =
-      statusFilter === 'ALL' || l.status === statusFilter;
+      statusFilter === 'ALL' ||
+      (statusFilter === 'COMPLETED' && isComplete) ||
+      (statusFilter === 'NOT_ADDED' && isNotAdded) ||
+      l.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -199,37 +213,25 @@ export const ExamTranslationManager: React.FC<Props> = ({
                 <ArrowLeft className="h-5 w-5" />
               </button>
             )}
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-xs">
               <Globe className="h-6 w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                  Question & Option Translations
+                <h2 className="text-xl font-black tracking-tight text-slate-900">
+                  {examTitle || coverageData?.examTitle || 'Exam'} Translations
                 </h2>
-                {coverageData && (
-                  <span
-                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-                      coverageData.isAllRequiredComplete
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-amber-50 text-amber-700 border-amber-200'
-                    }`}
-                  >
-                    {coverageData.isAllRequiredComplete
-                      ? '✓ Fully Translated'
-                      : `${coverageData.overallCompletenessPercentage}% Completed`}
-                  </span>
-                )}
+                <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                  ID: {examId.slice(0, 8)}
+                </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {examTitle || coverageData?.examTitle || 'Exam Mock'} •{' '}
-                {coverageData?.totalQuestions ?? '—'} Total Questions •{' '}
-                {coverageData?.totalOptions ?? '—'} Total Options
+              <p className="text-xs font-medium text-slate-400 mt-0.5">
+                Manage supported languages, upload translations asynchronously, and monitor live status.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <Button
               variant="outline"
               size="sm"
@@ -237,36 +239,38 @@ export const ExamTranslationManager: React.FC<Props> = ({
               disabled={isCoverageLoading}
               className="flex items-center gap-1.5 text-xs font-bold"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${isCoverageLoading ? 'animate-spin' : ''}`} />
-              <span>Refresh Coverage</span>
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${isCoverageLoading ? 'animate-spin' : ''}`}
+              />
+              <span>Refresh</span>
             </Button>
           </div>
         </div>
 
-        {/* Overall Completeness Bar */}
+        {/* Coverage Overview Metrics */}
         {coverageData && (
-          <div className="pt-4 grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/60">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5">
+            <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-100">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 Total Questions
               </span>
-              <p className="text-xl font-black text-slate-800 mt-0.5">
+              <p className="text-xl font-black text-slate-900 mt-0.5 font-mono">
                 {coverageData.totalQuestions}
               </p>
             </div>
-            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/60">
+            <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-100">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 Total Options
               </span>
-              <p className="text-xl font-black text-slate-800 mt-0.5">
+              <p className="text-xl font-black text-slate-900 mt-0.5 font-mono">
                 {coverageData.totalOptions}
               </p>
             </div>
-            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/60">
+            <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-100">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 Supported Languages
               </span>
-              <p className="text-xl font-black text-slate-800 mt-0.5">
+              <p className="text-xl font-black text-slate-900 mt-0.5 font-mono">
                 {coverageData.languages.length}
               </p>
             </div>
@@ -308,9 +312,10 @@ export const ExamTranslationManager: React.FC<Props> = ({
         <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
           {[
             { id: 'ALL', label: 'All Languages' },
-            { id: 'COMPLETE', label: 'Complete (100%)' },
-            { id: 'IN_PROGRESS', label: 'In Progress' },
-            { id: 'NOT_STARTED', label: 'Not Started (0%)' },
+            { id: 'COMPLETED', label: 'Completed' },
+            { id: 'PROCESSING', label: 'Processing' },
+            { id: 'NOT_ADDED', label: 'Not Added' },
+            { id: 'FAILED', label: 'Failed' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -327,7 +332,7 @@ export const ExamTranslationManager: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* ─── Language Coverage Table / Cards ──────────────────────────── */}
+      {/* ─── Language Coverage Table ──────────────────────────────────── */}
       {isCoverageLoading && !coverageData ? (
         <div className="py-16 flex flex-col items-center justify-center gap-2">
           <Loader label="Calculating translation coverage metrics..." />
@@ -351,159 +356,218 @@ export const ExamTranslationManager: React.FC<Props> = ({
                   <th className="py-3.5 px-4">Option Coverage</th>
                   <th className="py-3.5 px-4">Overall %</th>
                   <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-5 text-right">Actions</th>
+                  <th className="py-3.5 px-5 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredLanguages.map((lang) => (
-                  <tr key={lang.languageId} className="hover:bg-slate-50/60 transition-colors">
-                    {/* Language Name & Code */}
-                    <td className="py-4 px-5">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 font-black text-xs">
-                          {lang.languageCode.toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-slate-900 text-sm">
-                              {lang.languageName}
-                            </span>
-                            {lang.isDefault && (
-                              <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                Default
-                              </span>
-                            )}
+                {filteredLanguages.map((lang) => {
+                  const isComplete =
+                    lang.status === 'COMPLETED' || lang.status === 'COMPLETE';
+                  const isProcessing = lang.status === 'PROCESSING';
+                  const isFailed = lang.status === 'FAILED';
+
+                  return (
+                    <tr
+                      key={lang.languageId}
+                      className="hover:bg-slate-50/60 transition-colors"
+                    >
+                      {/* Language Name & Code */}
+                      <td className="py-4 px-5">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 font-black text-xs">
+                            {lang.languageCode.toUpperCase()}
                           </div>
-                          <span className="text-xs text-slate-400 font-medium">
-                            {lang.nativeName}
-                          </span>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-slate-900 text-sm">
+                                {lang.languageName}
+                              </span>
+                              {lang.isDefault && (
+                                <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                  Default
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-slate-400 font-medium">
+                              {lang.nativeName}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Question Coverage */}
-                    <td className="py-4 px-4 font-medium">
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-slate-800">
-                            {lang.translatedQuestions} / {lang.totalQuestions}
-                          </span>
-                          <span className="text-slate-500 font-semibold">
-                            {lang.questionCoveragePercentage}%
-                          </span>
+                      {/* Question Coverage */}
+                      <td className="py-4 px-4 font-medium">
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-slate-800">
+                              {lang.translatedQuestions} / {lang.totalQuestions}
+                            </span>
+                            <span className="text-slate-500 font-semibold">
+                              {lang.questionCoveragePercentage}%
+                            </span>
+                          </div>
+                          <div className="w-28 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-1.5 rounded-full ${
+                                lang.questionCoveragePercentage >= 100
+                                  ? 'bg-emerald-500'
+                                  : lang.questionCoveragePercentage > 0
+                                    ? 'bg-amber-500'
+                                    : 'bg-slate-300'
+                              }`}
+                              style={{
+                                width: `${lang.questionCoveragePercentage}%`,
+                              }}
+                            />
+                          </div>
                         </div>
-                        <div className="w-28 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                          <div
-                            className={`h-1.5 rounded-full ${
-                              lang.questionCoveragePercentage >= 100
-                                ? 'bg-emerald-500'
-                                : lang.questionCoveragePercentage > 0
-                                  ? 'bg-amber-500'
-                                  : 'bg-slate-300'
-                            }`}
-                            style={{ width: `${lang.questionCoveragePercentage}%` }}
-                          />
-                        </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Option Coverage */}
-                    <td className="py-4 px-4 font-medium">
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-slate-800">
-                            {lang.translatedOptions} / {lang.totalOptions}
-                          </span>
-                          <span className="text-slate-500 font-semibold">
-                            {lang.optionCoveragePercentage}%
-                          </span>
+                      {/* Option Coverage */}
+                      <td className="py-4 px-4 font-medium">
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-slate-800">
+                              {lang.translatedOptions} / {lang.totalOptions}
+                            </span>
+                            <span className="text-slate-500 font-semibold">
+                              {lang.optionCoveragePercentage}%
+                            </span>
+                          </div>
+                          <div className="w-28 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-1.5 rounded-full ${
+                                lang.optionCoveragePercentage >= 100
+                                  ? 'bg-emerald-500'
+                                  : lang.optionCoveragePercentage > 0
+                                    ? 'bg-amber-500'
+                                    : 'bg-slate-300'
+                              }`}
+                              style={{
+                                width: `${lang.optionCoveragePercentage}%`,
+                              }}
+                            />
+                          </div>
                         </div>
-                        <div className="w-28 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                          <div
-                            className={`h-1.5 rounded-full ${
-                              lang.optionCoveragePercentage >= 100
-                                ? 'bg-emerald-500'
-                                : lang.optionCoveragePercentage > 0
-                                  ? 'bg-amber-500'
-                                  : 'bg-slate-300'
-                            }`}
-                            style={{ width: `${lang.optionCoveragePercentage}%` }}
-                          />
-                        </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Overall Percentage */}
-                    <td className="py-4 px-4">
-                      <span className="font-black text-slate-900 text-sm">
-                        {lang.overallCoveragePercentage}%
-                      </span>
-                    </td>
-
-                    {/* Status Badge */}
-                    <td className="py-4 px-4">
-                      <span
-                        className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full border ${
-                          lang.status === 'COMPLETE'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : lang.status === 'IN_PROGRESS'
-                              ? 'bg-amber-50 text-amber-700 border-amber-200'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                        }`}
-                      >
-                        {lang.status === 'COMPLETE' && <CheckCircle2 className="h-3 w-3" />}
-                        {lang.status === 'IN_PROGRESS' && <Clock className="h-3 w-3" />}
-                        {lang.status === 'NOT_STARTED' && <XCircle className="h-3 w-3" />}
-                        <span>
-                          {lang.status === 'COMPLETE'
-                            ? 'Complete'
-                            : lang.status === 'IN_PROGRESS'
-                              ? 'In Progress'
-                              : 'Not Started'}
+                      {/* Overall Percentage */}
+                      <td className="py-4 px-4">
+                        <span className="font-black text-slate-900 text-sm">
+                          {lang.overallCoveragePercentage}%
                         </span>
-                      </span>
-                    </td>
+                      </td>
 
-                    {/* Action Buttons */}
-                    <td className="py-4 px-5 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleDownloadTemplate(lang)}
-                          title="Download Pre-filled Translation Template (.xlsx)"
-                          className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition-colors"
-                        >
-                          <Download className="h-3.5 w-3.5" />
-                        </button>
+                      {/* Status Column */}
+                      <td className="py-4 px-4">
+                        {isProcessing ? (
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border bg-amber-50 text-amber-700 border-amber-200 animate-pulse">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <span>Processing...</span>
+                          </span>
+                        ) : isComplete ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span>Completed</span>
+                          </span>
+                        ) : isFailed ? (
+                          <span
+                            title={lang.processingError || 'Import failed. Click Add Translation to retry.'}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full border bg-rose-50 text-rose-700 border-rose-200 cursor-help"
+                          >
+                            <AlertTriangle className="h-3 w-3" />
+                            <span>Failed</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full border bg-slate-100 text-slate-600 border-slate-200">
+                            <MinusCircle className="h-3 w-3" />
+                            <span>Not Added</span>
+                          </span>
+                        )}
+                      </td>
 
-                        {lang.translatedQuestions > 0 && (
+                      {/* Action Column */}
+                      <td className="py-4 px-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* Pre-filled Template Download */}
                           <button
                             type="button"
-                            onClick={() => handleExportTranslations(lang)}
-                            title="Export Existing Translations (.xlsx)"
+                            onClick={() => handleDownloadTemplate(lang)}
+                            title="Download Pre-filled Translation Template (.xlsx)"
                             className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition-colors"
                           >
-                            <FileDown className="h-3.5 w-3.5" />
+                            <Download className="h-3.5 w-3.5" />
                           </button>
-                        )}
 
-                        {isTranslationImportEnabled && (
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            onClick={() => handleOpenUploadModal(lang)}
-                            className="flex items-center gap-1.5 text-xs font-bold"
-                          >
-                            <Upload className="h-3.5 w-3.5" />
-                            <span>
-                              {lang.status === 'COMPLETE' ? 'Update' : 'Upload'}
+                          {/* Export if translations exist */}
+                          {lang.translatedQuestions > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleExportTranslations(lang)}
+                              title="Export Existing Translations (.xlsx)"
+                              className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition-colors"
+                            >
+                              <FileDown className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+
+                          {/* Primary Action Button */}
+                          {lang.isDefault ? (
+                            <span className="text-slate-400 font-bold px-4 py-1 text-sm select-none">
+                              —
                             </span>
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          ) : isProcessing ? (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled
+                              className="flex items-center gap-1.5 text-xs font-bold opacity-75 cursor-not-allowed"
+                            >
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <span>Processing...</span>
+                            </Button>
+                          ) : isComplete ? (
+                            isTranslationImportEnabled && (
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                onClick={() => handleOpenUploadModal(lang)}
+                                className="flex items-center gap-1.5 text-xs font-bold"
+                              >
+                                <Upload className="h-3.5 w-3.5" />
+                                <span>Update</span>
+                              </Button>
+                            )
+                          ) : isFailed ? (
+                            isTranslationImportEnabled && (
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                onClick={() => handleOpenUploadModal(lang)}
+                                className="flex items-center gap-1.5 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white"
+                              >
+                                <RotateCw className="h-3.5 w-3.5" />
+                                <span>Add Translation</span>
+                              </Button>
+                            )
+                          ) : (
+                            isTranslationImportEnabled && (
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                onClick={() => handleOpenUploadModal(lang)}
+                                className="flex items-center gap-1.5 text-xs font-bold"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                                <span>Add Translation</span>
+                              </Button>
+                            )
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -511,218 +575,128 @@ export const ExamTranslationManager: React.FC<Props> = ({
       )}
 
       {/* ═════════════════════════════════════════════════════════════════ */}
-      {/* MODAL: UPLOAD & VALIDATE TRANSLATION FILE                        */}
+      {/* POPUP / MODAL: ADD / UPDATE TRANSLATION FILE                     */}
       {/* ═════════════════════════════════════════════════════════════════ */}
       {selectedLanguage && (
         <Modal
           isOpen={isUploadModalOpen}
           onClose={() => {
-            if (!isImporting && !isValidating) {
+            if (!isImporting) {
               setIsUploadModalOpen(false);
             }
           }}
-          title={`Upload ${selectedLanguage.languageName} (${selectedLanguage.nativeName}) Translations`}
+          title={
+            selectedLanguage.status === 'COMPLETED' ||
+            selectedLanguage.status === 'COMPLETE'
+              ? `Update ${selectedLanguage.languageName} Translation`
+              : `Add ${selectedLanguage.languageName} Translation`
+          }
         >
           <div className="space-y-6">
-            {/* ── Step 1: File Selection ──────────────────────────────── */}
-            {uploadStep === 1 && (
-              <div className="space-y-5">
-                <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 flex items-start space-x-3">
-                  <Globe className="h-5 w-5 text-indigo-600 shrink-0 mt-0.5" />
-                  <div className="text-xs text-indigo-900 leading-relaxed">
-                    <strong>Target Language:</strong> {selectedLanguage.languageName} (<code>{selectedLanguage.languageCode}</code>).
-                    The translation file should contain question translations matching the {coverageData?.totalQuestions ?? 0} questions belonging to this exam.
-                  </div>
+            {/* Language Details Banner */}
+            <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white font-black text-xs shadow-xs">
+                  {selectedLanguage.languageCode.toUpperCase()}
                 </div>
-
-                {uploadError && (
-                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
-                    <span>{uploadError}</span>
-                  </div>
-                )}
-
-                {/* File Dropzone Area */}
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-3xl p-8 text-center cursor-pointer bg-slate-50/50 hover:bg-indigo-50/20 transition-all space-y-3"
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileSelect}
-                    accept=".csv, .xlsx, .xls"
-                    className="hidden"
-                  />
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 mx-auto">
-                    <FileSpreadsheet className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-bold text-slate-800 block">
-                      {selectedFile ? selectedFile.name : 'Click to select CSV or Excel translation file'}
-                    </span>
-                    <span className="text-xs text-slate-400 block mt-1">
-                      {selectedFile
-                        ? `${(selectedFile.size / 1024).toFixed(1)} KB`
-                        : 'Supported formats: .xlsx, .xls, .csv (Max 25MB)'}
-                    </span>
-                  </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">
+                    Language: {selectedLanguage.languageName}
+                  </h4>
+                  <span className="text-xs text-slate-500 font-medium">
+                    {selectedLanguage.nativeName} ({selectedLanguage.languageCode})
+                  </span>
                 </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleDownloadTemplate(selectedLanguage)}
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-indigo-200 hover:border-indigo-300 transition-colors shadow-xs"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Template</span>
+              </button>
+            </div>
 
-                {/* Replace Mode Toggle */}
-                <label className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={replaceMode}
-                    onChange={(e) => setReplaceMode(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500"
-                  />
-                  <div>
-                    <span className="text-xs font-bold text-slate-800 block">
-                      Replace Existing Translations Mode
-                    </span>
-                    <span className="text-[11px] text-slate-500 block mt-0.5">
-                      When checked, all previous {selectedLanguage.languageName} translations on this exam will be replaced with rows from this file.
-                    </span>
-                  </div>
-                </label>
-
-                {/* Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleDownloadTemplate(selectedLanguage)}
-                    className="flex items-center gap-1.5 text-xs font-bold"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    <span>Download Template</span>
-                  </Button>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsUploadModalOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="primary"
-                      disabled={!selectedFile}
-                      isLoading={isValidating}
-                      onClick={handleValidateFile}
-                      className="flex items-center gap-1.5 font-bold"
-                    >
-                      <span>Validate File</span>
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+            {uploadError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{uploadError}</span>
               </div>
             )}
 
-            {/* ── Step 2: Validation Preview & Confirmation ──────────── */}
-            {uploadStep === 2 && validationResult && (
-              <div className="space-y-5">
-                {/* Diff Summary Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">
-                      Total Rows
-                    </span>
-                    <p className="text-lg font-black text-slate-900 mt-0.5 font-mono">
-                      {validationResult.totalRows}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-center">
-                    <span className="text-[10px] font-bold text-emerald-700 uppercase">
-                      Valid Rows
-                    </span>
-                    <p className="text-lg font-black text-emerald-700 mt-0.5 font-mono">
-                      {validationResult.validRows}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-center">
-                    <span className="text-[10px] font-bold text-blue-700 uppercase">
-                      New / Updated
-                    </span>
-                    <p className="text-lg font-black text-blue-700 mt-0.5 font-mono">
-                      +{validationResult.newTranslationsCount} / ↑{validationResult.updatedTranslationsCount}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-center">
-                    <span className="text-[10px] font-bold text-indigo-700 uppercase">
-                      Post-Import Coverage
-                    </span>
-                    <p className="text-lg font-black text-indigo-700 mt-0.5 font-mono">
-                      {validationResult.coverageAfterImportPercentage}%
-                    </p>
-                  </div>
+            {/* File Dropzone / Selector */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-700">
+                Upload File:
+              </label>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-2xl p-6 text-center cursor-pointer bg-slate-50/50 hover:bg-indigo-50/20 transition-all space-y-2"
+              >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  accept=".csv, .xlsx, .xls"
+                  className="hidden"
+                />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 mx-auto">
+                  <FileSpreadsheet className="h-5 w-5" />
                 </div>
-
-                {/* Validation Warnings / Errors */}
-                {validationResult.invalidRows > 0 && (
-                  <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-bold text-amber-800">
-                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                      <span>
-                        {validationResult.invalidRows} row(s) failed validation and will be skipped:
-                      </span>
-                    </div>
-                    <div className="max-h-32 overflow-y-auto space-y-1 text-[11px] text-amber-900 font-mono">
-                      {validationResult.rowDetails
-                        .filter((r) => r.errors.length > 0)
-                        .slice(0, 10)
-                        .map((r, i) => (
-                          <p key={i}>
-                            &bull; Row {r.rowNumber} (Q: {r.questionId || 'N/A'}): {r.errors.join(', ')}
-                          </p>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setUploadStep(1)}
-                    disabled={isImporting}
-                    className="flex items-center gap-1.5"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    <span>Upload Different File</span>
-                  </Button>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsUploadModalOpen(false)}
-                      disabled={isImporting}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="primary"
-                      disabled={validationResult.validRows === 0}
-                      isLoading={isImporting}
-                      onClick={handleExecuteImport}
-                      className="bg-emerald-600 hover:bg-emerald-700 font-bold flex items-center gap-1.5"
-                    >
-                      <Check className="h-4 w-4" />
-                      <span>
-                        Confirm & Import ({validationResult.validRows} Translations)
-                      </span>
-                    </Button>
-                  </div>
+                <div>
+                  <span className="text-sm font-bold text-slate-800 block">
+                    {selectedFile ? selectedFile.name : 'Choose CSV / Excel'}
+                  </span>
+                  <span className="text-xs text-slate-400 block mt-0.5">
+                    {selectedFile
+                      ? `${(selectedFile.size / 1024).toFixed(1)} KB`
+                      : 'Supported formats: .csv, .xlsx, .xls (Max 25MB)'}
+                  </span>
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Replace Mode Toggle */}
+            <label className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={replaceMode}
+                onChange={(e) => setReplaceMode(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500"
+              />
+              <div>
+                <span className="text-xs font-bold text-slate-800 block">
+                  Replace Existing Translations
+                </span>
+                <span className="text-[11px] text-slate-500 block mt-0.5">
+                  Overwrites previously imported translations for this language on this exam.
+                </span>
+              </div>
+            </label>
+
+            {/* Modal Footer Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsUploadModalOpen(false)}
+                disabled={isImporting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                disabled={!selectedFile || isImporting}
+                isLoading={isImporting}
+                onClick={handleUploadTranslation}
+                className="flex items-center gap-1.5 font-bold"
+              >
+                <Upload className="h-4 w-4" />
+                <span>Upload Translation</span>
+              </Button>
+            </div>
           </div>
         </Modal>
       )}

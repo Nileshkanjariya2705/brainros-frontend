@@ -17,7 +17,7 @@ const StudentCTA = () => {
         Consistent practice boosts exam accuracy & scores.
       </p>
       <button
-        onClick={() => navigate(PRIVATE_NAVIGATION.studentExams)}
+        onClick={() => navigate(PRIVATE_NAVIGATION.studentMockTests)}
         className="mt-3 flex items-center gap-1 rounded-xl bg-white/20 px-3 py-1.5 text-xs font-bold hover:bg-white/30 transition-colors"
       >
         Start Test <ChevronRight size={14} />

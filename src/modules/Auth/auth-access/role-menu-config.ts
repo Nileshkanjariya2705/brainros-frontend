@@ -60,12 +60,12 @@ export const STUDENT_MENU_GROUPS: MenuGroupConfig[] = [
     ],
   },
   {
-    categoryKey: 'EXAM_PORTAL',
-    categoryLabel: 'Examination Portal',
+    categoryKey: 'EXAMS',
+    categoryLabel: 'Exams',
     items: [
       {
-        key: 'available-exams',
-        label: 'Available Exams',
+        key: 'all-exams',
+        label: 'All Exams',
         to: PRIVATE_NAVIGATION.studentExams,
         icon: FileText,
       },
@@ -80,6 +80,24 @@ export const STUDENT_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Academic Calendar',
         to: PRIVATE_NAVIGATION.studentCalendar,
         icon: CalendarDays,
+      },
+    ],
+  },
+  {
+    categoryKey: 'MOCK_TESTS',
+    categoryLabel: 'Mock Tests',
+    items: [
+      {
+        key: 'all-mock-tests',
+        label: 'All Mock Tests',
+        to: PRIVATE_NAVIGATION.studentMockTests,
+        icon: Award,
+      },
+      {
+        key: 'mock-history',
+        label: 'Mock Test History',
+        to: PRIVATE_NAVIGATION.studentMockHistory,
+        icon: History,
       },
     ],
   },

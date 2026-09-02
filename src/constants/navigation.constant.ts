@@ -18,6 +18,7 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   examInterface: '/exam/:examId/attempt/:attemptId',
   examResult: '/exam/result/:attemptId',
   myHistory: '/history',
+  mockHistory: '/mock-history',
   questionBank: '/question-bank',
   createQuestion: '/question-bank/create',
   importQuestions: '/question-bank/import',
@@ -48,6 +49,8 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   // ── Student role-prefixed routes ──
   studentDashboard: '/student/dashboard',
   studentExams: '/student/exams',
+  studentMockTests: '/student/mock-tests',
+  studentMockHistory: '/student/mock-history',
   studentExamDetails: '/student/exams/:examId',
   studentNotifications: '/student/notifications',
   studentHistory: '/student/history',

@@ -16,10 +16,19 @@ export interface ExamLanguageCoverageItem {
   translatedOptions: number;
   optionCoveragePercentage: number;
   overallCoveragePercentage: number;
-  status: 'COMPLETE' | 'IN_PROGRESS' | 'NOT_STARTED';
+  status:
+    | 'NOT_ADDED'
+    | 'PROCESSING'
+    | 'COMPLETED'
+    | 'FAILED'
+    | 'IN_PROGRESS'
+    | 'COMPLETE'
+    | 'NOT_STARTED';
   missingQuestionsCount: number;
   missingQuestionIds: string[];
   lastUpdatedAt?: string | null;
+  jobId?: string;
+  processingError?: string | null;
 }
 
 export interface ExamTranslationCoverageResponse {
