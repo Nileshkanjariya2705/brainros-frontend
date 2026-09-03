@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Globe,
   Search,
@@ -9,16 +9,44 @@ import {
   AlertCircle,
   X,
   ChevronLeft,
+  Upload,
+  Download,
+  FileSpreadsheet,
+  CheckCircle2,
+  AlertTriangle,
+  FileDown,
+  Loader2,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import Modal from '@/components/ui/Modal';
 import Loader from '@/components/feedback/Loader';
+import { toast } from '@/utils/toast';
 import ExamTranslationManager from '../components/ExamTranslationManager';
 import {
   useGetTranslationTargetsAPI,
+  useImportExamTranslationsAPI,
+  downloadExamTranslationTemplate,
   type TranslationTargetItem,
   type ExamTranslationTargetsQueryParams,
 } from '../services/examTranslation.service';
 import { useAxiosGet } from '@/hooks/useAxios';
+import { Axios } from '@/base-axios';
+
+// ─── Standard Supported Languages ─────────────────────────────────────
+const DEFAULT_LANGUAGES = [
+  { id: 'hi', code: 'HI', name: 'Hindi', nativeName: 'हिन्दी' },
+  { id: 'gu', code: 'GU', name: 'Gujarati', nativeName: 'ગુજરાતી' },
+  { id: 'mr', code: 'MR', name: 'Marathi', nativeName: 'मराठी' },
+  { id: 'ta', code: 'TA', name: 'Tamil', nativeName: 'தமிழ்' },
+  { id: 'te', code: 'TE', name: 'Telugu', nativeName: 'తెలుగు' },
+  { id: 'kn', code: 'KN', name: 'Kannada', nativeName: 'ಕನ್ನಡ' },
+  { id: 'bn', code: 'BN', name: 'Bengali', nativeName: 'বাংলা' },
+  { id: 'ml', code: 'ML', name: 'Malayalam', nativeName: 'മലയാളം' },
+  { id: 'pa', code: 'PA', name: 'Punjabi', nativeName: 'ਪੰਜਾਬੀ' },
+  { id: 'or', code: 'OR', name: 'Odia', nativeName: 'ଓଡ଼ିଆ' },
+  { id: 'as', code: 'AS', name: 'Assamese', nativeName: 'অসমীয়া' },
+  { id: 'ur', code: 'UR', name: 'Urdu', nativeName: 'اردو' },
+];
 
 // ─── Format Created At Date (e.g. 01 Sep 2026, 10:30 AM) ─────────────
 const formatCreatedAt = (isoString: string): string => {
@@ -43,6 +71,8 @@ export const AdminTranslationManagementPage: React.FC = () => {
   // ─── API Hooks ───────────────────────────────────────────────────────
   const { getTranslationTargetsAPI, isLoading, isError } =
     useGetTranslationTargetsAPI();
+  const { importExamTranslationsAPI, isLoading: isUploadingTranslation } =
+    useImportExamTranslationsAPI();
   const [getSubjectsReq] = useAxiosGet();
 
   // ─── State ───────────────────────────────────────────────────────────
@@ -54,8 +84,22 @@ export const AdminTranslationManagementPage: React.FC = () => {
     totalPages: 1,
   });
 
-  // Selected Target for managing translation
+  // Selected Target for managing translation in detail view
   const [selectedTarget, setSelectedTarget] = useState<TranslationTargetItem | null>(null);
+
+  // ─── Direct Language File Upload Modal State ───────────────────────────
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadTargetId, setUploadTargetId] = useState<string>('');
+  const [uploadLanguageId, setUploadLanguageId] = useState<string>('hi');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [replaceMode, setReplaceMode] = useState(false);
+  const [modalUploadError, setModalUploadError] = useState<string | null>(null);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+
+  // Languages list
+  const [availableLanguages, setAvailableLanguages] = useState<any[]>(DEFAULT_LANGUAGES);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Filter States
   const [activeTab, setActiveTab] = useState<'ALL' | 'LIVE_EXAM' | 'MOCK' | 'SUBJECT_MOCK'>('ALL');
@@ -70,6 +114,18 @@ export const AdminTranslationManagementPage: React.FC = () => {
 
   // Master Subjects list
   const [availableSubjects, setAvailableSubjects] = useState<any[]>([]);
+
+  // ─── Load Languages ──────────────────────────────────────────────────
+  useEffect(() => {
+    Axios.get('/languages')
+      .then((res) => {
+        const data = res?.data?.data || res?.data;
+        if (Array.isArray(data) && data.length > 0) {
+          setAvailableLanguages(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // ─── Search Debounce ─────────────────────────────────────────────────
   useEffect(() => {
@@ -173,6 +229,66 @@ export const AdminTranslationManagementPage: React.FC = () => {
     toDate ||
     activeTab !== 'ALL';
 
+  // ─── Quick Upload Translation Modal Handlers ──────────────────────────
+  const handleOpenQuickUpload = (item?: TranslationTargetItem) => {
+    if (item) {
+      setUploadTargetId(item.id);
+    } else if (items.length > 0 && !uploadTargetId) {
+      setUploadTargetId(items[0].id);
+    }
+    setUploadFile(null);
+    setReplaceMode(false);
+    setModalUploadError(null);
+    setIsUploadModalOpen(true);
+  };
+
+  const handleDownloadModalTemplate = async (format: 'xlsx' | 'csv' = 'xlsx') => {
+    if (!uploadLanguageId) return;
+    try {
+      setIsDownloadingTemplate(true);
+      await downloadExamTranslationTemplate(uploadLanguageId, format);
+      toast.success(`Translation template (${format.toUpperCase()}) downloaded.`);
+    } catch {
+      toast.error('Failed to download translation template.');
+    } finally {
+      setIsDownloadingTemplate(false);
+    }
+  };
+
+  const handleSubmitModalUpload = async () => {
+    if (!uploadTargetId) {
+      setModalUploadError('Please select a target Exam or Mock Test.');
+      return;
+    }
+    if (!uploadLanguageId) {
+      setModalUploadError('Please select a translation language.');
+      return;
+    }
+    if (!uploadFile) {
+      setModalUploadError('Please select a CSV or Excel translation file.');
+      return;
+    }
+
+    setModalUploadError(null);
+
+    const { data, error } = await importExamTranslationsAPI(
+      uploadTargetId,
+      uploadLanguageId,
+      uploadFile,
+      replaceMode,
+    );
+
+    if (error) {
+      setModalUploadError(typeof error === 'string' ? error : 'Failed to import translation.');
+      toast.error('Translation upload failed. Please check the file formatting.');
+      return;
+    }
+
+    toast.success('Translation file uploaded successfully! Background processing started.');
+    setIsUploadModalOpen(false);
+    loadTargets();
+  };
+
   // ─── If a Target is selected, render the Reusable Translation Manager ─
   if (selectedTarget) {
     return (
@@ -213,11 +329,21 @@ export const AdminTranslationManagementPage: React.FC = () => {
             Translation Management
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Manage question and option translations across Exams, Mock Tests, and Subject-wise Mocks.
+            Manage and upload specific language translation files across Exams, Mock Tests, and Subject-wise Mocks.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => handleOpenQuickUpload()}
+            className="flex items-center gap-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            <span>Upload Translation File</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -537,20 +663,36 @@ export const AdminTranslationManagementPage: React.FC = () => {
                           )}
                         </td>
 
-                        {/* Manage Action */}
-                        <td className="py-4 px-5 text-right">
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedTarget(item);
-                            }}
-                            className="inline-flex items-center gap-1.5 text-xs font-bold"
-                          >
-                            <Globe className="h-3.5 w-3.5" />
-                            <span>Manage</span>
-                          </Button>
+                        {/* Manage & Quick Upload Actions */}
+                        <td className="py-4 px-5 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenQuickUpload(item);
+                              }}
+                              className="inline-flex items-center gap-1.5 text-xs font-bold border-indigo-200 text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100"
+                              title="Upload Language Translation File"
+                            >
+                              <Upload className="h-3.5 w-3.5" />
+                              <span>Upload</span>
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedTarget(item);
+                              }}
+                              className="inline-flex items-center gap-1.5 text-xs font-bold"
+                            >
+                              <Globe className="h-3.5 w-3.5" />
+                              <span>Manage</span>
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -615,11 +757,19 @@ export const AdminTranslationManagementPage: React.FC = () => {
                   })}
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
-                  <span className="text-[11px] text-slate-500 font-mono">
-                    Created: <strong>{formatCreatedAt(item.createdAt)}</strong>
-                  </span>
-
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenQuickUpload(item);
+                    }}
+                    className="inline-flex items-center gap-1 text-xs font-bold border-indigo-200 text-indigo-700"
+                  >
+                    <Upload className="h-3 w-3" />
+                    <span>Upload</span>
+                  </Button>
                   <Button
                     size="sm"
                     variant="primary"
@@ -627,10 +777,10 @@ export const AdminTranslationManagementPage: React.FC = () => {
                       e.stopPropagation();
                       setSelectedTarget(item);
                     }}
-                    className="flex items-center gap-1 text-xs font-bold"
+                    className="inline-flex items-center gap-1 text-xs font-bold"
                   >
                     <Globe className="h-3 w-3" />
-                    <span>Manage Translation</span>
+                    <span>Manage</span>
                   </Button>
                 </div>
               </div>
@@ -696,6 +846,164 @@ export const AdminTranslationManagementPage: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* ─── Direct Language Translation Upload Modal ───────────── */}
+      <Modal
+        isOpen={isUploadModalOpen}
+        onClose={() => {
+          if (!isUploadingTranslation) setIsUploadModalOpen(false);
+        }}
+        title="Upload Module Translation File"
+        size="lg"
+      >
+        <div className="p-6 space-y-6">
+          <div className="space-y-1">
+            <p className="text-xs text-slate-500">
+              Upload translated questions and options (.xlsx or .csv) for any module in a specific language.
+            </p>
+          </div>
+
+          {/* Target Module / Exam Selection */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700">Target Module / Exam *</label>
+            <select
+              value={uploadTargetId}
+              onChange={(e) => setUploadTargetId(e.target.value)}
+              className="w-full text-xs font-medium rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-900 focus:bg-white focus:border-indigo-500 focus:outline-none cursor-pointer"
+            >
+              <option value="">-- Select Exam / Test --</option>
+              {items.map((item) => (
+                <option key={item.id} value={item.id}>
+                  [{item.typeLabel}] {item.title} ({item.totalQuestions} Qs)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Language Selection */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-700">Target Language *</label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isDownloadingTemplate || !uploadLanguageId}
+                  onClick={() => handleDownloadModalTemplate('xlsx')}
+                  className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1"
+                >
+                  <FileDown size={13} />
+                  <span>Download Excel Template</span>
+                </button>
+                <span className="text-slate-300">|</span>
+                <button
+                  type="button"
+                  disabled={isDownloadingTemplate || !uploadLanguageId}
+                  onClick={() => handleDownloadModalTemplate('csv')}
+                  className="text-[11px] font-bold text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
+                >
+                  <span>CSV</span>
+                </button>
+              </div>
+            </div>
+            <select
+              value={uploadLanguageId}
+              onChange={(e) => setUploadLanguageId(e.target.value)}
+              className="w-full text-xs font-medium rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-900 focus:bg-white focus:border-indigo-500 focus:outline-none cursor-pointer"
+            >
+              {availableLanguages.map((l) => (
+                <option key={l.id || l.code} value={l.id || l.code?.toLowerCase()}>
+                  {l.name} ({l.nativeName || l.code})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Dropzone for Translation File */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700">Translation File (.xlsx, .csv) *</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setUploadFile(e.target.files[0]);
+                  setModalUploadError(null);
+                }
+              }}
+              className="hidden"
+            />
+
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-300 hover:border-indigo-400 bg-slate-50 hover:bg-indigo-50/20 p-6 rounded-2xl cursor-pointer text-center space-y-2 transition-all"
+            >
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+                <FileSpreadsheet size={20} />
+              </div>
+              {uploadFile ? (
+                <div>
+                  <p className="text-xs font-bold text-slate-900">{uploadFile.name}</p>
+                  <p className="text-[11px] text-slate-500">
+                    {(uploadFile.size / 1024).toFixed(1)} KB • Click to choose another file
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-xs font-bold text-slate-800">
+                    Click to select or drop translation file here
+                  </p>
+                  <p className="text-[11px] text-slate-400">Supports .xlsx, .xls, and .csv files</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Replace mode checkbox */}
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="replace-mode-chk"
+              checked={replaceMode}
+              onChange={(e) => setReplaceMode(e.target.checked)}
+              className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+            />
+            <label htmlFor="replace-mode-chk" className="text-xs font-medium text-slate-700 cursor-pointer">
+              Overwrite / Replace existing translations for this language
+            </label>
+          </div>
+
+          {modalUploadError && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700 flex items-center gap-2">
+              <AlertTriangle size={15} className="shrink-0" />
+              <span>{modalUploadError}</span>
+            </div>
+          )}
+
+          {/* Modal Actions */}
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsUploadModalOpen(false)}
+              disabled={isUploadingTranslation}
+              className="text-xs"
+            >
+              Cancel
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={handleSubmitModalUpload}
+              disabled={!uploadFile || isUploadingTranslation || !uploadTargetId}
+              isLoading={isUploadingTranslation}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
+            >
+              <span>Upload & Import Translations</span>
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

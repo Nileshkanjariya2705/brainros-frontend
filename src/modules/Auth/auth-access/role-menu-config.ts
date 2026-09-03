@@ -218,7 +218,7 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
       },
       {
         key: 'exam-scheduling',
-        label: 'Mock Test Scheduling',
+        label: 'Exam Scheduling',
         to: PRIVATE_NAVIGATION.adminExamScheduling,
         icon: CalendarClock,
       },
@@ -426,7 +426,7 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
       },
       {
         key: 'exam-scheduling',
-        label: 'Mock Test Scheduling',
+        label: 'Exam Scheduling',
         to: PRIVATE_NAVIGATION.superAdminExamScheduling,
         icon: CalendarClock,
       },

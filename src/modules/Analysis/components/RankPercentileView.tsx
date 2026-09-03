@@ -8,6 +8,8 @@ import {
   Clock,
   CheckCircle2,
   Users,
+  Trophy,
+  ArrowRight,
 } from 'lucide-react';
 import cn from 'classnames';
 import type { MyRanksResponse, ScopedRankSummary } from '@/types/exam.types';
@@ -17,9 +19,15 @@ interface Props {
   ranks?: MyRanksResponse | null;
   isLoading?: boolean;
   onRefresh?: () => void;
+  onViewFullLeaderboard?: () => void;
 }
 
-export const RankPercentileView: React.FC<Props> = ({ ranks, isLoading, onRefresh }) => {
+export const RankPercentileView: React.FC<Props> = ({
+  ranks,
+  isLoading,
+  onRefresh,
+  onViewFullLeaderboard,
+}) => {
   if (isLoading) {
     return (
       <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm">
@@ -148,6 +156,20 @@ export const RankPercentileView: React.FC<Props> = ({ ranks, isLoading, onRefres
                 Accuracy: <strong className="text-white">{overall.accuracy.toFixed(1)}%</strong>
               </span>
             </div>
+
+            {onViewFullLeaderboard && (
+              <div className="mt-3 pt-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={onViewFullLeaderboard}
+                  className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-amber-950 text-xs font-black flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer"
+                >
+                  <Trophy size={14} />
+                  <span>View Full Exam Leaderboard</span>
+                  <ArrowRight size={13} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

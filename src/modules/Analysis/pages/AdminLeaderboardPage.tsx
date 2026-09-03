@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Trophy,
   Search,
@@ -10,6 +11,10 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
+  ArrowLeft,
+  Sparkles,
+  Award,
+  Zap,
 } from 'lucide-react';
 import cn from 'classnames';
 import {
@@ -26,6 +31,9 @@ import type {
 } from '@/types/exam.types';
 import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
+import { useCurrentUser } from '@/modules/Auth/auth-access/useCurrentUser';
+import { ROLES } from '@/constants/roles.constant';
+import { Axios } from '@/base-axios';
 
 const SCOPES: { label: string; value: RankTypeEnum; icon: any }[] = [
   { label: 'Overall National', value: 'OVERALL', icon: Trophy },
@@ -36,13 +44,20 @@ const SCOPES: { label: string; value: RankTypeEnum; icon: any }[] = [
 ];
 
 export const AdminLeaderboardPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useCurrentUser();
+  const isAdmin = user?.role === ROLES.ADMIN || user?.role === ROLES.SUPER_ADMIN;
+
+  const examIdParam = searchParams.get('examId');
+
   const { getAdminLeaderboardAPI, isLoading: isLeaderboardLoading } = useGetAdminLeaderboardAPI();
   const { generateRanksAPI, isLoading: isGenerating } = useGenerateRanksAPI();
   const { getRankStatusAPI } = useGetRankStatusAPI();
   const { getAvailableExamsAPI } = useGetAvailableExamsAPI();
 
   const [exams, setExams] = useState<{ id: string; title: string }[]>([]);
-  const [selectedExamId, setSelectedExamId] = useState<string>('');
+  const [selectedExamId, setSelectedExamId] = useState<string>(examIdParam || '');
   const [selectedRankType, setSelectedRankType] = useState<RankTypeEnum>('OVERALL');
   const [scopeFilter, setScopeFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -56,15 +71,29 @@ export const AdminLeaderboardPage: React.FC = () => {
   // Load available exams on mount
   useEffect(() => {
     const fetchExams = async () => {
-      // Default to general target
       const res = await getAvailableExamsAPI('all');
-      if (res.data && res.data.length > 0) {
-        setExams(res.data.map((e: any) => ({ id: e.id, title: e.title })));
-        setSelectedExamId(res.data[0].id);
+      let examList = res.data && res.data.length > 0 ? res.data.map((e: any) => ({ id: e.id, title: e.title })) : [];
+
+      // If examIdParam is passed and not in the list, fetch its title and prepend it
+      if (examIdParam && !examList.some((e: any) => e.id === examIdParam)) {
+        try {
+          const detailRes = await Axios.get(`/exams/${examIdParam}`);
+          const examObj = detailRes?.data?.data || detailRes?.data;
+          if (examObj) {
+            examList = [{ id: examObj.id, title: examObj.title }, ...examList];
+          }
+        } catch {}
+      }
+
+      setExams(examList);
+      if (examIdParam) {
+        setSelectedExamId(examIdParam);
+      } else if (examList.length > 0 && !selectedExamId) {
+        setSelectedExamId(examList[0].id);
       }
     };
     fetchExams();
-  }, []);
+  }, [examIdParam]);
 
   // Fetch leaderboard data & snapshot status when filters change
   const loadLeaderboard = async () => {
@@ -116,38 +145,53 @@ export const AdminLeaderboardPage: React.FC = () => {
     return `${m}m ${s}s`;
   };
 
+  const topThree = leaderboardData?.items?.slice(0, 3) || [];
+
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+      {/* ── Back Navigation ────────────────────────────────────────── */}
+      {examIdParam && (
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors"
+        >
+          <ArrowLeft size={14} />
+          <span>Back to Previous Page</span>
+        </button>
+      )}
+
       {/* ── Page Header ────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 border border-amber-200 text-amber-800">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 border border-amber-200 text-amber-800 flex items-center gap-1">
+              <Trophy size={12} className="text-amber-600" />
               Leaderboard & Rankings
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 border border-emerald-200 text-emerald-700">
-              Competition Mode (1, 1, 3)
+              Live Verified Snapshot
             </span>
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 mt-1">
             Exam Leaderboard & Population Rankings
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Official immutable rank snapshots partitioned by National, State, District, and School
-            scopes.
+            Official rank benchmarks and candidate standings across National, State, District, and School scopes.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={handleTriggerBatchGeneration}
-            disabled={isGenerating || !selectedExamId}
-            className="gap-2 shadow-sm"
-          >
-            <RotateCw size={16} className={cn(isGenerating && 'animate-spin')} />
-            <span>{isGenerating ? 'Generating...' : 'Recalculate Batch Rankings'}</span>
-          </Button>
-        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handleTriggerBatchGeneration}
+              disabled={isGenerating || !selectedExamId}
+              className="gap-2 shadow-sm"
+            >
+              <RotateCw size={16} className={cn(isGenerating && 'animate-spin')} />
+              <span>{isGenerating ? 'Generating...' : 'Recalculate Batch Rankings'}</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {actionMessage && (
@@ -160,14 +204,14 @@ export const AdminLeaderboardPage: React.FC = () => {
       {/* ── Exam Selector & Aggregate Summary Strip ─────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-1 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-2">
-          <label className="text-xs font-bold text-slate-700 block">Select Target Exam</label>
+          <label className="text-xs font-bold text-slate-700 block">Select Target Exam / Test</label>
           <select
             value={selectedExamId}
             onChange={(e) => {
               setSelectedExamId(e.target.value);
               setPage(1);
             }}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 cursor-pointer"
           >
             {exams.map((ex) => (
               <option key={ex.id} value={ex.id}>
@@ -184,7 +228,7 @@ export const AdminLeaderboardPage: React.FC = () => {
               Ranked Candidates
             </span>
             <div className="text-xl md:text-2xl font-black text-slate-900 mt-0.5">
-              {snapshotStatus?.totalCandidates?.toLocaleString() || '0'}
+              {snapshotStatus?.totalCandidates?.toLocaleString() || leaderboardData?.totalCandidates?.toLocaleString() || '0'}
             </div>
             <span className="text-[10px] text-emerald-600 font-bold">
               Snapshot v{snapshotStatus?.snapshotVersion || 1}
@@ -196,7 +240,7 @@ export const AdminLeaderboardPage: React.FC = () => {
               Top Score
             </span>
             <div className="text-xl md:text-2xl font-black text-emerald-600 mt-0.5">
-              {snapshotStatus?.highestScore ?? '—'}
+              {snapshotStatus?.highestScore ?? topThree[0]?.score ?? '—'}
             </div>
             <span className="text-[10px] text-slate-400 font-medium">Rank 1 Benchmark</span>
           </div>
@@ -222,6 +266,93 @@ export const AdminLeaderboardPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Top 3 Podium Cards (Rendered when on Page 1) ─────────── */}
+      {page === 1 && topThree.length > 0 && !searchQuery && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {topThree.map((candidate, idx) => {
+            const isRank1 = candidate.rank === 1;
+            const isRank2 = candidate.rank === 2;
+            const isRank3 = candidate.rank === 3;
+
+            return (
+              <div
+                key={candidate.studentId || idx}
+                className={cn(
+                  'rounded-3xl p-5 border shadow-sm relative overflow-hidden transition-all flex flex-col justify-between',
+                  isRank1
+                    ? 'bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-white border-amber-300 ring-2 ring-amber-400/30 md:-translate-y-1'
+                    : isRank2
+                    ? 'bg-gradient-to-b from-slate-300/20 via-slate-100/10 to-white border-slate-300'
+                    : 'bg-gradient-to-b from-amber-700/10 via-orange-50/10 to-white border-amber-200',
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        'w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-sm',
+                        isRank1
+                          ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-amber-950 shadow-amber-200'
+                          : isRank2
+                          ? 'bg-gradient-to-br from-slate-200 to-slate-400 text-slate-900 shadow-slate-200'
+                          : 'bg-gradient-to-br from-amber-600 to-amber-700 text-white shadow-orange-200',
+                      )}
+                    >
+                      {isRank1 ? '🥇' : isRank2 ? '🥈' : '🥉'}
+                    </div>
+
+                    <div>
+                      <span
+                        className={cn(
+                          'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full',
+                          isRank1
+                            ? 'bg-amber-100 text-amber-800'
+                            : isRank2
+                            ? 'bg-slate-200 text-slate-800'
+                            : 'bg-orange-100 text-orange-800',
+                        )}
+                      >
+                        Rank #{candidate.rank}
+                      </span>
+                      <h4 className="text-sm font-extrabold text-slate-900 mt-1 truncate max-w-[150px]">
+                        {candidate.studentName}
+                      </h4>
+                      <p className="text-[10px] text-slate-400 font-mono">{candidate.studentCode}</p>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-lg font-black text-slate-900">{candidate.score}</div>
+                    <span className="text-[10px] font-bold text-slate-400">Score</span>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="p-1.5 rounded-xl bg-slate-50">
+                    <span className="text-[10px] text-slate-400 block font-semibold">Percentile</span>
+                    <span className="font-extrabold text-emerald-600 text-[11px]">
+                      {candidate.percentile.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="p-1.5 rounded-xl bg-slate-50">
+                    <span className="text-[10px] text-slate-400 block font-semibold">Accuracy</span>
+                    <span className="font-extrabold text-indigo-600 text-[11px]">
+                      {candidate.accuracy.toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="p-1.5 rounded-xl bg-slate-50">
+                    <span className="text-[10px] text-slate-400 block font-semibold">Time</span>
+                    <span className="font-extrabold text-slate-700 text-[11px]">
+                      {formatTime(candidate.timeUsedSeconds)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Scope Tabs & Search Bar ─────────────────────────────────── */}
       <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
@@ -304,42 +435,55 @@ export const AdminLeaderboardPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {leaderboardData.items.map((row: LeaderboardEntry) => (
-                    <tr
-                      key={row.studentId}
-                      className={cn(
-                        'hover:bg-slate-50/60 transition-colors',
-                        row.rank === 1 && 'bg-amber-50/40',
-                        row.rank === 2 && 'bg-slate-50/50',
-                        row.rank === 3 && 'bg-amber-50/20',
-                      )}
-                    >
-                      {/* Rank with Medal */}
-                      <td className="py-3 px-4 text-center">
-                        {row.rank === 1 ? (
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-400 text-amber-950 font-black text-xs shadow-sm">
-                            🥇 1
-                          </span>
-                        ) : row.rank === 2 ? (
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-300 text-slate-900 font-black text-xs shadow-sm">
-                            🥈 2
-                          </span>
-                        ) : row.rank === 3 ? (
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-600 text-white font-black text-xs shadow-sm">
-                            🥉 3
-                          </span>
-                        ) : (
-                          <span className="font-black text-slate-700">#{row.rank}</span>
-                        )}
-                      </td>
+                  {leaderboardData.items.map((row: LeaderboardEntry) => {
+                    const isMe =
+                      (user?.id && (row.studentId === user.id || (row as any).userId === user.id)) ||
+                      (user?.email && (row.studentCode === user.email || row.studentName === user.name));
 
-                      {/* Candidate Name & ID */}
-                      <td className="py-3 px-4">
-                        <div className="font-bold text-slate-900">{row.studentName}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">
-                          {row.studentCode}
-                        </div>
-                      </td>
+                    return (
+                      <tr
+                        key={row.studentId}
+                        className={cn(
+                          'hover:bg-slate-50/60 transition-colors',
+                          isMe && 'bg-indigo-50/70 border-l-4 border-indigo-600 font-bold',
+                          !isMe && row.rank === 1 && 'bg-amber-50/40',
+                          !isMe && row.rank === 2 && 'bg-slate-50/50',
+                          !isMe && row.rank === 3 && 'bg-amber-50/20',
+                        )}
+                      >
+                        {/* Rank with Medal */}
+                        <td className="py-3 px-4 text-center">
+                          {row.rank === 1 ? (
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-400 text-amber-950 font-black text-xs shadow-sm">
+                              🥇 1
+                            </span>
+                          ) : row.rank === 2 ? (
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-300 text-slate-900 font-black text-xs shadow-sm">
+                              🥈 2
+                            </span>
+                          ) : row.rank === 3 ? (
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-600 text-white font-black text-xs shadow-sm">
+                              🥉 3
+                            </span>
+                          ) : (
+                            <span className="font-black text-slate-700">#{row.rank}</span>
+                          )}
+                        </td>
+
+                        {/* Candidate Name & ID */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-bold text-slate-900">{row.studentName}</span>
+                            {isMe && (
+                              <span className="text-[10px] font-black bg-indigo-600 text-white px-2 py-0.5 rounded-full shadow-2xs">
+                                You
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            {row.studentCode}
+                          </div>
+                        </td>
 
                       {/* Score */}
                       <td className="py-3 px-4">

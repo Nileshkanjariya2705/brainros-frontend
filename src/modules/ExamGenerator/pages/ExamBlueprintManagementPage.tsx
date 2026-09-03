@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Layers, Plus, Play, Trash2, Eye, Lock, Sliders } from 'lucide-react';
+import { Layers, Plus, Play, Trash2, Eye, Lock, Sliders, Pencil } from 'lucide-react';
 import {
   useGetAllExamsAPI,
   useGetExamBlueprintsAPI,
@@ -11,6 +11,7 @@ import { BlueprintBuilderModal } from '../components/BlueprintBuilderModal';
 import { BlueprintValidationModal } from '../components/BlueprintValidationModal';
 import { BlueprintDetailsModal } from '../components/BlueprintDetailsModal';
 import Button from '@/components/ui/Button';
+import { toast } from '@/utils/toast';
 
 const ExamBlueprintManagementPage: React.FC = () => {
   const [exams, setExams] = useState<Exam[]>([]);
@@ -19,6 +20,7 @@ const ExamBlueprintManagementPage: React.FC = () => {
 
   // Modals
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const [builderMode, setBuilderMode] = useState<'create' | 'edit'>('create');
   const [isValidationOpen, setIsValidationOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [activeBlueprint, setActiveBlueprint] = useState<ExamBlueprintItem | null>(null);
@@ -54,13 +56,26 @@ const ExamBlueprintManagementPage: React.FC = () => {
 
   const selectedExam = exams.find((e) => e.id === selectedExamId);
 
+  const handleCreateBlueprint = () => {
+    setBuilderMode('create');
+    setActiveBlueprint(null);
+    setIsBuilderOpen(true);
+  };
+
+  const handleEditBlueprint = (bp: ExamBlueprintItem) => {
+    setBuilderMode('edit');
+    setActiveBlueprint(bp);
+    setIsBuilderOpen(true);
+  };
+
   const handleDeleteBlueprint = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this blueprint?')) return;
     const { error } = await deleteBlueprintAPI(id);
     if (error) {
-      alert(typeof error === 'string' ? error : 'Cannot delete blueprint');
+      toast.error(typeof error === 'string' ? error : 'Cannot delete blueprint');
       return;
     }
+    toast.success('Blueprint deleted successfully.');
     loadExamData();
   };
 
@@ -94,7 +109,7 @@ const ExamBlueprintManagementPage: React.FC = () => {
         {/* Create Blueprint Action */}
         <div className="flex items-center gap-2.5">
           <Button
-            onClick={() => setIsBuilderOpen(true)}
+            onClick={handleCreateBlueprint}
             className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200"
           >
             <Plus size={16} />
@@ -170,7 +185,7 @@ const ExamBlueprintManagementPage: React.FC = () => {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                     {/* View Blueprint Details */}
                     <Button
                       variant="outline"
@@ -179,7 +194,18 @@ const ExamBlueprintManagementPage: React.FC = () => {
                       className="flex items-center gap-1.5 text-xs border-slate-200 text-slate-700 bg-slate-50/70 hover:bg-slate-100"
                     >
                       <Eye size={14} />
-                      <span>View Blueprint</span>
+                      <span>View</span>
+                    </Button>
+
+                    {/* Edit Blueprint */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditBlueprint(bp)}
+                      className="flex items-center gap-1.5 text-xs border-indigo-200 text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 font-bold"
+                    >
+                      <Pencil size={13} />
+                      <span>Edit</span>
                     </Button>
 
                     {/* Validate & Generate Exam */}
@@ -253,7 +279,7 @@ const ExamBlueprintManagementPage: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsBuilderOpen(true)}
+              onClick={handleCreateBlueprint}
               className="mt-2"
             >
               <Plus size={14} className="mr-1" /> Create Blueprint
@@ -269,6 +295,8 @@ const ExamBlueprintManagementPage: React.FC = () => {
         isOpen={isBuilderOpen}
         onClose={() => setIsBuilderOpen(false)}
         onSaved={loadExamData}
+        blueprint={activeBlueprint}
+        mode={builderMode}
       />
 
       <BlueprintDetailsModal

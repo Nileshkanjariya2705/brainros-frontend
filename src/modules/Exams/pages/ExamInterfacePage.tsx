@@ -22,8 +22,11 @@ import {
   Maximize,
   Minimize,
   GraduationCap,
+  LogOut,
 } from 'lucide-react';
 import cn from 'classnames';
+import { API_URL } from '@config';
+import { toast } from '@/utils/toast';
 
 // ** Services & Hooks **
 import {
@@ -137,6 +140,22 @@ const ExamInterfacePage = () => {
   // UI & Network state
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [leaveModalConfig, setLeaveModalConfig] = useState<{
+    title: string;
+    subtitle: string;
+    warningText: string;
+    stayButtonText: string;
+    leaveButtonText: string;
+    isTabCloseIntent: boolean;
+  }>({
+    title: 'Exam in Progress',
+    subtitle: 'Leaving may submit/end your exam',
+    warningText:
+      'Are you sure you want to leave the exam? Your examination is currently active. Choosing to leave will securely save your answers and finalize/submit your attempt.',
+    stayButtonText: 'Stay in Exam',
+    leaveButtonText: 'Leave & Submit Exam',
+    isTabCloseIntent: false,
+  });
   const hasSubmittedRef = useRef(false);
 
   const isExamInProgress =
@@ -158,22 +177,6 @@ const ExamInterfacePage = () => {
   const debounceSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const sequenceCounterRef = useRef<number>(1);
   const isInitialLoadDoneRef = useRef(false);
-
-  // ─── Native BeforeUnload Guard (Tab / Window Close & Page Refresh) ──
-  useEffect(() => {
-    if (!isExamInProgress) return;
-
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = '';
-      return '';
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [isExamInProgress]);
 
   // ─── Cross-Tab Active Exam Synchronization ────────────────────────
   useEffect(() => {
@@ -230,6 +233,121 @@ const ExamInterfacePage = () => {
       recordSecEvent('LEAVE_WARNING_SHOWN');
     }
   }, [blocker.state, blocker.location, recordSecEvent]);
+
+  // ─── Fire-and-forget Auto-Submit on Forceful Tab Close / Window Destroy ───
+  const triggerUnloadAutoSubmit = useCallback(() => {
+    if (!attemptId || hasSubmittedRef.current) return;
+    hasSubmittedRef.current = true;
+
+    try {
+      localStorage.removeItem('brainros_active_exam');
+    } catch {}
+
+    const leaveUrl = `${API_URL}/attempts/${attemptId}/leave`;
+    const payload = JSON.stringify({ reason: 'FORCE_CLOSE_TAB' });
+
+    // 1. Fetch with keepalive (runs asynchronously in browser network layer even after page teardown)
+    try {
+      fetch(leaveUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        keepalive: true,
+        body: payload,
+      }).catch(() => {});
+    } catch {}
+
+    // 2. Beacon fallback for maximum browser compatibility
+    try {
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        const blob = new Blob([payload], { type: 'application/json' });
+        navigator.sendBeacon(leaveUrl, blob);
+      }
+    } catch {}
+  }, [attemptId]);
+
+  // ─── Native BeforeUnload Guard & Forceful Close Auto-Submit ────────
+  useEffect(() => {
+    if (!isExamInProgress) return;
+
+    let cancelCheckTimer: NodeJS.Timeout | null = null;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      const warningText =
+        'Warning: An exam/mock test is currently in progress. If you close this tab, your exam will be automatically submitted!';
+      e.returnValue = warningText;
+
+      // If user clicks "Cancel" and remains in the tab:
+      if (cancelCheckTimer) clearTimeout(cancelCheckTimer);
+      cancelCheckTimer = setTimeout(() => {
+        // Tab is still open! User cancelled the browser prompt.
+        if (document.visibilityState === 'visible' && !hasSubmittedRef.current) {
+          setLeaveModalConfig({
+            title: '⚠️ Tab Close Attempt Detected',
+            subtitle: 'Closing this tab will auto-submit your exam',
+            warningText:
+              'You attempted to close this exam tab. Please note: if you close this tab, refresh, or exit the browser, your exam/mock test will be automatically submitted with your current answers and cannot be resumed.',
+            stayButtonText: 'Stay & Continue Exam',
+            leaveButtonText: 'Force Close & Auto-Submit',
+            isTabCloseIntent: true,
+          });
+          setShowLeaveModal(true);
+          recordSecEvent('TAB_CLOSE_CANCELLED', 0, {}, true);
+        }
+      }, 700);
+
+      return warningText;
+    };
+
+    const handlePageHide = (e: PageTransitionEvent) => {
+      // Fires when user confirms "Leave" or tab is actually closing
+      if (!hasSubmittedRef.current) {
+        recordSecEvent('TAB_FORCE_CLOSED', 0, { persisted: e.persisted }, true);
+        triggerUnloadAutoSubmit();
+      }
+    };
+
+    // Exit-intent detection: cursor leaves top of window viewport
+    const handleMouseLeave = (e: MouseEvent) => {
+      if (
+        e.clientY <= 0 &&
+        !showLeaveModal &&
+        !showSubmitModal &&
+        !hasSubmittedRef.current &&
+        isExamInProgress
+      ) {
+        setLeaveModalConfig({
+          title: '⚠️ Exiting Exam Window?',
+          subtitle: 'Closing this tab will submit your exam',
+          warningText:
+            'You are moving towards the browser tab bar. Closing or leaving this tab will automatically submit your exam and finalize your answers immediately.',
+          stayButtonText: 'Continue Taking Exam',
+          leaveButtonText: 'Submit & Exit Exam',
+          isTabCloseIntent: true,
+        });
+        setShowLeaveModal(true);
+        recordSecEvent('EXIT_INTENT_DETECTED');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
+    document.documentElement.addEventListener('mouseleave', handleMouseLeave);
+
+    return () => {
+      if (cancelCheckTimer) clearTimeout(cancelCheckTimer);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
+      document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, [
+    isExamInProgress,
+    triggerUnloadAutoSubmit,
+    showLeaveModal,
+    showSubmitModal,
+    recordSecEvent,
+  ]);
 
   // ─── Network Interruption Recovery Listeners ──────────────────
   useEffect(() => {
@@ -330,6 +448,20 @@ const ExamInterfacePage = () => {
           : (sRes.data as any)?.data || sRes.response?.data?.data;
 
         if (sData) {
+          const rawStatus = (sData.status || (sData as any).attemptStatus || '').toUpperCase();
+          if (
+            rawStatus === 'SUBMITTED' ||
+            rawStatus === 'AUTO_SUBMITTED' ||
+            rawStatus === 'CANCELLED'
+          ) {
+            hasSubmittedRef.current = true;
+            toast.info('This exam/mock test has already been finalized and submitted.');
+            navigate(PRIVATE_NAVIGATION.examResult.replace(':attemptId', attemptId), {
+              replace: true,
+            });
+            return;
+          }
+
           if (sData.examId) setExamId(sData.examId);
           if (sData.exam?.title || sData.examTitle) {
             setExamTitle(sData.exam?.title || sData.examTitle);
@@ -942,6 +1074,30 @@ const ExamInterfacePage = () => {
             </span>
           </div>
 
+          {/* Exit / Close Exam Button */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setLeaveModalConfig({
+                title: 'Exit Examination',
+                subtitle: 'Leaving will finalize and submit your answers',
+                warningText:
+                  'Are you sure you want to exit? Your exam is currently active. Choosing to leave or close will automatically finalize and submit your attempt immediately.',
+                stayButtonText: 'Stay in Exam',
+                leaveButtonText: 'Leave & Submit Exam',
+                isTabCloseIntent: false,
+              });
+              setShowLeaveModal(true);
+            }}
+            className="flex items-center gap-1.5 border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300 font-bold text-xs shadow-2xs"
+            title="Exit / Close Exam"
+          >
+            <LogOut size={13} />
+            <span className="hidden sm:inline">Exit</span>
+          </Button>
+
           {/* Final Submit Button */}
           <Button
             type="button"
@@ -1466,6 +1622,20 @@ const ExamInterfacePage = () => {
             return st === 'MARKED' || st === 'ANS_MARKED';
           }).length
         }
+        title={blocker.state === 'blocked' ? 'Leave Examination?' : leaveModalConfig.title}
+        subtitle={
+          blocker.state === 'blocked'
+            ? 'Navigating away will finalize and submit your exam'
+            : leaveModalConfig.subtitle
+        }
+        warningText={
+          blocker.state === 'blocked'
+            ? 'You are attempting to navigate away from the examination. Leaving will automatically finalize and submit your answers immediately.'
+            : leaveModalConfig.warningText
+        }
+        stayButtonText={leaveModalConfig.stayButtonText}
+        leaveButtonText={leaveModalConfig.leaveButtonText}
+        isTabCloseIntent={leaveModalConfig.isTabCloseIntent}
         onStay={() => {
           recordSecEvent('LEAVE_CANCELLED');
           if (blocker.state === 'blocked') {

@@ -403,7 +403,21 @@ const ExamResultPage = () => {
           Back to Dashboard
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          {analysis.examId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                navigate(`${PRIVATE_NAVIGATION.studentLeaderboard}?examId=${analysis.examId}`)
+              }
+              className="flex items-center gap-1.5 text-xs font-bold border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100 shadow-2xs"
+            >
+              <Trophy size={14} className="text-amber-600" />
+              <span>View Leaderboard</span>
+            </Button>
+          )}
+
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
             Exam Target:{' '}
             <span className="text-indigo-600 dark:text-indigo-400 font-bold">
@@ -449,13 +463,13 @@ const ExamResultPage = () => {
           >
             <tab.icon size={15} />
             <span>{tab.label}</span>
-            {tab.badge !== undefined && (
+            {tab.badge !== undefined && tab.badge > 0 && (
               <span
                 className={cn(
-                  'ml-1 rounded-full px-1.5 py-0.2 text-[10px] font-bold',
+                  'rounded-full px-1.5 py-0.5 text-[10px] font-black',
                   activeTab === tab.id
-                    ? 'bg-white text-indigo-700'
-                    : 'bg-indigo-100 text-indigo-700',
+                    ? 'bg-indigo-800 text-white'
+                    : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300',
                 )}
               >
                 {tab.badge}
@@ -481,6 +495,9 @@ const ExamResultPage = () => {
           ranks={ranks}
           isLoading={isRanksLoading}
           onRefresh={handleRefreshRanks}
+          onViewFullLeaderboard={() =>
+            navigate(`${PRIVATE_NAVIGATION.studentLeaderboard}?examId=${analysis.examId}`)
+          }
         />
       )}
 

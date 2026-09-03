@@ -20,6 +20,7 @@ import {
   BarChart3,
   Layers,
   RotateCcw,
+  Trophy,
 } from 'lucide-react';
 import cn from 'classnames';
 
@@ -536,6 +537,22 @@ export const MockHistoryPage = () => {
                           </Button>
                         ) : isCompleted ? (
                           <div className="flex items-center gap-2">
+                            {attempt.exam?.id && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  navigate(
+                                    `${PRIVATE_NAVIGATION.studentLeaderboard}?examId=${attempt.exam.id}`,
+                                  )
+                                }
+                                className="border-amber-200 bg-amber-50/60 text-amber-800 hover:bg-amber-100 hover:border-amber-300 font-bold transition-all shadow-2xs"
+                              >
+                                <Trophy size={13} className="mr-1 text-amber-600" />
+                                Leaderboard
+                              </Button>
+                            )}
+
                             <Button
                               variant="outline"
                               size="sm"

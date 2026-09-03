@@ -14,6 +14,7 @@ import {
   Percent,
   RotateCcw,
   Zap,
+  Trophy,
 } from 'lucide-react';
 import cn from 'classnames';
 
@@ -429,14 +430,38 @@ const HistoryPage = () => {
                       Resume
                     </Button>
                   ) : isCompleted ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-indigo-200 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"
-                    >
-                      View Report
-                      <ArrowRight size={14} className="ml-1" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {attempt.exam?.id && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(
+                              `${PRIVATE_NAVIGATION.studentLeaderboard}?examId=${attempt.exam.id}`,
+                            );
+                          }}
+                          className="border-amber-200 bg-amber-50/60 text-amber-800 hover:bg-amber-100 hover:border-amber-300 font-bold transition-all shadow-2xs"
+                        >
+                          <Trophy size={13} className="mr-1 text-amber-600" />
+                          Leaderboard
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(
+                            PRIVATE_NAVIGATION.examResult.replace(':attemptId', attempt.id),
+                          );
+                        }}
+                        className="border-indigo-200 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors font-bold"
+                      >
+                        View Report
+                        <ArrowRight size={14} className="ml-1" />
+                      </Button>
+                    </div>
                   ) : null}
                 </div>
               </div>

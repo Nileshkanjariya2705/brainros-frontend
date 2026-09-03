@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Layers, Plus, Trash2, AlertCircle, Sliders, CheckCircle2 } from 'lucide-react';
-import { useCreateBlueprintAPI } from '../services/examGenerator.service';
+import { X, Layers, Plus, Trash2, AlertCircle, Sliders, CheckCircle2, Edit } from 'lucide-react';
+import {
+  useCreateBlueprintAPI,
+  useUpdateBlueprintAPI,
+} from '../services/examGenerator.service';
 import {
   useGetSubjectsAPI,
   useGetChaptersAPI,
@@ -9,6 +12,7 @@ import type {
   CreateBlueprintRulePayload,
   QuestionDifficultyEnum,
   QuestionTypeEnum,
+  ExamBlueprintItem,
 } from '../types/examGenerator.types';
 import { isAllowedSubject, formatSubjectDisplayName } from '@/constants/subjects.constant';
 import type { NamedEntity } from '@/modules/QuestionBank/types/questionBank.types';
@@ -20,6 +24,8 @@ interface BlueprintBuilderModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved?: () => void;
+  blueprint?: ExamBlueprintItem | null;
+  mode?: 'create' | 'edit';
 }
 
 export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
@@ -28,6 +34,8 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
   isOpen,
   onClose,
   onSaved,
+  blueprint,
+  mode = 'create',
 }) => {
   const [name, setName] = useState('');
   const [totalQuestions, setTotalQuestions] = useState<number>(180);
@@ -40,7 +48,7 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
   const [ruleChapterId, setRuleChapterId] = useState<string>('');
   const [ruleDifficulty, setRuleDifficulty] = useState<QuestionDifficultyEnum | ''>('');
   const [ruleType, setRuleType] = useState<QuestionTypeEnum | ''>('');
-  const [mode, setMode] = useState<'COUNT' | 'PERCENTAGE'>('COUNT');
+  const [modeType, setModeType] = useState<'COUNT' | 'PERCENTAGE'>('COUNT');
   const [ruleCount, setRuleCount] = useState<number>(45);
   const [rulePercentage, setRulePercentage] = useState<number>(25);
 
@@ -50,7 +58,10 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
 
   const { getSubjectsAPI } = useGetSubjectsAPI();
   const { getChaptersAPI } = useGetChaptersAPI();
-  const { createBlueprintAPI, isLoading: isSaving } = useCreateBlueprintAPI();
+  const { createBlueprintAPI, isLoading: isCreating } = useCreateBlueprintAPI();
+  const { updateBlueprintAPI, isLoading: isUpdating } = useUpdateBlueprintAPI();
+
+  const isSaving = isCreating || isUpdating;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -63,12 +74,32 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
         setSubjects(list);
       }
     });
-    setName(`${examTitle || 'Exam'} Blueprint v1`);
-    setRules([]);
-    setExamType('');
-    setTotalQuestions(180);
+
+    if (mode === 'edit' && blueprint) {
+      setName(blueprint.name || '');
+      setTotalQuestions(blueprint.totalQuestions || 180);
+      setRules(
+        (blueprint.rules || []).map((r) => ({
+          subjectId: r.subjectId || undefined,
+          chapterId: r.chapterId || undefined,
+          topicId: r.topicId || undefined,
+          subTopicId: r.subTopicId || undefined,
+          difficultyLevel: r.difficultyLevel || undefined,
+          type: r.type || undefined,
+          selectionCount: r.selectionCount || undefined,
+          selectionPercentage: r.selectionPercentage || undefined,
+          priority: r.priority || 0,
+        })),
+      );
+      setExamType('');
+    } else {
+      setName(`${examTitle || 'Exam'} Blueprint v1`);
+      setRules([]);
+      setExamType('');
+      setTotalQuestions(180);
+    }
     setErrorMsg(null);
-  }, [isOpen, examTitle, getSubjectsAPI]);
+  }, [isOpen, examTitle, getSubjectsAPI, mode, blueprint]);
 
   useEffect(() => {
     if (!ruleSubjectId) {
@@ -229,16 +260,16 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
       chapterId: ruleChapterId || undefined,
       difficultyLevel: ruleDifficulty ? (ruleDifficulty as QuestionDifficultyEnum) : undefined,
       type: ruleType ? (ruleType as QuestionTypeEnum) : undefined,
-      selectionCount: mode === 'COUNT' ? Number(ruleCount) : undefined,
-      selectionPercentage: mode === 'PERCENTAGE' ? Number(rulePercentage) : undefined,
+      selectionCount: modeType === 'COUNT' ? Number(ruleCount) : undefined,
+      selectionPercentage: modeType === 'PERCENTAGE' ? Number(rulePercentage) : undefined,
       priority: rules.length + 1,
     };
 
-    if (mode === 'COUNT' && (!ruleCount || ruleCount <= 0)) {
+    if (modeType === 'COUNT' && (!ruleCount || ruleCount <= 0)) {
       setErrorMsg('Please specify a positive question count for the rule.');
       return;
     }
-    if (mode === 'PERCENTAGE' && (!rulePercentage || rulePercentage <= 0)) {
+    if (modeType === 'PERCENTAGE' && (!rulePercentage || rulePercentage <= 0)) {
       setErrorMsg('Please specify a valid percentage for the rule.');
       return;
     }
@@ -277,15 +308,28 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
 
     setErrorMsg(null);
 
-    const { error } = await createBlueprintAPI(examId, {
-      name: name.trim(),
-      totalQuestions: Number(totalQuestions),
-      rules,
-    });
+    if (mode === 'edit' && blueprint?.id) {
+      const { error } = await updateBlueprintAPI(blueprint.id, {
+        name: name.trim(),
+        totalQuestions: Number(totalQuestions),
+        rules,
+      });
 
-    if (error) {
-      setErrorMsg(typeof error === 'string' ? error : 'Failed to create blueprint');
-      return;
+      if (error) {
+        setErrorMsg(typeof error === 'string' ? error : 'Failed to update blueprint');
+        return;
+      }
+    } else {
+      const { error } = await createBlueprintAPI(examId, {
+        name: name.trim(),
+        totalQuestions: Number(totalQuestions),
+        rules,
+      });
+
+      if (error) {
+        setErrorMsg(typeof error === 'string' ? error : 'Failed to create blueprint');
+        return;
+      }
     }
 
     onSaved?.();
@@ -305,11 +349,13 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
         <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/80 px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-200">
-              <Layers size={20} />
+              {mode === 'edit' ? <Edit size={20} /> : <Layers size={20} />}
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-extrabold text-slate-900">
-                Exam Blueprint & Rule Builder
+                {mode === 'edit'
+                  ? `Edit Exam Blueprint: ${blueprint?.name || name}`
+                  : 'Exam Blueprint & Rule Builder'}
               </h2>
               <p className="text-xs text-slate-500 font-mono">
                 {examTitle || `Exam: ${examId.slice(0, 8)}...`}
@@ -595,10 +641,10 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
           <Button
             onClick={handleSave}
             isLoading={isSaving}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200"
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 font-bold text-xs"
           >
             <CheckCircle2 size={16} />
-            <span>Save Blueprint</span>
+            <span>{mode === 'edit' ? 'Update Blueprint' : 'Save Blueprint'}</span>
           </Button>
         </div>
       </div>

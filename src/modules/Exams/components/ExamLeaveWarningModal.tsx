@@ -12,6 +12,12 @@ interface ExamLeaveWarningModalProps {
   onStay: () => void;
   onLeaveAndSubmit: () => void;
   isSubmitting?: boolean;
+  title?: string;
+  subtitle?: string;
+  warningText?: string;
+  stayButtonText?: string;
+  leaveButtonText?: string;
+  isTabCloseIntent?: boolean;
 }
 
 const formatTimer = (totalSeconds: number | null) => {
@@ -32,6 +38,12 @@ export const ExamLeaveWarningModal: React.FC<ExamLeaveWarningModalProps> = ({
   onStay,
   onLeaveAndSubmit,
   isSubmitting = false,
+  title = 'Exam in Progress',
+  subtitle = 'Leaving may submit/end your exam',
+  warningText,
+  stayButtonText = 'Stay in Exam',
+  leaveButtonText = 'Leave & Submit Exam',
+  isTabCloseIntent = false,
 }) => {
   if (!isOpen) return null;
 
@@ -45,11 +57,16 @@ export const ExamLeaveWarningModal: React.FC<ExamLeaveWarningModalProps> = ({
               <AlertTriangle size={20} />
             </div>
             <div>
-              <h3 className="text-base font-black text-slate-900 tracking-tight">
-                Exam in Progress
+              <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+                {title}
+                {isTabCloseIntent && (
+                  <span className="rounded-full bg-rose-600 px-2 py-0.5 text-[9px] font-black uppercase text-white tracking-wider animate-pulse">
+                    Tab Close Alert
+                  </span>
+                )}
               </h3>
               <p className="text-[11px] font-semibold text-rose-600">
-                Leaving may submit/end your exam
+                {subtitle}
               </p>
             </div>
           </div>
@@ -76,8 +93,8 @@ export const ExamLeaveWarningModal: React.FC<ExamLeaveWarningModalProps> = ({
 
         {/* Description Warning */}
         <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-3.5 text-xs font-semibold text-amber-900 leading-relaxed">
-          Are you sure you want to leave the exam? Your examination is currently active.
-          Choosing to leave will securely save your answers and finalize/submit your attempt.
+          {warningText ||
+            'Are you sure you want to leave the exam? Your examination is currently active. Choosing to leave will securely save your answers and finalize/submit your attempt.'}
         </div>
 
         {/* Progress Snapshot */}
@@ -126,7 +143,7 @@ export const ExamLeaveWarningModal: React.FC<ExamLeaveWarningModalProps> = ({
             onClick={onStay}
             disabled={isSubmitting}
           >
-            Stay in Exam
+            {stayButtonText}
           </Button>
           <Button
             type="button"
@@ -137,7 +154,7 @@ export const ExamLeaveWarningModal: React.FC<ExamLeaveWarningModalProps> = ({
             isLoading={isSubmitting}
           >
             <Send size={14} />
-            <span>Leave & Submit Exam</span>
+            <span>{leaveButtonText}</span>
           </Button>
         </div>
       </div>

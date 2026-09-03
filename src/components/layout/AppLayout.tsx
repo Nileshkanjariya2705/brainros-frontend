@@ -16,6 +16,7 @@ import { useState, useEffect } from 'react';
 
 // ** Components **
 import Button from '@/components/ui/Button';
+import { LogoutConfirmationModal } from '@/components/feedback/LogoutConfirmationModal';
 
 // ** Hooks & Auth Access **
 import { useAuth } from '@/hooks/useAuth';
@@ -40,6 +41,7 @@ const AppLayout = () => {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const { roles, activeRole, activeRoleMeta, hasMultipleRoles, switchActiveRole } = useRole();
 
@@ -376,8 +378,9 @@ const AppLayout = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={logout}
+              onClick={() => setShowLogoutModal(true)}
               className="text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+              title="Sign Out"
             >
               <LogOut size={16} />
               <span className="hidden sm:inline ml-1.5">Logout</span>
@@ -390,6 +393,12 @@ const AppLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmationModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+      />
     </div>
   );
 };
