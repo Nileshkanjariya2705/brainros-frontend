@@ -137,6 +137,13 @@ const StudentComparisonPage = lazyRoute(
 const SuperAdminExamResultsPage = lazyRoute(
   () => import('@/modules/Admin/pages/SuperAdminExamResultsPage'),
 );
+const SuperAdminBulkStudentRegistrationPage = lazyRoute(
+  () => import('@/modules/Admin/pages/SuperAdminBulkStudentRegistrationPage'),
+);
+const CompletedExamReportsPage = lazyRoute(
+  () => import('@/modules/Admin/pages/CompletedExamReportsPage'),
+);
+const AdminStudentsPage = lazyRoute(() => import('@/modules/Admin/pages/AdminStudentsPage'));
 const NotFoundPage = lazyRoute(() => import('@/components/feedback/NotFoundPage'));
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -410,6 +417,14 @@ const adminRoutes: RouteObject[] = [
         ),
       },
       {
+        path: 'completed-exams',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.RESULT_VIEW]}>
+            <CompletedExamReportsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'exam-manager',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
@@ -466,10 +481,26 @@ const adminRoutes: RouteObject[] = [
         ),
       },
       {
+        path: 'approvals',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.APPROVAL_VIEW]}>
+            <AdminApprovalQueuePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'approval-queue',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.APPROVAL_VIEW]}>
             <AdminApprovalQueuePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'audit-logs',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.AUDIT_VIEW]}>
+            <AdminAuditLogsPage />
           </ProtectedRoute>
         ),
       },
@@ -482,10 +513,34 @@ const adminRoutes: RouteObject[] = [
         ),
       },
       {
+        path: 'notifications',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.NOTIFICATION_VIEW]}>
+            <AdminNotificationsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'notifications-page',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.NOTIFICATION_VIEW]}>
             <AdminNotificationsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'students',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW]}>
+            <AdminStudentsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'students/bulk-register',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW]}>
+            <SuperAdminBulkStudentRegistrationPage />
           </ProtectedRoute>
         ),
       },
@@ -556,6 +611,7 @@ const superAdminRoutes: RouteObject[] = [
       { path: 'mock-tests', element: <ExamManagementPage /> },
       { path: 'exams', element: <ExamManagementPage /> },
       { path: 'exams/results', element: <SuperAdminExamResultsPage /> },
+      { path: 'completed-exams', element: <CompletedExamReportsPage /> },
       { path: 'exam-manager', element: <ExamManagerDashboardPage /> },
       { path: 'exam-manager/upload', element: <UploadQuestionPaperPage /> },
       { path: 'exam-manager/history', element: <ImportHistoryPage /> },
@@ -564,9 +620,14 @@ const superAdminRoutes: RouteObject[] = [
       { path: 'leaderboard', element: <AdminLeaderboardPage /> },
       { path: 'historical-datasets', element: <HistoricalDatasetsPage /> },
       { path: 'control-center', element: <AdminControlCenterPage /> },
+      { path: 'approvals', element: <AdminApprovalQueuePage /> },
       { path: 'approval-queue', element: <AdminApprovalQueuePage /> },
       { path: 'audit-logs', element: <AdminAuditLogsPage /> },
+      { path: 'audit-logs-page', element: <AdminAuditLogsPage /> },
       { path: 'notifications', element: <AdminNotificationsPage /> },
+      { path: 'notifications-page', element: <AdminNotificationsPage /> },
+      { path: 'students', element: <AdminStudentsPage /> },
+      { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
       { path: 'profile', element: <StudentProfilePage /> },
     ],
   },

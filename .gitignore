@@ -29,5 +29,7 @@ coverage
 .env.*
 !.env.example
 
+PROJECT_CONTEXT.md
+
 # Temporary build artifacts
 *.timestamp-*.mjs

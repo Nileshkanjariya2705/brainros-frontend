@@ -10,12 +10,9 @@ import {
   X,
   ChevronLeft,
   Upload,
-  Download,
   FileSpreadsheet,
-  CheckCircle2,
   AlertTriangle,
   FileDown,
-  Loader2,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
@@ -271,7 +268,7 @@ export const AdminTranslationManagementPage: React.FC = () => {
 
     setModalUploadError(null);
 
-    const { data, error } = await importExamTranslationsAPI(
+    const { error } = await importExamTranslationsAPI(
       uploadTargetId,
       uploadLanguageId,
       uploadFile,
@@ -854,7 +851,7 @@ export const AdminTranslationManagementPage: React.FC = () => {
           if (!isUploadingTranslation) setIsUploadModalOpen(false);
         }}
         title="Upload Module Translation File"
-        size="lg"
+        maxWidth="lg"
       >
         <div className="p-6 space-y-6">
           <div className="space-y-1">

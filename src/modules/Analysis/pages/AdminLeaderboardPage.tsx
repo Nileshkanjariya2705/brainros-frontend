@@ -12,9 +12,6 @@ import {
   ChevronRight,
   CheckCircle2,
   ArrowLeft,
-  Sparkles,
-  Award,
-  Zap,
 } from 'lucide-react';
 import cn from 'classnames';
 import {
@@ -31,8 +28,8 @@ import type {
 } from '@/types/exam.types';
 import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
-import { useCurrentUser } from '@/modules/Auth/auth-access/useCurrentUser';
-import { ROLES } from '@/constants/roles.constant';
+import { useAuth } from '@/hooks/useAuth';
+import { ROLES } from '@/modules/Auth/auth-access/roles.constants';
 import { Axios } from '@/base-axios';
 
 const SCOPES: { label: string; value: RankTypeEnum; icon: any }[] = [
@@ -46,8 +43,8 @@ const SCOPES: { label: string; value: RankTypeEnum; icon: any }[] = [
 export const AdminLeaderboardPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useCurrentUser();
-  const isAdmin = user?.role === ROLES.ADMIN || user?.role === ROLES.SUPER_ADMIN;
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes(ROLES.ADMIN) || user?.roles?.includes(ROLES.SUPER_ADMIN);
 
   const examIdParam = searchParams.get('examId');
 
@@ -273,7 +270,6 @@ export const AdminLeaderboardPage: React.FC = () => {
           {topThree.map((candidate, idx) => {
             const isRank1 = candidate.rank === 1;
             const isRank2 = candidate.rank === 2;
-            const isRank3 = candidate.rank === 3;
 
             return (
               <div
@@ -438,7 +434,7 @@ export const AdminLeaderboardPage: React.FC = () => {
                   {leaderboardData.items.map((row: LeaderboardEntry) => {
                     const isMe =
                       (user?.id && (row.studentId === user.id || (row as any).userId === user.id)) ||
-                      (user?.email && (row.studentCode === user.email || row.studentName === user.name));
+                      (user?.email && (row.studentCode === user.email || row.studentName === (user?.studentProfile?.name || (user as any)?.name)));
 
                     return (
                       <tr
@@ -532,8 +528,9 @@ export const AdminLeaderboardPage: React.FC = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
+                  );
+                })}
+              </tbody>
               </table>
             </div>
 

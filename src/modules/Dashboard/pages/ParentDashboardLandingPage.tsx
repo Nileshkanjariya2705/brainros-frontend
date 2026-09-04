@@ -134,7 +134,7 @@ export const ParentDashboardLandingPage = () => {
                     <strong className="text-slate-700">{st.attendancePercentage}%</strong>
                   </span>
                   <Link
-                    to={PRIVATE_NAVIGATION.parentWardProgress}
+                    to={`${PRIVATE_NAVIGATION.parentWardProgress}?studentId=${st.studentId}`}
                     className="font-bold text-teal-700 hover:text-teal-900 flex items-center gap-1"
                   >
                     <span>Full Diagnostic &rarr;</span>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Users,
   Clock,
@@ -28,12 +29,15 @@ import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
 
 export const ParentDashboardPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlStudentId = searchParams.get('studentId') || '';
+
   const { getParentStudentsAPI, isLoading: isLoadingStudents } = useGetParentStudentsAPI();
   const { getParentChildDashboardAPI, isLoading: isLoadingDashboard } =
     useGetParentChildDashboardAPI();
 
   const [students, setStudents] = useState<ParentStudentInfo[]>([]);
-  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [selectedStudentId, setSelectedStudentId] = useState<string>(urlStudentId);
   const [dashboardData, setDashboardData] = useState<ParentDashboardResponse | null>(null);
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SUBJECTS' | 'REVISION' | 'TESTS'>(
     'OVERVIEW',
@@ -44,7 +48,10 @@ export const ParentDashboardPage: React.FC = () => {
     const res = await getParentStudentsAPI();
     if (res.data && res.data.length > 0) {
       setStudents(res.data);
-      if (!selectedStudentId) {
+      const match = res.data.find((s) => s.studentId === urlStudentId);
+      if (match) {
+        setSelectedStudentId(match.studentId);
+      } else if (!selectedStudentId) {
         setSelectedStudentId(res.data[0].studentId);
       }
     }
@@ -117,7 +124,10 @@ export const ParentDashboardPage: React.FC = () => {
             {students.map((st) => (
               <button
                 key={st.studentId}
-                onClick={() => setSelectedStudentId(st.studentId)}
+                onClick={() => {
+                  setSelectedStudentId(st.studentId);
+                  setSearchParams({ studentId: st.studentId });
+                }}
                 className={cn(
                   'p-3.5 rounded-2xl border transition-all text-left flex items-center gap-3 min-w-[240px] cursor-pointer',
                   selectedStudentId === st.studentId

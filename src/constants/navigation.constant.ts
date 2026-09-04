@@ -87,10 +87,15 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   adminNotificationsPage: '/admin/notifications-page',
   adminChapters: '/admin/chapters',
   adminExamResults: '/admin/exams/results',
+  adminCompletedExams: '/admin/completed-exams',
+  adminBulkStudents: '/admin/students/bulk-register',
+  adminStudents: '/admin/students',
   adminProfile: '/admin/profile',
 
   // ── Super Admin role-prefixed routes ──
   superAdminDashboard: '/super-admin/dashboard',
+  superAdminBulkStudents: '/super-admin/students/bulk-register',
+  superAdminStudents: '/super-admin/students',
   superAdminQuestionBank: '/super-admin/question-bank',
   superAdminChapters: '/super-admin/chapters',
   superAdminCreateQuestion: '/super-admin/question-bank/create',
@@ -104,6 +109,7 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   superAdminMockTests: '/super-admin/mock-tests',
   superAdminExams: '/super-admin/mock-tests',
   superAdminExamResults: '/super-admin/exams/results',
+  superAdminCompletedExams: '/super-admin/completed-exams',
   superAdminExamManager: '/super-admin/exam-manager',
   superAdminUploadPaper: '/super-admin/exam-manager/upload',
   superAdminExamImportHistory: '/super-admin/exam-manager/history',

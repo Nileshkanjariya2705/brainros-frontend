@@ -10,10 +10,8 @@ import {
   Sparkles,
   FileCheck,
   BookOpen,
-  ShieldCheck,
   Layers,
   ArrowRight,
-  ArrowLeft,
   Search,
   Check,
   Sliders,
@@ -24,7 +22,6 @@ import Button from '@/components/ui/Button';
 import { toast } from '@/utils/toast';
 import {
   useGetBlueprintsAPI,
-  useValidateExamUploadAPI,
   useCreateExamFromUploadAPI,
   useUploadQuestionPaperAPI,
   downloadQuestionPaperTemplate,
@@ -447,7 +444,7 @@ export const UploadQuestionPaperPage: React.FC = () => {
                         {/* Section / Rules Tag Summary */}
                         {bp.rules && bp.rules.length > 0 && (
                           <div className="pt-2 flex flex-wrap gap-1">
-                            {bp.rules.slice(0, 3).map((r, idx) => (
+                            {bp.rules.slice(0, 3).map((r: any, idx: number) => (
                               <span
                                 key={idx}
                                 className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700"
@@ -547,6 +544,17 @@ export const UploadQuestionPaperPage: React.FC = () => {
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="e.g. JEE Main 2026 Full Length Mock 01"
+                      className="w-full text-xs font-medium rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-900 focus:bg-white focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs font-bold text-slate-700">Description (Optional)</label>
+                    <input
+                      type="text"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="e.g. Comprehensive mock exam covering Physics, Chemistry and Maths"
                       className="w-full text-xs font-medium rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-900 focus:bg-white focus:border-indigo-500 focus:outline-none"
                     />
                   </div>
@@ -737,7 +745,7 @@ export const UploadQuestionPaperPage: React.FC = () => {
                     <span>Blueprint Section Rules</span>
                   </div>
                   <div className="space-y-2 text-xs text-slate-600">
-                    {selectedBlueprint.rules.map((rule, idx) => (
+                    {selectedBlueprint.rules.map((rule: any, idx: number) => (
                       <div
                         key={idx}
                         className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between"
@@ -756,67 +764,6 @@ export const UploadQuestionPaperPage: React.FC = () => {
             </div>
           </div>
         )
-      ) : uploadResult.success ? (
-
-          {/* Sidebar Templates & Guidelines */}
-          <div className="space-y-6">
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-              <div className="flex items-center gap-2 text-slate-900 font-extrabold text-sm">
-                <Download size={18} className="text-indigo-600" />
-                <span>Question Paper Templates</span>
-              </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Download a pre-formatted question paper spreadsheet with sample questions in Physics, Chemistry, and Biology.
-              </p>
-
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <button
-                  type="button"
-                  disabled={isDownloadingTemplate}
-                  onClick={() => handleDownloadTemplate('xlsx')}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/40 text-xs font-bold text-slate-700 transition-all"
-                >
-                  <FileSpreadsheet size={16} className="text-emerald-600" />
-                  <span>Excel (.xlsx)</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={isDownloadingTemplate}
-                  onClick={() => handleDownloadTemplate('csv')}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/40 text-xs font-bold text-slate-700 transition-all"
-                >
-                  <Download size={16} className="text-blue-600" />
-                  <span>CSV (.csv)</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Checklist */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
-              <div className="text-slate-900 font-extrabold text-sm">
-                Supported Question Types
-              </div>
-              <div className="space-y-2 text-xs text-slate-600">
-                <div className="p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                  <span className="font-semibold">Single Correct MCQ</span>
-                  <span className="font-mono text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">SINGLE_CORRECT</span>
-                </div>
-                <div className="p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                  <span className="font-semibold">Multiple Correct</span>
-                  <span className="font-mono text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">MULTIPLE_CORRECT</span>
-                </div>
-                <div className="p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                  <span className="font-semibold">Assertion-Reason</span>
-                  <span className="font-mono text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">ASSERTION_REASON</span>
-                </div>
-                <div className="p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                  <span className="font-semibold">Numerical</span>
-                  <span className="font-mono text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">NUMERICAL</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       ) : uploadResult.success ? (
         /* ─── SUCCESS RESULT ────────────────────────────────────── */
         <div className="max-w-3xl mx-auto space-y-6">

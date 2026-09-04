@@ -64,7 +64,7 @@ export const LogoutConfirmationModal: React.FC<LogoutConfirmationModalProps> = (
 
   const displayName =
     user?.studentProfile?.name ||
-    user?.name ||
+    (user as any)?.name ||
     user?.phone ||
     user?.email?.split('@')[0] ||
     'User';

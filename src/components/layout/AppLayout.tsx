@@ -36,7 +36,7 @@ import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 import { APP_NAME } from '@config';
 
 const AppLayout = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);

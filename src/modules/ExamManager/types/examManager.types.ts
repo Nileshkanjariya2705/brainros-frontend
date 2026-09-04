@@ -80,6 +80,9 @@ export interface BlueprintItem {
   status: 'ACTIVE' | 'INACTIVE';
   subjectDistribution: BlueprintSubjectRule[];
   examTargetId?: string;
+  version?: number;
+  examTarget?: { id?: string; name?: string };
+  rules?: any[];
 }
 
 export interface TranslationValidationSummary {

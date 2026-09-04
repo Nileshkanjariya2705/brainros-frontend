@@ -313,7 +313,7 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
         name: name.trim(),
         totalQuestions: Number(totalQuestions),
         rules,
-      });
+      } as any);
 
       if (error) {
         setErrorMsg(typeof error === 'string' ? error : 'Failed to update blueprint');
@@ -432,18 +432,18 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
               <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs">
                 <button
                   type="button"
-                  onClick={() => setMode('COUNT')}
+                  onClick={() => setModeType('COUNT')}
                   className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    mode === 'COUNT' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500'
+                    modeType === 'COUNT' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500'
                   }`}
                 >
                   Exact Count
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMode('PERCENTAGE')}
+                  onClick={() => setModeType('PERCENTAGE')}
                   className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    mode === 'PERCENTAGE' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500'
+                    modeType === 'PERCENTAGE' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500'
                   }`}
                 >
                   Percentage (%)
@@ -519,14 +519,14 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
 
               <div className="space-y-1">
                 <label className="font-bold text-slate-600">
-                  {mode === 'COUNT' ? 'Required Count' : 'Percentage (%)'}
+                  {modeType === 'COUNT' ? 'Required Count' : 'Percentage (%)'}
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="number"
-                    value={mode === 'COUNT' ? ruleCount : rulePercentage}
+                    value={modeType === 'COUNT' ? ruleCount : rulePercentage}
                     onChange={(e) =>
-                      mode === 'COUNT'
+                      modeType === 'COUNT'
                         ? setRuleCount(Number(e.target.value))
                         : setRulePercentage(Number(e.target.value))
                     }

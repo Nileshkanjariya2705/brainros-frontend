@@ -137,7 +137,7 @@ interface RoleLayoutShellProps {
 }
 
 const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();

@@ -33,6 +33,7 @@ import {
   BookOpen,
   Award,
   Globe,
+  UserPlus,
 } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 import { FEATURES } from '@/constants/feature-flag.constant';
@@ -149,6 +150,24 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
     ],
   },
   {
+    categoryKey: 'STUDENTS',
+    categoryLabel: 'Student Directory',
+    items: [
+      {
+        key: 'all-students',
+        label: 'All Students',
+        to: PRIVATE_NAVIGATION.adminStudents,
+        icon: Users,
+      },
+      {
+        key: 'bulk-register-students',
+        label: 'Bulk Register Students',
+        to: PRIVATE_NAVIGATION.adminBulkStudents,
+        icon: UserPlus,
+      },
+    ],
+  },
+  {
     categoryKey: 'QUESTION_STUDIO',
     categoryLabel: 'Question & Content Studio',
     items: [
@@ -227,6 +246,12 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Result Publication Center',
         to: PRIVATE_NAVIGATION.adminExamResults,
         icon: Award,
+      },
+      {
+        key: 'completed-live-exams',
+        label: 'Completed Live Exam Reports',
+        to: PRIVATE_NAVIGATION.adminCompletedExams,
+        icon: FileText,
       },
     ],
   },
@@ -357,6 +382,24 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
     ],
   },
   {
+    categoryKey: 'STUDENTS',
+    categoryLabel: 'Student Directory',
+    items: [
+      {
+        key: 'all-students',
+        label: 'All Students',
+        to: PRIVATE_NAVIGATION.superAdminStudents,
+        icon: Users,
+      },
+      {
+        key: 'bulk-register-students',
+        label: 'Bulk Register Students',
+        to: PRIVATE_NAVIGATION.superAdminBulkStudents,
+        icon: UserPlus,
+      },
+    ],
+  },
+  {
     categoryKey: 'QUESTION_STUDIO',
     categoryLabel: 'Question & Content Studio',
     items: [
@@ -435,6 +478,12 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Result Publication Center',
         to: PRIVATE_NAVIGATION.superAdminExamResults,
         icon: Award,
+      },
+      {
+        key: 'super-admin-completed-live-exams',
+        label: 'Completed Live Exam Reports',
+        to: PRIVATE_NAVIGATION.superAdminCompletedExams,
+        icon: FileText,
       },
     ],
   },
