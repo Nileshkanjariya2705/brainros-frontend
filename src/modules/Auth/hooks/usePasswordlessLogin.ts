@@ -15,6 +15,7 @@ export interface PendingLoginState {
   expiresIn: number;
   resendAvailableIn: number;
   identifier: string;
+  otpLength?: number;
 }
 
 export const usePasswordlessLogin = () => {
@@ -46,6 +47,7 @@ export const usePasswordlessLogin = () => {
         expiresIn: data.expiresIn || 300,
         resendAvailableIn: data.resendAvailableIn || 60,
         identifier,
+        otpLength: data.otpLength || 5,
       });
       return true;
     } else {

@@ -267,6 +267,7 @@ export const useRequestPasswordlessLoginOtpAPI = () => {
         mobileMasked: string;
         expiresIn: number;
         resendAvailableIn: number;
+        otpLength?: number;
       }>(`${AUTH_API_BASE_PATH}/login/request-otp`, data, config);
     },
     [callApi],

@@ -298,12 +298,12 @@ const LoginForm = () => {
           className="space-y-5 animate-in fade-in zoom-in-95"
         >
           <div className="rounded-xl bg-emerald-500/10 p-4 border border-emerald-500/20 space-y-1.5">
-            <div className="flex items-center space-x-2 text-emerald-400 font-bold text-xs">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+            <div className="flex items-center space-x-2 text-emerald-700 font-bold text-xs">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
               <span>OTP Dispatched Successfully</span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              We sent a 6-digit verification code to your verified mobile ending in{' '}
+              Enter the OTP sent to your registered mobile number ending in{' '}
               <strong className="font-mono text-slate-900 font-bold">
                 {pendingLogin.mobileMasked}
               </strong>
@@ -313,10 +313,10 @@ const LoginForm = () => {
 
           <div className="space-y-3 py-1">
             <label className="block text-xs font-bold text-slate-600 text-center uppercase tracking-wider">
-              Enter 6-Digit OTP Code
+              Enter OTP Code
             </label>
             <OtpPinInput
-              length={6}
+              length={pendingLogin.otpLength || 5}
               value={currentOtp}
               onChange={(newOtp) => setValueVerify('otp', newOtp, { shouldValidate: true })}
               error={errorsVerify.otp?.message}
