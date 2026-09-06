@@ -13,12 +13,13 @@ import {
   HeartHandshake,
 } from 'lucide-react';
 import {
-  useGetStudentParentsAPI,
-  useAddStudentParentAPI,
-  useRevokeStudentParentAPI,
   type ParentLinkItem,
-  type StudentParentsResponse,
 } from '../services/admin-students.service';
+import {
+  useAdminStudentParentsQuery,
+  useAddStudentParentMutation,
+  useDeleteStudentParentMutation,
+} from '../services/admin.queries';
 import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
 
@@ -39,11 +40,21 @@ export const AdminStudentParentModal: React.FC<AdminStudentParentModalProps> = (
   onClose,
   onParentUpdated,
 }) => {
-  const { getStudentParentsAPI, isLoading: isLoadingParents } = useGetStudentParentsAPI();
-  const { addStudentParentAPI, isLoading: isAddingParent } = useAddStudentParentAPI();
-  const { revokeStudentParentAPI, isLoading: isRevokingParent } = useRevokeStudentParentAPI();
+  const {
+    data: parentData,
+    isLoading: isLoadingParents,
+  } = useAdminStudentParentsQuery(isOpen ? studentId : undefined);
 
-  const [parentData, setParentData] = useState<StudentParentsResponse | null>(null);
+  const {
+    mutateAsync: addParentMutate,
+    isPending: isAddingParent,
+  } = useAddStudentParentMutation();
+
+  const {
+    mutateAsync: revokeParentMutate,
+    isPending: isRevokingParent,
+  } = useDeleteStudentParentMutation();
+
   const [showAddForm, setShowAddForm] = useState(false);
 
   // Form State
@@ -54,18 +65,8 @@ export const AdminStudentParentModal: React.FC<AdminStudentParentModalProps> = (
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
-  const fetchParents = async () => {
-    if (!studentId) return;
-    setFormError(null);
-    const res = await getStudentParentsAPI(studentId);
-    if (res.data) {
-      setParentData(res.data);
-    }
-  };
-
   useEffect(() => {
     if (isOpen && studentId) {
-      fetchParents();
       setShowAddForm(false);
       setFormError(null);
       setFormSuccess(null);
@@ -98,22 +99,22 @@ export const AdminStudentParentModal: React.FC<AdminStudentParentModalProps> = (
     }
 
     try {
-      const res = await addStudentParentAPI(studentId, {
-        name: name.trim(),
-        mobile: cleanMobile,
-        email: email.trim().toLowerCase(),
-        relationship,
+      await addParentMutate({
+        studentId,
+        payload: {
+          name: name.trim(),
+          mobile: cleanMobile,
+          email: email.trim().toLowerCase(),
+          relationship,
+        },
       });
 
-      if (res.data) {
-        setFormSuccess('Parent linked successfully!');
-        setName('');
-        setMobile('');
-        setEmail('');
-        setShowAddForm(false);
-        await fetchParents();
-        if (onParentUpdated) onParentUpdated();
-      }
+      setFormSuccess('Parent linked successfully!');
+      setName('');
+      setMobile('');
+      setEmail('');
+      setShowAddForm(false);
+      if (onParentUpdated) onParentUpdated();
     } catch (err: any) {
       setFormError(err?.response?.data?.message || err?.message || 'Failed to link parent.');
     }
@@ -124,8 +125,7 @@ export const AdminStudentParentModal: React.FC<AdminStudentParentModalProps> = (
       return;
     }
     try {
-      await revokeStudentParentAPI(studentId, linkId);
-      await fetchParents();
+      await revokeParentMutate({ studentId, linkId });
       if (onParentUpdated) onParentUpdated();
     } catch (err: any) {
       alert(err?.response?.data?.message || err?.message || 'Failed to revoke parent link.');

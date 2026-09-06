@@ -1,5 +1,5 @@
 // ** Packages **
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileText,
@@ -18,16 +18,12 @@ import {
 } from 'lucide-react';
 
 // ** Services **
-import {
-  useGetStudentExamsAPI,
-  useStartAttemptAPI,
-  type StudentExamItem,
-  type StudentPaginationMeta,
-} from '../services';
+import { useStartAttemptAPI, type StudentExamItem } from '../services';
+import { useStudentExamsQuery } from '../services/exams.queries';
 
 // ** Hooks **
 import { useAuth } from '@/hooks/useAuth';
-import { useAxiosGet } from '@/hooks/useAxios';
+import { useAuthOptionsQuery } from '@/services/options.queries';
 
 // ** Components **
 import Button from '@/components/ui/Button';
@@ -55,23 +51,15 @@ const formatScheduleTime = (isoString?: string | null) => {
 export const AvailableExamsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [get] = useAxiosGet();
 
-  const { getStudentExamsAPI, isLoading } = useGetStudentExamsAPI();
   const { startAttemptAPI } = useStartAttemptAPI();
 
-  const [exams, setExams] = useState<StudentExamItem[]>([]);
-  const [pagination, setPagination] = useState<StudentPaginationMeta>({
-    page: 1,
-    limit: 12,
-    total: 0,
-    totalPages: 1,
-  });
+  const [page, setPage] = useState<number>(1);
+  const limit = 12;
 
   const [statusTab, setStatusTab] = useState<'ALL' | 'UPCOMING' | 'LIVE' | 'COMPLETED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [examTargets, setExamTargets] = useState<{ id: string; name: string }[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<string>('');
   const [sortOption, setSortOption] = useState<string>('UPCOMING_SOONEST');
 
@@ -83,35 +71,19 @@ export const AvailableExamsPage = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-      setPagination((prev) => ({ ...prev, page: 1 }));
+      setPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Load target options on mount
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const res = await get<{
-        examTargets: { id: string; name: string }[];
-      }>('/auth/options');
-      if (!active) return;
-      const opts = res.data?.examTargets ? res.data : (res.data as any)?.data || {};
-      if (opts?.examTargets) {
-        setExamTargets(opts.examTargets);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [get]);
+  const { data: authOptions } = useAuthOptionsQuery();
+  const examTargets: Array<{ id: string; name: string }> = authOptions?.examTargets || [];
 
-  // Fetch Exams from API
-  const fetchExams = useCallback(async () => {
+  const queryParams = useMemo(() => {
     const params: Record<string, any> = {
       status: statusTab,
-      page: pagination.page,
-      limit: pagination.limit,
+      page,
+      limit,
       sort: sortOption,
     };
     if (debouncedSearch.trim()) {
@@ -120,20 +92,17 @@ export const AvailableExamsPage = () => {
     if (selectedTarget) {
       params.examTargetId = selectedTarget;
     }
+    return params;
+  }, [statusTab, page, limit, sortOption, debouncedSearch, selectedTarget]);
 
-    const res = await getStudentExamsAPI(params);
-    if (res.data) {
-      setExams(Array.isArray(res.data) ? res.data : (res.data as any).data || []);
-      const meta = (res as any).meta || (res.response?.data as any)?.meta;
-      if (meta) {
-        setPagination(meta);
-      }
-    }
-  }, [statusTab, pagination.page, pagination.limit, sortOption, debouncedSearch, selectedTarget, getStudentExamsAPI]);
-
-  useEffect(() => {
-    fetchExams();
-  }, [fetchExams]);
+  const { data: examsResult, isLoading } = useStudentExamsQuery(queryParams);
+  const exams = examsResult?.data || [];
+  const pagination = examsResult?.meta || {
+    page,
+    limit,
+    total: exams.length,
+    totalPages: 1,
+  };
 
   // Handle Exam Actions
   const handleStartExam = (exam: StudentExamItem) => {
@@ -215,7 +184,7 @@ export const AvailableExamsPage = () => {
               key={tab.key}
               onClick={() => {
                 setStatusTab(tab.key as any);
-                setPagination((prev) => ({ ...prev, page: 1 }));
+                setPage(1);
               }}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                 statusTab === tab.key
@@ -250,7 +219,7 @@ export const AvailableExamsPage = () => {
             value={selectedTarget}
             onChange={(e) => {
               setSelectedTarget(e.target.value);
-              setPagination((prev) => ({ ...prev, page: 1 }));
+              setPage(1);
             }}
             className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
           >
@@ -267,7 +236,7 @@ export const AvailableExamsPage = () => {
             value={sortOption}
             onChange={(e) => {
               setSortOption(e.target.value);
-              setPagination((prev) => ({ ...prev, page: 1 }));
+              setPage(1);
             }}
             className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
           >
@@ -514,7 +483,7 @@ export const AvailableExamsPage = () => {
               variant="outline"
               size="sm"
               disabled={pagination.page <= 1}
-              onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
               className="rounded-xl text-xs flex items-center gap-1"
             >
               <ChevronLeft size={14} /> Previous
@@ -526,7 +495,7 @@ export const AvailableExamsPage = () => {
               variant="outline"
               size="sm"
               disabled={pagination.page >= pagination.totalPages}
-              onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
+              onClick={() => setPage((prev) => prev + 1)}
               className="rounded-xl text-xs flex items-center gap-1"
             >
               Next <ChevronRight size={14} />

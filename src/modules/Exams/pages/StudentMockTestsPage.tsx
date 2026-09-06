@@ -1,5 +1,5 @@
 // ** Packages **
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import {
   Award,
@@ -19,14 +19,16 @@ import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 
 // ** Services **
 import {
-  useGetStudentMockTestsAPI,
-  useStartAttemptAPI,
   type StudentMockTestItem,
   type StudentPaginationMeta,
 } from '../services';
+import {
+  useStudentMockTestsQuery,
+  useStartAttemptMutation,
+} from '../services/exams.queries';
 
 // ** Hooks **
-import { useAxiosGet } from '@/hooks/useAxios';
+import { useAuthOptionsQuery } from '@/services/options.queries';
 
 // ** Components **
 import Button from '@/components/ui/Button';
@@ -56,23 +58,11 @@ const getDifficultyBadge = (difficulty: string) => {
 
 export const StudentMockTestsPage = () => {
   const navigate = useNavigate();
-  const [get] = useAxiosGet();
 
-  const { getStudentMockTestsAPI, isLoading } = useGetStudentMockTestsAPI();
-  const { startAttemptAPI } = useStartAttemptAPI();
-
-  const [mockTests, setMockTests] = useState<StudentMockTestItem[]>([]);
-  const [pagination, setPagination] = useState<StudentPaginationMeta>({
-    page: 1,
-    limit: 12,
-    total: 0,
-    totalPages: 1,
-  });
-
+  const [page, setPage] = useState(1);
   const [attemptTab, setAttemptTab] = useState<'ALL' | 'NOT_ATTEMPTED' | 'ATTEMPTED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [examTargets, setExamTargets] = useState<{ id: string; name: string }[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<string>('');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('ALL');
   const [selectedSubject, setSelectedSubject] = useState<string>('');
@@ -91,73 +81,41 @@ export const StudentMockTestsPage = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-      setPagination((prev) => ({ ...prev, page: 1 }));
+      setPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Load target options on mount
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const res = await get<{
-        examTargets: { id: string; name: string }[];
-      }>('/auth/options');
-      if (!active) return;
-      const opts = res.data?.examTargets ? res.data : (res.data as any)?.data || {};
-      if (opts?.examTargets) {
-        setExamTargets(opts.examTargets);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [get]);
+  // Load target options from cached query
+  const { data: authOptions } = useAuthOptionsQuery();
+  const examTargets: Array<{ id: string; name: string }> = authOptions?.examTargets || [];
 
-  // Fetch Mock Tests from API
-  const fetchMockTests = useCallback(async () => {
+  // Build query params
+  const queryParams = useMemo(() => {
     const params: Record<string, any> = {
       attemptStatus: attemptTab,
-      page: pagination.page,
-      limit: pagination.limit,
+      page,
+      limit: 12,
       sort: sortOption,
     };
-    if (debouncedSearch.trim()) {
-      params.search = debouncedSearch.trim();
-    }
-    if (selectedTarget) {
-      params.examTargetId = selectedTarget;
-    }
-    if (selectedDifficulty && selectedDifficulty !== 'ALL') {
-      params.difficulty = selectedDifficulty;
-    }
-    if (selectedSubject) {
-      params.subjectId = selectedSubject;
-    }
+    if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
+    if (selectedTarget) params.examTargetId = selectedTarget;
+    if (selectedDifficulty && selectedDifficulty !== 'ALL') params.difficulty = selectedDifficulty;
+    if (selectedSubject) params.subjectId = selectedSubject;
+    return params;
+  }, [attemptTab, page, sortOption, debouncedSearch, selectedTarget, selectedDifficulty, selectedSubject]);
 
-    const res = await getStudentMockTestsAPI(params);
-    if (res.data) {
-      setMockTests(Array.isArray(res.data) ? res.data : (res.data as any).data || []);
-      const meta = (res as any).meta || (res.response?.data as any)?.meta;
-      if (meta) {
-        setPagination(meta);
-      }
-    }
-  }, [
-    attemptTab,
-    pagination.page,
-    pagination.limit,
-    sortOption,
-    debouncedSearch,
-    selectedTarget,
-    selectedDifficulty,
-    selectedSubject,
-    getStudentMockTestsAPI,
-  ]);
+  // Server-side cached query for mock tests
+  const { data: mockTestsData, isLoading } = useStudentMockTestsQuery(queryParams);
+  const mockTests: StudentMockTestItem[] = mockTestsData?.data || [];
+  const pagination: StudentPaginationMeta = mockTestsData?.meta || {
+    page,
+    limit: 12,
+    total: 0,
+    totalPages: 1,
+  };
 
-  useEffect(() => {
-    fetchMockTests();
-  }, [fetchMockTests]);
+  const { mutateAsync: startAttemptMutation } = useStartAttemptMutation();
 
   // Handle mockTestId query parameter (e.g. from Dashboard diagnostic recommendation)
   useEffect(() => {
@@ -187,20 +145,22 @@ export const StudentMockTestsPage = () => {
   const launchTest = async (testId: string, languageId: string) => {
     setStartingTestId(testId);
     setStartError(null);
-    const res = await startAttemptAPI(testId, languageId);
-    setStartingTestId(null);
+    try {
+      const payload: any = await startAttemptMutation({ examId: testId, languageId });
+      setStartingTestId(null);
+      const attemptData = payload?.data || payload;
+      const attemptId = attemptData?.attemptId || attemptData?.id;
 
-    const payload: any = res.data;
-    const raw: any = res.response?.data;
-    const attemptData = payload?.data || payload || raw?.data;
-    const attemptId = attemptData?.attemptId || attemptData?.id;
-
-    if (attemptId) {
-      setShowLangModal(null);
-      navigate(`/exam/${testId}/attempt/${attemptId}`);
-    } else {
+      if (attemptId) {
+        setShowLangModal(null);
+        navigate(`/exam/${testId}/attempt/${attemptId}`);
+      } else {
+        setStartError('Unable to start practice test.');
+      }
+    } catch (err: any) {
+      setStartingTestId(null);
       const errMsg =
-        res.error || raw?.message || payload?.message || 'Unable to start practice test.';
+        err?.response?.data?.message || err?.message || 'Unable to start practice test.';
       setStartError(errMsg);
     }
   };
@@ -264,7 +224,7 @@ export const StudentMockTestsPage = () => {
                 key={tab.key}
                 onClick={() => {
                   setAttemptTab(tab.key as any);
-                  setPagination((prev) => ({ ...prev, page: 1 }));
+                  setPage(1);
                 }}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                   attemptTab === tab.key
@@ -300,7 +260,7 @@ export const StudentMockTestsPage = () => {
             value={selectedSubject}
             onChange={(e) => {
               setSelectedSubject(e.target.value);
-              setPagination((prev) => ({ ...prev, page: 1 }));
+              setPage(1);
             }}
             className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
           >
@@ -316,7 +276,7 @@ export const StudentMockTestsPage = () => {
             value={selectedDifficulty}
             onChange={(e) => {
               setSelectedDifficulty(e.target.value);
-              setPagination((prev) => ({ ...prev, page: 1 }));
+              setPage(1);
             }}
             className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
           >
@@ -331,7 +291,7 @@ export const StudentMockTestsPage = () => {
             value={selectedTarget}
             onChange={(e) => {
               setSelectedTarget(e.target.value);
-              setPagination((prev) => ({ ...prev, page: 1 }));
+              setPage(1);
             }}
             className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
           >
@@ -348,7 +308,7 @@ export const StudentMockTestsPage = () => {
             value={sortOption}
             onChange={(e) => {
               setSortOption(e.target.value);
-              setPagination((prev) => ({ ...prev, page: 1 }));
+              setPage(1);
             }}
             className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium ml-auto"
           >
@@ -615,7 +575,7 @@ export const StudentMockTestsPage = () => {
               variant="outline"
               size="sm"
               disabled={pagination.page <= 1}
-              onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
               className="rounded-xl text-xs flex items-center gap-1"
             >
               <ChevronLeft size={14} /> Previous
@@ -627,7 +587,7 @@ export const StudentMockTestsPage = () => {
               variant="outline"
               size="sm"
               disabled={pagination.page >= pagination.totalPages}
-              onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
+              onClick={() => setPage((p) => p + 1)}
               className="rounded-xl text-xs flex items-center gap-1"
             >
               Next <ChevronRight size={14} />

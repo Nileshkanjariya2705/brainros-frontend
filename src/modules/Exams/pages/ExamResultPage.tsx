@@ -1,5 +1,5 @@
 // ** Packages **
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import {
@@ -25,13 +25,15 @@ import {
 
 // ** Services **
 import {
-  useGetAttemptResultStatusAPI,
-  useGetFullAnalysisAPI,
-  useGetAnswerReviewAPI,
-  useGetAttemptStrategyAPI,
   useRecalculateStrategyAPI,
-  useGetMyRanksAPI,
 } from '../services';
+import {
+  useResultStatusQuery,
+  useFullAnalysisQuery,
+  useAttemptStrategyQuery,
+  useMyRanksQuery,
+  useAnswerReviewQuery,
+} from '../services/exams.queries';
 
 // ** Components **
 import Loader from '@/components/feedback/Loader';
@@ -47,40 +49,13 @@ import { SmartRecommendationsView } from '@/modules/Analysis/components/SmartRec
 import { RankPercentileView } from '@/modules/Analysis/components/RankPercentileView';
 
 // ** Types **
-import type {
-  FullAnalysisReport,
-  QuestionReviewItem,
-  DetailedStrategyAnalysis,
-  MyRanksResponse,
-  ResultStatusResponse,
-} from '@/types/exam.types';
+import type { QuestionReviewItem } from '@/types/exam.types';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 
 const ExamResultPage = () => {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
 
-  // API Hooks
-  const { getAttemptResultStatusAPI } = useGetAttemptResultStatusAPI();
-  const { getFullAnalysisAPI, isLoading: isAnalysisLoading } =
-    useGetFullAnalysisAPI();
-  const { getAnswerReviewAPI } = useGetAnswerReviewAPI();
-  const { getAttemptStrategyAPI } = useGetAttemptStrategyAPI();
-  const { recalculateStrategyAPI, isLoading: isRecalculatingStrategy } =
-    useRecalculateStrategyAPI();
-  const { getMyRanksAPI, isLoading: isRanksLoading } = useGetMyRanksAPI();
-
-  // Lifecycle & Status State
-  const [resultStatusData, setResultStatusData] =
-    useState<ResultStatusResponse | null>(null);
-  const [isPolling, setIsPolling] = useState(true);
-
-  // Analysis State
-  const [analysis, setAnalysis] = useState<FullAnalysisReport | null>(null);
-  const [detailedStrategy, setDetailedStrategy] =
-    useState<DetailedStrategyAnalysis | null>(null);
-  const [ranks, setRanks] = useState<MyRanksResponse | null>(null);
-  const [reviewItems, setReviewItems] = useState<QuestionReviewItem[]>([]);
   const [activeTab, setActiveTab] = useState<
     | 'overview'
     | 'ranks'
@@ -91,7 +66,64 @@ const ExamResultPage = () => {
     | 'recommendations'
     | 'review'
   >('overview');
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // TanStack Query for Result Status with auto-polling (polls every 3s, terminates on terminal state)
+  const {
+    data: resultStatusData,
+    isLoading: isStatusLoading,
+    refetch: refetchStatus,
+  } = useResultStatusQuery(attemptId);
+
+  const isReady = Boolean(
+    resultStatusData?.availability === 'PUBLISHED' ||
+      resultStatusData?.availability === 'RESULT_READY' ||
+      resultStatusData?.resultStatus === 'PUBLISHED' ||
+      resultStatusData?.resultStatus === 'COMPLETED' ||
+      resultStatusData?.resultStatus === 'EVALUATED' ||
+      (resultStatusData as any)?.status === 'EVALUATED' ||
+      (resultStatusData as any)?.attemptStatus === 'EVALUATED' ||
+      resultStatusData?.reportAvailable === true ||
+      resultStatusData?.resultAvailable === true,
+  );
+
+  const isPolling =
+    !isReady &&
+    (isStatusLoading ||
+      resultStatusData?.availability === 'PROCESSING' ||
+      resultStatusData?.processingStatus === 'PROCESSING');
+
+  // TanStack Query for immutable analysis report (staleTime: Infinity once completed)
+  const {
+    data: analysis,
+    isLoading: isAnalysisLoading,
+    error: analysisError,
+  } = useFullAnalysisQuery(attemptId, isReady);
+
+  // Lazy-loaded section queries
+  const {
+    data: detailedStrategy,
+    refetch: refetchStrategy,
+  } = useAttemptStrategyQuery(
+    attemptId,
+    isReady && (activeTab === 'strategy' || activeTab === 'overview'),
+  );
+
+  const {
+    data: ranks,
+    isLoading: isRanksLoading,
+    refetch: refetchRanks,
+  } = useMyRanksQuery(
+    attemptId,
+    isReady && (activeTab === 'ranks' || activeTab === 'overview'),
+  );
+
+  const {
+    data: reviewData,
+  } = useAnswerReviewQuery(attemptId, isReady && activeTab === 'review');
+  const reviewItems: QuestionReviewItem[] = reviewData || [];
+
+  const { recalculateStrategyAPI, isLoading: isRecalculatingStrategy } =
+    useRecalculateStrategyAPI();
 
   // Question review pagination and filtering
   const [reviewFilter, setReviewFilter] = useState<
@@ -100,123 +132,31 @@ const ExamResultPage = () => {
   const [reviewPage, setReviewPage] = useState<number>(1);
   const reviewPageSize = 5;
 
-  // Load published results
-  const loadPublishedReport = useCallback(async () => {
-    if (!attemptId) return;
-    const aRes = await getFullAnalysisAPI(attemptId);
-    if (aRes.data) {
-      setAnalysis(aRes.data);
-    } else if (aRes.error) {
-      setErrorMsg(aRes.error);
-    }
+  const errorMsg =
+    (analysisError as any)?.response?.data?.message ||
+    (analysisError as any)?.message ||
+    (resultStatusData?.availability === 'FAILED' ||
+    resultStatusData?.processingStatus === 'FAILED'
+      ? resultStatusData?.message ||
+        'We could not calculate your result. Please try again later.'
+      : null);
 
-    const sRes = await getAttemptStrategyAPI(attemptId);
-    if (sRes.data) {
-      setDetailedStrategy(sRes.data);
-    }
-
-    const rRes = await getMyRanksAPI(attemptId);
-    if (rRes.data) {
-      setRanks(rRes.data);
-    }
-
-    const revRes = await getAnswerReviewAPI(attemptId);
-    if (revRes.data) {
-      setReviewItems(revRes.data);
-    }
-  }, [
-    attemptId,
-    getFullAnalysisAPI,
-    getAttemptStrategyAPI,
-    getMyRanksAPI,
-    getAnswerReviewAPI,
-  ]);
-
-  // ─── 1. Check Result Status & Poll if in processing ─────────────
-  const checkStatus = useCallback(async () => {
-    if (!attemptId) return;
-    try {
-      const res = await getAttemptResultStatusAPI(attemptId);
-      if (res.data) {
-        setResultStatusData(res.data);
-
-        // If Result is evaluated, calculated, published, or available, stop polling and load report immediately
-        const isReady =
-          res.data.availability === 'PUBLISHED' ||
-          res.data.availability === 'RESULT_READY' ||
-          res.data.resultStatus === 'PUBLISHED' ||
-          res.data.resultStatus === 'COMPLETED' ||
-          res.data.resultStatus === 'EVALUATED' ||
-          (res.data as any).status === 'EVALUATED' ||
-          (res.data as any).attemptStatus === 'EVALUATED' ||
-          res.data.reportAvailable === true ||
-          res.data.resultAvailable === true;
-
-        if (isReady) {
-          setIsPolling(false);
-          loadPublishedReport();
-        } else if (res.data.availability === 'RESULT_PENDING') {
-          setIsPolling(false);
-        } else if (
-          res.data.availability === 'FAILED' ||
-          res.data.processingStatus === 'FAILED'
-        ) {
-          setIsPolling(false);
-          setErrorMsg(
-            res.data.message ||
-              'We could not calculate your result. Please try again later.',
-          );
-        }
-      }
-    } catch {
-      // Non-blocking status retry
-    }
-  }, [attemptId, getAttemptResultStatusAPI, loadPublishedReport]);
-
-  useEffect(() => {
-    checkStatus();
-  }, [checkStatus]);
-
-  // Periodic polling while in PROCESSING state
-  useEffect(() => {
-    if (!isPolling) return;
-    const interval = setInterval(() => {
-      checkStatus();
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [isPolling, checkStatus]);
+  const checkStatus = () => {
+    refetchStatus();
+  };
 
   const handleRecalculateStrategy = async () => {
     if (!attemptId) return;
-    const res = await recalculateStrategyAPI(attemptId, 1);
-    if (res.data) {
-      setDetailedStrategy(res.data);
-    }
+    await recalculateStrategyAPI(attemptId, 1);
+    refetchStrategy();
   };
 
   const handleRefreshRanks = async () => {
-    if (!attemptId) return;
-    const res = await getMyRanksAPI(attemptId);
-    if (res.data) {
-      setRanks(res.data);
-    }
+    refetchRanks();
   };
 
-  // Lazy load review when review tab selected
-  const handleTabChange = async (tab: typeof activeTab) => {
+  const handleTabChange = (tab: typeof activeTab) => {
     setActiveTab(tab);
-    if (tab === 'review' && attemptId && reviewItems.length === 0) {
-      const res = await getAnswerReviewAPI(attemptId);
-      if (res.data) setReviewItems(res.data);
-    }
-    if (tab === 'strategy' && attemptId && !detailedStrategy) {
-      const res = await getAttemptStrategyAPI(attemptId);
-      if (res.data) setDetailedStrategy(res.data);
-    }
-    if (tab === 'ranks' && attemptId && !ranks) {
-      const res = await getMyRanksAPI(attemptId);
-      if (res.data) setRanks(res.data);
-    }
   };
 
   // ─── Case 1: LIVE EXAM Awaiting Super Admin Publication ──────────

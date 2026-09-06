@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -16,11 +16,11 @@ import {
 } from 'lucide-react';
 import cn from 'classnames';
 import {
-  useGetNotificationsAPI,
-  useMarkNotificationAsReadAPI,
-  useMarkAllNotificationsAsReadAPI,
-  useDeleteNotificationAPI,
-} from '../services';
+  useNotificationsQuery,
+  useMarkNotificationReadMutation,
+  useMarkAllNotificationsReadMutation,
+  useDeleteNotificationMutation,
+} from '../services/notification.queries';
 import { handleNotificationClick } from '../utils/handleNotificationClick';
 import type { InAppNotification, NotificationType } from '@/types/exam.types';
 import Loader from '@/components/feedback/Loader';
@@ -93,65 +93,37 @@ export const StudentNotificationsPage: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'ALL' | 'UNREAD'>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
-  const [notifications, setNotifications] = useState<InAppNotification[]>([]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
 
-  const { getNotificationsAPI, isLoading } = useGetNotificationsAPI();
-  const { markNotificationAsReadAPI } = useMarkNotificationAsReadAPI();
-  const { markAllNotificationsAsReadAPI, isLoading: isMarkingAll } =
-    useMarkAllNotificationsAsReadAPI();
-  const { deleteNotificationAPI } = useDeleteNotificationAPI();
-
-  const fetchNotifications = useCallback(
-    async (page: number, unreadOnly: boolean) => {
-      const res = await getNotificationsAPI({
-        page,
-        limit: 15,
-        unreadOnly: unreadOnly ? true : undefined,
-      });
-
-      const responseData = (res.data as any)?.data || res.data;
-      const meta = (res.data as any)?.meta;
-
-      if (Array.isArray(responseData)) {
-        setNotifications(responseData);
-      } else if (Array.isArray(res.data)) {
-        setNotifications(res.data);
-      }
-
-      if (meta) {
-        setTotalPages(meta.totalPages || 1);
-        setTotalCount(meta.total || 0);
-      }
-    },
-    [getNotificationsAPI],
+  const queryParams = useMemo(
+    () => ({
+      page: currentPage,
+      limit: 15,
+      unreadOnly: activeTab === 'UNREAD' ? true : undefined,
+    }),
+    [currentPage, activeTab],
   );
 
-  useEffect(() => {
-    fetchNotifications(currentPage, activeTab === 'UNREAD');
-  }, [currentPage, activeTab, fetchNotifications]);
+  const { data: notificationData, isLoading } = useNotificationsQuery(queryParams);
+  const notifications: InAppNotification[] = notificationData?.items || [];
+  const totalPages = notificationData?.meta?.totalPages || 1;
+  const totalCount = notificationData?.meta?.total || 0;
+
+  const { mutateAsync: markReadMutate } = useMarkNotificationReadMutation();
+  const { mutateAsync: markAllReadMutate, isPending: isMarkingAll } =
+    useMarkAllNotificationsReadMutation();
+  const { mutateAsync: deleteMutate } = useDeleteNotificationMutation();
 
   const handleMarkAsRead = async (id: string) => {
-    // Optimistic update
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n)),
-    );
-    await markNotificationAsReadAPI(id);
+    await markReadMutate(id);
   };
 
   const handleMarkAllAsRead = async () => {
-    setNotifications((prev) =>
-      prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() })),
-    );
-    await markAllNotificationsAsReadAPI();
-    fetchNotifications(currentPage, activeTab === 'UNREAD');
+    await markAllReadMutate();
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-    await deleteNotificationAPI(id);
+    await deleteMutate(id);
   };
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;

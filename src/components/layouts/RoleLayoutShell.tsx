@@ -1,5 +1,4 @@
-// ** Packages **
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import { GraduationCap, Menu, X, User, Bell, LogOut, ChevronDown } from 'lucide-react';
 import { useState, useEffect, type ReactNode } from 'react';
@@ -14,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from '@/redux/store';
 import { setUserData } from '@/redux/slices/authSlice';
 import { Axios } from '@/base-axios';
+import { useUnreadNotificationCountQuery } from '@/modules/Notification/services/notification.queries';
 import {
   useRole,
   useFeatures,
@@ -140,7 +140,6 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
   const { user } = useAuth();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -149,10 +148,11 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
   const { isEnabled: isFeatureActive } = useFeatures();
 
   const { theme, menuGroups, dashboardPath, notificationsPath, profilePath, ctaWidget } = config;
-  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const { data: unreadCount = 0 } = useUnreadNotificationCountQuery(Boolean(notificationsPath));
 
-  // Sync user profile & permissions on mount
+  // Sync user profile & permissions on mount (only if not already loaded in Redux)
   useEffect(() => {
+    if (user?.id) return;
     let active = true;
     const fetchUser = async () => {
       try {
@@ -169,31 +169,7 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
     return () => {
       active = false;
     };
-  }, [dispatch]);
-
-  // Sync unread notification count
-  useEffect(() => {
-    if (!notificationsPath) return;
-    let isMounted = true;
-
-    const fetchUnread = async () => {
-      try {
-        const res = await Axios.get('/notifications/unread-count');
-        if (isMounted && res.data && typeof res.data.count === 'number') {
-          setUnreadCount(res.data.count);
-        }
-      } catch {
-        // Silently ignore
-      }
-    };
-
-    fetchUnread();
-    const timer = setInterval(fetchUnread, 30000);
-    return () => {
-      isMounted = false;
-      clearInterval(timer);
-    };
-  }, [notificationsPath, location.pathname]);
+  }, [dispatch, user?.id]);
 
   // Prevent background scroll when mobile sidebar drawer is open
   useEffect(() => {

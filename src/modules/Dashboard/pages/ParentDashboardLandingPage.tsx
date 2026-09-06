@@ -1,24 +1,11 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldCheck, TrendingUp, UserCheck, ArrowRight, BookOpen, Award } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
-import { useGetParentOverviewAPI } from '@/modules/Exams/services';
-import type { ParentStudentOverviewItem } from '@/types/exam.types';
+import { useParentOverviewQuery } from '@/modules/Exams/services/parent.queries';
 import Loader from '@/components/feedback/Loader';
 
 export const ParentDashboardLandingPage = () => {
-  const { getParentOverviewAPI, isLoading } = useGetParentOverviewAPI();
-  const [students, setStudents] = useState<ParentStudentOverviewItem[]>([]);
-
-  useEffect(() => {
-    const fetchOverview = async () => {
-      const res = await getParentOverviewAPI();
-      if (res.data) {
-        setStudents(res.data);
-      }
-    };
-    fetchOverview();
-  }, [getParentOverviewAPI]);
+  const { data: students = [], isLoading } = useParentOverviewQuery();
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300 pb-12">

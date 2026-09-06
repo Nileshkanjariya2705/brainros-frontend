@@ -29,11 +29,13 @@ import {
   Users,
 } from 'lucide-react';
 import {
-  useGetAdminStudentsAPI,
-  useGetAdminStudentFilterOptionsAPI,
   type AdminStudentItem,
   type AdminStudentFilterOptions,
 } from '../services/admin-students.service';
+import {
+  useAdminStudentsQuery,
+  useAdminStudentFilterOptionsQuery,
+} from '../services/admin.queries';
 import AdminStudentParentModal from '../components/AdminStudentParentModal';
 import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
@@ -41,25 +43,16 @@ import Loader from '@/components/feedback/Loader';
 export const AdminStudentsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // API Hooks
-  const { getAdminStudentsAPI, isLoading: isLoadingStudents, isError: isLoadError } =
-    useGetAdminStudentsAPI();
-  const { getAdminStudentFilterOptionsAPI } = useGetAdminStudentFilterOptionsAPI();
-
-  // Master Data Filter Options
-  const [filterOptions, setFilterOptions] = useState<AdminStudentFilterOptions>({
+  // Master Data Filter Options from cached query (staleTime: 30m)
+  const { data: filterOptionsData } = useAdminStudentFilterOptionsQuery();
+  const filterOptions: AdminStudentFilterOptions = filterOptionsData || {
     states: [],
     districts: [],
     classes: [],
     examTargets: [],
     institutions: [],
     statuses: [],
-  });
-
-  // Table Data State
-  const [students, setStudents] = useState<AdminStudentItem[]>([]);
-  const [totalCount, setTotalCount] = useState<number>(0);
-  const [totalPages, setTotalPages] = useState<number>(1);
+  };
 
   // Search Debounce State
   const urlSearch = searchParams.get('search') || '';
@@ -93,16 +86,46 @@ export const AdminStudentsPage: React.FC = () => {
   const districtFilter = searchParams.get('districtId') || '';
   const institutionFilter = searchParams.get('institutionId') || '';
 
-  // Load Master Data Filter Options on Mount
-  useEffect(() => {
-    const fetchMasterOptions = async () => {
-      const res = await getAdminStudentFilterOptionsAPI();
-      if (res.data) {
-        setFilterOptions(res.data);
-      }
-    };
-    fetchMasterOptions();
-  }, []);
+  // Server-side cached table query with keepPreviousData to prevent blank loading flash
+  const queryParams = useMemo(
+    () => ({
+      page,
+      pageSize,
+      search: urlSearch,
+      sortBy,
+      sortOrder,
+      status: statusFilter || undefined,
+      classId: classFilter || undefined,
+      examTargetId: examTargetFilter || undefined,
+      stateId: stateFilter || undefined,
+      districtId: districtFilter || undefined,
+      institutionId: institutionFilter || undefined,
+    }),
+    [
+      page,
+      pageSize,
+      urlSearch,
+      sortBy,
+      sortOrder,
+      statusFilter,
+      classFilter,
+      examTargetFilter,
+      stateFilter,
+      districtFilter,
+      institutionFilter,
+    ],
+  );
+
+  const {
+    data: studentsData,
+    isLoading: isLoadingStudents,
+    isError: isLoadError,
+    refetch: fetchStudents,
+  } = useAdminStudentsQuery(queryParams);
+
+  const students = studentsData?.items || [];
+  const totalCount = studentsData?.pagination?.total || 0;
+  const totalPages = studentsData?.pagination?.totalPages || 1;
 
   // Update URL search params helper
   const updateQueryParams = useCallback(
@@ -139,46 +162,6 @@ export const AdminStudentsPage: React.FC = () => {
   useEffect(() => {
     setSearchInput(urlSearch);
   }, [urlSearch]);
-
-  // Fetch Student List from Backend
-  const fetchStudents = useCallback(async () => {
-    const res = await getAdminStudentsAPI({
-      page,
-      pageSize,
-      search: urlSearch,
-      sortBy,
-      sortOrder,
-      status: statusFilter || undefined,
-      classId: classFilter || undefined,
-      examTargetId: examTargetFilter || undefined,
-      stateId: stateFilter || undefined,
-      districtId: districtFilter || undefined,
-      institutionId: institutionFilter || undefined,
-    });
-
-    if (res.data) {
-      setStudents(res.data.items);
-      setTotalCount(res.data.pagination.total);
-      setTotalPages(res.data.pagination.totalPages);
-    }
-  }, [
-    getAdminStudentsAPI,
-    page,
-    pageSize,
-    urlSearch,
-    sortBy,
-    sortOrder,
-    statusFilter,
-    classFilter,
-    examTargetFilter,
-    stateFilter,
-    districtFilter,
-    institutionFilter,
-  ]);
-
-  useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
 
   // Available districts filtered by selected state
   const filteredDistricts = useMemo(() => {

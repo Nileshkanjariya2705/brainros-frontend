@@ -7,7 +7,8 @@
  */
 
 // ** API **
-const API_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+const rawApiUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000').trim();
+const API_URL = rawApiUrl.replace(/\/+$/, '');
 const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT ?? 15000);
 
 // ** App **

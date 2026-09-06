@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/modules/Auth/auth-access';
 import { Axios } from '@/base-axios';
 import { toast } from '@/utils/toast';
+import { clearUserSessionCache } from '@/queryClient';
 
 interface LogoutConfirmationModalProps {
   isOpen: boolean;
@@ -51,6 +52,7 @@ export const LogoutConfirmationModal: React.FC<LogoutConfirmationModalProps> = (
           localStorage.removeItem('accessToken');
           sessionStorage.clear();
         } catch {}
+        clearUserSessionCache();
         logout();
         toast.success('Logged out successfully.');
       }

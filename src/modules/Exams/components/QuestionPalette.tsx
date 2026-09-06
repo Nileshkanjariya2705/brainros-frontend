@@ -22,7 +22,7 @@ export interface QuestionPaletteProps {
   isMobileDrawer?: boolean;
 }
 
-export const QuestionPalette: React.FC<QuestionPaletteProps> = ({
+export const QuestionPaletteComponent: React.FC<QuestionPaletteProps> = ({
   questions,
   currentIdx,
   activeSection,
@@ -33,27 +33,39 @@ export const QuestionPalette: React.FC<QuestionPaletteProps> = ({
   onClose,
   isMobileDrawer = false,
 }) => {
-  // Filter questions for active section
-  const sectionQuestions =
-    activeSection === 'ALL'
+  // Precompute question ID to global index map for O(1) lookups
+  const questionIndexMap = React.useMemo(() => {
+    const map = new Map<string, number>();
+    questions.forEach((q, idx) => {
+      map.set(q.examQuestionId, idx);
+    });
+    return map;
+  }, [questions]);
+
+  // Filter questions for active section (memoized)
+  const sectionQuestions = React.useMemo(() => {
+    return activeSection === 'ALL'
       ? questions
       : questions.filter((q) => (q.section?.name || 'General') === activeSection);
+  }, [questions, activeSection]);
 
   // Status counts across all questions
-  const counts = questions.reduce(
-    (acc, q) => {
-      const st = getQuestionStatus(q);
-      acc[st] = (acc[st] || 0) + 1;
-      return acc;
-    },
-    {
-      ANSWERED: 0,
-      NOT_ANSWERED: 0,
-      MARKED: 0,
-      ANS_MARKED: 0,
-      NOT_VISITED: 0,
-    } as Record<QuestionStatusType, number>,
-  );
+  const counts = React.useMemo(() => {
+    return questions.reduce(
+      (acc, q) => {
+        const st = getQuestionStatus(q);
+        acc[st] = (acc[st] || 0) + 1;
+        return acc;
+      },
+      {
+        ANSWERED: 0,
+        NOT_ANSWERED: 0,
+        MARKED: 0,
+        ANS_MARKED: 0,
+        NOT_VISITED: 0,
+      } as Record<QuestionStatusType, number>,
+    );
+  }, [questions, getQuestionStatus]);
 
   return (
     <div className="flex flex-col bg-white h-full w-full max-w-sm lg:w-72 xl:w-80 shrink-0 p-4 border-l border-slate-200">
@@ -125,7 +137,7 @@ export const QuestionPalette: React.FC<QuestionPaletteProps> = ({
       <div className="my-3.5 flex-1 overflow-y-auto pr-1">
         <div className="grid grid-cols-5 gap-2">
           {sectionQuestions.map((q) => {
-            const globalIdx = questions.findIndex((gq) => gq.examQuestionId === q.examQuestionId);
+            const globalIdx = questionIndexMap.get(q.examQuestionId) ?? 0;
             const isCurrent = globalIdx === currentIdx;
             const status = getQuestionStatus(q);
 
@@ -245,4 +257,5 @@ export const QuestionPalette: React.FC<QuestionPaletteProps> = ({
   );
 };
 
+export const QuestionPalette = React.memo(QuestionPaletteComponent);
 export default QuestionPalette;

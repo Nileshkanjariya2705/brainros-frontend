@@ -3,20 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 
 // ** Base Axios **
 import { Axios } from '@/base-axios';
+import { studentKeys } from '@/services/queryKeys';
 
 // ** Types **
 import type { DashboardStats } from './index';
-
-/**
- * TanStack Query example — the RECOMMENDED way to read server state.
- *
- * It calls the shared `Axios` instance (so the auth interceptor + baseURL still
- * apply) and lets React Query handle caching, retries, dedupe and loading state.
- * This is the modern alternative to the `useGetStatsAPI` (useAxios) hook —
- * prefer this pattern for new GET endpoints.
- *
- *   const { data, isLoading, error } = useDashboardStatsQuery();
- */
+import type { StudentDashboardResponse, DetailedComparisonResponse } from '@/types/exam.types';
 
 // Centralized, typed query keys (cache invalidation targets these).
 export const dashboardKeys = {
@@ -28,8 +19,46 @@ export const useDashboardStatsQuery = () =>
   useQuery({
     queryKey: dashboardKeys.stats(),
     queryFn: async () => {
-      // Backend wraps payloads as { data: { data } } (see useAxios).
       const res = await Axios.get<{ data: DashboardStats }>('/dashboard/stats');
       return res.data.data;
     },
+    staleTime: 60_000,
+  });
+
+/**
+ * Cached TanStack Query hook for Student Personalized Dashboard.
+ * Prevents re-fetching the entire dashboard payload on sub-component renders.
+ */
+export const useStudentDashboardQuery = () =>
+  useQuery<StudentDashboardResponse>({
+    queryKey: studentKeys.dashboard(),
+    queryFn: async () => {
+      const res = await Axios.get<StudentDashboardResponse | { data: StudentDashboardResponse }>(
+        '/students/me/dashboard',
+      );
+      return (res.data as any).data || res.data;
+    },
+    staleTime: 60_000,
+  });
+
+/**
+ * Cached TanStack Query hook for Student Performance Comparison.
+ */
+export const useStudentComparisonQuery = (params?: {
+  examType?: string;
+  examSeriesId?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  attemptIds?: string;
+}) =>
+  useQuery<DetailedComparisonResponse>({
+    queryKey: studentKeys.comparison(params || {}),
+    queryFn: async () => {
+      const res = await Axios.get<
+        DetailedComparisonResponse | { data: DetailedComparisonResponse }
+      >('/students/me/analytics/comparison', { params });
+      return (res.data as any).data || res.data;
+    },
+    staleTime: 60_000,
   });

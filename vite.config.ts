@@ -19,6 +19,39 @@ export default defineConfig({
     port: 4173,
     strictPort: true,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (
+              id.includes('/react/') ||
+              id.includes('/react-dom/') ||
+              id.includes('/react-router/') ||
+              id.includes('/react-router-dom/') ||
+              id.includes('/scheduler/') ||
+              id.includes('/@remix-run/')
+            ) {
+              return 'vendor-react';
+            }
+            if (id.includes('@reduxjs') || id.includes('react-redux')) {
+              return 'vendor-redux';
+            }
+            if (id.includes('@tanstack/react-query') || id.includes('@tanstack/react-table')) {
+              return 'vendor-tanstack';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('axios')) {
+              return 'vendor-axios';
+            }
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
+  },
   test: {
     globals: true,
     environment: 'jsdom',

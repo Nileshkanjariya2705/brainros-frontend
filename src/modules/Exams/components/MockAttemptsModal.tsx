@@ -1,5 +1,5 @@
 // ** Packages **
-import React, { useEffect, useState, useCallback } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   X,
@@ -17,10 +17,10 @@ import Button from '@/components/ui/Button';
 
 // ** Services & Types **
 import {
-  useGetMockTestAttemptsAPI,
   type MockTestAttemptItem,
   type MockTestAttemptsSummary,
 } from '../services';
+import { useMockTestAttemptsQuery } from '../services/exams.queries';
 
 interface MockAttemptsModalProps {
   isOpen: boolean;
@@ -40,36 +40,15 @@ export const MockAttemptsModal: React.FC<MockAttemptsModalProps> = ({
   onResumeTest,
 }) => {
   const navigate = useNavigate();
-  const { getMockTestAttemptsAPI, isLoading } = useGetMockTestAttemptsAPI();
+  const { data: attemptsData, isLoading, error: queryError, refetch } = useMockTestAttemptsQuery(isOpen ? mockTestId : undefined);
 
-  const [attempts, setAttempts] = useState<MockTestAttemptItem[]>([]);
-  const [summary, setSummary] = useState<MockTestAttemptsSummary | null>(null);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-
-  const fetchAttempts = useCallback(async () => {
-    if (!mockTestId || !isOpen) return;
-    setFetchError(null);
-    const res = await getMockTestAttemptsAPI(mockTestId);
-    if (res.data) {
-      const payload: any = res.data;
-      const list = Array.isArray(payload?.data)
-        ? payload.data
-        : Array.isArray(payload)
-          ? payload
-          : [];
-      setAttempts(list);
-      if (payload?.summary) {
-        setSummary(payload.summary);
-      }
-    } else {
-      const raw: any = res.response?.data;
-      setFetchError(res.error || raw?.message || 'Failed to load attempt history.');
-    }
-  }, [mockTestId, isOpen, getMockTestAttemptsAPI]);
-
-  useEffect(() => {
-    fetchAttempts();
-  }, [fetchAttempts]);
+  const attempts: MockTestAttemptItem[] = Array.isArray((attemptsData as any)?.data)
+    ? (attemptsData as any).data
+    : Array.isArray(attemptsData)
+      ? attemptsData
+      : [];
+  const summary: MockTestAttemptsSummary | null = (attemptsData as any)?.summary || null;
+  const fetchError = queryError ? (queryError as any)?.response?.data?.message || (queryError as any)?.message || 'Failed to load attempt history.' : null;
 
   if (!isOpen) return null;
 
@@ -187,7 +166,7 @@ export const MockAttemptsModal: React.FC<MockAttemptsModalProps> = ({
             <div className="rounded-2xl bg-rose-50 dark:bg-rose-950/30 p-4 border border-rose-200 dark:border-rose-800 text-center space-y-2">
               <AlertCircle className="h-6 w-6 text-rose-600 dark:text-rose-400 mx-auto" />
               <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">{fetchError}</p>
-              <Button variant="outline" size="sm" onClick={fetchAttempts} className="rounded-xl text-xs">
+              <Button variant="outline" size="sm" onClick={() => refetch()} className="rounded-xl text-xs">
                 Retry
               </Button>
             </div>

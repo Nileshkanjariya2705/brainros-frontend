@@ -45,8 +45,9 @@ const AppLayout = () => {
 
   const { roles, activeRole, activeRoleMeta, hasMultipleRoles, switchActiveRole } = useRole();
 
-  // Sync user profile & permissions on mount if user is authenticated
+  // Sync user profile & permissions on mount if user is authenticated (and not already loaded)
   useEffect(() => {
+    if (user?.id) return;
     let active = true;
     const fetchUser = async () => {
       try {
@@ -63,7 +64,7 @@ const AppLayout = () => {
     return () => {
       active = false;
     };
-  }, [dispatch]);
+  }, [dispatch, user?.id]);
 
   // Prevent background scroll when mobile sidebar drawer is open
   useEffect(() => {

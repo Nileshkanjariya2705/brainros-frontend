@@ -1,5 +1,5 @@
 // ** Packages **
-import { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import {
   Clock,
@@ -103,6 +103,88 @@ const formatTimer = (totalSeconds: number | null) => {
   return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
+// ─── Isolated Timer Badge (Prevents 1-Second Full Exam Page Rerenders) ─
+interface ExamTimerBadgeProps {
+  serverEndTime: string | null;
+  onTimeUp: () => void;
+  onTick?: (remainingSecs: number) => void;
+}
+
+const ExamTimerBadge: React.FC<ExamTimerBadgeProps> = React.memo(
+  ({ serverEndTime, onTimeUp, onTick }) => {
+    const [remainingSecs, setRemainingSecs] = useState<number | null>(() => {
+      if (!serverEndTime) return null;
+      return Math.max(0, Math.floor((new Date(serverEndTime).getTime() - Date.now()) / 1000));
+    });
+
+    useEffect(() => {
+      if (!serverEndTime) return;
+
+      const updateCountdown = () => {
+        const endMs = new Date(serverEndTime).getTime();
+        const secs = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+        setRemainingSecs(secs);
+        if (onTick) {
+          onTick(secs);
+        }
+        if (secs <= 0) {
+          onTimeUp();
+        }
+      };
+
+      updateCountdown();
+      const interval = setInterval(updateCountdown, 1000);
+
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          updateCountdown();
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('focus', updateCountdown);
+
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        window.removeEventListener('focus', updateCountdown);
+      };
+    }, [serverEndTime, onTimeUp, onTick]);
+
+    return (
+      <div
+        className={cn(
+          'flex items-center gap-2 rounded-2xl px-3.5 py-1.5 border transition-all shadow-xs',
+          remainingSecs !== null && remainingSecs < 300
+            ? 'bg-rose-50 border-rose-200 text-rose-700 animate-pulse ring-2 ring-rose-200'
+            : remainingSecs !== null && remainingSecs < 600
+              ? 'bg-amber-50 border-amber-200 text-amber-800'
+              : 'bg-indigo-50/70 border-indigo-200/80 text-indigo-900',
+        )}
+      >
+        <Clock
+          size={16}
+          className={cn(
+            'shrink-0',
+            remainingSecs !== null && remainingSecs < 300
+              ? 'text-rose-600'
+              : remainingSecs !== null && remainingSecs < 600
+                ? 'text-amber-600'
+                : 'text-indigo-600',
+          )}
+        />
+        <div className="flex flex-col">
+          <span className="text-[9px] uppercase tracking-wider text-slate-500 font-bold leading-none">
+            Time Left
+          </span>
+          <span className="font-mono text-sm sm:text-base font-black tracking-tight leading-tight tabular-nums">
+            {formatTimer(remainingSecs)}
+          </span>
+        </div>
+      </div>
+    );
+  },
+);
+
 const ExamInterfacePage = () => {
   const { attemptId } = useParams<{ examId: string; attemptId: string }>();
   const navigate = useNavigate();
@@ -121,7 +203,7 @@ const ExamInterfacePage = () => {
   const [visitedQuestions, setVisitedQuestions] = useState<Set<string>>(new Set());
   const [currentIdx, setCurrentIdx] = useState<number>(0);
   const [activeSection, setActiveSection] = useState<string>('ALL');
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const timeLeftRef = useRef<number | null>(null);
   const [serverEndTime, setServerEndTime] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [examId, setExamId] = useState<string>('');
@@ -161,8 +243,7 @@ const ExamInterfacePage = () => {
   const isExamInProgress =
     !hasSubmittedRef.current &&
     !isSubmitting &&
-    questions.length > 0 &&
-    timeLeft !== 0;
+    questions.length > 0;
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error' | 'syncing'>(
     'idle',
@@ -474,7 +555,7 @@ const ExamInterfacePage = () => {
           if (sData.serverEndTime) {
             const endMs = new Date(sData.serverEndTime).getTime();
             const remainingSecs = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
-            setTimeLeft(remainingSecs);
+            timeLeftRef.current = remainingSecs;
           }
 
           // Build server answer map
@@ -644,38 +725,6 @@ const ExamInterfacePage = () => {
     }
   }, [attemptId, handleAutoSubmit, blocker, recordSecEvent]);
 
-  useEffect(() => {
-    if (!serverEndTime) return;
-
-    // Recalculate remaining time relative to authoritative server end time
-    const updateCountdown = () => {
-      const endMs = new Date(serverEndTime).getTime();
-      const remainingSecs = Math.max(0, Math.floor((endMs - Date.now()) / 1000));
-      setTimeLeft(remainingSecs);
-
-      if (remainingSecs <= 0) {
-        handleAutoSubmit();
-      }
-    };
-
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
-
-    // Resynchronize when tab is reopened or device awakens
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        updateCountdown();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', updateCountdown);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', updateCountdown);
-    };
-  }, [serverEndTime, handleAutoSubmit]);
 
   // ─── Current Question Change & Timing Log ─────────────────────
   useEffect(() => {
@@ -975,37 +1024,14 @@ const ExamInterfacePage = () => {
           </div>
         </div>
 
-        {/* Center: Countdown Timer */}
-        <div
-          className={cn(
-            'flex items-center gap-2 rounded-2xl px-3.5 py-1.5 border transition-all shadow-xs',
-            timeLeft !== null && timeLeft < 300
-              ? 'bg-rose-50 border-rose-200 text-rose-700 animate-pulse ring-2 ring-rose-200'
-              : timeLeft !== null && timeLeft < 600
-                ? 'bg-amber-50 border-amber-200 text-amber-800'
-                : 'bg-indigo-50/70 border-indigo-200/80 text-indigo-900',
-          )}
-        >
-          <Clock
-            size={16}
-            className={cn(
-              'shrink-0',
-              timeLeft !== null && timeLeft < 300
-                ? 'text-rose-600'
-                : timeLeft !== null && timeLeft < 600
-                  ? 'text-amber-600'
-                  : 'text-indigo-600',
-            )}
-          />
-          <div className="flex flex-col">
-            <span className="text-[9px] uppercase tracking-wider text-slate-500 font-bold leading-none">
-              Time Left
-            </span>
-            <span className="font-mono text-sm sm:text-base font-black tracking-tight leading-tight tabular-nums">
-              {formatTimer(timeLeft)}
-            </span>
-          </div>
-        </div>
+        {/* Center: Countdown Timer (Isolated render boundary for 1-second countdowns) */}
+        <ExamTimerBadge
+          serverEndTime={serverEndTime}
+          onTimeUp={handleAutoSubmit}
+          onTick={(secs) => {
+            timeLeftRef.current = secs;
+          }}
+        />
 
         {/* Right: Controls & Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
@@ -1607,7 +1633,7 @@ const ExamInterfacePage = () => {
       {/* Exam Leave & Navigation Warning Modal */}
       <ExamLeaveWarningModal
         isOpen={blocker.state === 'blocked' || showLeaveModal}
-        timeLeft={timeLeft}
+        timeLeft={timeLeftRef.current}
         totalQuestions={questions.length}
         answeredCount={
           questions.filter((q) => {

@@ -1,7 +1,7 @@
-// ** Packages **
-import { useState, type ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { type ReactNode } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { queryClient } from '@/queryClient';
 
 // ** Types **
 interface QueryProviderProps {
@@ -13,31 +13,9 @@ interface QueryProviderProps {
  * background refetch). Sits alongside Redux: Redux holds CLIENT state (auth,
  * UI), React Query holds SERVER state (API data).
  *
- * The client is created once via useState so it survives re-renders but is not
- * shared across requests (important for SSR/tests). Tune the defaults per app.
+ * Uses the shared queryClient singleton from `@/queryClient`.
  */
 const QueryProvider = ({ children }: QueryProviderProps) => {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 60_000, // 1 min — data is "fresh" before a background refetch
-            gcTime: 5 * 60_000, // cache kept 5 min after last use
-            retry: (failureCount, error: any) => {
-              const status = error?.response?.status || error?.status;
-              // Never retry client errors (400, 401, 403, 404, 422, etc.)
-              if (status && status >= 400 && status < 500) {
-                return false;
-              }
-              return failureCount < 1;
-            },
-            refetchOnWindowFocus: false,
-          },
-        },
-      }),
-  );
-
   return (
     <QueryClientProvider client={queryClient}>
       {children}

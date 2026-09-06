@@ -19,10 +19,9 @@ import {
   BookOpen,
 } from 'lucide-react';
 import cn from 'classnames';
-import { useGetStudentDashboardAPI } from '../services';
+import { useStudentDashboardQuery } from '../services/dashboard.queries';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 import Loader from '@/components/feedback/Loader';
-import type { StudentDashboardResponse } from '@/types/exam.types';
 
 // ── Upcoming Exams Slider Component ──────────────────────────────────────────
 interface UpcomingExamsSliderProps {
@@ -303,51 +302,30 @@ const round2 = (val: number | string | null | undefined): string => {
   return (Math.round(num * 100) / 100).toString();
 };
 
+const formatTimer = (sec: number) => {
+  const hrs = Math.floor(sec / 3600);
+  const mins = Math.floor((sec % 3600) / 60);
+  const secs = sec % 60;
+  return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+};
+
 export const StudentDashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { getStudentDashboardAPI, isLoading } = useGetStudentDashboardAPI();
-  const [data, setData] = useState<StudentDashboardResponse | null>(null);
+  const { data, isLoading, refetch } = useStudentDashboardQuery();
   const [trendMetric, setTrendMetric] = useState<'SCORE' | 'ACCURACY' | 'RANK' | 'PERCENTILE'>(
     'SCORE',
   );
-  const [countdownSec, setCountdownSec] = useState<number>(0);
 
-  const fetchDashboard = useCallback(async () => {
-    const res = await getStudentDashboardAPI();
-    if (res.data) {
-      setData(res.data);
-      if (res.data.nextExam && res.data.nextExam.waitSeconds > 0) {
-        setCountdownSec(res.data.nextExam.waitSeconds);
-      }
-    }
-  }, [getStudentDashboardAPI]);
+  const nextExam = data?.nextExam;
 
+  // Auto-refresh when upcoming exam unlocks without interval polling
   useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
-
-  // Live countdown timer for upcoming exam
-  useEffect(() => {
-    if (countdownSec <= 0) return;
-    const timer = setInterval(() => {
-      setCountdownSec((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          fetchDashboard();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [countdownSec, fetchDashboard]);
-
-  const formatTimer = (sec: number) => {
-    const hrs = Math.floor(sec / 3600);
-    const mins = Math.floor((sec % 3600) / 60);
-    const secs = sec % 60;
-    return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  };
+    if (!nextExam || !nextExam.waitSeconds || nextExam.waitSeconds <= 0) return;
+    const timer = setTimeout(() => {
+      refetch();
+    }, nextExam.waitSeconds * 1000);
+    return () => clearTimeout(timer);
+  }, [nextExam?.waitSeconds, refetch]);
 
   if (isLoading && !data) {
     return (
@@ -358,7 +336,6 @@ export const StudentDashboardPage: React.FC = () => {
   }
 
   const student = data?.student;
-  const nextExam = data?.nextExam;
   const activeAttempt = data?.activeAttempt;
   const perf = data?.latestPerformance;
   const rank = data?.rank;
