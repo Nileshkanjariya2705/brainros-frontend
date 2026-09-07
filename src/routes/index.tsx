@@ -29,7 +29,6 @@ import { lazyRoute } from '@/utils/lazyRoute';
 // ** Pages (lazy — one chunk each) **
 const HomePage = lazyRoute(() => import('@/modules/Home/pages/HomePage'));
 const LoginPage = lazyRoute(() => import('@/modules/Auth/pages/LoginPage'));
-const RegisterPage = lazyRoute(() => import('@/modules/Auth/pages/RegisterPage'));
 
 // Role Dashboards
 const StudentDashboardPage = lazyRoute(
@@ -144,6 +143,7 @@ const CompletedExamReportsPage = lazyRoute(
   () => import('@/modules/Admin/pages/CompletedExamReportsPage'),
 );
 const AdminStudentsPage = lazyRoute(() => import('@/modules/Admin/pages/AdminStudentsPage'));
+const AdminSchoolsPage = lazyRoute(() => import('@/modules/Admin/pages/AdminSchoolsPage'));
 const NotFoundPage = lazyRoute(() => import('@/components/feedback/NotFoundPage'));
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -151,7 +151,7 @@ const NotFoundPage = lazyRoute(() => import('@/components/feedback/NotFoundPage'
 // ══════════════════════════════════════════════════════════════════════════
 const publicRoutes: RouteObject[] = [
   { path: PUBLIC_NAVIGATION.login, element: <LoginPage /> },
-  { path: PUBLIC_NAVIGATION.register, element: <RegisterPage /> },
+  { path: '/register', element: <Navigate to={PUBLIC_NAVIGATION.login} replace /> },
 ];
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -544,6 +544,14 @@ const adminRoutes: RouteObject[] = [
           </ProtectedRoute>
         ),
       },
+      {
+        path: 'schools',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW]}>
+            <AdminSchoolsPage />
+          </ProtectedRoute>
+        ),
+      },
       { path: 'profile', element: <StudentProfilePage /> },
     ],
   },
@@ -628,6 +636,7 @@ const superAdminRoutes: RouteObject[] = [
       { path: 'notifications-page', element: <AdminNotificationsPage /> },
       { path: 'students', element: <AdminStudentsPage /> },
       { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
+      { path: 'schools', element: <AdminSchoolsPage /> },
       { path: 'profile', element: <StudentProfilePage /> },
     ],
   },

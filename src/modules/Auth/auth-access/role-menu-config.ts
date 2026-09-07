@@ -358,6 +358,30 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
       },
     ],
   },
+  {
+    categoryKey: 'B2B_MANAGEMENT',
+    categoryLabel: 'Schools & Candidates',
+    items: [
+      {
+        key: 'schools-management',
+        label: 'Schools & Centers',
+        to: PRIVATE_NAVIGATION.adminSchools,
+        icon: Building2,
+      },
+      {
+        key: 'students-directory',
+        label: 'Candidate Directory',
+        to: PRIVATE_NAVIGATION.adminStudents,
+        icon: Users,
+      },
+      {
+        key: 'bulk-student-onboarding',
+        label: 'Bulk Candidate Upload',
+        to: PRIVATE_NAVIGATION.adminBulkStudents,
+        icon: UserPlus,
+      },
+    ],
+  },
 ];
 
 // ─── SUPER ADMIN Menu Groups ───────────────────────────────────────────────
@@ -587,6 +611,30 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         to: PRIVATE_NAVIGATION.superAdminImportTranslations,
         icon: UploadCloud,
         feature: FEATURES.BULK_IMPORT_TRANSLATION,
+      },
+    ],
+  },
+  {
+    categoryKey: 'B2B_MANAGEMENT',
+    categoryLabel: 'Schools & Candidates',
+    items: [
+      {
+        key: 'super-admin-schools',
+        label: 'Schools & Centers',
+        to: PRIVATE_NAVIGATION.superAdminSchools,
+        icon: Building2,
+      },
+      {
+        key: 'super-admin-students',
+        label: 'Candidate Directory',
+        to: PRIVATE_NAVIGATION.superAdminStudents,
+        icon: Users,
+      },
+      {
+        key: 'super-admin-bulk-students',
+        label: 'Bulk Candidate Upload',
+        to: PRIVATE_NAVIGATION.superAdminBulkStudents,
+        icon: UserPlus,
       },
     ],
   },

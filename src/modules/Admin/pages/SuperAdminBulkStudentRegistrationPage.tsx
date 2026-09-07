@@ -18,12 +18,20 @@ import {
   History,
   Info,
   ArrowRight,
+  Building2,
+  Edit2,
+  Save,
 } from 'lucide-react';
 import {
   studentBulkService,
   BulkStudentPreviewResponse,
   BulkStudentHistoryItem,
+  BulkStudentRow,
 } from '../services/studentBulk.service';
+import {
+  adminSchoolsService,
+  SchoolItem,
+} from '../services/admin-schools.service';
 
 export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'upload' | 'history'>('upload');
@@ -34,12 +42,23 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // B2B School / Center State
+  const [schools, setSchools] = useState<SchoolItem[]>([]);
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string>('');
+  const [isLoadingSchools, setIsLoadingSchools] = useState<boolean>(false);
+
   // Preview State
   const [activeUploadId, setActiveUploadId] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<BulkStudentPreviewResponse | null>(null);
   const [previewFilter, setPreviewFilter] = useState<'ALL' | 'VALID' | 'INVALID'>('ALL');
   const [previewPage, setPreviewPage] = useState<number>(1);
   const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
+
+  // Inline Row Edit State
+  const [editingRow, setEditingRow] = useState<BulkStudentRow | null>(null);
+  const [editFormData, setEditFormData] = useState<Record<string, string>>({});
+  const [isSavingRow, setIsSavingRow] = useState<boolean>(false);
+  const [rowEditError, setRowEditError] = useState<string | null>(null);
 
   // Confirmation & Registration State
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
@@ -59,6 +78,23 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load Active Schools on component mount
+  useEffect(() => {
+    loadSchools();
+  }, []);
+
+  const loadSchools = async () => {
+    setIsLoadingSchools(true);
+    try {
+      const res = await adminSchoolsService.getSchools({ status: 'ACTIVE', limit: 100 });
+      setSchools(res.data || []);
+    } catch (err) {
+      console.error('Failed to load active schools:', err);
+    } finally {
+      setIsLoadingSchools(false);
+    }
+  };
 
   // Load History on tab switch
   useEffect(() => {
@@ -183,7 +219,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
     }
   };
 
-  // Handle Upload & Validate
+  // Handle Upload & Validate with optional Target School ID
   const handleUploadAndValidate = async () => {
     if (!selectedFile) return;
 
@@ -191,7 +227,10 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
     setUploadError(null);
 
     try {
-      const res = await studentBulkService.uploadStudents(selectedFile);
+      const res = await studentBulkService.uploadStudents(
+        selectedFile,
+        selectedSchoolId || undefined,
+      );
       setActiveUploadId(res.uploadId);
       setCurrentStep('PREVIEW');
       setPreviewPage(1);
@@ -200,6 +239,59 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
       setUploadError(err.response?.data?.message || 'Failed to upload and validate file.');
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  // Open Edit Modal for a Staged Row
+  const handleOpenEditRow = (row: BulkStudentRow) => {
+    setEditingRow(row);
+    setRowEditError(null);
+    setEditFormData({
+      name: row.data.name || '',
+      mobile: row.data.rawMobile || row.data.mobile?.replace('+91', '') || '',
+      email: row.data.email || '',
+      state: row.data.state || '',
+      city: row.data.city || '',
+      class: row.data.class || '',
+      examTarget: row.data.examTarget || '',
+      preferredLanguage: row.data.preferredLanguage || '',
+      schoolCollege: row.data.schoolCollege || row.data.institutionName || '',
+      institutionId: row.data.institutionId || '',
+    });
+  };
+
+  // Save Row Corrections and Re-run Validation
+  const handleSaveRow = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRow) return;
+
+    setIsSavingRow(true);
+    setRowEditError(null);
+
+    try {
+      const res = await studentBulkService.updateRow(editingRow.id, editFormData);
+
+      if (previewData) {
+        const updatedRows = previewData.rows.map((r) =>
+          r.id === editingRow.id ? res.row : r,
+        );
+        setPreviewData({
+          ...previewData,
+          upload: {
+            ...previewData.upload,
+            validRowCount: res.uploadSummary.validRowCount,
+            invalidRowCount: res.uploadSummary.invalidRowCount,
+            duplicateRowCount: res.uploadSummary.duplicateRowCount,
+            status: res.uploadSummary.status,
+          },
+          rows: updatedRows,
+        });
+      }
+      setEditingRow(null);
+    } catch (err: any) {
+      setRowEditError(err.response?.data?.message || 'Failed to update student row.');
+    } finally {
+      setIsSavingRow(false);
     }
   };
 
@@ -353,6 +445,35 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Upload Dropzone */}
               <div className="lg:col-span-2 space-y-6">
+                {/* B2B Partner School / Examination Center Selector */}
+                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-semibold text-white flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-indigo-400" />
+                      Target School / Examination Center (Optional)
+                    </label>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
+                      B2B Center Mapping
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    If selected, all candidates in this batch will be assigned to this school/center. Leave unselected to detect school name or code directly from each row in your spreadsheet.
+                  </p>
+                  <select
+                    value={selectedSchoolId}
+                    onChange={(e) => setSelectedSchoolId(e.target.value)}
+                    disabled={isLoadingSchools}
+                    className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all"
+                  >
+                    <option value="">Auto-detect from spreadsheet ("School / College" column)</option>
+                    {schools.map((school) => (
+                      <option key={school.id} value={school.id}>
+                        {school.name} ({school.code}) {school.city ? `— ${school.city}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={handleDrop}
@@ -609,11 +730,11 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                         <th className="px-4 py-3.5 w-14 text-center">Row</th>
                         <th className="px-4 py-3.5">Full Name</th>
                         <th className="px-4 py-3.5">Mobile</th>
-                        <th className="px-4 py-3.5">Email</th>
-                        <th className="px-4 py-3.5">State & City</th>
-                        <th className="px-4 py-3.5">Class & Target</th>
+                        <th className="px-4 py-3.5">School / Center</th>
+                        <th className="px-4 py-3.5">Class & Targets</th>
                         <th className="px-4 py-3.5">Status</th>
                         <th className="px-4 py-3.5">Validation Notes</th>
+                        <th className="px-4 py-3.5 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60 font-medium">
@@ -641,25 +762,52 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                             <td className="px-4 py-3 text-center text-slate-500 font-mono">
                               {row.rowNumber}
                             </td>
-                            <td className="px-4 py-3 font-semibold text-white">
-                              {row.data.name || '—'}
+                            <td className="px-4 py-3">
+                              <div className="font-semibold text-white">{row.data.name || '—'}</div>
+                              {row.data.email && (
+                                <div className="text-[11px] text-slate-400 font-normal">{row.data.email}</div>
+                              )}
                             </td>
                             <td className="px-4 py-3 font-mono text-slate-300">
                               {row.data.mobile || row.data.phone || '—'}
                             </td>
-                            <td className="px-4 py-3 text-slate-400">
-                              {row.data.email || <span className="text-slate-600 italic">None</span>}
-                            </td>
                             <td className="px-4 py-3 text-slate-300">
-                              {row.data.city ? `${row.data.city}, ` : ''}{row.data.state || '—'}
+                              <div className="flex items-center gap-1.5">
+                                <Building2 className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                                <span className="truncate max-w-[150px]" title={row.data.institutionName || row.data.schoolCollege || 'Not specified'}>
+                                  {row.data.institutionName || row.data.schoolCollege || (
+                                    <span className="text-slate-600 italic">None</span>
+                                  )}
+                                </span>
+                              </div>
                             </td>
-                            <td className="px-4 py-3 text-slate-300">
-                              <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 mr-1.5">
-                                {row.data.class || 'N/A'}
-                              </span>
-                              <span className="text-indigo-400 font-semibold">
-                                {row.data.examTarget || ''}
-                              </span>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap items-center gap-1">
+                                <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[11px] font-medium">
+                                  {row.data.class || 'N/A'}
+                                </span>
+                                {((row.data.examTarget || '')
+                                  .split(/[,/+]|\band\b/i)
+                                  .map((t: string) => t.trim())
+                                  .filter(Boolean)).map((target: string, idx: number) => {
+                                  const upper = target.toUpperCase();
+                                  const badgeStyle = upper.includes('NEET')
+                                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                    : upper.includes('CET')
+                                      ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                                      : upper.includes('JEE')
+                                        ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                                        : 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30';
+                                  return (
+                                    <span
+                                      key={idx}
+                                      className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${badgeStyle}`}
+                                    >
+                                      {target}
+                                    </span>
+                                  );
+                                })}
+                              </div>
                             </td>
                             <td className="px-4 py-3">
                               {row.validationStatus === 'VALID' ? (
@@ -690,6 +838,16 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                               ) : (
                                 <span className="text-emerald-400/80 text-xs">Ready for registration</span>
                               )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                onClick={() => handleOpenEditRow(row)}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                                title="Edit Row"
+                              >
+                                <Edit2 className="w-3.5 h-3.5 text-indigo-400" />
+                                <span>Edit</span>
+                              </button>
                             </td>
                           </tr>
                         ))
@@ -931,6 +1089,233 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Staged Row Modal ── */}
+      {editingRow && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                  <Edit2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    Edit Candidate Data (Row #{editingRow.rowNumber})
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Fix validation errors or update details prior to confirmation
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingRow(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {rowEditError && (
+              <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{rowEditError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveRow} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.name || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    placeholder="e.g. Rahul Sharma"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Mobile Number (10 Digits) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={10}
+                    value={editFormData.mobile || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, mobile: e.target.value.replace(/\D/g, '') })}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white font-mono focus:outline-none focus:border-indigo-500"
+                    placeholder="9876543210"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Email Address (Optional)
+                  </label>
+                  <input
+                    type="email"
+                    value={editFormData.email || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    placeholder="rahul@example.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Class / Grade *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.class || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, class: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    placeholder="e.g. 11th, 12th, Dropper"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    State *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.state || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    placeholder="e.g. Gujarat"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    City / District *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.city || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    placeholder="e.g. Ahmedabad"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Exam Target(s) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.examTarget || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, examTarget: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    placeholder="e.g. NEET, CET"
+                  />
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="text-[11px] text-slate-500">Quick set:</span>
+                    {['NEET', 'CET', 'JEE', 'NEET, CET', 'JEE, CET'].map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setEditFormData({ ...editFormData, examTarget: t })}
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Preferred Language *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.preferredLanguage || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, preferredLanguage: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    placeholder="e.g. ENGLISH, HINDI, GUJARATI"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  School / College / Institution *
+                </label>
+                <div className="space-y-2">
+                  <select
+                    value={editFormData.institutionId || ''}
+                    onChange={(e) => {
+                      const instId = e.target.value;
+                      const matched = schools.find((s) => s.id === instId);
+                      setEditFormData({
+                        ...editFormData,
+                        institutionId: instId,
+                        schoolCollege: matched ? matched.name : editFormData.schoolCollege,
+                      });
+                    }}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="">Select a registered B2B School (or type custom below)</option>
+                    {schools.map((school) => (
+                      <option key={school.id} value={school.id}>
+                        {school.name} ({school.code})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    value={editFormData.schoolCollege || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, schoolCollege: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    placeholder="School / College name"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingRow(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingRow}
+                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white shadow-lg shadow-indigo-600/30 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingRow ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      Validating & Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5" />
+                      Save & Re-validate Row
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

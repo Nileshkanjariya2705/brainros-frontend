@@ -47,7 +47,7 @@ export const usePasswordlessLogin = () => {
         expiresIn: data.expiresIn || 300,
         resendAvailableIn: data.resendAvailableIn || 60,
         identifier,
-        otpLength: data.otpLength || 5,
+        otpLength: data.otpLength || 6,
       });
       return true;
     } else {

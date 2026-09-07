@@ -7,7 +7,6 @@
 export const PUBLIC_NAVIGATION = Object.freeze({
   home: '/',
   login: '/login',
-  register: '/register',
 });
 
 // ** Authenticated paths **
@@ -90,12 +89,14 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   adminCompletedExams: '/admin/completed-exams',
   adminBulkStudents: '/admin/students/bulk-register',
   adminStudents: '/admin/students',
+  adminSchools: '/admin/schools',
   adminProfile: '/admin/profile',
 
   // ── Super Admin role-prefixed routes ──
   superAdminDashboard: '/super-admin/dashboard',
   superAdminBulkStudents: '/super-admin/students/bulk-register',
   superAdminStudents: '/super-admin/students',
+  superAdminSchools: '/super-admin/schools',
   superAdminQuestionBank: '/super-admin/question-bank',
   superAdminChapters: '/super-admin/chapters',
   superAdminCreateQuestion: '/super-admin/question-bank/create',

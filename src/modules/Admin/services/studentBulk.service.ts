@@ -112,9 +112,12 @@ export const studentBulkService = {
   /**
    * Upload CSV or Excel file for staging and initial validation
    */
-  async uploadStudents(file: File): Promise<BulkStudentUploadSummary> {
+  async uploadStudents(file: File, institutionId?: string): Promise<BulkStudentUploadSummary> {
     const formData = new FormData();
     formData.append('file', file);
+    if (institutionId) {
+      formData.append('institutionId', institutionId);
+    }
 
     const response = await Axios.post('/admin/students/bulk-upload', formData, {
       headers: {
@@ -124,8 +127,19 @@ export const studentBulkService = {
     return response.data?.data || response.data;
   },
 
-  async uploadFile(file: File): Promise<BulkStudentUploadSummary> {
-    return this.uploadStudents(file);
+  async uploadFile(file: File, institutionId?: string): Promise<BulkStudentUploadSummary> {
+    return this.uploadStudents(file, institutionId);
+  },
+
+  /**
+   * Edit a staged student row and re-run validation
+   */
+  async updateRow(
+    rowId: string,
+    patchData: Record<string, any>,
+  ): Promise<{ row: BulkStudentRow; uploadSummary: any }> {
+    const response = await Axios.patch(`/admin/students/bulk-upload/rows/${rowId}`, patchData);
+    return response.data?.data || response.data;
   },
 
   /**

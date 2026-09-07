@@ -1,7 +1,7 @@
 import LoginForm from '../components/LoginForm';
 import { APP_NAME } from '@config';
-import { Link, Navigate } from 'react-router-dom';
-import { ShieldCheck, GraduationCap, ArrowRight, LockKeyhole } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+import { ShieldCheck, GraduationCap, LockKeyhole } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import PageLoader from '@/components/feedback/PageLoader';
 
@@ -28,7 +28,7 @@ export const LoginPage = () => {
           Welcome to {APP_NAME}
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto font-medium">
-          Access your mock tests, academic analytics, and question papers
+          Sign in using your registered mobile number or Student ID
         </p>
       </div>
 
@@ -60,16 +60,9 @@ export const LoginPage = () => {
         </div>
       </div>
 
-      {/* Footer Link to Register */}
-      <div className="text-center text-xs sm:text-sm text-slate-500 pt-1 font-medium">
-        <span>Don't have an account yet? </span>
-        <Link
-          to="/register"
-          className="inline-flex items-center font-bold text-indigo-600 hover:text-indigo-700 hover:underline transition-all group ml-1"
-        >
-          <span>Register Candidate</span>
-          <ArrowRight className="h-3.5 w-3.5 ml-1 group-hover:translate-x-1 transition-transform" />
-        </Link>
+      {/* B2B School Enrolled Candidate Note */}
+      <div className="text-center text-xs text-slate-500 pt-1 font-medium bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+        <span>Enrolled via your school or institution? Contact your school coordinator if you need help with your credentials.</span>
       </div>
     </div>
   );

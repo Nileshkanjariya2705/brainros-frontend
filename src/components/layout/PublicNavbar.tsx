@@ -8,7 +8,6 @@ import {
   ArrowRight,
   GraduationCap,
   LogIn,
-  UserPlus,
 } from 'lucide-react';
 
 // ** Hooks & Constants **
@@ -19,8 +18,6 @@ export const PublicNavbar: React.FC = () => {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
 
-  const isLoginPage = location.pathname === PUBLIC_NAVIGATION.login;
-  const isRegisterPage = location.pathname === PUBLIC_NAVIGATION.register;
   const isHomePage = location.pathname === PUBLIC_NAVIGATION.home;
 
   return (
@@ -87,25 +84,10 @@ export const PublicNavbar: React.FC = () => {
             <div className="flex items-center gap-2">
               <Link
                 to={PUBLIC_NAVIGATION.login}
-                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all ${
-                  isLoginPage
-                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-xs'
-                    : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-800'
-                }`}
+                className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white shadow-md transition-all hover:scale-[1.02] active:scale-95 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-indigo-200"
               >
-                <LogIn size={13} className="text-indigo-600" />
-                <span>Sign In</span>
-              </Link>
-              <Link
-                to={PUBLIC_NAVIGATION.register}
-                className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white shadow-md transition-all hover:scale-[1.02] active:scale-95 ${
-                  isRegisterPage
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 shadow-indigo-200 ring-2 ring-indigo-400/40'
-                    : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-indigo-200'
-                }`}
-              >
-                <UserPlus size={13} />
-                <span>Get Started</span>
+                <LogIn size={13} />
+                <span>Sign In / Student Portal</span>
                 <ArrowRight size={13} className="hidden sm:inline" />
               </Link>
             </div>

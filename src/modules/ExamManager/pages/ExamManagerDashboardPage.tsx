@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Languages,
+  Key,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { useGetExamsListAPI } from '../services/examManager.service';
@@ -24,6 +25,7 @@ import { BlueprintSelectionModal } from '../components/BlueprintSelectionModal';
 import { UploadQuestionPaperWizardModal } from '../components/UploadQuestionPaperWizardModal';
 import { MockTestDetailsModal } from '@/modules/ExamScheduling/components/MockTestDetailsModal';
 import ExamTranslationManager from '@/modules/RegionalLanguage/components/ExamTranslationManager';
+import { AnswerKeyModal } from '../components/AnswerKeyModal';
 import { toast } from '@/utils/toast';
 
 export const ExamManagerDashboardPage: React.FC = () => {
@@ -53,6 +55,10 @@ export const ExamManagerDashboardPage: React.FC = () => {
   const [isUploadWizardOpen, setIsUploadWizardOpen] = useState(false);
   const [selectedExamForDetails, setSelectedExamForDetails] = useState<any | null>(null);
   const [drilldownTranslationExam, setDrilldownTranslationExam] = useState<any | null>(null);
+  const [selectedScheduleForAnswerKey, setSelectedScheduleForAnswerKey] = useState<{
+    scheduleId: string;
+    examTitle: string;
+  } | null>(null);
 
   // APIs
   const { getExamsListAPI, isLoading } = useGetExamsListAPI();
@@ -357,6 +363,19 @@ export const ExamManagerDashboardPage: React.FC = () => {
                       >
                         {exam.status}
                       </span>
+
+                      {exam.schedule && (
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 ${
+                            exam.schedule.hasAnswerKey
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}
+                        >
+                          <Key size={10} />
+                          {exam.schedule.hasAnswerKey ? 'Answer Key Ready' : 'Key Pending'}
+                        </span>
+                      )}
                     </div>
 
                     <h3 className="text-base font-black text-slate-900 leading-snug">
@@ -425,6 +444,27 @@ export const ExamManagerDashboardPage: React.FC = () => {
                       <Languages size={13} />
                       <span>Translations</span>
                     </Button>
+
+                    {exam.schedule && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setSelectedScheduleForAnswerKey({
+                            scheduleId: exam.schedule!.id,
+                            examTitle: exam.title,
+                          })
+                        }
+                        className={`flex items-center gap-1.5 text-xs font-bold ${
+                          exam.schedule.hasAnswerKey
+                            ? 'border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100'
+                            : 'border-amber-200 text-amber-700 bg-amber-50/50 hover:bg-amber-100'
+                        }`}
+                      >
+                        <Key size={13} />
+                        <span>Answer Key</span>
+                      </Button>
+                    )}
 
                     {exam.status === 'DRAFT' && (
                       <Button
@@ -506,6 +546,17 @@ export const ExamManagerDashboardPage: React.FC = () => {
         exam={selectedExamForDetails}
         onUpdate={loadExams}
       />
+
+      {/* ── 4. Answer Key Management Modal ────────────────────────── */}
+      {selectedScheduleForAnswerKey && (
+        <AnswerKeyModal
+          isOpen={Boolean(selectedScheduleForAnswerKey)}
+          onClose={() => setSelectedScheduleForAnswerKey(null)}
+          scheduleId={selectedScheduleForAnswerKey.scheduleId}
+          examTitle={selectedScheduleForAnswerKey.examTitle}
+          onSuccess={loadExams}
+        />
+      )}
     </div>
   );
 };

@@ -432,13 +432,7 @@ export const HomePage: React.FC = () => {
           </div>
           <div className="flex items-center gap-4">
             <Link to={PUBLIC_NAVIGATION.login} className="hover:text-slate-600 transition-colors">
-              Student Login
-            </Link>
-            <Link
-              to={PUBLIC_NAVIGATION.register}
-              className="hover:text-slate-600 transition-colors"
-            >
-              Register
+              Student / School Login
             </Link>
             <a href="#test-series" className="hover:text-slate-600 transition-colors">
               Test Series

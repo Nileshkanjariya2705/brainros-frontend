@@ -186,6 +186,14 @@ export interface ExamItem {
     code: string;
   }>;
   translationCoverage?: Record<string, number>;
+  schedule?: {
+    id: string;
+    status: string;
+    startTime: string;
+    endTime: string;
+    hasAnswerKey: boolean;
+    answerKeyUploadedAt?: string | null;
+  } | null;
   createdBy?: {
     id: string;
     email: string;
