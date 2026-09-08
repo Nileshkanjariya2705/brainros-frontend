@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useAxiosGet, useAxiosPost, useAxiosDelete } from '@/hooks/useAxios';
+import { useAxiosGet, useAxiosPost, useAxiosPatch, useAxiosDelete } from '@/hooks/useAxios';
 
 export interface AdminStudentItem {
   id: string;
@@ -152,4 +152,14 @@ export const useRevokeStudentParentAPI = () => {
     [del],
   );
   return { revokeStudentParentAPI, ...state };
+};
+
+export const useUpdateAdminStudentAPI = () => {
+  const [patch, state] = useAxiosPatch();
+  const updateAdminStudentAPI = useCallback(
+    (studentId: string, payload: any) =>
+      patch<AdminStudentItem>(`/admin/students/${studentId}`, payload),
+    [patch],
+  );
+  return { updateAdminStudentAPI, ...state };
 };

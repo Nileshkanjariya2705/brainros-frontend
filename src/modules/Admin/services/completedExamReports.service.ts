@@ -64,8 +64,10 @@ export interface AttendeeItem {
   accuracy: number | null;
   rank: number | null;
   percentile: number | null;
-  totalCandidates: number | null;
   resultStatus: string;
+  reportStatus?: string;
+  approvedAt?: string | null;
+  approvedBy?: string | null;
   emailStatus: 'NONE' | 'QUEUED' | 'PROCESSING' | 'SENT' | 'FAILED';
   lastEmailSentAt: string | null;
 }
@@ -192,6 +194,19 @@ export const completedExamReportsService = {
   ): Promise<StudentAttemptAnalysisResponse> {
     const response = await Axios.get(
       `/admin/completed-exams/${examId}/attendees/${attemptId}/analysis`,
+    );
+    return response.data?.data || response.data;
+  },
+
+  /**
+   * Approve Student Analysis Report
+   */
+  async approveReport(
+    examId: string,
+    attemptId: string,
+  ): Promise<{ success: boolean; message: string; reportStatus: string; approvedAt: string }> {
+    const response = await Axios.post(
+      `/admin/completed-exams/${examId}/attempts/${attemptId}/approve`,
     );
     return response.data?.data || response.data;
   },

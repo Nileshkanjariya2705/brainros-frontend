@@ -1,9 +1,9 @@
 /**
  * Academic Subjects & Target Exam Constants
- * Restricts question authoring and filters to the 4 core subjects for JEE, NEET, and CAT.
+ * Restricts question authoring and filters to core subjects for JEE and NEET.
  */
 
-export const TARGET_EXAMS = ['JEE', 'NEET', 'CAT'] as const;
+export const TARGET_EXAMS = ['JEE', 'NEET'] as const;
 
 export const ALLOWED_CORE_SUBJECTS = ['Physics', 'Chemistry', 'Mathematics', 'Biology'] as const;
 

@@ -39,7 +39,7 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
 }) => {
   const [name, setName] = useState('');
   const [totalQuestions, setTotalQuestions] = useState<number>(180);
-  const [examType, setExamType] = useState<'' | 'JEE' | 'NEET' | 'CAT'>('');
+  const [examType, setExamType] = useState<'' | 'JEE' | 'NEET'>('');
   const [rules, setRules] = useState<CreateBlueprintRulePayload[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -112,7 +112,7 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
     });
   }, [ruleSubjectId, getChaptersAPI]);
 
-  const applyExamTemplate = (type: 'JEE' | 'NEET' | 'CAT') => {
+  const applyExamTemplate = (type: 'JEE' | 'NEET') => {
     setErrorMsg(null);
     if (type === 'JEE') {
       setName(`${examTitle || 'JEE Main'} Fixed Blueprint`);
@@ -203,43 +203,10 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
       }
 
       setRules(newRules);
-    } else if (type === 'CAT') {
-      setName(`${examTitle || 'CAT Exam'} Fixed Blueprint`);
-      setTotalQuestions(68);
-
-      const varcSub = subjects.find(
-        (s) => s.name.toLowerCase().includes('physics') && s.name.toLowerCase().includes('cat'),
-      );
-      const dilrSub = subjects.find(
-        (s) => s.name.toLowerCase().includes('chemistry') && s.name.toLowerCase().includes('cat'),
-      );
-      const qaSub =
-        subjects.find(
-          (s) =>
-            s.name.toLowerCase().includes('mathematics') && s.name.toLowerCase().includes('cat'),
-        ) ||
-        subjects.find(
-          (s) => s.name.toLowerCase().includes('math') && s.name.toLowerCase().includes('cat'),
-        );
-
-      const newRules: CreateBlueprintRulePayload[] = [];
-      let priority = 1;
-
-      if (varcSub) {
-        newRules.push({ subjectId: varcSub.id, selectionCount: 24, priority: priority++ });
-      }
-      if (dilrSub) {
-        newRules.push({ subjectId: dilrSub.id, selectionCount: 22, priority: priority++ });
-      }
-      if (qaSub) {
-        newRules.push({ subjectId: qaSub.id, selectionCount: 22, priority: priority++ });
-      }
-
-      setRules(newRules);
     }
   };
 
-  const handleExamTypeChange = (type: '' | 'JEE' | 'NEET' | 'CAT') => {
+  const handleExamTypeChange = (type: '' | 'JEE' | 'NEET') => {
     setExamType(type);
     if (!type) {
       setRules([]);
@@ -393,7 +360,6 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
               <option value="">Custom (Build Rules Manually)</option>
               <option value="JEE">JEE Main (Fixed Template - 75 Questions)</option>
               <option value="NEET">NEET-UG (Fixed Template - 180 Questions)</option>
-              <option value="CAT">CAT Exam (Fixed Template - 68 Questions)</option>
             </select>
           </div>
 

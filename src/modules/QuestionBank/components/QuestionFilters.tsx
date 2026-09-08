@@ -82,9 +82,8 @@ export const QuestionFilters: React.FC<QuestionFiltersProps> = ({
               className="rounded-xl border border-slate-200 bg-indigo-50/40 px-3 py-2 text-xs font-bold text-indigo-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all min-w-[160px]"
             >
               <option value="">All Subjects</option>
-              <option value="JEET">JEET</option>
+              <option value="JEE">JEE</option>
               <option value="NEET">NEET</option>
-              <option value="CAT">CAT</option>
             </select>
           )}
 

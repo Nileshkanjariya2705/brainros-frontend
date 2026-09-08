@@ -247,9 +247,8 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
                   <span className="truncate">{item.label}</span>
                   {item.badge && (
                     <span
-                      className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        item.badgeColor || 'bg-indigo-100 text-indigo-700'
-                      }`}
+                      className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded ${item.badgeColor || 'bg-indigo-100 text-indigo-700'
+                        }`}
                     >
                       {item.badge}
                     </span>
@@ -421,11 +420,10 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
                           <button
                             key={r}
                             onClick={() => handleRoleSelect(r)}
-                            className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-50 transition ${
-                              r === activeRole
+                            className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-50 transition ${r === activeRole
                                 ? 'text-indigo-600 font-bold bg-indigo-50/50'
                                 : 'text-slate-700'
-                            }`}
+                              }`}
                           >
                             <span>{meta.label}</span>
                             {r === activeRole && (

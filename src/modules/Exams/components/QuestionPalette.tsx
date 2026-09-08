@@ -68,7 +68,7 @@ export const QuestionPaletteComponent: React.FC<QuestionPaletteProps> = ({
   }, [questions, getQuestionStatus]);
 
   return (
-    <div className="flex flex-col bg-white h-full w-full max-w-sm lg:w-72 xl:w-80 shrink-0 p-4 border-l border-slate-200">
+    <div className="flex flex-col bg-white h-full w-full max-w-full sm:max-w-xs lg:w-72 xl:w-80 shrink-0 p-3.5 sm:p-4 border-l border-slate-200 overflow-hidden pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
       {/* ── Header ────────────────────────────────────────────── */}
       <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
         <div className="flex items-center gap-2.5">

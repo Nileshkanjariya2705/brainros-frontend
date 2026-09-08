@@ -18,13 +18,17 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import Loader from '@/components/feedback/Loader';
 import { toast } from '@/utils/toast';
-import ExamTranslationManager from '../components/ExamTranslationManager';
+import ExamTranslationManager, {
+  TranslationPreviewCard,
+} from '../components/ExamTranslationManager';
 import {
   useGetTranslationTargetsAPI,
   useImportExamTranslationsAPI,
+  useValidateExamTranslationFileAPI,
   downloadExamTranslationTemplate,
   type TranslationTargetItem,
   type ExamTranslationTargetsQueryParams,
+  type ExamTranslationValidationResponse,
 } from '../services/examTranslation.service';
 import { useAxiosGet } from '@/hooks/useAxios';
 import { Axios } from '@/base-axios';
@@ -85,6 +89,10 @@ export const AdminTranslationManagementPage: React.FC = () => {
   const [selectedTarget, setSelectedTarget] = useState<TranslationTargetItem | null>(null);
 
   // ─── Direct Language File Upload Modal State ───────────────────────────
+  const { validateExamTranslationFileAPI, isLoading: isValidatingModalFile } =
+    useValidateExamTranslationFileAPI();
+  const [modalValidationResult, setModalValidationResult] =
+    useState<ExamTranslationValidationResponse | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadTargetId, setUploadTargetId] = useState<string>('');
   const [uploadLanguageId, setUploadLanguageId] = useState<string>('hi');
@@ -234,9 +242,29 @@ export const AdminTranslationManagementPage: React.FC = () => {
       setUploadTargetId(items[0].id);
     }
     setUploadFile(null);
+    setModalValidationResult(null);
     setReplaceMode(false);
     setModalUploadError(null);
     setIsUploadModalOpen(true);
+  };
+
+  const handleModalFileSelect = async (
+    file: File,
+    targetId = uploadTargetId,
+    langId = uploadLanguageId,
+  ) => {
+    setUploadFile(file);
+    setModalUploadError(null);
+    setModalValidationResult(null);
+
+    if (targetId && langId) {
+      const res = await validateExamTranslationFileAPI(targetId, langId, file);
+      if (res.isSuccess && res.data) {
+        setModalValidationResult(res.data);
+      } else if (res.error) {
+        setModalUploadError(res.error);
+      }
+    }
   };
 
   const handleDownloadModalTemplate = async (format: 'xlsx' | 'csv' = 'xlsx') => {
@@ -865,7 +893,13 @@ export const AdminTranslationManagementPage: React.FC = () => {
             <label className="text-xs font-bold text-slate-700">Target Module / Exam *</label>
             <select
               value={uploadTargetId}
-              onChange={(e) => setUploadTargetId(e.target.value)}
+              onChange={(e) => {
+                const targetId = e.target.value;
+                setUploadTargetId(targetId);
+                if (uploadFile && targetId && uploadLanguageId) {
+                  handleModalFileSelect(uploadFile, targetId, uploadLanguageId);
+                }
+              }}
               className="w-full text-xs font-medium rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-900 focus:bg-white focus:border-indigo-500 focus:outline-none cursor-pointer"
             >
               <option value="">-- Select Exam / Test --</option>
@@ -886,7 +920,7 @@ export const AdminTranslationManagementPage: React.FC = () => {
                   type="button"
                   disabled={isDownloadingTemplate || !uploadLanguageId}
                   onClick={() => handleDownloadModalTemplate('xlsx')}
-                  className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1"
+                  className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1 cursor-pointer"
                 >
                   <FileDown size={13} />
                   <span>Download Excel Template</span>
@@ -896,7 +930,7 @@ export const AdminTranslationManagementPage: React.FC = () => {
                   type="button"
                   disabled={isDownloadingTemplate || !uploadLanguageId}
                   onClick={() => handleDownloadModalTemplate('csv')}
-                  className="text-[11px] font-bold text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
+                  className="text-[11px] font-bold text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 cursor-pointer"
                 >
                   <span>CSV</span>
                 </button>
@@ -904,7 +938,13 @@ export const AdminTranslationManagementPage: React.FC = () => {
             </div>
             <select
               value={uploadLanguageId}
-              onChange={(e) => setUploadLanguageId(e.target.value)}
+              onChange={(e) => {
+                const langId = e.target.value;
+                setUploadLanguageId(langId);
+                if (uploadFile && uploadTargetId && langId) {
+                  handleModalFileSelect(uploadFile, uploadTargetId, langId);
+                }
+              }}
               className="w-full text-xs font-medium rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-900 focus:bg-white focus:border-indigo-500 focus:outline-none cursor-pointer"
             >
               {availableLanguages.map((l) => (
@@ -915,46 +955,54 @@ export const AdminTranslationManagementPage: React.FC = () => {
             </select>
           </div>
 
-          {/* Dropzone for Translation File */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700">Translation File (.xlsx, .csv) *</label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,.xlsx,.xls"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  setUploadFile(e.target.files[0]);
-                  setModalUploadError(null);
-                }
-              }}
-              className="hidden"
-            />
+          {/* Hidden File Input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            onChange={(e) => {
+              if (e.target.files && e.target.files[0]) {
+                handleModalFileSelect(e.target.files[0]);
+              }
+            }}
+            className="hidden"
+          />
 
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-300 hover:border-indigo-400 bg-slate-50 hover:bg-indigo-50/20 p-6 rounded-2xl cursor-pointer text-center space-y-2 transition-all"
-            >
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
-                <FileSpreadsheet size={20} />
-              </div>
-              {uploadFile ? (
-                <div>
-                  <p className="text-xs font-bold text-slate-900">{uploadFile.name}</p>
-                  <p className="text-[11px] text-slate-500">
-                    {(uploadFile.size / 1024).toFixed(1)} KB • Click to choose another file
-                  </p>
+          {/* Dropzone or Validation State / Preview */}
+          {isValidatingModalFile ? (
+            <div className="rounded-3xl border border-indigo-200 bg-indigo-50/40 p-8 text-center space-y-3">
+              <Loader label="Validating & Parsing Translation File..." />
+              <p className="text-xs text-indigo-700/80">
+                Checking row mappings, option translations, and verifying question IDs...
+              </p>
+            </div>
+          ) : modalValidationResult ? (
+            <TranslationPreviewCard
+              validation={modalValidationResult}
+              onRemoveFile={() => {
+                setUploadFile(null);
+                setModalValidationResult(null);
+              }}
+            />
+          ) : (
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700">Translation File (.xlsx, .csv) *</label>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-slate-300 hover:border-indigo-400 bg-slate-50 hover:bg-indigo-50/20 p-6 rounded-2xl cursor-pointer text-center space-y-2 transition-all"
+              >
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+                  <FileSpreadsheet size={20} />
                 </div>
-              ) : (
                 <div>
                   <p className="text-xs font-bold text-slate-800">
                     Click to select or drop translation file here
                   </p>
-                  <p className="text-[11px] text-slate-400">Supports .xlsx, .xls, and .csv files</p>
+                  <p className="text-[11px] text-slate-400">Supports .xlsx, .xls, and .csv files up to 25MB</p>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Replace mode checkbox */}
           <div className="flex items-center gap-2">
@@ -992,11 +1040,15 @@ export const AdminTranslationManagementPage: React.FC = () => {
             <Button
               size="sm"
               onClick={handleSubmitModalUpload}
-              disabled={!uploadFile || isUploadingTranslation || !uploadTargetId}
+              disabled={!uploadFile || isUploadingTranslation || isValidatingModalFile || !uploadTargetId || (modalValidationResult !== null && modalValidationResult.validRows === 0)}
               isLoading={isUploadingTranslation}
               className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
             >
-              <span>Upload & Import Translations</span>
+              <span>
+                {modalValidationResult
+                  ? `Confirm & Import (${modalValidationResult.validRows} Valid Qs)`
+                  : 'Upload & Import Translations'}
+              </span>
             </Button>
           </div>
         </div>

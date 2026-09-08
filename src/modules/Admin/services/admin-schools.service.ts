@@ -94,7 +94,48 @@ export const AdminSchoolsApi = {
     status?: string;
   }): Promise<SchoolsResponse> => {
     const res = await Axios.get('/admin/schools', { params });
-    return res.data?.data || res.data;
+    const payload = res.data;
+
+    // ResponseInterceptor format { success: true, data: [...], meta: {...} }
+    if (payload && Array.isArray(payload.data)) {
+      return {
+        data: payload.data,
+        meta: payload.meta || {
+          page: params?.page || 1,
+          limit: params?.limit || 20,
+          total: payload.data.length,
+          totalPages: 1,
+        },
+      };
+    }
+
+    // Direct object with nested data
+    if (payload?.data && Array.isArray(payload.data.data)) {
+      return {
+        data: payload.data.data,
+        meta: payload.data.meta || {
+          page: params?.page || 1,
+          limit: params?.limit || 20,
+          total: payload.data.data.length,
+          totalPages: 1,
+        },
+      };
+    }
+
+    // Direct array
+    if (Array.isArray(payload)) {
+      return {
+        data: payload,
+        meta: {
+          page: params?.page || 1,
+          limit: params?.limit || 20,
+          total: payload.length,
+          totalPages: 1,
+        },
+      };
+    }
+
+    return payload || { data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 0 } };
   },
 
   getFilterOptions: async (): Promise<SchoolFilterOptions> => {

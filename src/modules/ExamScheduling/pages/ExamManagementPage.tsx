@@ -69,12 +69,7 @@ export const ExamManagementPage: React.FC = () => {
     });
 
     if (data) {
-      // Exclude live exams if type is ALL, show MOCK and SUBJECT_MOCK
-      const allItems = data.items || [];
-      const mockList = selectedType === 'ALL'
-        ? allItems.filter((i) => i.type !== 'LIVE_EXAM')
-        : allItems;
-      setItems(mockList);
+      setItems(data.items || []);
     }
   }, [getTranslationTargetsAPI, selectedType, search, selectedStatus]);
 

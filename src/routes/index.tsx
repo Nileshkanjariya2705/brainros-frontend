@@ -85,6 +85,12 @@ const ExamManagementPage = lazyRoute(
 const ExamManagerDashboardPage = lazyRoute(
   () => import('@/modules/ExamManager/pages/ExamManagerDashboardPage'),
 );
+const DedicatedExamManagementDashboardPage = lazyRoute(
+  () => import('@/modules/ExamManager/pages/ExamManagementDashboardPage'),
+);
+const TranslationManagerPage = lazyRoute(
+  () => import('@/modules/RegionalLanguage/pages/TranslationManagerPage'),
+);
 const UploadQuestionPaperPage = lazyRoute(
   () => import('@/modules/ExamManager/pages/UploadQuestionPaperPage'),
 );
@@ -429,6 +435,22 @@ const adminRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
             <ExamManagerDashboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exams/:examId/manage',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
+            <DedicatedExamManagementDashboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'translation-manager/:examId',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.TRANSLATION_VIEW, PERMISSIONS.EXAM_VIEW]}>
+            <TranslationManagerPage />
           </ProtectedRoute>
         ),
       },

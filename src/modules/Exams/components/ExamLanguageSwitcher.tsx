@@ -90,30 +90,30 @@ export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
   );
 
   return (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
+    <div className="relative inline-block text-left shrink-0" ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         disabled={isSwitching || isLoadingLanguages}
-        className="group flex items-center gap-2 rounded-xl border border-slate-300/60 bg-slate-100/90 px-3 py-1.5 text-xs font-semibold text-slate-800 hover:border-indigo-500/80 hover:bg-slate-100 transition-all shadow-sm focus:outline-none"
+        className="group flex items-center gap-1.5 sm:gap-2 rounded-xl border border-slate-300/60 bg-slate-100/90 px-2 sm:px-3 py-1 sm:py-1.5 text-xs font-semibold text-slate-800 hover:border-indigo-500/80 hover:bg-slate-100 transition-all shadow-xs focus:outline-none shrink-0"
         title="Switch exam language (preserves all chosen answers)"
       >
-        <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400">
+        <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400 shrink-0">
           {isSwitching ? <Loader2 size={13} className="animate-spin" /> : <Languages size={13} />}
         </div>
 
         <div className="flex flex-col text-left">
-          <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold leading-none">
+          <span className="text-[9px] uppercase tracking-wider text-slate-500 font-bold leading-none hidden sm:inline">
             Language
           </span>
-          <span className="text-xs font-bold text-slate-900 leading-tight">
+          <span className="text-[11px] sm:text-xs font-bold text-slate-900 leading-tight">
             {currentLang ? `${currentLang.nativeName || currentLang.name}` : 'English'}
           </span>
         </div>
 
         <ChevronDown
           size={14}
-          className={`text-slate-500 transition-transform duration-200 group-hover:text-indigo-300 ${
+          className={`text-slate-500 transition-transform duration-200 group-hover:text-indigo-300 shrink-0 ${
             isOpen ? 'rotate-180' : ''
           }`}
         />
@@ -121,7 +121,7 @@ export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
 
       {/* Language Selection Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 origin-top-right rounded-2xl border border-slate-300 bg-white/95 p-1.5 text-slate-900 shadow-2xl backdrop-blur-xl ring-1 ring-black ring-opacity-5 z-50 animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] origin-top-right rounded-2xl border border-slate-300 bg-white/95 p-1.5 text-slate-900 shadow-2xl backdrop-blur-xl ring-1 ring-black ring-opacity-5 z-50 animate-in fade-in zoom-in-95 duration-100">
           <div className="px-3 py-2 border-b border-slate-200 mb-1">
             <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-indigo-400 uppercase tracking-wider">
               <Sparkles size={12} />

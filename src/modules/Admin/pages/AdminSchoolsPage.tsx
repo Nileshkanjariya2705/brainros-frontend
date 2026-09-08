@@ -29,7 +29,126 @@ import {
 } from '../services/admin-schools.service';
 import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
+import { useJobProgress } from '@/hooks/useJobProgress';
 
+/* ── WebSocket Live Job Progress Modal ───────────────────────────────────── */
+interface SchoolBulkProgressModalProps {
+  uploadId: string;
+  totalValid: number;
+  onClose: () => void;
+  onComplete: () => void;
+}
+
+const SchoolBulkProgressModal: React.FC<SchoolBulkProgressModalProps> = ({
+  uploadId,
+  totalValid,
+  onClose,
+  onComplete,
+}) => {
+  const {
+    percentage,
+    current,
+    total,
+    message,
+    status,
+    isCompleted,
+    isFailed,
+    isConnected,
+  } = useJobProgress({
+    queue: 'schools-bulk-upload',
+    jobId: uploadId,
+    enabled: Boolean(uploadId),
+    pollingIntervalMs: 500,
+  });
+
+  const displayTotal = total || totalValid || 1;
+  const displayCurrent = current || (isCompleted ? displayTotal : 0);
+  const displayPercentage = isCompleted ? 100 : percentage;
+
+  useEffect(() => {
+    if (isCompleted) {
+      onComplete();
+    }
+  }, [isCompleted, onComplete]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-xs p-4 animate-in fade-in">
+      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 font-bold">
+              <RotateCw className={`h-5 w-5 ${!isCompleted && !isFailed ? 'animate-spin' : ''}`} />
+            </span>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                {isCompleted
+                  ? 'Onboarding Completed!'
+                  : isFailed
+                    ? 'Onboarding Failed'
+                    : 'Onboarding Schools...'}
+              </h3>
+              <p className="text-[11px] text-slate-400 font-mono">
+                WebSocket Stream {isConnected ? '(Live Connected)' : '(Syncing)'}
+              </p>
+            </div>
+          </div>
+          {isCompleted || isFailed ? (
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition">
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
+
+        {/* Progress Bar & Counter */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-slate-700">
+              {displayCurrent} of {displayTotal} Schools Processed
+            </span>
+            <span className="font-black text-indigo-600">{displayPercentage.toFixed(0)}%</span>
+          </div>
+
+          <div className="h-3.5 w-full overflow-hidden rounded-full bg-slate-100 p-0.5 border border-slate-200">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${
+                isCompleted
+                  ? 'bg-emerald-500'
+                  : isFailed
+                    ? 'bg-rose-500'
+                    : 'bg-gradient-to-r from-indigo-500 via-indigo-600 to-teal-500 animate-pulse'
+              }`}
+              style={{ width: `${displayPercentage}%` }}
+            />
+          </div>
+
+          <p className="text-xs text-slate-600 font-medium min-h-[40px] bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center">
+            {message || (isCompleted ? 'All schools onboarded successfully.' : 'Processing school records...')}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+          <span className="text-[11px] text-slate-400">
+            Status: <strong className="uppercase text-indigo-700 font-bold">{status}</strong>
+          </span>
+          {isCompleted || isFailed ? (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={onClose}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+            >
+              Done & Close
+            </Button>
+          ) : (
+            <span className="text-[11px] text-slate-400 italic">Live WebSocket updating...</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── Main Admin Schools Page ─────────────────────────────────────────────── */
 export const AdminSchoolsPage: React.FC = () => {
   // State
   const [schools, setSchools] = useState<SchoolItem[]>([]);
@@ -72,6 +191,9 @@ export const AdminSchoolsPage: React.FC = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
 
+  // Live WebSocket Job Progress State
+  const [activeProgressUploadId, setActiveProgressUploadId] = useState<string | null>(null);
+
   // Load filter options once
   useEffect(() => {
     AdminSchoolsApi.getFilterOptions()
@@ -83,15 +205,22 @@ export const AdminSchoolsPage: React.FC = () => {
   const fetchSchools = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await AdminSchoolsApi.getSchools({
+      const res: any = await AdminSchoolsApi.getSchools({
         page,
         limit,
         search: search || undefined,
         stateId: stateFilter || undefined,
         status: statusFilter || undefined,
       });
-      setSchools(res.data || []);
-      setTotal(res.meta?.total || 0);
+      const list = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+          ? res.data
+          : [];
+      const totalCount =
+        res?.meta?.total ?? (Array.isArray(res) ? res.length : list.length);
+      setSchools(list);
+      setTotal(totalCount);
     } catch (err: any) {
       console.error('Failed to fetch schools', err);
     } finally {
@@ -162,26 +291,32 @@ export const AdminSchoolsPage: React.FC = () => {
     }
   };
 
-  // Confirm bulk upload
+  // Confirm bulk upload with WebSocket progress stream
   const handleConfirmUpload = async () => {
     if (!uploadResult?.upload?.id) return;
+    const uploadId = uploadResult.upload.id;
     setIsConfirming(true);
     setUploadError(null);
+
+    // Open live WebSocket progress modal
+    setActiveProgressUploadId(uploadId);
+
     try {
-      const res = await AdminSchoolsApi.confirmUpload(uploadResult.upload.id);
-      setUploadSuccess(`Successfully onboarded ${res.createdCount} schools!`);
-      fetchSchools();
-      setTimeout(() => {
-        setIsBulkModalOpen(false);
-        setSelectedFile(null);
-        setUploadResult(null);
-        setUploadSuccess(null);
-      }, 1500);
+      await AdminSchoolsApi.confirmUpload(uploadId);
     } catch (err: any) {
       setUploadError(err.response?.data?.message || 'Failed to confirm school batch');
-    } finally {
       setIsConfirming(false);
     }
+  };
+
+  const handleCloseProgressModal = () => {
+    setActiveProgressUploadId(null);
+    setIsBulkModalOpen(false);
+    setSelectedFile(null);
+    setUploadResult(null);
+    setUploadSuccess(null);
+    setIsConfirming(false);
+    fetchSchools();
   };
 
   // Metric stats
@@ -383,7 +518,7 @@ export const AdminSchoolsPage: React.FC = () => {
               <tr>
                 <th className="py-3 px-4">School Name & Code</th>
                 <th className="py-3 px-4">Location</th>
-                <th className="py-3 px-4">Contact Info</th>
+                <th className="py-3 px-4">Contact Info (Phone & Email)</th>
                 <th className="py-3 px-4 text-center">Enrolled Students</th>
                 <th className="py-3 px-4 text-center">Batches</th>
                 <th className="py-3 px-4 text-center">Status</th>
@@ -439,16 +574,16 @@ export const AdminSchoolsPage: React.FC = () => {
                     </td>
 
                     <td className="py-3.5 px-4 text-slate-500 text-[11px]">
-                      {school.email ? (
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3 text-slate-400" />
-                          <span>{school.email}</span>
+                      {school.phone ? (
+                        <div className="flex items-center gap-1 font-mono font-medium text-slate-800">
+                          <Phone className="h-3 w-3 text-indigo-500" />
+                          <span>{school.phone}</span>
                         </div>
                       ) : null}
-                      {school.phone ? (
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <Phone className="h-3 w-3 text-slate-400" />
-                          <span>{school.phone}</span>
+                      {school.email ? (
+                        <div className="flex items-center gap-1 mt-0.5 text-slate-500">
+                          <Mail className="h-3 w-3 text-slate-400" />
+                          <span>{school.email}</span>
                         </div>
                       ) : null}
                       {!school.email && !school.phone && <span>—</span>}
@@ -599,13 +734,16 @@ export const AdminSchoolsPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Phone Number</label>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
+                    required
                     value={addForm.phone || ''}
                     onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
                     placeholder="+919876543210"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-indigo-500 focus:outline-hidden"
+                    className="w-full font-mono rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-indigo-500 focus:outline-hidden"
                   />
                 </div>
               </div>
@@ -674,13 +812,13 @@ export const AdminSchoolsPage: React.FC = () => {
       {/* ═══════════════════════════════════════════════════════════════ */}
       {isBulkModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
-          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-xl border border-slate-200 animate-in zoom-in-95">
+          <div className="w-full max-w-3xl rounded-3xl bg-white p-6 shadow-xl border border-slate-200 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
                   <FileSpreadsheet className="h-4 w-4" />
                 </span>
-                <h3 className="text-base font-bold text-slate-900">Bulk Onboard Schools</h3>
+                <h3 className="text-base font-bold text-slate-900">Bulk Onboard Partner Schools</h3>
               </div>
               <button
                 onClick={() => setIsBulkModalOpen(false)}
@@ -711,7 +849,7 @@ export const AdminSchoolsPage: React.FC = () => {
                     <div className="py-6 space-y-3">
                       <Loader label={`Validating ${selectedFile?.name || 'spreadsheet'}...`} />
                       <p className="text-[11px] text-slate-400 font-semibold">
-                        Parsing rows, checking duplicate codes, and verifying schema...
+                        Parsing rows, verifying required columns (Name, Code, Phone, State, City)...
                       </p>
                     </div>
                   ) : (
@@ -721,10 +859,10 @@ export const AdminSchoolsPage: React.FC = () => {
                         Select a CSV or XLSX spreadsheet with school records
                       </p>
                       <p className="text-[11px] text-slate-400 mt-1">
-                        Columns: School Name, School Code, Email, Phone, State, City, Address
+                        Columns required: School Name, School Code, Email, Phone Number, State, City, Address
                       </p>
 
-                      <label className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 cursor-pointer">
+                      <label className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 cursor-pointer transition">
                         <span>Browse Spreadsheet</span>
                         <input
                           type="file"
@@ -738,14 +876,14 @@ export const AdminSchoolsPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-slate-500 pt-2">
-                  <span>Need the standard format?</span>
+                  <span>Need the standard bulk template?</span>
                   <button
                     type="button"
                     onClick={() => AdminSchoolsApi.downloadTemplate('xlsx')}
                     className="font-bold text-indigo-600 hover:underline flex items-center gap-1"
                   >
                     <Download className="h-3.5 w-3.5" />
-                    <span>Download Template</span>
+                    <span>Download Template (with Phone Number)</span>
                   </button>
                 </div>
               </div>
@@ -779,8 +917,9 @@ export const AdminSchoolsPage: React.FC = () => {
                     <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 sticky top-0">
                       <tr>
                         <th className="p-2">Row</th>
-                        <th className="p-2">Name</th>
-                        <th className="p-2">Code</th>
+                        <th className="p-2">School Name</th>
+                        <th className="p-2">School Code</th>
+                        <th className="p-2">Phone Number</th>
                         <th className="p-2">State / City</th>
                         <th className="p-2 text-center">Status</th>
                       </tr>
@@ -789,10 +928,20 @@ export const AdminSchoolsPage: React.FC = () => {
                       {uploadResult.rows.map((row) => (
                         <tr key={row.id}>
                           <td className="p-2 font-mono text-slate-400">#{row.rowNumber}</td>
-                          <td className="p-2 font-bold text-slate-800">{row.data.name}</td>
+                          <td className="p-2 font-bold text-slate-800">
+                            <div>{row.data.name}</div>
+                            {row.validationStatus !== 'VALID' && (row.data as any).errors?.length > 0 && (
+                              <div className="text-[10px] text-red-600 font-normal mt-0.5">
+                                {(row.data as any).errors.join(', ')}
+                              </div>
+                            )}
+                          </td>
                           <td className="p-2 font-mono text-slate-600">{row.data.code}</td>
+                          <td className="p-2 font-mono text-indigo-700 font-medium">
+                            {row.data.phone || '—'}
+                          </td>
                           <td className="p-2 text-slate-500">
-                            {row.data.city}, {row.data.state}
+                            {[row.data.city, row.data.state].filter(Boolean).join(', ') || '—'}
                           </td>
                           <td className="p-2 text-center">
                             <span
@@ -831,7 +980,7 @@ export const AdminSchoolsPage: React.FC = () => {
                     onClick={handleConfirmUpload}
                     className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
                   >
-                    Confirm & Onboard ({uploadResult.upload.validRows}) Schools
+                    Confirm & Onboard ({uploadResult.upload.validRows}) Schools (Live WebSocket Progress)
                   </Button>
                 </div>
               </div>
@@ -841,7 +990,19 @@ export const AdminSchoolsPage: React.FC = () => {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* MODAL 3: VIEW SCHOOL DETAILS                                    */}
+      {/* MODAL 3: WEBSOCKET LIVE JOB PROGRESS STREAM                     */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {activeProgressUploadId && (
+        <SchoolBulkProgressModal
+          uploadId={activeProgressUploadId}
+          totalValid={uploadResult?.upload?.validRows || 0}
+          onClose={handleCloseProgressModal}
+          onComplete={handleCloseProgressModal}
+        />
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* MODAL 4: VIEW SCHOOL DETAILS                                    */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       {selectedSchool && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
@@ -890,22 +1051,22 @@ export const AdminSchoolsPage: React.FC = () => {
 
               <div className="space-y-1.5 pt-2 border-t border-slate-100">
                 <p className="flex items-center gap-2 text-slate-600">
-                  <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                  <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                   <span>
                     {selectedSchool.address ? `${selectedSchool.address}, ` : ''}
                     {selectedSchool.city}, {selectedSchool.state}
                   </span>
                 </p>
-                {selectedSchool.email && (
-                  <p className="flex items-center gap-2 text-slate-600">
-                    <Mail className="h-3.5 w-3.5 text-slate-400" />
-                    <span>{selectedSchool.email}</span>
+                {selectedSchool.phone && (
+                  <p className="flex items-center gap-2 text-slate-600 font-mono font-medium">
+                    <Phone className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                    <span>{selectedSchool.phone}</span>
                   </p>
                 )}
-                {selectedSchool.phone && (
+                {selectedSchool.email && (
                   <p className="flex items-center gap-2 text-slate-600">
-                    <Phone className="h-3.5 w-3.5 text-slate-400" />
-                    <span>{selectedSchool.phone}</span>
+                    <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <span>{selectedSchool.email}</span>
                   </p>
                 )}
               </div>

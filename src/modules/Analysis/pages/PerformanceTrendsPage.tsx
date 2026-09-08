@@ -7,7 +7,7 @@ import PerformanceTrendsView from '../components/PerformanceTrendsView';
 import Loader from '@/components/feedback/Loader';
 import Button from '@/components/ui/Button';
 
-const EXAM_TYPES = ['All Types', 'JEET', 'NEET', 'CAT'];
+const EXAM_TYPES = ['All Types', 'JEE', 'NEET'];
 
 export const PerformanceTrendsPage: React.FC = () => {
   const { getPerformanceTrendsAPI, isLoading } = useGetPerformanceTrendsAPI();

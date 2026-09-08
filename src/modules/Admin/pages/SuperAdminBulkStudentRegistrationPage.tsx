@@ -219,9 +219,16 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
     }
   };
 
-  // Handle Upload & Validate with optional Target School ID
+  // Handle Upload & Validate with mandatory Target School ID
   const handleUploadAndValidate = async () => {
-    if (!selectedFile) return;
+    if (!selectedSchoolId) {
+      setUploadError('Please select a Target School / Examination Center before uploading.');
+      return;
+    }
+    if (!selectedFile) {
+      setUploadError('Please select a CSV or Excel file to upload.');
+      return;
+    }
 
     setIsUploading(true);
     setUploadError(null);
@@ -229,7 +236,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
     try {
       const res = await studentBulkService.uploadStudents(
         selectedFile,
-        selectedSchoolId || undefined,
+        selectedSchoolId,
       );
       setActiveUploadId(res.uploadId);
       setCurrentStep('PREVIEW');
@@ -326,34 +333,34 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="min-h-screen bg-slate-50 text-slate-900 p-4 sm:p-6 lg:p-8 space-y-6">
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2 text-indigo-400 text-sm font-semibold tracking-wider uppercase mb-1">
+          <div className="flex items-center gap-2 text-indigo-600 text-sm font-semibold tracking-wider uppercase mb-1">
             <Users className="w-4 h-4" />
             <span>Super Admin &bull; Student Directory</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
             Bulk Student Registration
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">
               Passwordless &bull; OTP Ready
             </span>
           </h1>
-          <p className="text-slate-400 text-sm mt-1 max-w-3xl">
+          <p className="text-slate-600 text-sm mt-1 max-w-3xl">
             Upload CSV or Excel files with student details matching normal registration. Validate state/city relationships,
             exam targets, and grade levels with automated duplicate detection.
           </p>
         </div>
 
         {/* Tab Controls */}
-        <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl self-start sm:self-auto">
+        <div className="flex items-center bg-white border border-slate-200 p-1 rounded-xl shadow-xs self-start sm:self-auto">
           <button
             onClick={() => setActiveTab('upload')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               activeTab === 'upload'
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
             <UploadCloud className="w-4 h-4" />
@@ -363,8 +370,8 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
             onClick={() => setActiveTab('history')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               activeTab === 'history'
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
             <History className="w-4 h-4" />
@@ -381,36 +388,36 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
             <div
               className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
                 currentStep === 'SELECT'
-                  ? 'bg-indigo-950/40 border-indigo-500/50 text-indigo-300 ring-1 ring-indigo-500/30'
-                  : 'bg-slate-900/60 border-slate-800 text-slate-400'
+                  ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 ring-1 ring-indigo-300'
+                  : 'bg-white border-slate-200 text-slate-500'
               }`}
             >
               <div
                 className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
                   currentStep !== 'SELECT'
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                     : 'bg-indigo-600 text-white'
                 }`}
               >
                 {currentStep !== 'SELECT' ? <Check className="w-3.5 h-3.5" /> : '1'}
               </div>
-              <span className="text-xs sm:text-sm font-semibold truncate">1. Upload File</span>
+              <span className="text-xs sm:text-sm font-semibold truncate">1. Select School & File</span>
             </div>
 
             <div
               className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
                 currentStep === 'PREVIEW'
-                  ? 'bg-indigo-950/40 border-indigo-500/50 text-indigo-300 ring-1 ring-indigo-500/30'
-                  : 'bg-slate-900/60 border-slate-800 text-slate-400'
+                  ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 ring-1 ring-indigo-300'
+                  : 'bg-white border-slate-200 text-slate-500'
               }`}
             >
               <div
                 className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
                   currentStep === 'COMPLETED'
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                     : currentStep === 'PREVIEW'
                       ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-800 text-slate-400'
+                      : 'bg-slate-100 text-slate-500'
                 }`}
               >
                 {currentStep === 'COMPLETED' ? <Check className="w-3.5 h-3.5" /> : '2'}
@@ -421,17 +428,17 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
             <div
               className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
                 currentStep === 'REGISTERING' || currentStep === 'COMPLETED'
-                  ? 'bg-indigo-950/40 border-indigo-500/50 text-indigo-300 ring-1 ring-indigo-500/30'
-                  : 'bg-slate-900/60 border-slate-800 text-slate-400'
+                  ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 ring-1 ring-indigo-300'
+                  : 'bg-white border-slate-200 text-slate-500'
               }`}
             >
               <div
                 className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
                   currentStep === 'COMPLETED'
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                     : currentStep === 'REGISTERING'
                       ? 'bg-indigo-600 text-white animate-pulse'
-                      : 'bg-slate-800 text-slate-400'
+                      : 'bg-slate-100 text-slate-500'
                 }`}
               >
                 3
@@ -445,27 +452,34 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Upload Dropzone */}
               <div className="lg:col-span-2 space-y-6">
-                {/* B2B Partner School / Examination Center Selector */}
-                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-3">
+                {/* B2B Partner School / Examination Center Selector (MANDATORY) */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-xs">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-semibold text-white flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-indigo-400" />
-                      Target School / Examination Center (Optional)
+                    <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-indigo-600" />
+                      Select Target School / Examination Center <span className="text-rose-500">*</span>
                     </label>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
-                      B2B Center Mapping
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-bold">
+                      Mandatory Step
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400">
-                    If selected, all candidates in this batch will be assigned to this school/center. Leave unselected to detect school name or code directly from each row in your spreadsheet.
+                  <p className="text-xs text-slate-500">
+                    You must select a target school before uploading a student file. All candidates in this batch will be assigned to the selected school.
                   </p>
                   <select
                     value={selectedSchoolId}
-                    onChange={(e) => setSelectedSchoolId(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedSchoolId(e.target.value);
+                      if (uploadError) setUploadError(null);
+                    }}
                     disabled={isLoadingSchools}
-                    className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-all"
+                    className={`w-full bg-slate-50 border rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:outline-none transition-all ${
+                      !selectedSchoolId
+                        ? 'border-amber-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100'
+                        : 'border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100'
+                    }`}
                   >
-                    <option value="">Auto-detect from spreadsheet ("School / College" column)</option>
+                    <option value="">-- Select Target School / Center (Required) --</option>
                     {schools.map((school) => (
                       <option key={school.id} value={school.id}>
                         {school.name} ({school.code}) {school.city ? `— ${school.city}` : ''}
@@ -478,28 +492,37 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={handleDrop}
                   className={`border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center transition-all cursor-pointer ${
-                    selectedFile
-                      ? 'border-indigo-500/60 bg-indigo-950/10'
-                      : 'border-slate-800 hover:border-indigo-500/40 bg-slate-900/30 hover:bg-slate-900/50'
+                    !selectedSchoolId
+                      ? 'border-slate-200 bg-slate-100/60 opacity-70'
+                      : selectedFile
+                      ? 'border-indigo-400 bg-indigo-50/50'
+                      : 'border-slate-300 hover:border-indigo-400 bg-white hover:bg-slate-50/60'
                   }`}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => {
+                    if (!selectedSchoolId) {
+                      setUploadError('Please select a Target School / Examination Center first.');
+                      return;
+                    }
+                    fileInputRef.current?.click();
+                  }}
                 >
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept=".xlsx,.xls,.csv"
                     className="hidden"
+                    disabled={!selectedSchoolId}
                     onChange={handleFileChange}
                   />
 
                   {selectedFile ? (
                     <div className="flex flex-col items-center space-y-4">
-                      <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                      <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
                         <FileSpreadsheet className="w-8 h-8" />
                       </div>
                       <div>
-                        <p className="text-base font-semibold text-white">{selectedFile.name}</p>
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-base font-semibold text-slate-900">{selectedFile.name}</p>
+                        <p className="text-xs text-slate-500 mt-1">
                           {(selectedFile.size / 1024).toFixed(1)} KB &bull; Ready to Validate
                         </p>
                       </div>
@@ -511,7 +534,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                             setSelectedFile(null);
                             if (fileInputRef.current) fileInputRef.current.value = '';
                           }}
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium text-red-400 hover:bg-red-500/10 border border-red-500/20 transition-all flex items-center gap-1.5"
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50 border border-rose-200 transition-all flex items-center gap-1.5"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           Remove File
@@ -520,15 +543,17 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     </div>
                   ) : (
                     <div className="flex flex-col items-center space-y-4">
-                      <div className="w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700/50 flex items-center justify-center text-slate-400 group-hover:text-indigo-400 group-hover:bg-indigo-500/10 transition-all">
+                      <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-all">
                         <UploadCloud className="w-8 h-8" />
                       </div>
                       <div>
-                        <p className="text-base font-semibold text-white">
-                          Click to browse or drag and drop your spreadsheet
+                        <p className="text-base font-semibold text-slate-900">
+                          {!selectedSchoolId
+                            ? 'Please select a School / Center above first'
+                            : 'Click to browse or drag and drop your spreadsheet'}
                         </p>
-                        <p className="text-xs text-slate-400 mt-1">
-                          Supported formats: <span className="text-slate-300 font-medium">.xlsx, .csv</span> (Max 10MB, up to 10,000 rows)
+                        <p className="text-xs text-slate-500 mt-1">
+                          Supported formats: <span className="text-slate-700 font-medium">.xlsx, .csv</span> (Max 10MB, up to 10,000 rows)
                         </p>
                       </div>
                     </div>
@@ -536,11 +561,11 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                 </div>
 
                 {uploadError && (
-                  <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-rose-600" />
                     <div>
-                      <p className="font-semibold">Upload Validation Error</p>
-                      <p className="text-xs text-red-300/90 mt-0.5">{uploadError}</p>
+                      <p className="font-semibold">Upload Validation Alert</p>
+                      <p className="text-xs text-rose-700 mt-0.5">{uploadError}</p>
                     </div>
                   </div>
                 )}
@@ -548,9 +573,9 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                 {/* Validate Button */}
                 <div className="flex justify-end">
                   <button
-                    disabled={!selectedFile || isUploading}
+                    disabled={!selectedSchoolId || !selectedFile || isUploading}
                     onClick={handleUploadAndValidate}
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition-all shadow-md shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {isUploading ? (
                       <>
@@ -569,62 +594,62 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
 
               {/* Template & Guidelines Card */}
               <div className="space-y-6">
-                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-5">
-                  <div className="flex items-center gap-2.5 text-white font-semibold text-base">
-                    <Download className="w-5 h-5 text-indigo-400" />
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5 shadow-xs">
+                  <div className="flex items-center gap-2.5 text-slate-900 font-semibold text-base">
+                    <Download className="w-5 h-5 text-indigo-600" />
                     <h3>Download Sample Templates</h3>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">
+                  <p className="text-xs text-slate-500 leading-relaxed">
                     Download the official template pre-configured with the required columns, headers, and validation rules.
                   </p>
 
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => handleDownloadTemplate('xlsx')}
-                      className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white border border-slate-700 transition-all cursor-pointer"
+                      className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-800 border border-slate-200 transition-all cursor-pointer"
                     >
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                       Excel (.xlsx)
                     </button>
                     <button
                       onClick={() => handleDownloadTemplate('csv')}
-                      className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white border border-slate-700 transition-all cursor-pointer"
+                      className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-800 border border-slate-200 transition-all cursor-pointer"
                     >
-                      <FileText className="w-4 h-4 text-blue-400" />
+                      <FileText className="w-4 h-4 text-blue-600" />
                       CSV (.csv)
                     </button>
                   </div>
                 </div>
 
-                <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 space-y-4">
-                  <div className="flex items-center gap-2 text-indigo-300 font-semibold text-sm">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4 shadow-xs">
+                  <div className="flex items-center gap-2 text-indigo-700 font-semibold text-sm">
                     <Info className="w-4 h-4" />
                     <h4>Required Field Rules</h4>
                   </div>
-                  <ul className="text-xs text-slate-400 space-y-2.5">
+                  <ul className="text-xs text-slate-600 space-y-2.5">
                     <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 flex-shrink-0" />
-                      <span><strong className="text-slate-200">Full Name:</strong> Min 2 characters.</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-1.5 flex-shrink-0" />
+                      <span><strong className="text-slate-900">Full Name:</strong> Min 2 characters.</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 flex-shrink-0" />
-                      <span><strong className="text-slate-200">Mobile:</strong> 10 digits starting with 6-9 (Duplicates rejected).</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-1.5 flex-shrink-0" />
+                      <span><strong className="text-slate-900">Mobile:</strong> 10 digits starting with 6-9 (Duplicates rejected).</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 flex-shrink-0" />
-                      <span><strong className="text-slate-200">State & City:</strong> City must belong to the specified State.</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-1.5 flex-shrink-0" />
+                      <span><strong className="text-slate-900">State & City:</strong> City must belong to the specified State.</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 flex-shrink-0" />
-                      <span><strong className="text-slate-200">Class:</strong> Valid academic class (e.g. 11th, 12th, Dropper).</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-1.5 flex-shrink-0" />
+                      <span><strong className="text-slate-900">Class:</strong> Valid academic class (e.g. 11th, 12th, Dropper).</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 flex-shrink-0" />
-                      <span><strong className="text-slate-200">Exam Target:</strong> NEET, JEE_MAIN, etc.</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-1.5 flex-shrink-0" />
+                      <span><strong className="text-slate-900">Exam Target:</strong> NEET, JEE_MAIN, etc.</span>
                     </li>
                     <li className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 flex-shrink-0" />
-                      <span><strong className="text-slate-200">Language:</strong> ENGLISH, HINDI, GUJARATI, etc.</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-1.5 flex-shrink-0" />
+                      <span><strong className="text-slate-900">Language:</strong> ENGLISH, HINDI, GUJARATI, etc.</span>
                     </li>
                   </ul>
                 </div>
@@ -637,37 +662,37 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
             <div className="space-y-6">
               {/* Summary Metric Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800">
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Rows</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-white mt-1">
+                <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Rows</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
                     {previewData.upload.rowCount}
                   </p>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-emerald-950/20 border border-emerald-500/30">
-                  <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Valid Rows</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-emerald-300 mt-1">
+                <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 shadow-xs">
+                  <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Valid Rows</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-emerald-800 mt-1">
                     {previewData.upload.validRowCount}
                   </p>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-red-950/20 border border-red-500/30">
-                  <p className="text-xs font-semibold text-red-400 uppercase tracking-wider">Invalid Rows</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-red-300 mt-1">
+                <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 shadow-xs">
+                  <p className="text-xs font-semibold text-rose-700 uppercase tracking-wider">Invalid Rows</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-rose-800 mt-1">
                     {previewData.upload.invalidRowCount}
                   </p>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-amber-950/20 border border-amber-500/30">
-                  <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Duplicate Rows</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-amber-300 mt-1">
+                <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 shadow-xs">
+                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Duplicate Rows</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-amber-800 mt-1">
                     {previewData.upload.duplicateRowCount}
                   </p>
                 </div>
               </div>
 
               {/* Table Controls & Filter */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-slate-900/60 border border-slate-800 p-4 rounded-2xl">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white border border-slate-200 p-4 rounded-2xl shadow-xs">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
@@ -677,7 +702,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                       previewFilter === 'ALL'
                         ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
                     All ({previewData.upload.rowCount})
@@ -690,7 +715,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                       previewFilter === 'VALID'
                         ? 'bg-emerald-600 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
                     Valid Only ({previewData.upload.validRowCount})
@@ -702,8 +727,8 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                       previewFilter === 'INVALID'
-                        ? 'bg-red-600 text-white'
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                        ? 'bg-rose-600 text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
                     Errors & Duplicates ({previewData.upload.invalidRowCount})
@@ -713,7 +738,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                 {previewData.upload.invalidRowCount > 0 && (
                   <button
                     onClick={() => handleDownloadErrorReport(previewData.upload.id, 'xlsx')}
-                    className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-semibold transition-all self-start sm:self-auto cursor-pointer"
+                    className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-all self-start sm:self-auto cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
                     Download Error Report
@@ -722,10 +747,10 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
               </div>
 
               {/* Preview Table */}
-              <div className="bg-slate-900/40 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-slate-300">
-                    <thead className="bg-slate-900/90 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                  <table className="w-full text-left text-xs text-slate-700">
+                    <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
                       <tr>
                         <th className="px-4 py-3.5 w-14 text-center">Row</th>
                         <th className="px-4 py-3.5">Full Name</th>
@@ -737,11 +762,11 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                         <th className="px-4 py-3.5 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800/60 font-medium">
+                    <tbody className="divide-y divide-slate-100 font-medium">
                       {isLoadingPreview ? (
                         <tr>
-                          <td colSpan={8} className="py-12 text-center text-slate-400">
-                            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-400" />
+                          <td colSpan={8} className="py-12 text-center text-slate-500">
+                            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
                             Loading preview rows...
                           </td>
                         </tr>
@@ -755,35 +780,35 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                         previewData.rows.map((row) => (
                           <tr
                             key={row.id}
-                            className={`hover:bg-slate-800/30 transition-colors ${
-                              row.validationStatus === 'INVALID' ? 'bg-red-950/10' : ''
+                            className={`hover:bg-slate-50/80 transition-colors ${
+                              row.validationStatus === 'INVALID' ? 'bg-rose-50/30' : ''
                             }`}
                           >
-                            <td className="px-4 py-3 text-center text-slate-500 font-mono">
+                            <td className="px-4 py-3 text-center text-slate-400 font-mono">
                               {row.rowNumber}
                             </td>
                             <td className="px-4 py-3">
-                              <div className="font-semibold text-white">{row.data.name || '—'}</div>
+                              <div className="font-semibold text-slate-900">{row.data.name || '—'}</div>
                               {row.data.email && (
-                                <div className="text-[11px] text-slate-400 font-normal">{row.data.email}</div>
+                                <div className="text-[11px] text-slate-500 font-normal">{row.data.email}</div>
                               )}
                             </td>
-                            <td className="px-4 py-3 font-mono text-slate-300">
+                            <td className="px-4 py-3 font-mono text-slate-700">
                               {row.data.mobile || row.data.phone || '—'}
                             </td>
-                            <td className="px-4 py-3 text-slate-300">
+                            <td className="px-4 py-3 text-slate-700">
                               <div className="flex items-center gap-1.5">
-                                <Building2 className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                                <Building2 className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
                                 <span className="truncate max-w-[150px]" title={row.data.institutionName || row.data.schoolCollege || 'Not specified'}>
                                   {row.data.institutionName || row.data.schoolCollege || (
-                                    <span className="text-slate-600 italic">None</span>
+                                    <span className="text-slate-400 italic">None</span>
                                   )}
                                 </span>
                               </div>
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex flex-wrap items-center gap-1">
-                                <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[11px] font-medium">
+                                <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200">
                                   {row.data.class || 'N/A'}
                                 </span>
                                 {((row.data.examTarget || '')
@@ -792,12 +817,12 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                                   .filter(Boolean)).map((target: string, idx: number) => {
                                   const upper = target.toUpperCase();
                                   const badgeStyle = upper.includes('NEET')
-                                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                     : upper.includes('CET')
-                                      ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                                      ? 'bg-purple-50 text-purple-800 border-purple-200'
                                       : upper.includes('JEE')
-                                        ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
-                                        : 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30';
+                                        ? 'bg-sky-50 text-sky-800 border-sky-200'
+                                        : 'bg-indigo-50 text-indigo-800 border-indigo-200';
                                   return (
                                     <span
                                       key={idx}
@@ -811,12 +836,12 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                             </td>
                             <td className="px-4 py-3">
                               {row.validationStatus === 'VALID' ? (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                   <Check className="w-3 h-3" />
                                   Valid
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
                                   <X className="w-3 h-3" />
                                   Invalid
                                 </span>
@@ -828,7 +853,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                                   {row.errors.map((err, i) => (
                                     <div
                                       key={i}
-                                      className="text-xs text-red-300 bg-red-950/40 border border-red-500/20 rounded px-2 py-0.5 truncate"
+                                      className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-0.5 truncate"
                                       title={err.message}
                                     >
                                       &bull; {err.message}
@@ -836,16 +861,16 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                                   ))}
                                 </div>
                               ) : (
-                                <span className="text-emerald-400/80 text-xs">Ready for registration</span>
+                                <span className="text-emerald-700 text-xs font-medium">Ready for registration</span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-right">
                               <button
                                 onClick={() => handleOpenEditRow(row)}
-                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                                className="p-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
                                 title="Edit Row"
                               >
-                                <Edit2 className="w-3.5 h-3.5 text-indigo-400" />
+                                <Edit2 className="w-3.5 h-3.5 text-indigo-600" />
                                 <span>Edit</span>
                               </button>
                             </td>
@@ -858,7 +883,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
 
                 {/* Pagination */}
                 {previewData.pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-between p-4 border-t border-slate-800 bg-slate-900/60 text-xs text-slate-400">
+                  <div className="flex items-center justify-between p-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-600">
                     <div>
                       Showing {(previewPage - 1) * previewData.pagination.limit + 1} to{' '}
                       {Math.min(previewPage * previewData.pagination.limit, previewData.pagination.total)} of{' '}
@@ -868,7 +893,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                       <button
                         disabled={previewPage <= 1}
                         onClick={() => setPreviewPage((p) => Math.max(1, p - 1))}
-                        className="p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white"
+                        className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700"
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </button>
@@ -878,7 +903,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                       <button
                         disabled={previewPage >= previewData.pagination.totalPages}
                         onClick={() => setPreviewPage((p) => Math.min(previewData.pagination.totalPages, p + 1))}
-                        className="p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white"
+                        className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700"
                       >
                         <ChevronRight className="w-4 h-4" />
                       </button>
@@ -888,10 +913,10 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-800">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
                 <button
                   onClick={resetFlow}
-                  className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200 transition-all cursor-pointer"
                 >
                   Cancel / Upload Different File
                 </button>
@@ -900,7 +925,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                   <button
                     disabled={previewData.upload.validRowCount === 0}
                     onClick={() => setIsConfirmModalOpen(true)}
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition-all shadow-lg shadow-emerald-600/30 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-all shadow-md shadow-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <ShieldCheck className="w-4 h-4" />
                     Register {previewData.upload.validRowCount} Valid Students
@@ -912,40 +937,40 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
 
           {/* ── STEP 3: REGISTERING & COMPLETED ── */}
           {currentStep === 'REGISTERING' && (
-            <div className="p-12 text-center bg-slate-900/60 border border-slate-800 rounded-3xl space-y-4 max-w-lg mx-auto">
-              <RefreshCw className="w-12 h-12 animate-spin text-indigo-400 mx-auto" />
-              <h3 className="text-xl font-bold text-white">Registering Students...</h3>
-              <p className="text-xs text-slate-400">
+            <div className="p-12 text-center bg-white border border-slate-200 rounded-3xl space-y-4 max-w-lg mx-auto shadow-xs">
+              <RefreshCw className="w-12 h-12 animate-spin text-indigo-600 mx-auto" />
+              <h3 className="text-xl font-bold text-slate-900">Registering Students...</h3>
+              <p className="text-xs text-slate-500">
                 Creating User credentials, assigning Student roles, generating unique Student IDs, and storing profiles.
               </p>
             </div>
           )}
 
           {currentStep === 'COMPLETED' && registrationResult && (
-            <div className="p-8 sm:p-12 bg-slate-900/60 border border-slate-800 rounded-3xl space-y-6 max-w-2xl mx-auto text-center">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto">
+            <div className="p-8 sm:p-12 bg-white border border-slate-200 rounded-3xl space-y-6 max-w-2xl mx-auto text-center shadow-xs">
+              <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mx-auto">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
 
               <div>
-                <h3 className="text-2xl font-bold text-white">Bulk Registration Completed</h3>
-                <p className="text-sm text-slate-400 mt-1">
+                <h3 className="text-2xl font-bold text-slate-900">Bulk Registration Completed</h3>
+                <p className="text-sm text-slate-600 mt-1">
                   Students have been registered and can now log in immediately via OTP.
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 py-4 border-y border-slate-800">
+              <div className="grid grid-cols-3 gap-4 py-4 border-y border-slate-200">
                 <div>
-                  <p className="text-xs text-slate-400 uppercase tracking-wider">Total Valid</p>
-                  <p className="text-2xl font-bold text-white mt-0.5">{registrationResult.totalValid}</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider">Total Valid</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-0.5">{registrationResult.totalValid}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-emerald-400 uppercase tracking-wider">Registered</p>
-                  <p className="text-2xl font-bold text-emerald-400 mt-0.5">{registrationResult.activated}</p>
+                  <p className="text-xs text-emerald-600 uppercase tracking-wider">Registered</p>
+                  <p className="text-2xl font-bold text-emerald-600 mt-0.5">{registrationResult.activated}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-red-400 uppercase tracking-wider">Failed</p>
-                  <p className="text-2xl font-bold text-red-400 mt-0.5">{registrationResult.failed}</p>
+                  <p className="text-xs text-rose-600 uppercase tracking-wider">Failed</p>
+                  <p className="text-2xl font-bold text-rose-600 mt-0.5">{registrationResult.failed}</p>
                 </div>
               </div>
 
@@ -953,7 +978,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                 {registrationResult.failed > 0 && (
                   <button
                     onClick={() => handleDownloadErrorReport(registrationResult.uploadId, 'xlsx')}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-semibold transition-all cursor-pointer"
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
                   >
                     <Download className="w-4 h-4" />
                     Download Failed Rows Report
@@ -962,7 +987,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
 
                 <button
                   onClick={resetFlow}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-md shadow-indigo-200 transition-all cursor-pointer"
                 >
                   <UploadCloud className="w-4 h-4" />
                   Upload Another Batch
@@ -976,10 +1001,10 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
       {/* ── HISTORY TAB ── */}
       {activeTab === 'history' && (
         <div className="space-y-6">
-          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-900/90 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
                   <tr>
                     <th className="px-4 py-3.5">File Name</th>
                     <th className="px-4 py-3.5">Uploaded Date</th>
@@ -991,11 +1016,11 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     <th className="px-4 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 font-medium">
+                <tbody className="divide-y divide-slate-100 font-medium">
                   {isLoadingHistory ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-slate-400">
-                        <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-400" />
+                      <td colSpan={8} className="py-12 text-center text-slate-500">
+                        <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
                         Loading upload history...
                       </td>
                     </tr>
@@ -1007,31 +1032,31 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     </tr>
                   ) : (
                     historyList.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="px-4 py-3 font-semibold text-white flex items-center gap-2">
-                          <FileSpreadsheet className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                      <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="px-4 py-3 font-semibold text-slate-900 flex items-center gap-2">
+                          <FileSpreadsheet className="w-4 h-4 text-indigo-600 flex-shrink-0" />
                           <span className="truncate max-w-xs">{item.fileName}</span>
                         </td>
-                        <td className="px-4 py-3 text-slate-400 font-mono">
+                        <td className="px-4 py-3 text-slate-500 font-mono">
                           {new Date(item.createdAt).toLocaleString('en-US', {
                             dateStyle: 'medium',
                             timeStyle: 'short',
                           })}
                         </td>
-                        <td className="px-4 py-3 text-center font-bold text-white">{item.rowCount}</td>
-                        <td className="px-4 py-3 text-center font-semibold text-emerald-400">{item.validRowCount}</td>
-                        <td className="px-4 py-3 text-center font-semibold text-indigo-400">{item.activatedCount}</td>
-                        <td className="px-4 py-3 text-center font-semibold text-red-400">{item.invalidRowCount + item.failedCount}</td>
+                        <td className="px-4 py-3 text-center font-bold text-slate-900">{item.rowCount}</td>
+                        <td className="px-4 py-3 text-center font-semibold text-emerald-700">{item.validRowCount}</td>
+                        <td className="px-4 py-3 text-center font-semibold text-indigo-700">{item.activatedCount}</td>
+                        <td className="px-4 py-3 text-center font-semibold text-rose-700">{item.invalidRowCount + item.failedCount}</td>
                         <td className="px-4 py-3">
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                               item.status === 'ACTIVATED'
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                 : item.status === 'READY_FOR_REVIEW'
-                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
                                   : item.status === 'FAILED'
-                                    ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                                    : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                    : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                             }`}
                           >
                             {item.status}
@@ -1045,14 +1070,14 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                                 setCurrentStep('PREVIEW');
                                 setActiveTab('upload');
                               }}
-                              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 transition-all cursor-pointer"
+                              className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-xs font-medium text-slate-700 border border-slate-200 transition-all cursor-pointer"
                             >
                               Preview
                             </button>
                             {(item.invalidRowCount > 0 || item.failedCount > 0) && (
                               <button
                                 onClick={() => handleDownloadErrorReport(item.id, 'xlsx')}
-                                className="p-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-all cursor-pointer"
+                                className="p-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all cursor-pointer"
                                 title="Download Error Report"
                               >
                                 <Download className="w-3.5 h-3.5" />
@@ -1069,20 +1094,20 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
 
             {/* Pagination */}
             {historyTotalPages > 1 && (
-              <div className="flex items-center justify-between p-4 border-t border-slate-800 bg-slate-900/60 text-xs text-slate-400">
+              <div className="flex items-center justify-between p-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-600">
                 <div>Page {historyPage} of {historyTotalPages}</div>
                 <div className="flex items-center gap-2">
                   <button
                     disabled={historyPage <= 1}
                     onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
-                    className="p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white"
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <button
                     disabled={historyPage >= historyTotalPages}
                     onClick={() => setHistoryPage((p) => Math.min(historyTotalPages, p + 1))}
-                    className="p-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-white"
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -1095,33 +1120,33 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
 
       {/* ── Edit Staged Row Modal ── */}
       {editingRow && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-xl w-full p-6 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
                   <Edit2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">
+                  <h3 className="text-lg font-bold text-slate-900">
                     Edit Candidate Data (Row #{editingRow.rowNumber})
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500">
                     Fix validation errors or update details prior to confirmation
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setEditingRow(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {rowEditError && (
-              <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-rose-600" />
                 <span>{rowEditError}</span>
               </div>
             )}
@@ -1129,7 +1154,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
             <form onSubmit={handleSaveRow} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Full Name *
                   </label>
                   <input
@@ -1137,13 +1162,13 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     required
                     value={editFormData.name || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500"
                     placeholder="e.g. Rahul Sharma"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Mobile Number (10 Digits) *
                   </label>
                   <input
@@ -1152,26 +1177,26 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     maxLength={10}
                     value={editFormData.mobile || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, mobile: e.target.value.replace(/\D/g, '') })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white font-mono focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 font-mono focus:outline-none focus:border-indigo-500"
                     placeholder="9876543210"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Email Address (Optional)
                   </label>
                   <input
                     type="email"
                     value={editFormData.email || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500"
                     placeholder="rahul@example.com"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Class / Grade *
                   </label>
                   <input
@@ -1179,13 +1204,13 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     required
                     value={editFormData.class || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, class: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500"
                     placeholder="e.g. 11th, 12th, Dropper"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     State *
                   </label>
                   <input
@@ -1193,13 +1218,13 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     required
                     value={editFormData.state || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500"
                     placeholder="e.g. Gujarat"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     City / District *
                   </label>
                   <input
@@ -1207,13 +1232,13 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     required
                     value={editFormData.city || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500"
                     placeholder="e.g. Ahmedabad"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Exam Target(s) *
                   </label>
                   <input
@@ -1221,7 +1246,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     required
                     value={editFormData.examTarget || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, examTarget: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500"
                     placeholder="e.g. NEET, CET"
                   />
                   <div className="flex items-center gap-1.5 mt-1.5">
@@ -1231,7 +1256,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                         key={t}
                         type="button"
                         onClick={() => setEditFormData({ ...editFormData, examTarget: t })}
-                        className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
                       >
                         {t}
                       </button>
@@ -1240,7 +1265,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Preferred Language *
                   </label>
                   <input
@@ -1248,14 +1273,14 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     required
                     value={editFormData.preferredLanguage || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, preferredLanguage: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500"
                     placeholder="e.g. ENGLISH, HINDI, GUJARATI"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   School / College / Institution *
                 </label>
                 <div className="space-y-2">
@@ -1270,7 +1295,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                         schoolCollege: matched ? matched.name : editFormData.schoolCollege,
                       });
                     }}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-300 focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
                   >
                     <option value="">Select a registered B2B School (or type custom below)</option>
                     {schools.map((school) => (
@@ -1283,24 +1308,24 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     type="text"
                     value={editFormData.schoolCollege || ''}
                     onChange={(e) => setEditFormData({ ...editFormData, schoolCollege: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500"
                     placeholder="School / College name"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setEditingRow(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700 transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 border border-slate-200 transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingRow}
-                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white shadow-lg shadow-indigo-600/30 transition-all cursor-pointer disabled:opacity-50"
+                  className="flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-xs font-semibold text-white shadow-md shadow-indigo-200 transition-all cursor-pointer disabled:opacity-50"
                 >
                   {isSavingRow ? (
                     <>
@@ -1322,22 +1347,22 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
 
       {/* ── Confirmation Modal ── */}
       {isConfirmModalOpen && previewData && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
               <ShieldCheck className="w-6 h-6" />
             </div>
 
             <div>
-              <h3 className="text-xl font-bold text-white">Confirm Bulk Registration</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                You are about to register <strong className="text-emerald-400">{previewData.upload.validRowCount} students</strong> into the system.
+              <h3 className="text-xl font-bold text-slate-900">Confirm Bulk Registration</h3>
+              <p className="text-xs text-slate-600 mt-1">
+                You are about to register <strong className="text-emerald-700">{previewData.upload.validRowCount} students</strong> into the system.
               </p>
             </div>
 
             {previewData.upload.invalidRowCount > 0 && (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-start gap-2.5">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600" />
                 <span>
                   <strong>{previewData.upload.invalidRowCount} invalid rows</strong> will be skipped and can be reviewed in the error report.
                 </span>
@@ -1347,14 +1372,14 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setIsConfirmModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700 transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 border border-slate-200 transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 disabled={isRegistering}
                 onClick={handleConfirmRegistration}
-                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold text-white shadow-md shadow-emerald-200 transition-all cursor-pointer"
               >
                 {isRegistering ? 'Processing...' : `Confirm & Register (${previewData.upload.validRowCount})`}
               </button>

@@ -20,8 +20,8 @@ export const ExamSecurityWarningModal: React.FC<ExamSecurityWarningModalProps> =
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-md animate-in fade-in">
-      <div className="w-full max-w-md rounded-3xl border border-rose-200 bg-white p-6 md:p-8 shadow-2xl space-y-6 text-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-3 sm:p-4 backdrop-blur-md animate-in fade-in">
+      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border border-rose-200 bg-white p-5 sm:p-6 md:p-8 shadow-2xl space-y-5 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 ring-8 ring-rose-50/50">
           <ShieldAlert size={28} />
         </div>

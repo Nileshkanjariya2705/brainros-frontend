@@ -14,7 +14,6 @@ import {
   Search,
   RotateCw,
   X,
-  HeartHandshake,
   User,
   ChevronLeft,
   ChevronRight,
@@ -27,23 +26,349 @@ import {
   AlertCircle,
   Eye,
   Users,
+  Pencil,
+  Save,
+  CheckCircle2,
 } from 'lucide-react';
 import {
   type AdminStudentItem,
   type AdminStudentFilterOptions,
+  useUpdateAdminStudentAPI,
 } from '../services/admin-students.service';
 import {
   useAdminStudentsQuery,
   useAdminStudentFilterOptionsQuery,
 } from '../services/admin.queries';
-import AdminStudentParentModal from '../components/AdminStudentParentModal';
+import {
+  fetchAllStatesAPI,
+  fetchDistrictsByStateSlugAPI,
+  getStateSlug,
+  formatLocationName,
+  type StateItem,
+  type DistrictItem,
+} from '@/modules/Auth/services';
 import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
 
+/* ── Edit Student Modal Component ────────────────────────────────────────── */
+interface EditStudentModalProps {
+  student: AdminStudentItem;
+  filterOptions: AdminStudentFilterOptions;
+  publicStates: StateItem[];
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const EditStudentModal: React.FC<EditStudentModalProps> = ({
+  student,
+  filterOptions,
+  publicStates,
+  onClose,
+  onSuccess,
+}) => {
+  const { updateAdminStudentAPI, isLoading: isUpdating } = useUpdateAdminStudentAPI();
+
+  const [name, setName] = useState(student.name || '');
+  const [email, setEmail] = useState(student.email === '—' ? '' : student.email || '');
+  const [mobile, setMobile] = useState(student.mobile === '—' ? '' : student.mobile || '');
+  const [schoolCollege, setSchoolCollege] = useState(
+    student.schoolCollege === '—' ? '' : student.schoolCollege || '',
+  );
+  const [classId, setClassId] = useState(student.class?.id || '');
+  const [examTargetId, setExamTargetId] = useState(student.examTarget?.id || '');
+  const [status, setStatus] = useState(student.status || 'ACTIVE');
+
+  const initialRawState = student.state?.name || '';
+  const initialRawDistrict = student.district?.name || '';
+  const [selectedState, setSelectedState] = useState(formatLocationName(initialRawState));
+  const [selectedDistrict, setSelectedDistrict] = useState(formatLocationName(initialRawDistrict));
+
+  const [modalDistricts, setModalDistricts] = useState<DistrictItem[]>([]);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Load public districts when selected state changes
+  useEffect(() => {
+    if (!selectedState) return;
+    let isMounted = true;
+    setIsLoadingDistricts(true);
+    const slug = getStateSlug(selectedState);
+    fetchDistrictsByStateSlugAPI(slug).then(({ data }) => {
+      if (!isMounted) return;
+      setIsLoadingDistricts(false);
+      if (data && data.length > 0) {
+        setModalDistricts(data);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedState]);
+
+  const stateOptions = useMemo(() => {
+    const opts = publicStates.map((s) => {
+      const formatted = formatLocationName(s.name);
+      return { label: formatted, value: formatted };
+    });
+    if (selectedState && !opts.some((o) => o.value.toLowerCase() === selectedState.toLowerCase())) {
+      opts.unshift({ label: selectedState, value: selectedState });
+    }
+    return opts;
+  }, [publicStates, selectedState]);
+
+  const districtOptions = useMemo(() => {
+    const opts = modalDistricts.map((d) => {
+      const formatted = formatLocationName(d.name);
+      return { label: formatted, value: formatted };
+    });
+    if (
+      selectedDistrict &&
+      !opts.some((o) => o.value.toLowerCase() === selectedDistrict.toLowerCase())
+    ) {
+      opts.unshift({ label: selectedDistrict, value: selectedDistrict });
+    }
+    return opts;
+  }, [modalDistricts, selectedDistrict]);
+
+  const handleStateChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextState = e.target.value;
+    setSelectedState(nextState);
+    setSelectedDistrict('');
+    setModalDistricts([]);
+    if (!nextState) return;
+
+    setIsLoadingDistricts(true);
+    const slug = getStateSlug(nextState);
+    const { data } = await fetchDistrictsByStateSlugAPI(slug);
+    setIsLoadingDistricts(false);
+    if (data && data.length > 0) {
+      setModalDistricts(data);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    const payload = {
+      name: name.trim(),
+      email: email.trim() || undefined,
+      mobile: mobile.trim() || undefined,
+      schoolCollege: schoolCollege.trim() || undefined,
+      classId: classId || undefined,
+      examTargetId: examTargetId || undefined,
+      state: selectedState || undefined,
+      district: selectedDistrict || undefined,
+      status: status || undefined,
+    };
+
+    const { error } = await updateAdminStudentAPI(student.id, payload);
+    if (error) {
+      setErrorMsg(error);
+    } else {
+      setSuccessMsg('Student record updated successfully!');
+      setTimeout(() => {
+        onSuccess();
+        onClose();
+      }, 800);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-50 text-teal-700 border border-teal-200">
+              <Pencil className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Edit Student Details</h3>
+              <p className="font-mono text-xs text-teal-700">ID: {student.studentCode}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-200/60 hover:text-slate-600 transition"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Scrollable Form Body */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+          {errorMsg && (
+            <div className="flex items-start space-x-2 rounded-xl bg-rose-50 p-3 border border-rose-200 text-rose-800 font-medium">
+              <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {successMsg && (
+            <div className="flex items-start space-x-2 rounded-xl bg-emerald-50 p-3 border border-emerald-200 text-emerald-800 font-medium">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Student Name */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-slate-700">
+                Full Name <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-teal-600 focus:outline-none"
+                required
+              />
+            </div>
+
+            {/* School / College */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-slate-700">School / College</label>
+              <input
+                type="text"
+                value={schoolCollege}
+                onChange={(e) => setSchoolCollege(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-teal-600 focus:outline-none"
+              />
+            </div>
+
+            {/* Email */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-slate-700">Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-teal-600 focus:outline-none"
+              />
+            </div>
+
+            {/* Mobile Number */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-slate-700">Mobile Number</label>
+              <input
+                type="text"
+                value={mobile}
+                onChange={(e) => setMobile(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-mono text-slate-800 focus:border-teal-600 focus:outline-none"
+              />
+            </div>
+
+            {/* Class */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-slate-700">Class</label>
+              <select
+                value={classId}
+                onChange={(e) => setClassId(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-teal-600 focus:outline-none"
+              >
+                <option value="">Select Class</option>
+                {filterOptions.classes.map((cls) => (
+                  <option key={cls.id} value={cls.id}>
+                    {cls.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Exam Target */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-slate-700">Exam Target</label>
+              <select
+                value={examTargetId}
+                onChange={(e) => setExamTargetId(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-teal-600 focus:outline-none"
+              >
+                <option value="">Select Target Exam</option>
+                {filterOptions.examTargets.map((tgt) => (
+                  <option key={tgt.id} value={tgt.id}>
+                    {tgt.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* State (Public API) */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-slate-700">State (Public API)</label>
+              <select
+                value={selectedState}
+                onChange={handleStateChange}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-teal-600 focus:outline-none"
+              >
+                <option value="">Select State</option>
+                {stateOptions.map((st) => (
+                  <option key={st.value} value={st.value}>
+                    {st.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* City / District (Public API) */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-slate-700">
+                City / District {isLoadingDistricts && '(Loading...)'}
+              </label>
+              <select
+                value={selectedDistrict}
+                onChange={(e) => setSelectedDistrict(e.target.value)}
+                disabled={!selectedState || isLoadingDistricts}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-teal-600 focus:outline-none disabled:bg-slate-100"
+              >
+                <option value="">Select City / District</option>
+                {districtOptions.map((dst) => (
+                  <option key={dst.value} value={dst.value}>
+                    {dst.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status */}
+            <div className="col-span-1 sm:col-span-2 space-y-1">
+              <label className="block text-[11px] font-bold text-slate-700">Student Status</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 focus:border-teal-600 focus:outline-none"
+              >
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="PENDING">PENDING</option>
+                <option value="SUSPENDED">SUSPENDED</option>
+                <option value="INACTIVE">INACTIVE</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-4 flex justify-end gap-2">
+            <Button size="sm" variant="secondary" type="button" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button size="sm" variant="primary" type="submit" isLoading={isUpdating}>
+              <Save className="h-3.5 w-3.5 mr-1" />
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+/* ── Main Admin Students Page ───────────────────────────────────────────── */
 export const AdminStudentsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Master Data Filter Options from cached query (staleTime: 30m)
+  // Master Data Filter Options from backend cached query
   const { data: filterOptionsData } = useAdminStudentFilterOptionsQuery();
   const filterOptions: AdminStudentFilterOptions = filterOptionsData || {
     states: [],
@@ -54,25 +379,18 @@ export const AdminStudentsPage: React.FC = () => {
     statuses: [],
   };
 
+  // Public Location API State & District lists
+  const [publicStates, setPublicStates] = useState<StateItem[]>([]);
+  const [publicDistricts, setPublicDistricts] = useState<DistrictItem[]>([]);
+  const [isLoadingPublicDistricts, setIsLoadingPublicDistricts] = useState(false);
+
   // Search Debounce State
   const urlSearch = searchParams.get('search') || '';
   const [searchInput, setSearchInput] = useState<string>(urlSearch);
 
-  // Parent Modal State
-  const [parentModalState, setParentModalState] = useState<{
-    isOpen: boolean;
-    studentId: string;
-    studentName: string;
-    studentCode: string;
-  }>({
-    isOpen: false,
-    studentId: '',
-    studentName: '',
-    studentCode: '',
-  });
-
-  // Details Modal State
+  // Modal States
   const [selectedStudentDetails, setSelectedStudentDetails] = useState<AdminStudentItem | null>(null);
+  const [editingStudent, setEditingStudent] = useState<AdminStudentItem | null>(null);
 
   // Synchronize URL query params
   const page = Math.max(1, Number(searchParams.get('page')) || 1);
@@ -85,6 +403,43 @@ export const AdminStudentsPage: React.FC = () => {
   const stateFilter = searchParams.get('stateId') || '';
   const districtFilter = searchParams.get('districtId') || '';
   const institutionFilter = searchParams.get('institutionId') || '';
+
+  // 1. Fetch Public States from India Pincode API on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetchAllStatesAPI().then(({ data }) => {
+      if (!isMounted) return;
+      if (data && data.length > 0) {
+        setPublicStates(data);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // 2. Fetch Public Districts whenever stateFilter changes
+  useEffect(() => {
+    if (!stateFilter) {
+      setPublicDistricts([]);
+      return;
+    }
+    let isMounted = true;
+    setIsLoadingPublicDistricts(true);
+    const slug = getStateSlug(stateFilter);
+    fetchDistrictsByStateSlugAPI(slug).then(({ data }) => {
+      if (!isMounted) return;
+      setIsLoadingPublicDistricts(false);
+      if (data && data.length > 0) {
+        setPublicDistricts(data);
+      } else {
+        setPublicDistricts([]);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [stateFilter]);
 
   // Server-side cached table query with keepPreviousData to prevent blank loading flash
   const queryParams = useMemo(
@@ -158,16 +513,10 @@ export const AdminStudentsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchInput, urlSearch, updateQueryParams]);
 
-  // Keep search input in sync if URL changes externally (e.g. browser back/forward)
+  // Keep search input in sync if URL changes externally
   useEffect(() => {
     setSearchInput(urlSearch);
   }, [urlSearch]);
-
-  // Available districts filtered by selected state
-  const filteredDistricts = useMemo(() => {
-    if (!stateFilter) return filterOptions.districts;
-    return filterOptions.districts.filter((d) => d.stateId === stateFilter);
-  }, [stateFilter, filterOptions.districts]);
 
   // Reset Filters
   const handleClearFilters = () => {
@@ -184,16 +533,6 @@ export const AdminStudentsPage: React.FC = () => {
       districtFilter ||
       institutionFilter,
   );
-
-  // Open Parent Modal Handler
-  const handleOpenParentModal = (student: AdminStudentItem) => {
-    setParentModalState({
-      isOpen: true,
-      studentId: student.id,
-      studentName: student.name,
-      studentCode: student.studentCode,
-    });
-  };
 
   // TanStack Table Column Definitions
   const columns = useMemo<ColumnDef<AdminStudentItem, any>[]>(
@@ -283,28 +622,6 @@ export const AdminStudentsPage: React.FC = () => {
         },
       },
       {
-        id: 'parentStatus',
-        header: 'Parent',
-        enableSorting: false,
-        cell: (info) => {
-          const hasParent = info.row.original.hasParent;
-          const count = info.row.original.parentsCount;
-          return (
-            <button
-              onClick={() => handleOpenParentModal(info.row.original)}
-              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold transition hover:opacity-80 ${
-                hasParent
-                  ? 'bg-teal-50 border-teal-200 text-teal-800'
-                  : 'bg-slate-50 border-slate-200 text-slate-500'
-              }`}
-            >
-              <HeartHandshake className="h-3 w-3" />
-              <span>{hasParent ? `Linked (${count})` : 'Not Added'}</span>
-            </button>
-          );
-        },
-      },
-      {
         accessorKey: 'createdAt',
         header: 'Registered',
         enableSorting: true,
@@ -325,20 +642,20 @@ export const AdminStudentsPage: React.FC = () => {
         cell: (info) => (
           <div className="flex items-center justify-end gap-1.5">
             <button
-              onClick={() => handleOpenParentModal(info.row.original)}
-              className="inline-flex items-center gap-1 rounded-xl border border-teal-200 bg-teal-50/70 px-2.5 py-1.5 text-xs font-bold text-teal-800 shadow-xs hover:bg-teal-100 transition"
-              title="Manage Parent"
-            >
-              <HeartHandshake className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Parent</span>
-            </button>
-            <button
               onClick={() => setSelectedStudentDetails(info.row.original)}
               className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition"
-              title="View Profile"
+              title="View Details"
             >
               <Eye className="h-3.5 w-3.5 text-slate-500" />
               <span className="hidden sm:inline">View</span>
+            </button>
+            <button
+              onClick={() => setEditingStudent(info.row.original)}
+              className="inline-flex items-center gap-1 rounded-xl border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-xs font-bold text-teal-700 shadow-xs hover:bg-teal-100 transition"
+              title="Edit Student"
+            >
+              <Pencil className="h-3.5 w-3.5 text-teal-600" />
+              <span className="hidden sm:inline">Edit</span>
             </button>
           </div>
         ),
@@ -392,7 +709,6 @@ export const AdminStudentsPage: React.FC = () => {
     getCoreRowModel: getCoreRowModel(),
   });
 
-  // Calculate pagination showing string
   const startItem = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const endItem = Math.min(page * pageSize, totalCount);
 
@@ -414,8 +730,7 @@ export const AdminStudentsPage: React.FC = () => {
             Student Management
           </h1>
           <p className="text-xs md:text-sm text-slate-500 mt-1">
-            High-performance server-side directory for viewing student records, academic profiles,
-            and managing verified parental relationships.
+            High-performance directory for viewing, editing, and managing registered students.
           </p>
         </div>
 
@@ -531,51 +846,53 @@ export const AdminStudentsPage: React.FC = () => {
             </select>
           </div>
 
-          {/* State Filter (Cascading) */}
+          {/* State Filter (Loaded from Public API) */}
           <div>
             <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-              State
+              State (Public API)
             </label>
             <select
               value={stateFilter}
               onChange={(e) => {
-                // Reset district when state changes
                 updateQueryParams({ stateId: e.target.value, districtId: undefined }, true);
               }}
               className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-teal-600 focus:outline-none"
             >
               <option value="">All States</option>
-              {filterOptions.states.map((st) => (
-                <option key={st.id} value={st.id}>
-                  {st.name}
+              {(publicStates.length > 0 ? publicStates : filterOptions.states).map((st: any) => (
+                <option key={st.slug || st.id || st.name} value={formatLocationName(st.name)}>
+                  {formatLocationName(st.name)}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* District / City Filter */}
+          {/* District / City Filter (Loaded from Public API) */}
           <div>
             <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-              District / City
+              District / City {isLoadingPublicDistricts && '(Loading...)'}
             </label>
             <select
               value={districtFilter}
               onChange={(e) => updateQueryParams({ districtId: e.target.value }, true)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-teal-600 focus:outline-none"
+              disabled={!stateFilter || isLoadingPublicDistricts}
+              className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-teal-600 focus:outline-none disabled:bg-slate-50"
             >
-              <option value="">All Districts</option>
-              {filteredDistricts.map((dst) => (
-                <option key={dst.id} value={dst.id}>
-                  {dst.name}
+              <option value="">
+                {!stateFilter ? 'Select State first' : 'All Districts'}
+              </option>
+              {publicDistricts.map((dst) => (
+                <option key={dst.slug || dst.name} value={formatLocationName(dst.name)}>
+                  {formatLocationName(dst.name)}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* Institution Filter */}
+          {/* Institution Filter (Loaded from Database Bulk Import) */}
           <div>
             <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-              Institution
+              Institution (DB)
             </label>
             <select
               value={institutionFilter}
@@ -595,7 +912,6 @@ export const AdminStudentsPage: React.FC = () => {
 
       {/* ── Table Container ────────────────────────────────────────── */}
       <div className="rounded-3xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-        {/* Error State */}
         {isLoadError && (
           <div className="p-8 text-center space-y-3">
             <AlertCircle className="mx-auto h-8 w-8 text-rose-500" />
@@ -654,7 +970,6 @@ export const AdminStudentsPage: React.FC = () => {
 
                 <tbody className="divide-y divide-slate-100">
                   {isLoadingStudents ? (
-                    // Skeleton Rows
                     Array.from({ length: Math.min(pageSize, 8) }).map((_, idx) => (
                       <tr key={`skeleton-${idx}`} className="animate-pulse">
                         <td className="px-5 py-4">
@@ -676,9 +991,6 @@ export const AdminStudentsPage: React.FC = () => {
                         </td>
                         <td className="px-5 py-4">
                           <div className="h-5 w-16 rounded-full bg-slate-200" />
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="h-5 w-20 rounded-full bg-slate-200" />
                         </td>
                         <td className="px-5 py-4">
                           <div className="h-4 w-20 rounded-md bg-slate-200" />
@@ -774,16 +1086,10 @@ export const AdminStudentsPage: React.FC = () => {
                           {student.examTarget?.name || '—'}
                         </span>
                       </div>
-                      <div>
+                      <div className="col-span-2">
                         <span className="text-[10px] text-slate-400 uppercase block">City</span>
                         <span className="font-semibold text-slate-800">
                           {student.district?.name || '—'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 uppercase block">Parent</span>
-                        <span className="font-semibold text-teal-800">
-                          {student.hasParent ? `Linked (${student.parentsCount})` : 'None'}
                         </span>
                       </div>
                     </div>
@@ -796,20 +1102,20 @@ export const AdminStudentsPage: React.FC = () => {
                         <Button
                           size="sm"
                           variant="secondary"
-                          onClick={() => handleOpenParentModal(student)}
-                          className="gap-1 text-xs"
-                        >
-                          <HeartHandshake className="h-3.5 w-3.5 text-teal-700" />
-                          <span>Parent</span>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
                           onClick={() => setSelectedStudentDetails(student)}
                           className="gap-1 text-xs"
                         >
                           <Eye className="h-3.5 w-3.5" />
                           <span>View</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          onClick={() => setEditingStudent(student)}
+                          className="gap-1 text-xs bg-teal-600 hover:bg-teal-700 text-white"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          <span>Edit</span>
                         </Button>
                       </div>
                     </div>
@@ -820,7 +1126,6 @@ export const AdminStudentsPage: React.FC = () => {
 
             {/* ── Pagination Bar ─────────────────────────────────────── */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 bg-slate-50/50 px-5 py-3.5 text-xs text-slate-600">
-              {/* Counter & Page Size Selector */}
               <div className="flex flex-wrap items-center gap-4">
                 <span>
                   Showing <strong className="text-slate-800">{startItem}</strong>–
@@ -843,7 +1148,6 @@ export const AdminStudentsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Navigation Controls */}
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => table.setPageIndex(0)}
@@ -887,16 +1191,6 @@ export const AdminStudentsPage: React.FC = () => {
           </>
         )}
       </div>
-
-      {/* ── Parent Management Modal ─────────────────────────────────── */}
-      <AdminStudentParentModal
-        studentId={parentModalState.studentId}
-        studentName={parentModalState.studentName}
-        studentCode={parentModalState.studentCode}
-        isOpen={parentModalState.isOpen}
-        onClose={() => setParentModalState((prev) => ({ ...prev, isOpen: false }))}
-        onParentUpdated={() => fetchStudents()}
-      />
 
       {/* ── Student Details Modal ──────────────────────────────────── */}
       {selectedStudentDetails && (
@@ -969,13 +1263,36 @@ export const AdminStudentsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="border-t border-slate-100 bg-slate-50 px-6 py-3 flex justify-end">
+            <div className="border-t border-slate-100 bg-slate-50 px-6 py-3 flex justify-end gap-2">
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => {
+                  setEditingStudent(selectedStudentDetails);
+                  setSelectedStudentDetails(null);
+                }}
+                className="bg-teal-600 hover:bg-teal-700 text-white gap-1"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit Student
+              </Button>
               <Button size="sm" variant="secondary" onClick={() => setSelectedStudentDetails(null)}>
                 Close
               </Button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Edit Student Modal ────────────────────────────────────── */}
+      {editingStudent && (
+        <EditStudentModal
+          student={editingStudent}
+          filterOptions={filterOptions}
+          publicStates={publicStates}
+          onClose={() => setEditingStudent(null)}
+          onSuccess={() => fetchStudents()}
+        />
       )}
     </div>
   );

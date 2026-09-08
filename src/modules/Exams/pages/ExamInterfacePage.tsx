@@ -980,11 +980,11 @@ const ExamInterfacePage = () => {
   return (
     <div className="flex h-screen w-screen flex-col bg-slate-50 text-slate-900 overflow-hidden select-none font-sans">
       {/* ══ HEADER BAR ════════════════════════════════════════════════ */}
-      <header className="relative z-20 flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 shadow-xs">
+      <header className="relative z-20 flex min-h-14 sm:h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-2.5 sm:px-6 py-1.5 sm:py-0 flex-wrap sm:flex-nowrap gap-x-2 gap-y-1.5 shadow-xs">
         {/* Left: Brand & Exam Meta */}
         <div
           className={cn(
-            'flex items-center gap-3 transition-opacity',
+            'flex items-center gap-2 sm:gap-3 transition-opacity min-w-0 shrink',
             isExamInProgress && 'cursor-pointer hover:opacity-90',
           )}
           onClick={() => {
@@ -998,43 +998,46 @@ const ExamInterfacePage = () => {
               : undefined
           }
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-200">
-            <GraduationCap size={20} />
+          <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-200">
+            <GraduationCap size={18} className="sm:hidden" />
+            <GraduationCap size={20} className="hidden sm:block" />
           </div>
 
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-black tracking-tight text-indigo-600 uppercase">
-                Brainros Exam Portal
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="hidden xs:inline text-[10px] sm:text-xs font-black tracking-tight text-indigo-600 uppercase shrink-0">
+                Brainros
               </span>
               <span className="hidden sm:inline text-slate-300">•</span>
-              <h1 className="text-xs sm:text-sm font-extrabold text-slate-900 truncate max-w-[140px] sm:max-w-[240px] md:max-w-[340px]">
+              <h1 className="text-xs sm:text-sm font-extrabold text-slate-900 truncate max-w-[110px] xs:max-w-[140px] sm:max-w-[240px] md:max-w-[340px]">
                 {examTitle}
               </h1>
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
-              <span className="truncate max-w-[100px] sm:max-w-[160px]">
+            <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-[11px] font-semibold text-slate-500">
+              <span className="truncate max-w-[80px] xs:max-w-[100px] sm:max-w-[160px]">
                 {currentQuestion?.section?.name ?? 'General Section'}
               </span>
               <span>•</span>
-              <span className="font-mono text-slate-700">
-                Q{currentIdx + 1} of {questions.length}
+              <span className="font-mono text-slate-700 shrink-0">
+                Q{currentIdx + 1}/{questions.length}
               </span>
             </div>
           </div>
         </div>
 
         {/* Center: Countdown Timer (Isolated render boundary for 1-second countdowns) */}
-        <ExamTimerBadge
-          serverEndTime={serverEndTime}
-          onTimeUp={handleAutoSubmit}
-          onTick={(secs) => {
-            timeLeftRef.current = secs;
-          }}
-        />
+        <div className="shrink-0">
+          <ExamTimerBadge
+            serverEndTime={serverEndTime}
+            onTimeUp={handleAutoSubmit}
+            onTick={(secs) => {
+              timeLeftRef.current = secs;
+            }}
+          />
+        </div>
 
         {/* Right: Controls & Actions */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 ml-auto sm:ml-0">
           {/* Language Switcher */}
           {attemptId && (
             <ExamLanguageSwitcher
@@ -1048,7 +1051,7 @@ const ExamInterfacePage = () => {
           {/* Network & Autosave State Indicator */}
           <div
             className={cn(
-              'flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-bold transition-all border shadow-2xs',
+              'flex items-center gap-1 sm:gap-1.5 rounded-xl px-2 sm:px-2.5 py-1 text-xs font-bold transition-all border shadow-2xs shrink-0',
               !isOnline
                 ? 'bg-rose-50 text-rose-700 border-rose-200'
                 : saveStatus === 'saving' || saveStatus === 'syncing'
@@ -1085,13 +1088,13 @@ const ExamInterfacePage = () => {
             onClick={toggleFullscreen}
             aria-label={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
             title={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
-            className="hidden sm:flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all"
+            className="hidden sm:flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all shrink-0"
           >
             {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
           </button>
 
           {/* User badge */}
-          <div className="hidden lg:flex items-center gap-2 border-l border-slate-200 pl-3 text-xs">
+          <div className="hidden lg:flex items-center gap-2 border-l border-slate-200 pl-3 text-xs shrink-0">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 font-black text-xs">
               {user?.studentProfile?.name?.charAt(0)?.toUpperCase() ?? <User size={12} />}
             </div>
@@ -1117,7 +1120,7 @@ const ExamInterfacePage = () => {
               });
               setShowLeaveModal(true);
             }}
-            className="flex items-center gap-1.5 border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300 font-bold text-xs shadow-2xs"
+            className="flex items-center gap-1 sm:gap-1.5 border-rose-200 text-rose-700 hover:bg-rose-50 hover:border-rose-300 font-bold text-xs shadow-2xs px-2 sm:px-3 py-1 sm:py-1.5 shrink-0"
             title="Exit / Close Exam"
           >
             <LogOut size={13} />
@@ -1130,23 +1133,23 @@ const ExamInterfacePage = () => {
             variant="success"
             size="sm"
             onClick={() => setShowSubmitModal(true)}
-            className="flex items-center gap-1.5 shadow-md shadow-emerald-200 font-extrabold text-xs"
+            className="flex items-center gap-1 sm:gap-1.5 shadow-md shadow-emerald-200 font-extrabold text-xs px-2.5 sm:px-3 py-1 sm:py-1.5 shrink-0"
           >
             <Send size={13} />
-            <span>Submit</span>
+            <span className="hidden xs:inline">Submit</span>
           </Button>
         </div>
       </header>
 
       {/* ══ SECTION TABS BAR ═════════════════════════════════════════ */}
-      <div className="relative z-10 flex h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6">
+      <div className="relative z-10 flex h-11 sm:h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-2.5 sm:px-6 gap-2">
         {/* Section Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pr-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none pr-1 min-w-0">
           <button
             type="button"
             onClick={() => setActiveSection('ALL')}
             className={cn(
-              'shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold transition-all',
+              'shrink-0 rounded-xl px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs font-bold transition-all',
               activeSection === 'ALL'
                 ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
@@ -1162,7 +1165,7 @@ const ExamInterfacePage = () => {
                 type="button"
                 onClick={() => setActiveSection(sec)}
                 className={cn(
-                  'shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold transition-all',
+                  'shrink-0 rounded-xl px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs font-bold transition-all',
                   activeSection === sec
                     ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
@@ -1176,7 +1179,7 @@ const ExamInterfacePage = () => {
 
         {/* Font Controls & Mobile Palette Toggle */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-0.5 text-xs">
+          <div className="hidden xs:flex items-center rounded-xl border border-slate-200 bg-slate-50 p-0.5 text-xs">
             <button
               type="button"
               onClick={() => setFontSize('sm')}
@@ -1217,7 +1220,7 @@ const ExamInterfacePage = () => {
             type="button"
             onClick={() => setIsPaletteOpen((v) => !v)}
             title="Toggle Question Palette"
-            className="flex lg:hidden items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700 shadow-2xs"
+            className="flex lg:hidden items-center gap-1 sm:gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs font-bold text-indigo-700 shadow-2xs shrink-0"
           >
             <Grid3X3 size={14} />
             <span>Palette ({currentIdx + 1}/{questions.length})</span>
@@ -1226,25 +1229,25 @@ const ExamInterfacePage = () => {
       </div>
 
       {/* ══ MAIN BODY: QUESTION AREA + QUESTION PALETTE ══════════════ */}
-      <div className="flex flex-1 overflow-hidden min-h-0">
+      <div className="flex flex-1 overflow-hidden min-h-0 relative">
         {/* ── Center Question Area ─────────────────────────────── */}
-        <main className="flex flex-1 min-w-0 flex-col overflow-y-auto bg-slate-50/70 p-4 sm:p-6 lg:p-8">
+        <main className="flex flex-1 min-w-0 flex-col overflow-y-auto bg-slate-50/70 p-2.5 sm:p-6 lg:p-8 pb-20 lg:pb-8">
           {currentQuestion && (
-            <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-between gap-5">
+            <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col justify-between gap-4 sm:gap-5">
               {/* Question Card */}
-              <div className="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
+              <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-3.5 sm:p-6 lg:p-8 shadow-xs">
                 {/* Question Header Meta */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-50 px-3 py-1 text-xs font-black text-indigo-700 border border-indigo-200/80">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 sm:pb-4">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <span className="inline-flex items-center gap-1 sm:gap-1.5 rounded-xl bg-indigo-50 px-2.5 sm:px-3 py-1 text-xs font-black text-indigo-700 border border-indigo-200/80">
                       Question {currentIdx + 1}
                       <span className="text-indigo-300">/</span>
                       <span className="text-indigo-400 font-semibold">{questions.length}</span>
                     </span>
-                    <span className="rounded-xl bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 border border-slate-200">
+                    <span className="rounded-xl bg-slate-100 px-2 sm:px-2.5 py-1 text-xs font-bold text-slate-600 border border-slate-200">
                       {currentQuestion.section?.name ?? 'General Section'}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-xl bg-purple-50 px-2.5 py-1 text-xs font-bold text-purple-700 border border-purple-200/80">
+                    <span className="inline-flex items-center gap-1 sm:gap-1.5 rounded-xl bg-purple-50 px-2 sm:px-2.5 py-1 text-xs font-bold text-purple-700 border border-purple-200/80">
                       <QuestionTypeIcon
                         code={currentQuestion.questionType?.code || (currentQuestion as any).type}
                       />
@@ -1254,12 +1257,12 @@ const ExamInterfacePage = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs font-black">
-                    <span className="flex items-center gap-1 rounded-xl bg-emerald-50 px-2.5 py-1 text-emerald-700 border border-emerald-200">
+                  <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-black">
+                    <span className="flex items-center gap-1 rounded-xl bg-emerald-50 px-2 sm:px-2.5 py-1 text-emerald-700 border border-emerald-200">
                       +{currentQuestion.marks} Mark{currentQuestion.marks > 1 ? 's' : ''}
                     </span>
                     {currentQuestion.negativeMarks > 0 && (
-                      <span className="flex items-center gap-1 rounded-xl bg-rose-50 px-2.5 py-1 text-rose-700 border border-rose-200">
+                      <span className="flex items-center gap-1 rounded-xl bg-rose-50 px-2 sm:px-2.5 py-1 text-rose-700 border border-rose-200">
                         −{currentQuestion.negativeMarks} Neg
                       </span>
                     )}
@@ -1268,7 +1271,7 @@ const ExamInterfacePage = () => {
 
                 {/* Optional Passage / Context */}
                 {displayPassage && (
-                  <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4 text-xs sm:text-sm leading-relaxed text-slate-700">
+                  <div className="mt-3.5 sm:mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-3 sm:p-4 text-xs sm:text-sm leading-relaxed text-slate-700 break-words overflow-wrap-anywhere">
                     <div className="font-bold text-indigo-700 text-xs mb-1 uppercase tracking-wider">
                       Passage / Comprehension Context:
                     </div>
@@ -1278,7 +1281,7 @@ const ExamInterfacePage = () => {
 
                 {/* Optional Assertion & Reason */}
                 {displayAssertion && (
-                  <div className="mt-4 space-y-2 rounded-2xl border border-purple-100 bg-purple-50/40 p-4 text-xs sm:text-sm text-slate-700">
+                  <div className="mt-3.5 sm:mt-4 space-y-2 rounded-2xl border border-purple-100 bg-purple-50/40 p-3 sm:p-4 text-xs sm:text-sm text-slate-700 break-words overflow-wrap-anywhere">
                     <div>
                       <span className="font-bold text-purple-800 mr-2">Assertion (A):</span>
                       {displayAssertion}
@@ -1294,26 +1297,30 @@ const ExamInterfacePage = () => {
 
                 {/* Question Text */}
                 <div
-                  className={cn('mt-5 leading-relaxed text-slate-900 font-semibold', fontSizeClass)}
+                  className={cn(
+                    'mt-4 sm:mt-5 leading-relaxed text-slate-900 font-semibold break-words overflow-wrap-anywhere [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-xl',
+                    fontSizeClass,
+                  )}
                 >
                   {displayQuestionText}
                 </div>
 
                 {/* ── Options / Inputs ────────────────────────────── */}
-                <div className="mt-6 space-y-3">
+                <div className="mt-5 sm:mt-6 space-y-2.5 sm:space-y-3">
                   {getNormalizedQuestionType(currentQuestion) === 'NUM' ? (
                     /* NUMERICAL */
-                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/60 p-3.5 sm:p-5">
                       <label className="block text-xs font-bold text-slate-700 mb-2">
                         Enter your numerical response:
                       </label>
                       <input
                         type="number"
                         step="any"
+                        inputMode="decimal"
                         value={numericalAnswer}
                         onChange={(e) => handleNumericalChange(e.target.value)}
                         placeholder="e.g. 25.5"
-                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-lg font-bold text-slate-900 placeholder-slate-400 shadow-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 sm:px-4 sm:py-3 text-base sm:text-lg font-bold text-slate-900 placeholder-slate-400 shadow-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                       />
                     </div>
                   ) : getNormalizedQuestionType(currentQuestion) === 'MCQ' ? (
@@ -1341,7 +1348,7 @@ const ExamInterfacePage = () => {
                           key={opt.id || optIdx}
                           onClick={() => handleToggleMultipleOption(opt.id)}
                           className={cn(
-                            'group flex cursor-pointer items-start gap-3.5 rounded-2xl border p-4 transition-all duration-150 select-none',
+                            'group flex cursor-pointer items-start gap-2.5 sm:gap-3.5 rounded-2xl border p-3 sm:p-4 transition-all duration-150 select-none min-w-0',
                             isSelected
                               ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-600/30 shadow-xs'
                               : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/20',
@@ -1349,7 +1356,7 @@ const ExamInterfacePage = () => {
                         >
                           <div
                             className={cn(
-                              'flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border text-xs font-black transition-all',
+                              'flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-xl border text-xs font-black transition-all mt-0.5',
                               isSelected
                                 ? 'border-indigo-600 bg-indigo-600 text-white shadow-xs'
                                 : 'border-slate-300 text-slate-600 group-hover:border-indigo-400',
@@ -1357,7 +1364,7 @@ const ExamInterfacePage = () => {
                           >
                             {isSelected ? '✓' : label}
                           </div>
-                          <span className="text-xs sm:text-sm font-medium text-slate-800 leading-relaxed pt-0.5">
+                          <span className="text-xs sm:text-sm font-medium text-slate-800 leading-relaxed min-w-0 flex-1 break-words overflow-wrap-anywhere [&_img]:max-w-full [&_img]:h-auto">
                             {optionText}
                           </span>
                         </label>
@@ -1388,7 +1395,7 @@ const ExamInterfacePage = () => {
                           key={opt.id || optIdx}
                           onClick={() => handleSelectSingleOption(opt.id)}
                           className={cn(
-                            'group flex cursor-pointer items-start gap-3.5 rounded-2xl border p-4 transition-all duration-150 select-none',
+                            'group flex cursor-pointer items-start gap-2.5 sm:gap-3.5 rounded-2xl border p-3 sm:p-4 transition-all duration-150 select-none min-w-0',
                             isSelected
                               ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-600/30 shadow-xs'
                               : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/20',
@@ -1396,7 +1403,7 @@ const ExamInterfacePage = () => {
                         >
                           <div
                             className={cn(
-                              'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-black transition-all',
+                              'flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full border text-xs font-black transition-all mt-0.5',
                               isSelected
                                 ? 'border-indigo-600 bg-indigo-600 text-white shadow-xs'
                                 : 'border-slate-300 text-slate-600 group-hover:border-indigo-400',
@@ -1406,8 +1413,8 @@ const ExamInterfacePage = () => {
                           </div>
                           <span
                             className={cn(
-                              'font-medium text-slate-800 leading-relaxed pt-0.5',
-                              fontSizeClass === 'text-lg' ? 'text-base' : 'text-xs sm:text-sm',
+                              'font-medium text-slate-800 leading-relaxed min-w-0 flex-1 break-words overflow-wrap-anywhere [&_img]:max-w-full [&_img]:h-auto',
+                              fontSizeClass === 'text-lg' ? 'text-sm sm:text-base' : 'text-xs sm:text-sm',
                             )}
                           >
                             {optionText}
@@ -1420,14 +1427,14 @@ const ExamInterfacePage = () => {
               </div>
 
               {/* ── Action Toolbar ──────────────────────────────── */}
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 sm:p-4 shadow-xs">
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Mark for Review */}
                   <button
                     type="button"
                     onClick={handleToggleMarkForReview}
                     className={cn(
-                      'flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition-all',
+                      'flex items-center gap-1.5 sm:gap-2 rounded-xl px-3 sm:px-3.5 py-1.5 sm:py-2 text-xs font-bold transition-all',
                       isMarkedForReview
                         ? 'bg-purple-600 text-white shadow-sm shadow-purple-200'
                         : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100',
@@ -1436,7 +1443,7 @@ const ExamInterfacePage = () => {
                     <Flag
                       size={14}
                       className={cn(
-                        'transition-transform',
+                        'transition-transform shrink-0',
                         isMarkedForReview ? 'fill-white text-white' : 'text-purple-600',
                       )}
                     />
@@ -1450,15 +1457,15 @@ const ExamInterfacePage = () => {
                     disabled={
                       !selectedOptionId && selectedOptions.length === 0 && numericalAnswer === ''
                     }
-                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none transition-all"
+                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 sm:py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none transition-all"
                   >
-                    <RotateCcw size={13} />
+                    <RotateCcw size={13} className="shrink-0" />
                     <span>Clear Response</span>
                   </button>
                 </div>
 
-                {/* Navigation: Previous / Next / Save & Next */}
-                <div className="flex items-center gap-2">
+                {/* Navigation (Desktop / Tablet lg+): Previous / Next / Save & Next */}
+                <div className="hidden lg:flex items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -1477,7 +1484,7 @@ const ExamInterfacePage = () => {
                       variant="outline"
                       size="sm"
                       onClick={handleNext}
-                      className="hidden sm:flex items-center gap-1 font-bold text-xs"
+                      className="flex items-center gap-1 font-bold text-xs"
                     >
                       <span>Next</span>
                       <ChevronRight size={15} />
@@ -1500,6 +1507,41 @@ const ExamInterfacePage = () => {
           )}
         </main>
 
+        {/* ── Fixed Mobile Bottom Navigation Bar (Mobile / Tablet < lg) ── */}
+        <div className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-between border-t border-slate-200/90 bg-white/95 px-3 py-2 backdrop-blur-md lg:hidden shadow-lg pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handlePrevious}
+            disabled={currentIdx === 0}
+            className="flex items-center gap-1 font-bold text-xs px-2.5 py-1.5"
+          >
+            <ChevronLeft size={15} />
+            <span>Prev</span>
+          </Button>
+
+          <button
+            type="button"
+            onClick={() => setIsPaletteOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700 shadow-2xs"
+          >
+            <Grid3X3 size={14} />
+            <span>Q {currentIdx + 1}/{questions.length}</span>
+          </button>
+
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={handleSaveAndNext}
+            className="flex items-center gap-1.5 shadow-md shadow-indigo-200 font-extrabold text-xs px-3 py-1.5"
+          >
+            <span>Save & Next</span>
+            <ChevronRight size={15} />
+          </Button>
+        </div>
+
         {/* ── Question Palette Sidebar (Desktop) ─ */}
         <aside className="hidden lg:flex h-full shrink-0">
           <QuestionPalette
@@ -1515,8 +1557,8 @@ const ExamInterfacePage = () => {
 
         {/* ── Mobile/Tablet Slide-over Drawer for Question Palette ─ */}
         {isPaletteOpen && (
-          <div className="fixed inset-0 z-40 flex justify-end bg-slate-950/40 backdrop-blur-xs lg:hidden">
-            <div className="relative h-full w-full max-w-xs bg-white shadow-2xl animate-in slide-in-from-right duration-200">
+          <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/50 backdrop-blur-xs lg:hidden animate-in fade-in duration-150">
+            <div className="relative h-full w-full max-w-xs sm:max-w-sm bg-white shadow-2xl animate-in slide-in-from-right duration-200">
               <QuestionPalette
                 questions={questions}
                 currentIdx={currentIdx}
@@ -1538,8 +1580,8 @@ const ExamInterfacePage = () => {
 
       {/* ══ SUBMIT CONFIRMATION MODAL ════════════════════════════════ */}
       {showSubmitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl text-slate-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-2xl text-slate-900">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 font-bold">
@@ -1558,11 +1600,11 @@ const ExamInterfacePage = () => {
 
             {/* Summary Statistics */}
             <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-2xl bg-slate-50 p-3.5 border border-slate-100">
+              <div className="rounded-2xl bg-slate-50 p-3 sm:p-3.5 border border-slate-100">
                 <span className="text-slate-400 block text-[10px] font-bold uppercase">Total Questions</span>
                 <span className="text-xl font-black text-slate-900 mt-0.5 block">{questions.length}</span>
               </div>
-              <div className="rounded-2xl bg-emerald-50 p-3.5 border border-emerald-100">
+              <div className="rounded-2xl bg-emerald-50 p-3 sm:p-3.5 border border-emerald-100">
                 <span className="text-emerald-700 block text-[10px] font-bold uppercase">Answered</span>
                 <span className="text-xl font-black text-emerald-800 mt-0.5 block">
                   {
@@ -1573,13 +1615,13 @@ const ExamInterfacePage = () => {
                   }
                 </span>
               </div>
-              <div className="rounded-2xl bg-rose-50 p-3.5 border border-rose-100">
+              <div className="rounded-2xl bg-rose-50 p-3 sm:p-3.5 border border-rose-100">
                 <span className="text-rose-700 block text-[10px] font-bold uppercase">Unanswered</span>
                 <span className="text-xl font-black text-rose-800 mt-0.5 block">
                   {questions.filter((q) => getQuestionStatus(q) === 'NOT_ANSWERED').length}
                 </span>
               </div>
-              <div className="rounded-2xl bg-purple-50 p-3.5 border border-purple-100">
+              <div className="rounded-2xl bg-purple-50 p-3 sm:p-3.5 border border-purple-100">
                 <span className="text-purple-700 block text-[10px] font-bold uppercase">Marked for Review</span>
                 <span className="text-xl font-black text-purple-800 mt-0.5 block">
                   {
@@ -1598,10 +1640,11 @@ const ExamInterfacePage = () => {
             </p>
 
             {/* Modal Actions */}
-            <div className="mt-6 flex items-center justify-end gap-2.5 border-t border-slate-100 pt-4">
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-end gap-2.5 border-t border-slate-100 pt-4">
               <Button
                 variant="outline"
                 size="sm"
+                className="w-full sm:w-auto font-bold"
                 onClick={() => setShowSubmitModal(false)}
                 disabled={isSubmitting}
               >
@@ -1610,7 +1653,7 @@ const ExamInterfacePage = () => {
               <Button
                 variant="success"
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold"
+                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold"
                 onClick={handleAutoSubmit}
                 isLoading={isSubmitting}
               >

@@ -199,9 +199,8 @@ export const StudentComparisonPage: React.FC = () => {
                 className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">All Targets</option>
-                <option value="JEET">JEET</option>
+                <option value="JEE">JEE</option>
                 <option value="NEET">NEET</option>
-                <option value="CAT">CAT</option>
               </select>
             </div>
           </div>

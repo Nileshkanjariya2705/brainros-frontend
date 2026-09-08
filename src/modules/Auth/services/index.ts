@@ -220,14 +220,20 @@ export const useStudentProfileAPI = () => {
 
   const getStudentProfile = useCallback(
     async (config: AxiosRequestConfig = {}) => {
-      return getApi<StudentProfile>(`${STUDENT_API_BASE_PATH}/me`, config);
+      const res = await getApi<any>(`${STUDENT_API_BASE_PATH}/me`, config);
+      if (res.data) return res;
+      // Fallback for Super Admin / Admin accounts without student record
+      return getApi<any>(`${AUTH_API_BASE_PATH}/me`, config);
     },
     [getApi],
   );
 
   const updateStudentProfile = useCallback(
     async (data: Partial<StudentProfile>, config: AxiosRequestConfig = {}) => {
-      return patchApi<StudentProfile>(`${STUDENT_API_BASE_PATH}/me`, data, config);
+      const res = await patchApi<any>(`${STUDENT_API_BASE_PATH}/me`, data, config);
+      if (res.data && !res.error) return res;
+      // Fallback for Super Admin / Admin user update via /auth/me
+      return patchApi<any>(`${AUTH_API_BASE_PATH}/me`, data, config);
     },
     [patchApi],
   );

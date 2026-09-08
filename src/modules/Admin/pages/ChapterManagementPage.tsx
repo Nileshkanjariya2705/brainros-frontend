@@ -17,8 +17,6 @@ import {
 import {
   useGetAllChaptersAPI,
   useGetSubjectsAPI,
-  useCreateSubjectAPI,
-  useGetExamTargetsAPI,
   useCreateChapterAPI,
   useUpdateChapterAPI,
   useDeleteChapterAPI,
@@ -26,7 +24,7 @@ import {
 } from '@/modules/QuestionBank/services/questionBank.service';
 import type { ChapterItem, CreateChapterPayload, UpdateChapterPayload } from '@/modules/QuestionBank/types/questionBank.types';
 import Button from '@/components/ui/Button';
-import { formatSubjectDisplayName } from '@/constants/subjects.constant';
+import { formatSubjectDisplayName, isAllowedSubject } from '@/constants/subjects.constant';
 
 export const ChapterManagementPage: React.FC = () => {
   // ─── State ───────────────────────────────────────────────────
@@ -40,24 +38,8 @@ export const ChapterManagementPage: React.FC = () => {
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isAddSubjectModalOpen, setIsAddSubjectModalOpen] = useState(false);
   const [editingChapter, setEditingChapter] = useState<ChapterItem | null>(null);
   const [deletingChapter, setDeletingChapter] = useState<ChapterItem | null>(null);
-  const [examTargets, setExamTargets] = useState<any[]>([]);
-
-  // Subject Form State
-  const [subjectFormData, setSubjectFormData] = useState<{
-    examTargetId: string;
-    name: string;
-    code: string;
-    displayOrder: number;
-  }>({
-    examTargetId: '',
-    name: '',
-    code: '',
-    displayOrder: 1,
-  });
-  const [subjectFormErrors, setSubjectFormErrors] = useState<Record<string, string>>({});
 
   // Chapter Form State
   const [formData, setFormData] = useState<{
@@ -81,8 +63,6 @@ export const ChapterManagementPage: React.FC = () => {
   // ─── API Hooks ────────────────────────────────────────────────
   const { getAllChaptersAPI, isLoading: isFetchingChapters } = useGetAllChaptersAPI();
   const { getSubjectsAPI } = useGetSubjectsAPI();
-  const { createSubjectAPI, isLoading: isCreatingSubject } = useCreateSubjectAPI();
-  const { getExamTargetsAPI } = useGetExamTargetsAPI();
   const { createChapterAPI, isLoading: isCreating } = useCreateChapterAPI();
   const { updateChapterAPI, isLoading: isUpdating } = useUpdateChapterAPI();
   const { deleteChapterAPI, isLoading: isDeleting } = useDeleteChapterAPI();
@@ -92,26 +72,21 @@ export const ChapterManagementPage: React.FC = () => {
   const loadData = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const [subjectsRes, chaptersRes, targetsRes] = await Promise.all([
+      const [subjectsRes, chaptersRes] = await Promise.all([
         getSubjectsAPI(),
         getAllChaptersAPI({ includeInactive: true }),
-        getExamTargetsAPI().catch(() => ({ data: [] })),
       ]);
 
-      const subList = Array.isArray(subjectsRes?.data)
+      const rawSubList = Array.isArray(subjectsRes?.data)
         ? subjectsRes.data
         : (subjectsRes?.data as any)?.data || [];
+      const subList = rawSubList.filter((s: any) => isAllowedSubject(s.name));
       setSubjects(subList);
 
       const chList = Array.isArray(chaptersRes?.data)
         ? chaptersRes.data
         : (chaptersRes?.data as any)?.data || [];
       setChapters(chList);
-
-      const targetList = Array.isArray(targetsRes?.data)
-        ? targetsRes.data
-        : (targetsRes?.data as any)?.data || [];
-      setExamTargets(targetList);
     } catch (err: any) {
       setFeedbackMsg({
         type: 'error',
@@ -120,7 +95,7 @@ export const ChapterManagementPage: React.FC = () => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [getSubjectsAPI, getAllChaptersAPI, getExamTargetsAPI]);
+  }, [getSubjectsAPI, getAllChaptersAPI]);
 
   useEffect(() => {
     loadData();
@@ -179,66 +154,7 @@ export const ChapterManagementPage: React.FC = () => {
     );
   };
 
-  // ─── Open Add Subject Modal ──────────────────────────────────
-  const handleOpenAddSubjectModal = () => {
-    const defaultExamTargetId = examTargets[0]?.id || '';
-    setSubjectFormData({
-      examTargetId: defaultExamTargetId,
-      name: '',
-      code: '',
-      displayOrder: subjects.length + 1,
-    });
-    setSubjectFormErrors({});
-    setIsAddSubjectModalOpen(true);
-  };
 
-  const handleSelectDefaultSubjectPreset = (name: string, code: string) => {
-    setSubjectFormData((prev) => ({
-      ...prev,
-      name,
-      code,
-    }));
-    setSubjectFormErrors((prev) => {
-      const updated = { ...prev };
-      delete updated.name;
-      return updated;
-    });
-  };
-
-  const handleSaveAddSubject = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!subjectFormData.examTargetId) {
-      setSubjectFormErrors((prev) => ({ ...prev, examTargetId: 'Please select a Target Exam.' }));
-      return;
-    }
-    if (!subjectFormData.name.trim()) {
-      setSubjectFormErrors((prev) => ({ ...prev, name: 'Subject name is required.' }));
-      return;
-    }
-
-    const payload = {
-      examTargetId: subjectFormData.examTargetId,
-      name: subjectFormData.name.trim(),
-      code: subjectFormData.code.trim() || undefined,
-      displayOrder: Number(subjectFormData.displayOrder) || 1,
-    };
-
-    const res = await createSubjectAPI(payload);
-    if (res?.error) {
-      setFeedbackMsg({
-        type: 'error',
-        text: typeof res.error === 'string' ? res.error : (res.error as any).message || 'Failed to create subject.',
-      });
-      return;
-    }
-
-    setFeedbackMsg({
-      type: 'success',
-      text: `Subject "${payload.name}" was created successfully.`,
-    });
-    setIsAddSubjectModalOpen(false);
-    loadData();
-  };
 
   // ─── Open Add Chapter Modal ──────────────────────────────────
   const handleOpenAddModal = () => {
@@ -524,14 +440,6 @@ export const ChapterManagementPage: React.FC = () => {
           >
             <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-indigo-600' : ''} />
             <span>Refresh</span>
-          </button>
-
-          <button
-            onClick={handleOpenAddSubjectModal}
-            className="flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/80 px-3.5 py-2.5 text-xs font-bold text-indigo-700 shadow-sm hover:bg-indigo-100 transition-all"
-          >
-            <Plus size={15} />
-            <span>Add Subject</span>
           </button>
 
           <Button
@@ -918,11 +826,14 @@ export const ChapterManagementPage: React.FC = () => {
             </div>
 
             <form onSubmit={handleSaveAdd} className="space-y-4 text-xs">
-              {/* Subject Select */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 block">
-                  Subject <span className="text-rose-500">*</span>
+              {/* Step 1: Subject Select */}
+              <div className="space-y-1.5 border-b border-slate-100 pb-3">
+                <label className="font-bold text-slate-800 block text-xs">
+                  Step 1: Select Subject <span className="text-rose-500">*</span>
                 </label>
+                <p className="text-[11px] text-slate-500 mb-1">
+                  Choose from fixed subjects (Physics, Chemistry, Biology, Mathematics)
+                </p>
                 <select
                   value={formData.subjectId}
                   onChange={(e) => handleSubjectChange(e.target.value)}
@@ -932,7 +843,7 @@ export const ChapterManagementPage: React.FC = () => {
                       : 'border-slate-200 bg-slate-50/50 focus:border-indigo-500 focus:ring-indigo-100'
                   }`}
                 >
-                  <option value="">Select Parent Subject</option>
+                  <option value="">-- Select Subject --</option>
                   {subjects.map((s) => (
                     <option key={s.id} value={s.id}>
                       {formatSubjectDisplayName(s.name)} {s.examTarget?.name ? `(${s.examTarget.name})` : ''}
@@ -944,10 +855,10 @@ export const ChapterManagementPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Chapter Name */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 block">
-                  Chapter Name <span className="text-rose-500">*</span>
+              {/* Step 2: Chapter Name */}
+              <div className="space-y-1.5 pt-1">
+                <label className="font-bold text-slate-800 block text-xs">
+                  Step 2: Enter Chapter Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1272,163 +1183,7 @@ export const ChapterManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════ */}
-      {/* ADD SUBJECT MODAL */}
-      {/* ═══════════════════════════════════════════════════════════ */}
-      {isAddSubjectModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                  <Plus size={16} />
-                </div>
-                <h2 className="text-base font-extrabold text-slate-900">Add New Subject Master</h2>
-              </div>
-              <button
-                onClick={() => setIsAddSubjectModalOpen(false)}
-                className="rounded-lg p-1 text-slate-400 hover:text-slate-700 transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
 
-            <form onSubmit={handleSaveAddSubject} className="space-y-4 text-xs">
-              {/* Target Exam */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 block">
-                  Target Exam <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  value={subjectFormData.examTargetId}
-                  onChange={(e) => setSubjectFormData((prev) => ({ ...prev, examTargetId: e.target.value }))}
-                  className={`w-full rounded-xl border p-3 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 ${
-                    subjectFormErrors.examTargetId
-                      ? 'border-rose-300 bg-rose-50/50 focus:ring-rose-100'
-                      : 'border-slate-200 bg-slate-50/50 focus:border-indigo-500 focus:ring-indigo-100'
-                  }`}
-                >
-                  <option value="">Select Target Exam</option>
-                  {examTargets.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-                {subjectFormErrors.examTargetId && (
-                  <p className="text-[11px] font-semibold text-rose-600">{subjectFormErrors.examTargetId}</p>
-                )}
-              </div>
-
-              {/* Default Core Subject Quick Presets */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 block">
-                  Default Core Subject Presets:
-                </label>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {[
-                    { name: 'Physics', code: 'PHY' },
-                    { name: 'Chemistry', code: 'CHEM' },
-                    { name: 'Mathematics', code: 'MATH' },
-                    { name: 'Biology', code: 'BIO' },
-                  ].map((preset) => (
-                    <button
-                      key={preset.name}
-                      type="button"
-                      onClick={() => handleSelectDefaultSubjectPreset(preset.name, preset.code)}
-                      className={`rounded-lg border px-3 py-1 text-xs font-bold transition-all ${
-                        subjectFormData.name === preset.name
-                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm'
-                          : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      + {preset.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Subject Name */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-700 block">
-                  Subject Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Physics, Chemistry, Mathematics, Biology..."
-                  value={subjectFormData.name}
-                  onChange={(e) => {
-                    const name = e.target.value;
-                    setSubjectFormData((prev) => ({ ...prev, name }));
-                    if (!name.trim()) {
-                      setSubjectFormErrors((prev) => ({ ...prev, name: 'Subject name is required.' }));
-                    } else {
-                      setSubjectFormErrors((prev) => {
-                        const updated = { ...prev };
-                        delete updated.name;
-                        return updated;
-                      });
-                    }
-                  }}
-                  className={`w-full rounded-xl border p-3 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 ${
-                    subjectFormErrors.name
-                      ? 'border-rose-300 bg-rose-50/50 focus:ring-rose-100'
-                      : 'border-slate-200 bg-slate-50/50 focus:border-indigo-500 focus:ring-indigo-100'
-                  }`}
-                />
-                {subjectFormErrors.name && (
-                  <p className="text-[11px] font-semibold text-rose-600">{subjectFormErrors.name}</p>
-                )}
-              </div>
-
-              {/* Subject Code & Display Order */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700 block">Subject Code</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. PHY, MATH, CHEM"
-                    value={subjectFormData.code}
-                    onChange={(e) => setSubjectFormData((prev) => ({ ...prev, code: e.target.value }))}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-bold text-slate-700 block">Display Order</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={subjectFormData.displayOrder}
-                    onChange={(e) =>
-                      setSubjectFormData((prev) => ({ ...prev, displayOrder: parseInt(e.target.value) || 1 }))
-                    }
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                  />
-                </div>
-              </div>
-
-              {/* Modal Buttons */}
-              <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsAddSubjectModalOpen(false)}
-                  className="rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-slate-600 hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <Button
-                  type="submit"
-                  disabled={isCreatingSubject || !subjectFormData.name || !subjectFormData.examTargetId}
-                  className="rounded-xl bg-indigo-600 px-5 py-2.5 font-bold text-white shadow-md shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-50"
-                >
-                  {isCreatingSubject ? 'Saving...' : 'Save Subject'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

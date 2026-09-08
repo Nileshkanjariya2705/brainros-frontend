@@ -28,6 +28,9 @@ export interface StudentProfile {
   stateId?: string;
   districtId?: string;
   status?: string;
+  email?: string;
+  mobileNumber?: string;
+  password?: string;
 }
 
 export interface User {

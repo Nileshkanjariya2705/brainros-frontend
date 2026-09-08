@@ -18,8 +18,8 @@ export const ExamSessionConflictModal: React.FC<ExamSessionConflictModalProps> =
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-amber-200 bg-white p-6 sm:p-8 shadow-2xl text-slate-900 text-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-3 sm:p-4 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border border-amber-200 bg-white p-5 sm:p-8 shadow-2xl text-slate-900 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 ring-8 ring-amber-50/50 mb-4">
           <Layers size={28} />
         </div>

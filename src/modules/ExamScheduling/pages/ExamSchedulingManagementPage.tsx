@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   CalendarClock,
   Send,
@@ -10,6 +11,7 @@ import {
   Clock,
   Layers,
   Server,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useGetAllExamsAPI } from '@/modules/ExamGenerator/services/examGenerator.service';
 import {
@@ -36,6 +38,7 @@ const LIFECYCLE_STEPS = [
 ];
 
 const ExamSchedulingManagementPage: React.FC = () => {
+  const navigate = useNavigate();
   const [exams, setExams] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
@@ -251,7 +254,12 @@ const ExamSchedulingManagementPage: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
                   <div>
                     <div className="flex items-center gap-2.5 flex-wrap">
-                      <h3 className="text-base font-extrabold text-slate-900">{exam.title}</h3>
+                      <button
+                        onClick={() => navigate(`/admin/exams/${exam.id}/manage`)}
+                        className="text-base font-extrabold text-slate-900 hover:text-indigo-600 transition-colors text-left"
+                      >
+                        {exam.title}
+                      </button>
                       <span
                         className={`rounded-lg px-2.5 py-0.5 text-xs font-black border ${getStatusBadge(
                           stName,
@@ -259,9 +267,20 @@ const ExamSchedulingManagementPage: React.FC = () => {
                       >
                         {stName}
                       </span>
+                      <span className="rounded-lg px-2 py-0.5 text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                        Type: {exam.examType || exam.type || 'Standard'}
+                      </span>
                     </div>
 
-                    <p className="text-xs text-slate-500 font-mono mt-1 flex items-center gap-2">
+                    <p className="text-xs text-slate-500 font-mono mt-1 flex items-center gap-2 flex-wrap">
+                      <span>Subject: {exam.subject?.name || exam.subjectName || 'All Subjects'}</span>
+                      {exam.chapter?.name && (
+                        <>
+                          <span>•</span>
+                          <span>Chapter: {exam.chapter.name}</span>
+                        </>
+                      )}
+                      <span>•</span>
                       <span>{exam.totalQuestions} Questions</span>
                       <span>•</span>
                       <span>{exam.durationMinutes} mins</span>
@@ -272,6 +291,15 @@ const ExamSchedulingManagementPage: React.FC = () => {
 
                   {/* Top Right Quick Actions */}
                   <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      size="sm"
+                      onClick={() => navigate(`/admin/exams/${exam.id}/manage`)}
+                      className="flex items-center gap-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-700 font-bold shadow-sm"
+                    >
+                      <LayoutDashboard size={13} />
+                      <span>Exam Management</span>
+                    </Button>
+
                     <Button
                       variant="outline"
                       size="sm"

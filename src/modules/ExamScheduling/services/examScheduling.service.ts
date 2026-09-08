@@ -65,6 +65,30 @@ export const useScheduleExamAPI = () => {
   return { scheduleExamAPI, ...state };
 };
 
+export const useScheduleAdminExamAPI = () => {
+  const [postReq, state] = useAxiosPost();
+
+  const scheduleAdminExamAPI = useCallback(
+    async (payload: {
+      examType: string;
+      title?: string;
+      subjectId?: string;
+      chapterId?: string;
+      examTargetId?: string;
+      blueprintId?: string;
+      totalQuestions?: number;
+      durationMinutes?: number;
+      startTime: string;
+      timezone?: string;
+    }) => {
+      return postReq<ExamScheduleItem>(`/admin/exams/schedule`, payload);
+    },
+    [postReq],
+  );
+
+  return { scheduleAdminExamAPI, ...state };
+};
+
 export const useRescheduleExamAPI = () => {
   const [patchReq, state] = useAxiosPatch();
 

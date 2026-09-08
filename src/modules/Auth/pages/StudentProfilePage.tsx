@@ -58,6 +58,10 @@ const StudentProfilePage = () => {
   const [examTargetId, setExamTargetId] = useState('');
   const [preferredLanguageId, setPreferredLanguageId] = useState('');
 
+  const [email, setEmail] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [password, setPassword] = useState('');
+
   // 1. Fetch States list from India Pincode API on mount
   useEffect(() => {
     let isMounted = true;
@@ -100,7 +104,15 @@ const StudentProfilePage = () => {
   // 3. Initialize profile data on load with database values
   useEffect(() => {
     if (profile) {
-      setName(profile.name || '');
+      setName(profile.name || (profile as any).email?.split('@')[0] || 'User Profile');
+      setEmail((profile as any).user?.email || (profile as any).email || '');
+      setMobile(
+        (profile as any).user?.mobileNumber ||
+          (profile as any).user?.phone ||
+          (profile as any).mobileNumber ||
+          (profile as any).phone ||
+          '',
+      );
       setSchoolCollege(profile.schoolCollege || '');
 
       const rawState = profile.state || (profile as any).stateRef?.name || '';
@@ -215,6 +227,9 @@ const StudentProfilePage = () => {
     e.preventDefault();
     await updateProfile({
       name: name.trim(),
+      email: email.trim() || undefined,
+      mobileNumber: mobile.trim() || undefined,
+      password: password.trim() || undefined,
       schoolCollege: schoolCollege.trim(),
       state: selectedState || undefined,
       district: selectedDistrict || undefined,
@@ -222,6 +237,7 @@ const StudentProfilePage = () => {
       examTargetId: examTargetId || undefined,
       preferredLanguageId: preferredLanguageId || undefined,
     });
+    setPassword('');
     fetchProfile();
   };
 

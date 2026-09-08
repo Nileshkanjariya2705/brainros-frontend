@@ -5,18 +5,19 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  Layers,
   Globe,
   Sparkles,
   Bell,
+  BookOpen,
+  FileText,
+  Award,
 } from 'lucide-react';
-import { useScheduleExamAPI } from '../services/examScheduling.service';
-import { useGetExamVersionsAPI } from '@/modules/ExamGenerator/services/examGenerator.service';
-import type { ExamVersionItem } from '@/modules/ExamGenerator/types/examGenerator.types';
+import { useScheduleExamAPI, useScheduleAdminExamAPI } from '../services/examScheduling.service';
+import { useAxiosGet } from '@/hooks/useAxios';
 import Button from '@/components/ui/Button';
 
 interface ScheduleExamModalProps {
-  examId: string;
+  examId?: string;
   examTitle?: string;
   examDuration?: number;
   examsList?: any[];
@@ -26,12 +27,11 @@ interface ScheduleExamModalProps {
   onScheduled?: () => void;
 }
 
-/**
- * Calculates End Date & Time from Start Date, Start Time, and Duration in minutes
- */
+export type AdminExamType = 'SPECIFIC_SUBJECT' | 'SPECIFIC_CHAPTER' | 'JEE_NEET_CET';
+
 function calculateEndTime(startDateStr: string, startTimeStr: string, durationMinutes: number) {
   if (!startDateStr || !startTimeStr) {
-    return { endDate: startDateStr, endTime: startTimeStr };
+    return { endDate: startDateStr, endTime: startTimeStr, endFormatted: '' };
   }
 
   const [hours, minutes] = startTimeStr.split(':').map(Number);
@@ -49,134 +49,219 @@ function calculateEndTime(startDateStr: string, startTimeStr: string, durationMi
   const endMinutes = String(endObj.getMinutes()).padStart(2, '0');
   const endTimeFormatted = `${endHours}:${endMinutes}`;
 
-  return { endDate: endDateFormatted, endTime: endTimeFormatted };
+  const displayFormatted = `${endDateFormatted} at ${endTimeFormatted}`;
+
+  return { endDate: endDateFormatted, endTime: endTimeFormatted, endFormatted: displayFormatted };
 }
 
 export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
   examId: initialExamId,
   examTitle: initialExamTitle,
   examDuration: initialExamDuration = 180,
-  examsList = [],
-  onSelectExam,
   isOpen,
   onClose,
   onScheduled,
 }) => {
-  const [currentExamId, setCurrentExamId] = useState<string>(initialExamId);
-  const [currentExamTitle, setCurrentExamTitle] = useState<string>(initialExamTitle || '');
-  const [currentDuration, setCurrentDuration] = useState<number>(initialExamDuration);
+  const [getReq] = useAxiosGet();
 
-  const [versions, setVersions] = useState<ExamVersionItem[]>([]);
-  const [selectedVersionId, setSelectedVersionId] = useState<string>('');
+  // Mode: Existing exam vs New Admin Exam Manager Flow
+  const [examType, setExamType] = useState<AdminExamType>('SPECIFIC_SUBJECT');
+
+  // Specific Subject / Chapter / Blueprint states
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [chapters, setChapters] = useState<any[]>([]);
+  const [blueprints, setBlueprints] = useState<any[]>([]);
+
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
+  const [selectedChapterId, setSelectedChapterId] = useState<string>('');
+  const [selectedBlueprintId, setSelectedBlueprintId] = useState<string>('');
+
+  const [totalQuestions, setTotalQuestions] = useState<number>(30);
+  const [durationMinutes, setDurationMinutes] = useState<number>(60);
+
+  const [currentExamId, setCurrentExamId] = useState<string>(initialExamId || '');
+  const [currentExamTitle, setCurrentExamTitle] = useState<string>(initialExamTitle || '');
+
   const [startDate, setStartDate] = useState('');
   const [startTime, setStartTime] = useState('10:00');
-  const [endDate, setEndDate] = useState('');
-  const [endTime, setEndTime] = useState('13:00');
   const [timezone, setTimezone] = useState('Asia/Kolkata');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { getExamVersionsAPI } = useGetExamVersionsAPI();
-  const { scheduleExamAPI, isLoading: isScheduling } = useScheduleExamAPI();
+  const { scheduleExamAPI, isLoading: isSchedulingExisting } = useScheduleExamAPI();
+  const { scheduleAdminExamAPI, isLoading: isSchedulingAdmin } = useScheduleAdminExamAPI();
 
-  // Helper to re-calculate end date/time
-  const updateStartAndCalculateEnd = (
-    newStartDate: string,
-    newStartTime: string,
-    duration: number,
-  ) => {
-    setStartDate(newStartDate);
-    setStartTime(newStartTime);
-    const calculated = calculateEndTime(newStartDate, newStartTime, duration);
-    setEndDate(calculated.endDate);
-    setEndTime(calculated.endTime);
-  };
+  const isLoading = isSchedulingExisting || isSchedulingAdmin;
 
+  // Load Subjects & Blueprints on open
   useEffect(() => {
     if (!isOpen) return;
 
-    setCurrentExamId(initialExamId);
-    setCurrentExamTitle(initialExamTitle || '');
-    setCurrentDuration(initialExamDuration || 180);
-
-    // Set default tomorrow date
+    // Reset default tomorrow start date
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const defaultDateStr = tomorrow.toISOString().split('T')[0];
-    const defaultStartTime = '10:00';
-
-    updateStartAndCalculateEnd(defaultDateStr, defaultStartTime, initialExamDuration || 180);
+    setStartDate(defaultDateStr);
+    setStartTime('10:00');
     setErrorMsg(null);
 
     if (initialExamId) {
-      getExamVersionsAPI(initialExamId).then(({ data }) => {
-        if (data && data.length > 0) {
-          setVersions(data);
-          const pub = data.find((v) => v.status === 'PUBLISHED') || data[0];
-          setSelectedVersionId(pub.id);
-        } else {
-          setVersions([]);
-          setSelectedVersionId('');
-        }
-      });
+      setCurrentExamId(initialExamId);
+      setCurrentExamTitle(initialExamTitle || '');
     }
-  }, [isOpen, initialExamId, initialExamTitle, initialExamDuration, getExamVersionsAPI]);
 
-  const handleExamDropdownChange = (newId: string) => {
-    setCurrentExamId(newId);
-    const found = examsList.find((e) => e.id === newId);
+    // Fetch subjects
+    getReq<any[]>('/academic/subjects').then(({ data }) => {
+      if (data && Array.isArray(data)) {
+        setSubjects(data);
+        if (data.length > 0) setSelectedSubjectId(data[0].id);
+      }
+    });
+
+    // Fetch blueprints
+    getReq<any>('/admin/exam-manager/blueprints').then(({ data }) => {
+      const bps = Array.isArray(data) ? data : data?.items || [];
+      setBlueprints(bps);
+      if (bps.length > 0) {
+        setSelectedBlueprintId(bps[0].id);
+        if (bps[0].totalQuestions) setTotalQuestions(bps[0].totalQuestions);
+        if (bps[0].durationMinutes) setDurationMinutes(bps[0].durationMinutes);
+      }
+    });
+  }, [isOpen, getReq]);
+
+  // Load chapters dynamically when subject changes
+  useEffect(() => {
+    if (!selectedSubjectId) {
+      setChapters([]);
+      setSelectedChapterId('');
+      return;
+    }
+    getReq<any[]>(`/academic/subjects/${selectedSubjectId}/chapters`).then(({ data }) => {
+      if (data && Array.isArray(data)) {
+        setChapters(data);
+        if (data.length > 0) setSelectedChapterId(data[0].id);
+      } else {
+        setChapters([]);
+        setSelectedChapterId('');
+      }
+    });
+  }, [selectedSubjectId, getReq]);
+
+  // When blueprint changes, auto-fill question count and duration
+  const handleBlueprintChange = (blueprintId: string) => {
+    setSelectedBlueprintId(blueprintId);
+    const found = blueprints.find((b) => b.id === blueprintId);
     if (found) {
-      setCurrentExamTitle(found.title);
-      const dur = found.durationMinutes || 180;
-      setCurrentDuration(dur);
-      updateStartAndCalculateEnd(startDate, startTime, dur);
-      onSelectExam?.(found);
-
-      getExamVersionsAPI(newId).then(({ data }) => {
-        if (data && data.length > 0) {
-          setVersions(data);
-          const pub = data.find((v) => v.status === 'PUBLISHED') || data[0];
-          setSelectedVersionId(pub.id);
-        } else {
-          setVersions([]);
-          setSelectedVersionId('');
-        }
-      });
+      if (found.totalQuestions) setTotalQuestions(found.totalQuestions);
+      if (found.durationMinutes) setDurationMinutes(found.durationMinutes);
     }
   };
 
   if (!isOpen) return null;
 
+  const effectiveDuration = initialExamId ? initialExamDuration : durationMinutes;
+
+  // Dynamically calculate End Date & Time
+  const calculatedEnd = calculateEndTime(
+    startDate,
+    startTime,
+    effectiveDuration,
+  );
+
   const handleSchedule = async () => {
     setErrorMsg(null);
 
-    if (!currentExamId) {
-      setErrorMsg('Please select an examination to schedule.');
-      return;
-    }
-
-    if (!startDate || !startTime || !endDate || !endTime) {
-      setErrorMsg('Please provide a valid start date and start time.');
+    if (!startDate || !startTime) {
+      setErrorMsg('Please select a valid start date and start time.');
       return;
     }
 
     const startISO = new Date(`${startDate}T${startTime}:00`).toISOString();
-    const endISO = new Date(`${endDate}T${endTime}:00`).toISOString();
 
-    if (new Date(startISO) >= new Date(endISO)) {
-      setErrorMsg('Start time must be strictly before end time.');
+    // If initialExamId is present, schedule existing exam
+    if (initialExamId && currentExamId) {
+      const endISO = new Date(
+        new Date(startISO).getTime() + (effectiveDuration || 180) * 60 * 1000,
+      ).toISOString();
+
+      const payload: any = {
+        startTime: startISO,
+        endTime: endISO,
+        timezone,
+      };
+
+      const { error } = await scheduleExamAPI(currentExamId, payload);
+      if (error) {
+        const msg =
+          typeof error === 'string'
+            ? error
+            : (error as any)?.message
+              ? Array.isArray((error as any).message)
+                ? (error as any).message.join(', ')
+                : (error as any).message
+              : 'Failed to schedule exam.';
+        setErrorMsg(msg);
+        return;
+      }
+
+      onScheduled?.();
+      onClose();
       return;
     }
 
-    const payload: any = {
-      startTime: startISO,
-      endTime: endISO,
-      timezone,
-    };
-    if (selectedVersionId || versions[0]?.id) {
-      payload.examVersionId = selectedVersionId || versions[0]?.id;
+    // Otherwise, use New Admin Exam Manager Flow (3 Exam Types)
+    if (examType === 'SPECIFIC_SUBJECT') {
+      if (!selectedSubjectId) {
+        setErrorMsg('Please select a subject.');
+        return;
+      }
+      if (!totalQuestions || totalQuestions <= 0) {
+        setErrorMsg('Please enter a valid question count.');
+        return;
+      }
+      if (!durationMinutes || durationMinutes <= 0) {
+        setErrorMsg('Please select a valid duration in minutes.');
+        return;
+      }
+    } else if (examType === 'SPECIFIC_CHAPTER') {
+      if (!selectedSubjectId) {
+        setErrorMsg('Please select a subject.');
+        return;
+      }
+      if (!selectedChapterId) {
+        setErrorMsg('Please select a chapter.');
+        return;
+      }
+      if (!totalQuestions || totalQuestions <= 0) {
+        setErrorMsg('Please enter a valid question count.');
+        return;
+      }
+      if (!durationMinutes || durationMinutes <= 0) {
+        setErrorMsg('Please select a valid duration in minutes.');
+        return;
+      }
+    } else if (examType === 'JEE_NEET_CET') {
+      if (!selectedBlueprintId) {
+        setErrorMsg('Please select an Exam Blueprint for JEE/NEET/CET.');
+        return;
+      }
     }
 
-    const { error } = await scheduleExamAPI(currentExamId, payload);
+    const adminPayload = {
+      examType:
+        examType === 'JEE_NEET_CET'
+          ? (blueprints.find((b) => b.id === selectedBlueprintId)?.examTarget?.name || 'JEE')
+          : examType,
+      subjectId: examType !== 'JEE_NEET_CET' ? selectedSubjectId : undefined,
+      chapterId: examType === 'SPECIFIC_CHAPTER' ? selectedChapterId : undefined,
+      blueprintId: examType === 'JEE_NEET_CET' ? selectedBlueprintId : undefined,
+      totalQuestions: Number(totalQuestions),
+      durationMinutes: Number(durationMinutes),
+      startTime: startISO,
+      timezone,
+    };
+
+    const { error } = await scheduleAdminExamAPI(adminPayload);
 
     if (error) {
       const msg =
@@ -186,7 +271,7 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
             ? Array.isArray((error as any).message)
               ? (error as any).message.join(', ')
               : (error as any).message
-            : 'Failed to schedule exam.';
+            : 'Failed to schedule exam. Insufficient question pool or invalid configuration.';
       setErrorMsg(msg);
       return;
     }
@@ -195,29 +280,31 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
     onClose();
   };
 
-  const durationHours = Math.floor(currentDuration / 60);
-  const durationMinsRemainder = currentDuration % 60;
+  const activeDuration = effectiveDuration;
+  const durationHours = Math.floor(activeDuration / 60);
+  const durationMinsRemainder = activeDuration % 60;
   const formattedDurationText =
     durationHours > 0
       ? `${durationHours}h ${durationMinsRemainder > 0 ? `${durationMinsRemainder}m` : ''}`
-      : `${currentDuration} mins`;
+      : `${activeDuration} mins`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="flex max-h-[92vh] w-full max-w-lg flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+      <div className="flex max-h-[92vh] w-full max-w-xl flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/80 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/90 px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-200">
               <CalendarClock size={20} />
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-extrabold text-slate-900">
-                Schedule Exam Live Window
+                Schedule Exam Flow
               </h2>
-              <p className="text-xs text-slate-500 font-mono">
-                {currentExamTitle ||
-                  `Exam: ${currentExamId ? currentExamId.slice(0, 8) + '...' : 'Select Exam'}`}
+              <p className="text-xs text-slate-500 font-medium">
+                {initialExamId
+                  ? `Exam: ${currentExamTitle || initialExamId.slice(0, 8)}`
+                  : 'Admin Exam Manager — Select Exam Type & Schedule'}
               </p>
             </div>
           </div>
@@ -239,43 +326,190 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
             </div>
           )}
 
-          {/* Student Notification Guarantee Banner */}
+          {/* Broadcast Banner */}
           <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-3.5 text-xs text-indigo-950 flex items-start gap-2.5">
             <Bell size={16} className="text-indigo-600 shrink-0 mt-0.5" />
             <div className="space-y-0.5">
-              <span className="font-extrabold block">Automatic Student Broadcast</span>
+              <span className="font-extrabold block">Async Student Broadcast</span>
               <p className="text-slate-600 leading-relaxed text-[11px]">
-                Upon confirming schedule, instant notifications are automatically dispatched to all
-                eligible students informing them of the test date and starting time.
+                Upon successful schedule, eligible students are automatically notified via async
+                BullMQ background notifications.
               </p>
             </div>
           </div>
 
-          {/* Optional Exam Selector if list provided */}
-          {examsList.length > 1 && (
-            <div className="space-y-1.5 bg-slate-50/70 p-3.5 rounded-2xl border border-slate-200">
-              <label className="text-xs font-bold text-slate-700 block">Select Examination</label>
-              <select
-                value={currentExamId}
-                onChange={(e) => handleExamDropdownChange(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500"
-              >
-                {examsList.map((exam) => (
-                  <option key={exam.id} value={exam.id}>
-                    {exam.title} ({exam.totalQuestions} Qs • {exam.durationMinutes} mins •{' '}
-                    {exam.examTarget?.name || 'General'})
-                  </option>
-                ))}
-              </select>
+          {/* Exam Type Tabs (if scheduling new admin exam) */}
+          {!initialExamId && (
+            <div className="space-y-2">
+              <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider block">
+                1. Select Exam Type
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExamType('SPECIFIC_SUBJECT')}
+                  className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-xs font-bold transition-all ${
+                    examType === 'SPECIFIC_SUBJECT'
+                      ? 'border-indigo-600 bg-indigo-50/80 text-indigo-900 shadow-sm ring-2 ring-indigo-500/20'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <BookOpen size={18} className="mb-1 text-indigo-600" />
+                  Specific Subject
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setExamType('SPECIFIC_CHAPTER')}
+                  className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-xs font-bold transition-all ${
+                    examType === 'SPECIFIC_CHAPTER'
+                      ? 'border-indigo-600 bg-indigo-50/80 text-indigo-900 shadow-sm ring-2 ring-indigo-500/20'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <FileText size={18} className="mb-1 text-indigo-600" />
+                  Specific Chapter
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setExamType('JEE_NEET_CET')}
+                  className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-xs font-bold transition-all ${
+                    examType === 'JEE_NEET_CET'
+                      ? 'border-indigo-600 bg-indigo-50/80 text-indigo-900 shadow-sm ring-2 ring-indigo-500/20'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <Award size={18} className="mb-1 text-purple-600" />
+                  JEE / NEET / CET
+                </button>
+              </div>
             </div>
           )}
 
-          {/* 1. Start Date & Start Time (User Input) */}
+          {/* Exam Type Specific Inputs */}
+          {!initialExamId && (
+            <div className="space-y-4 bg-slate-50/80 p-4 rounded-2xl border border-slate-200">
+              {/* Specific Subject / Chapter */}
+              {(examType === 'SPECIFIC_SUBJECT' || examType === 'SPECIFIC_CHAPTER') && (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Select Subject *</label>
+                    <select
+                      value={selectedSubjectId}
+                      onChange={(e) => setSelectedSubjectId(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    >
+                      {subjects.map((sub) => (
+                        <option key={sub.id} value={sub.id}>
+                          {sub.name} ({sub.code || 'Master'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {examType === 'SPECIFIC_CHAPTER' && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">Select Chapter *</label>
+                      <select
+                        value={selectedChapterId}
+                        onChange={(e) => setSelectedChapterId(e.target.value)}
+                        disabled={chapters.length === 0}
+                        className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500 cursor-pointer disabled:opacity-50"
+                      >
+                        {chapters.length === 0 ? (
+                          <option value="">No chapters found for subject</option>
+                        ) : (
+                          chapters.map((ch) => (
+                            <option key={ch.id} value={ch.id}>
+                              {ch.chapterNumber ? `Ch ${ch.chapterNumber}: ` : ''}
+                              {ch.name}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">
+                        Number of Questions *
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={500}
+                        value={totalQuestions}
+                        onChange={(e) => setTotalQuestions(Number(e.target.value))}
+                        className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700">
+                        Select Duration (mins) *
+                      </label>
+                      <select
+                        value={durationMinutes}
+                        onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                        className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                      >
+                        <option value={30}>30 mins</option>
+                        <option value={45}>45 mins</option>
+                        <option value={60}>60 mins (1 hr)</option>
+                        <option value={90}>90 mins (1.5 hrs)</option>
+                        <option value={120}>120 mins (2 hrs)</option>
+                        <option value={180}>180 mins (3 hrs)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* JEE / NEET / CET Blueprint Flow */}
+              {examType === 'JEE_NEET_CET' && (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700">Select Exam Blueprint *</label>
+                    <select
+                      value={selectedBlueprintId}
+                      onChange={(e) => handleBlueprintChange(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    >
+                      {blueprints.length === 0 ? (
+                        <option value="">No blueprints loaded</option>
+                      ) : (
+                        blueprints.map((bp) => (
+                          <option key={bp.id} value={bp.id}>
+                            {bp.name} ({bp.totalQuestions || 90} Qs • {bp.durationMinutes || 180} mins)
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  <div className="rounded-xl border border-purple-200 bg-purple-50/60 p-3 text-xs text-purple-900 space-y-1">
+                    <span className="font-extrabold block">Dynamic Blueprint Configuration</span>
+                    <p className="text-[11px] text-purple-700">
+                      Questions, subject distribution, and duration are determined dynamically from
+                      the selected Exam Blueprint master.
+                    </p>
+                    <div className="flex gap-4 pt-1 font-bold">
+                      <span>Questions: {totalQuestions}</span>
+                      <span>Duration: {durationMinutes} mins</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Start Date & Start Time Input */}
           <div className="space-y-2 bg-slate-50/70 p-4 rounded-2xl border border-slate-200">
             <div className="flex items-center justify-between">
               <label className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <Clock size={14} className="text-indigo-600" />
-                Select Start Date & Time
+                Starting Date & Time
               </label>
               <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-lg border border-indigo-100">
                 Duration: {formattedDurationText}
@@ -288,9 +522,7 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) =>
-                    updateStartAndCalculateEnd(e.target.value, startTime, currentDuration)
-                  }
+                  onChange={(e) => setStartDate(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500"
                 />
               </div>
@@ -299,75 +531,40 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
                 <input
                   type="time"
                   value={startTime}
-                  onChange={(e) =>
-                    updateStartAndCalculateEnd(startDate, e.target.value, currentDuration)
-                  }
+                  onChange={(e) => setStartTime(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-black text-indigo-950 focus:outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
           </div>
 
-          {/* 2. Auto-Calculated End Date & Time Display */}
-          <div className="space-y-2 bg-emerald-50/40 p-4 rounded-2xl border border-emerald-200">
+          {/* Dynamic Auto-Calculated End Date/Time (No manual input) */}
+          <div className="space-y-2 bg-emerald-50/50 p-4 rounded-2xl border border-emerald-200">
             <div className="flex items-center justify-between">
               <label className="text-xs font-extrabold text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles size={14} className="text-emerald-600" />
-                Auto-Calculated End Window
+                Ending Date & Time (Calculated Automatically)
               </label>
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-lg">
-                Calculated ({currentDuration} mins)
+              <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-lg">
+                Calculated dynamically
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-emerald-800">End Date</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full rounded-xl border border-emerald-200 bg-white/90 p-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-emerald-800">End Time</label>
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full rounded-xl border border-emerald-200 bg-white/90 p-2.5 text-xs font-black text-emerald-950 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
+            <div className="p-3 bg-white/90 rounded-xl border border-emerald-200 flex items-center justify-between">
+              <span className="text-xs font-mono font-black text-emerald-950">
+                {calculatedEnd.endFormatted || 'Select Start Date & Time'}
+              </span>
+              <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">
+                +{activeDuration} mins
+              </span>
             </div>
           </div>
 
-          {/* 3. Immutable Version Selector (if available) */}
-          {versions.length > 0 && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <Layers size={14} className="text-indigo-600" />
-                Target Exam Version
-              </label>
-              <select
-                value={selectedVersionId}
-                onChange={(e) => setSelectedVersionId(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500 cursor-pointer"
-              >
-                {versions.map((ver) => (
-                  <option key={ver.id} value={ver.id}>
-                    Version #{ver.versionNumber} ({ver.status} | {ver.totalQuestions} Questions)
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* 4. Timezone */}
+          {/* Canonical Timezone */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
               <Globe size={14} className="text-indigo-600" />
-              Canonical Timezone
+              Timezone
             </label>
             <select
               value={timezone}
@@ -376,9 +573,6 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
             >
               <option value="Asia/Kolkata">Asia/Kolkata (IST +5:30)</option>
               <option value="UTC">UTC (Coordinated Universal Time)</option>
-              <option value="America/New_York">America/New_York (EST/EDT)</option>
-              <option value="Europe/London">Europe/London (GMT/BST)</option>
-              <option value="Asia/Dubai">Asia/Dubai (GST +4:00)</option>
             </select>
           </div>
         </div>
@@ -391,7 +585,7 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
 
           <Button
             onClick={handleSchedule}
-            isLoading={isScheduling}
+            isLoading={isLoading}
             className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200"
           >
             <CheckCircle2 size={16} />
