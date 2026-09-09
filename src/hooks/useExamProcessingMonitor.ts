@@ -99,6 +99,19 @@ export const useExamProcessingMonitor = ({
     [examId, queryClient],
   );
 
+  const onExamCompletedRef = useRef(onExamCompleted);
+  useEffect(() => {
+    onExamCompletedRef.current = onExamCompleted;
+  });
+
+  const queryClientRef = useRef(queryClient);
+  useEffect(() => {
+    queryClientRef.current = queryClient;
+  });
+
+  const handleJobEventRef = useRef<(event: any) => void>(() => {});
+  handleJobEventRef.current = handleJobEvent;
+
   useEffect(() => {
     if (!enabled || !examId) {
       setIsConnected(false);
@@ -110,8 +123,9 @@ export const useExamProcessingMonitor = ({
       withCredentials: true,
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 15,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 5000,
+      reconnectionDelayMax: 15000,
     });
 
     socketRef.current = socket;
@@ -119,31 +133,33 @@ export const useExamProcessingMonitor = ({
     socket.on('connect', () => {
       setIsConnected(true);
       // Subscribe to all jobs for this exam
-      socket.emit('subscribe_exam_jobs', { examId });
-      // Invalidate queries to recover any missed events during disconnect
-      queryClient.invalidateQueries({ queryKey: examProcessingKeys.summary(examId) });
-      queryClient.invalidateQueries({ queryKey: ['exam-processing', 'jobs', examId] });
+      socket.emit('subscribe_exam_jobs', { examId }, (ack: any) => {
+        if (ack?.status === 'error') {
+          console.warn('[WebSocket] Exam room subscription notice:', ack.message);
+        }
+      });
     });
 
     socket.on('disconnect', () => {
       setIsConnected(false);
     });
 
-    // Handle generic and explicit job events
-    socket.on('job.event', handleJobEvent);
-    socket.on('job.started', handleJobEvent);
-    socket.on('job.progress', handleJobEvent);
-    socket.on('job.completed', handleJobEvent);
-    socket.on('job.failed', handleJobEvent);
-    socket.on('job.retrying', handleJobEvent);
+    // Handle generic and explicit job events via stable ref
+    const onEvent = (event: any) => handleJobEventRef.current(event);
+    socket.on('job.event', onEvent);
+    socket.on('job.started', onEvent);
+    socket.on('job.progress', onEvent);
+    socket.on('job.completed', onEvent);
+    socket.on('job.failed', onEvent);
+    socket.on('job.retrying', onEvent);
 
     // Handle exam-level completion event
     socket.on('exam.result.processing.completed', (payload: any) => {
-      if (!payload || (payload.examId && payload.examId === examId)) {
-        queryClient.invalidateQueries({ queryKey: examProcessingKeys.summary(examId) });
-        queryClient.invalidateQueries({ queryKey: ['exam-processing', 'jobs', examId] });
-        if (onExamCompleted) {
-          onExamCompleted(payload);
+      if (!payload || (payload.examId && String(payload.examId) === String(examId))) {
+        queryClientRef.current.invalidateQueries({ queryKey: examProcessingKeys.summary(examId) });
+        queryClientRef.current.invalidateQueries({ queryKey: ['exam-processing', 'jobs', examId] });
+        if (onExamCompletedRef.current) {
+          onExamCompletedRef.current(payload);
         }
       }
     });
@@ -154,7 +170,7 @@ export const useExamProcessingMonitor = ({
       socketRef.current = null;
       setIsConnected(false);
     };
-  }, [enabled, examId, getSocketBaseUrl, handleJobEvent, onExamCompleted, queryClient]);
+  }, [enabled, examId, getSocketBaseUrl]);
 
   /**
    * Helper that merges live WebSocket updates with a database row item.

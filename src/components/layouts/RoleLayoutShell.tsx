@@ -1,12 +1,13 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import { GraduationCap, Menu, X, User, Bell, LogOut, ChevronDown } from 'lucide-react';
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, Suspense, type ReactNode } from 'react';
 
 // ** Components **
 import Button from '@/components/ui/Button';
 import { ActiveExamBanner } from './ActiveExamBanner';
 import { LogoutConfirmationModal } from '@/components/feedback/LogoutConfirmationModal';
+import { DashboardMainContentSkeleton } from '@/components/ui/Skeleton';
 
 // ** Hooks & Auth Access **
 import { useAuth } from '@/hooks/useAuth';
@@ -370,15 +371,15 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
 
             {/* Mobile Brand (hidden on desktop because sidebar already displays brand) */}
             <div
-              className="flex lg:hidden items-center gap-2 cursor-pointer"
+              className="flex lg:hidden items-center gap-1.5 sm:gap-2 cursor-pointer min-w-0"
               onClick={() => navigate(dashboardPath)}
             >
               <div
-                className={`flex h-8 w-8 items-center justify-center rounded-xl ${theme.brandIconBg} shadow-sm shadow-indigo-200`}
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${theme.brandIconBg} shadow-sm shadow-indigo-200`}
               >
                 <GraduationCap size={16} className="text-white" />
               </div>
-              <span className="text-base font-black text-slate-900 tracking-tight">
+              <span className="hidden min-[380px]:inline text-base font-black text-slate-900 tracking-tight truncate">
                 {APP_NAME}
               </span>
             </div>
@@ -394,7 +395,7 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
           </div>
 
           {/* Right Side Controls */}
-          <div className="flex items-center gap-2.5 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
             {/* Active Role Badge & Switcher */}
             <div className="relative">
               {hasMultipleRoles ? (
@@ -402,11 +403,14 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
                   <button
                     type="button"
                     onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-800 text-xs font-bold transition shadow-2xs"
+                    className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-800 text-xs font-bold transition shadow-2xs"
                     title="Switch Role Perspective"
                   >
-                    <span>Role: {activeRoleMeta.label}</span>
-                    <ChevronDown size={14} className="text-indigo-600" />
+                    <span className="max-w-[75px] sm:max-w-none truncate">
+                      <span className="hidden sm:inline">Role: </span>
+                      {activeRoleMeta.label}
+                    </span>
+                    <ChevronDown size={14} className="text-indigo-600 shrink-0" />
                   </button>
 
                   {isRoleMenuOpen && (
@@ -420,10 +424,11 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
                           <button
                             key={r}
                             onClick={() => handleRoleSelect(r)}
-                            className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-50 transition ${r === activeRole
+                            className={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center justify-between hover:bg-slate-50 transition ${
+                              r === activeRole
                                 ? 'text-indigo-600 font-bold bg-indigo-50/50'
                                 : 'text-slate-700'
-                              }`}
+                            }`}
                           >
                             <span>{meta.label}</span>
                             {r === activeRole && (
@@ -449,7 +454,7 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
               <button
                 type="button"
                 onClick={() => navigate(notificationsPath)}
-                className="relative rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                className="relative rounded-xl p-1.5 sm:p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
                 title="Notifications"
               >
                 <Bell size={18} />
@@ -464,10 +469,10 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
             {/* User Profile Pill */}
             <div
               onClick={() => navigate(profilePath)}
-              className={`flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 ${theme.profileHoverBg} ${theme.profileHoverBorder} px-3 py-1.5 cursor-pointer transition-all shadow-2xs`}
+              className={`flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 ${theme.profileHoverBg} ${theme.profileHoverBorder} p-1 sm:px-3 sm:py-1.5 cursor-pointer transition-all shadow-2xs shrink-0`}
               title="View & Edit Profile"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 font-black text-xs">
+              <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 font-black text-xs shrink-0">
                 {user?.studentProfile?.name?.charAt(0)?.toUpperCase() ?? <User size={14} />}
               </div>
               <div className="hidden md:block text-left">
@@ -487,7 +492,7 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
               variant="ghost"
               size="sm"
               onClick={() => setShowLogoutModal(true)}
-              className="text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+              className="text-slate-500 hover:text-rose-600 hover:bg-rose-50 px-2 sm:px-3"
               title="Sign Out"
             >
               <LogOut size={16} />
@@ -500,8 +505,10 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
         <ActiveExamBanner />
 
         {/* Main Application Content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 lg:p-8 min-w-0">
+          <Suspense fallback={<DashboardMainContentSkeleton />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
 

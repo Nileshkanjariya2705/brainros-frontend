@@ -26,7 +26,7 @@ import type {
   RecommendedRevisionItem,
 } from '@/types/exam.types';
 import Button from '@/components/ui/Button';
-import Loader from '@/components/feedback/Loader';
+import { DashboardMainContentSkeleton } from '@/components/ui/Skeleton';
 
 export const ParentDashboardPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -79,7 +79,7 @@ export const ParentDashboardPage: React.FC = () => {
   const maxScore = Math.max(...trend.map((t) => t.score), 100);
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6 animate-in fade-in duration-300 pb-16">
+    <div className="max-w-7xl mx-auto p-3 sm:p-4 md:p-8 space-y-6 animate-in fade-in duration-300 pb-16">
       {/* ── Page Header ────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
         <div>
@@ -107,16 +107,17 @@ export const ParentDashboardPage: React.FC = () => {
             onClick={() => selectedStudentId && loadChildDashboard(selectedStudentId)}
             className="gap-1.5"
             size="sm"
+            disabled={isLoadingDashboard}
           >
-            <RotateCw size={14} />
-            <span>Refresh Analytics</span>
+            <RotateCw size={14} className={isLoadingDashboard ? 'animate-spin text-teal-600' : ''} />
+            <span>{isLoadingDashboard ? 'Refreshing...' : 'Refresh Analytics'}</span>
           </Button>
         </div>
       </div>
 
       {/* ── Multi-Child Switcher ────────────────────────────────────── */}
       {students.length > 1 && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-xs">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 sm:p-4 shadow-xs">
           <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-3 pl-1">
             Select Linked Student:
           </span>
@@ -129,7 +130,7 @@ export const ParentDashboardPage: React.FC = () => {
                   setSearchParams({ studentId: st.studentId });
                 }}
                 className={cn(
-                  'p-3.5 rounded-2xl border transition-all text-left flex items-center gap-3 min-w-[240px] cursor-pointer',
+                  'p-3 sm:p-3.5 rounded-2xl border transition-all text-left flex items-center gap-2.5 sm:gap-3 min-w-[200px] sm:min-w-[240px] cursor-pointer',
                   selectedStudentId === st.studentId
                     ? 'bg-teal-50/90 border-teal-300 ring-2 ring-teal-500/20 shadow-xs'
                     : 'bg-white border-slate-200 hover:bg-slate-50',
@@ -137,7 +138,7 @@ export const ParentDashboardPage: React.FC = () => {
               >
                 <div
                   className={cn(
-                    'p-2.5 rounded-xl text-white font-black text-xs',
+                    'p-2 sm:p-2.5 rounded-xl text-white font-black text-xs',
                     selectedStudentId === st.studentId ? 'bg-teal-600' : 'bg-slate-400',
                   )}
                 >
@@ -156,14 +157,12 @@ export const ParentDashboardPage: React.FC = () => {
       )}
 
       {/* ── Main Dashboard Content ─────────────────────────────────── */}
-      {isLoadingDashboard || isLoadingStudents ? (
-        <div className="py-24">
-          <Loader label="Synthesizing student performance telemetry..." />
-        </div>
+      {(isLoadingDashboard && !dashboardData) || (isLoadingStudents && students.length === 0) ? (
+        <DashboardMainContentSkeleton />
       ) : dashboardData ? (
         <div className="space-y-6">
           {/* ── 1. Hero Performance & Student Profile Card ───────────── */}
-          <div className="rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 via-teal-950 to-indigo-950 p-6 md:p-8 text-white shadow-xl relative overflow-hidden">
+          <div className="rounded-2xl sm:rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 via-teal-950 to-indigo-950 p-4 sm:p-6 md:p-8 text-white shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
               <Award className="w-64 h-64 text-teal-400" />
             </div>
@@ -198,9 +197,9 @@ export const ParentDashboardPage: React.FC = () => {
             </div>
 
             {/* Metric KPI Grid (9 Specific Parent Requirements) */}
-            <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+            <div className="relative z-10 grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6">
               {/* 1. Tests Attempted */}
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs space-y-1">
+              <div className="p-3.5 min-[360px]:p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs space-y-1">
                 <span className="text-[11px] font-bold text-teal-200 uppercase tracking-wider block">
                   Tests Attempted
                 </span>

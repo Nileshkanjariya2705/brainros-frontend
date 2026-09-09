@@ -384,7 +384,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
       {activeTab === 'upload' && (
         <div className="space-y-6">
           {/* Stepper Wizard Indicator */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 min-[480px]:grid-cols-3 gap-2 sm:gap-4 max-w-3xl mx-auto">
             <div
               className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
                 currentStep === 'SELECT'
@@ -661,29 +661,29 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
           {currentStep === 'PREVIEW' && previewData && (
             <div className="space-y-6">
               {/* Summary Metric Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
+              <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div className="p-3.5 min-[360px]:p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Rows</p>
                   <p className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
                     {previewData.upload.rowCount}
                   </p>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 shadow-xs">
+                <div className="p-3.5 min-[360px]:p-4 sm:p-5 rounded-2xl bg-emerald-50 border border-emerald-200 shadow-xs">
                   <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Valid Rows</p>
                   <p className="text-2xl sm:text-3xl font-bold text-emerald-800 mt-1">
                     {previewData.upload.validRowCount}
                   </p>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 shadow-xs">
+                <div className="p-3.5 min-[360px]:p-4 sm:p-5 rounded-2xl bg-rose-50 border border-rose-200 shadow-xs">
                   <p className="text-xs font-semibold text-rose-700 uppercase tracking-wider">Invalid Rows</p>
                   <p className="text-2xl sm:text-3xl font-bold text-rose-800 mt-1">
                     {previewData.upload.invalidRowCount}
                   </p>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200 shadow-xs">
+                <div className="p-3.5 min-[360px]:p-4 sm:p-5 rounded-2xl bg-amber-50 border border-amber-200 shadow-xs">
                   <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Duplicate Rows</p>
                   <p className="text-2xl sm:text-3xl font-bold text-amber-800 mt-1">
                     {previewData.upload.duplicateRowCount}

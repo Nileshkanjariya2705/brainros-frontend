@@ -135,7 +135,8 @@ export function useInstitutionDashboardSummaryQuery(batchId?: string) {
       const res = await Axios.get('/institutions/me/dashboard', {
         params: batchId ? { batchId } : undefined,
       });
-      return res.data?.data || res.data;
+      const raw = res.data?.data ?? res.data;
+      return raw || {};
     },
     staleTime: 60 * 1000,
   });
@@ -164,7 +165,28 @@ export function useInstitutionStudentsQuery(params: {
       if (params.sortOrder) cleanParams.sortOrder = params.sortOrder;
 
       const res = await Axios.get('/institutions/me/students', { params: cleanParams });
-      return res.data?.data || res.data;
+      const raw = res.data;
+
+      let items: InstituteStudentItem[] = [];
+      if (Array.isArray(raw?.data)) {
+        items = raw.data;
+      } else if (Array.isArray(raw?.data?.data)) {
+        items = raw.data.data;
+      } else if (Array.isArray(raw)) {
+        items = raw;
+      }
+
+      const meta = raw?.meta || raw?.data?.meta || {
+        total: items.length,
+        page: params.page,
+        limit: params.limit,
+        totalPages: Math.ceil(items.length / params.limit) || 1,
+      };
+
+      return {
+        data: items,
+        meta,
+      };
     },
     placeholderData: (previousData) => previousData,
     staleTime: 30 * 1000,
@@ -176,8 +198,10 @@ export function useInstitutionAdmissionYearsQuery() {
     queryKey: institutionKeys.admissionYears(),
     queryFn: async () => {
       const res = await Axios.get('/institutions/me/admission-years');
-      const data = res.data?.data || res.data;
-      return Array.isArray(data) ? data : [];
+      const raw = res.data?.data ?? res.data;
+      if (Array.isArray(raw)) return raw;
+      if (Array.isArray(raw?.data)) return raw.data;
+      return [];
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -188,8 +212,10 @@ export function useInstitutionBatchesQuery() {
     queryKey: institutionKeys.batches(),
     queryFn: async () => {
       const res = await Axios.get('/institutions/me/batches');
-      const data = res.data?.data || res.data;
-      return Array.isArray(data) ? data : [];
+      const raw = res.data?.data ?? res.data;
+      if (Array.isArray(raw)) return raw;
+      if (Array.isArray(raw?.data)) return raw.data;
+      return [];
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -200,8 +226,10 @@ export function useInstitutionRankExamsQuery() {
     queryKey: institutionKeys.rankExams(),
     queryFn: async () => {
       const res = await Axios.get('/institutions/me/rankings/exams');
-      const data = res.data?.data || res.data;
-      return Array.isArray(data) ? data : [];
+      const raw = res.data?.data ?? res.data;
+      if (Array.isArray(raw)) return raw;
+      if (Array.isArray(raw?.data)) return raw.data;
+      return [];
     },
     staleTime: 60 * 1000,
   });
@@ -224,7 +252,31 @@ export function useInstitutionRankingsQuery(params: {
       if (params.batchId) cleanParams.batchId = params.batchId;
 
       const res = await Axios.get('/institutions/me/rankings', { params: cleanParams });
-      return res.data?.data || res.data;
+      const raw = res.data;
+
+      let items: InstituteRankItem[] = [];
+      if (Array.isArray(raw?.data)) {
+        items = raw.data;
+      } else if (Array.isArray(raw?.data?.data)) {
+        items = raw.data.data;
+      } else if (Array.isArray(raw)) {
+        items = raw;
+      }
+
+      const meta = raw?.meta || raw?.data?.meta || {
+        total: items.length,
+        page: params.page,
+        limit: params.limit,
+        totalPages: Math.ceil(items.length / params.limit) || 1,
+      };
+
+      const exam = raw?.exam || raw?.data?.exam || null;
+
+      return {
+        data: items,
+        exam,
+        meta,
+      };
     },
     placeholderData: (previousData) => previousData,
     staleTime: 30 * 1000,

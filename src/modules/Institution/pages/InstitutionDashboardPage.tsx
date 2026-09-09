@@ -36,6 +36,8 @@ import {
   InstituteStudentItem,
   InstituteRankItem,
 } from '../services/institutionDashboard.service';
+import { SectionError } from '@/components/feedback/SectionError';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export const InstitutionDashboardPage: React.FC = () => {
   // ── Global Filter State for Student Directory ──
@@ -59,6 +61,7 @@ export const InstitutionDashboardPage: React.FC = () => {
   const {
     data: dashboardData,
     isLoading: isDashboardLoading,
+    isFetching: isDashboardFetching,
     error: dashboardError,
     refetch: refetchDashboard,
   } = useInstitutionDashboardSummaryQuery();
@@ -84,19 +87,21 @@ export const InstitutionDashboardPage: React.FC = () => {
   });
 
   const { data: rankExamsData = [] } = useInstitutionRankExamsQuery();
+  const safeRankExams = Array.isArray(rankExamsData) ? rankExamsData : [];
 
   // If selectedExamId is empty and rankExamsData loaded, pick first exam by default
   const activeExamId = useMemo(() => {
     if (selectedExamId) return selectedExamId;
-    if (rankExamsData.length > 0) return rankExamsData[0].id;
+    if (safeRankExams.length > 0) return safeRankExams[0].id;
     return undefined;
-  }, [selectedExamId, rankExamsData]);
+  }, [selectedExamId, safeRankExams]);
 
   const {
     data: rankingsData,
     isLoading: isRankingsLoading,
     isFetching: isRankingsFetching,
     error: rankingsError,
+    refetch: refetchRankings,
   } = useInstitutionRankingsQuery({
     examId: activeExamId,
     batchId: rankBatchId || undefined,
@@ -162,7 +167,23 @@ export const InstitutionDashboardPage: React.FC = () => {
 
   const topStudent = dashboardData?.topStudent;
   const weakestSubject = dashboardData?.weakestSubject;
-  const batches = dashboardData?.batches || [];
+  const batches = Array.isArray(dashboardData?.batches) ? dashboardData.batches : [];
+
+  const studentList = Array.isArray(studentsData?.data) ? studentsData.data : [];
+  const studentMeta = studentsData?.meta || {
+    total: studentList.length,
+    page: studentPage,
+    limit: studentLimit,
+    totalPages: Math.ceil(studentList.length / studentLimit) || 1,
+  };
+
+  const rankList = Array.isArray(rankingsData?.data) ? rankingsData.data : [];
+  const rankMeta = rankingsData?.meta || {
+    total: rankList.length,
+    page: rankPage,
+    limit: rankLimit,
+    totalPages: Math.ceil(rankList.length / rankLimit) || 1,
+  };
 
   return (
     <div className="space-y-8 pb-16">
@@ -195,11 +216,12 @@ export const InstitutionDashboardPage: React.FC = () => {
               onClick={() => {
                 refetchDashboard();
                 refetchStudents();
+                refetchRankings();
               }}
               className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3.5 py-2 text-xs sm:text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20 active:scale-95"
               title="Refresh Dashboard"
             >
-              <RefreshCw className="h-4 w-4" /> Refresh
+              <RefreshCw className={`h-4 w-4 ${isDashboardFetching || isStudentsFetching || isRankingsFetching ? 'animate-spin' : ''}`} /> Refresh
             </button>
             <NavLink
               to={PRIVATE_NAVIGATION.institutionBatches}
@@ -220,22 +242,18 @@ export const InstitutionDashboardPage: React.FC = () => {
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* 1. KPI Cards Grid (Dynamic Database Metrics) */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {isDashboardLoading ? (
+      {isDashboardLoading && !dashboardData ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-32 animate-pulse rounded-2xl bg-slate-100 border border-slate-200/80 p-5" />
           ))}
         </div>
-      ) : dashboardError ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0" />
-            <div>
-              <h3 className="font-semibold">Unable to load dashboard metrics</h3>
-              <p className="text-sm">Please refresh or check your connection.</p>
-            </div>
-          </div>
-        </div>
+      ) : dashboardError && !dashboardData ? (
+        <SectionError
+          title="Unable to load dashboard metrics"
+          description="Please refresh or check your connection."
+          onRetry={() => refetchDashboard()}
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {/* Total Students */}
@@ -580,18 +598,46 @@ export const InstitutionDashboardPage: React.FC = () => {
             <div className="absolute top-0 left-0 right-0 h-0.5 bg-indigo-600 animate-pulse" />
           )}
 
-          {isStudentsLoading ? (
-            <div className="p-12 text-center">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
-              <p className="mt-3 text-sm text-slate-500">Loading student directory...</p>
+          {studentsError && studentList.length === 0 ? (
+            <div className="p-6">
+              <SectionError
+                title="Failed to load students"
+                description="Unable to retrieve the student directory. Please try again or adjust your filters."
+                onRetry={() => refetchStudents()}
+              />
             </div>
-          ) : studentsError ? (
-            <div className="p-8 text-center text-red-600">
-              <AlertTriangle className="mx-auto h-8 w-8 text-red-500" />
-              <p className="mt-2 text-sm font-semibold">Failed to load students</p>
-              <p className="text-xs text-red-500">Please try again later.</p>
-            </div>
-          ) : studentsData?.data.length === 0 ? (
+          ) : isStudentsLoading && studentList.length === 0 ? (
+            <table className="w-full text-left text-xs sm:text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-semibold">
+                  <th className="py-3.5 px-4">Student Name</th>
+                  <th className="py-3.5 px-4">Student ID</th>
+                  <th className="py-3.5 px-4">Contact</th>
+                  <th className="py-3.5 px-4">Class</th>
+                  <th className="py-3.5 px-4">Exam Target</th>
+                  <th className="py-3.5 px-4">Batch</th>
+                  <th className="py-3.5 px-4 text-center">Admission Year</th>
+                  <th className="py-3.5 px-4 text-center">Status</th>
+                  <th className="py-3.5 px-4">Enrolled On</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-32 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-28 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-16 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-24 rounded" /></td>
+                    <td className="py-4 px-4 text-center"><Skeleton className="h-4 w-12 rounded mx-auto" /></td>
+                    <td className="py-4 px-4 text-center"><Skeleton className="h-5 w-16 rounded-full mx-auto" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-20 rounded" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : studentList.length === 0 ? (
             <div className="p-12 text-center">
               <Users className="mx-auto h-10 w-10 text-slate-300" />
               <h3 className="mt-3 text-sm font-bold text-slate-800">No students found</h3>
@@ -685,7 +731,7 @@ export const InstitutionDashboardPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {studentsData?.data.map((student: InstituteStudentItem) => (
+                {studentList.map((student: InstituteStudentItem) => (
                   <tr key={student.id} className="hover:bg-indigo-50/30 transition">
                     <td className="py-3 px-4">
                       <div className="font-semibold text-slate-900">{student.name}</div>
@@ -745,18 +791,18 @@ export const InstitutionDashboardPage: React.FC = () => {
         </div>
 
         {/* Pagination Footer */}
-        {studentsData && studentsData.meta.totalPages > 0 && (
+        {studentMeta.totalPages > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 bg-slate-50/50 px-5 py-3.5 gap-4">
             <div className="text-xs text-slate-500">
               Showing{' '}
               <span className="font-bold text-slate-800">
-                {(studentPage - 1) * studentLimit + (studentsData.data.length > 0 ? 1 : 0)}
+                {(studentPage - 1) * studentLimit + (studentList.length > 0 ? 1 : 0)}
               </span>{' '}
               to{' '}
               <span className="font-bold text-slate-800">
-                {Math.min(studentPage * studentLimit, studentsData.meta.total)}
+                {Math.min(studentPage * studentLimit, studentMeta.total)}
               </span>{' '}
-              of <span className="font-bold text-slate-800">{studentsData.meta.total}</span> students
+              of <span className="font-bold text-slate-800">{studentMeta.total}</span> students
             </div>
 
             <div className="flex items-center gap-3">
@@ -785,11 +831,11 @@ export const InstitutionDashboardPage: React.FC = () => {
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <span className="px-2 text-xs font-semibold text-slate-700">
-                  {studentPage} / {studentsData.meta.totalPages}
+                  {studentPage} / {studentMeta.totalPages}
                 </span>
                 <button
-                  onClick={() => setStudentPage((p) => Math.min(studentsData.meta.totalPages, p + 1))}
-                  disabled={studentPage >= studentsData.meta.totalPages}
+                  onClick={() => setStudentPage((p) => Math.min(studentMeta.totalPages, p + 1))}
+                  disabled={studentPage >= studentMeta.totalPages}
                   className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -829,10 +875,10 @@ export const InstitutionDashboardPage: React.FC = () => {
                   }}
                   className="w-full appearance-none rounded-xl border border-slate-300 bg-white py-2 pl-3.5 pr-8 text-xs sm:text-sm font-medium text-slate-800 focus:border-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-600 transition"
                 >
-                  {rankExamsData.length === 0 && (
+                  {safeRankExams.length === 0 && (
                     <option value="">No completed exams</option>
                   )}
-                  {rankExamsData.map((ex) => (
+                  {safeRankExams.map((ex) => (
                     <option key={ex.id} value={ex.id}>
                       {ex.title} ({ex.targetName})
                     </option>
@@ -870,17 +916,42 @@ export const InstitutionDashboardPage: React.FC = () => {
             <div className="absolute top-0 left-0 right-0 h-0.5 bg-amber-500 animate-pulse" />
           )}
 
-          {isRankingsLoading ? (
-            <div className="p-12 text-center">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent"></div>
-              <p className="mt-3 text-sm text-slate-500">Loading rank leaderboard...</p>
+          {rankingsError && rankList.length === 0 ? (
+            <div className="p-6">
+              <SectionError
+                title="Unable to load rank list"
+                description="Failed to retrieve ranking data for this exam. Please check your connection and retry."
+                onRetry={() => refetchRankings()}
+              />
             </div>
-          ) : rankingsError ? (
-            <div className="p-8 text-center text-red-600">
-              <AlertTriangle className="mx-auto h-8 w-8 text-red-500" />
-              <p className="mt-2 text-sm font-semibold">Unable to load rank list</p>
-            </div>
-          ) : rankingsData?.data.length === 0 ? (
+          ) : isRankingsLoading && rankList.length === 0 ? (
+            <table className="w-full text-left text-xs sm:text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-semibold">
+                  <th className="py-3.5 px-4 text-center w-16">Rank</th>
+                  <th className="py-3.5 px-4">Student</th>
+                  <th className="py-3.5 px-4">Student ID</th>
+                  <th className="py-3.5 px-4">Batch</th>
+                  <th className="py-3.5 px-4 text-right">Score</th>
+                  <th className="py-3.5 px-4 text-right">Percentage</th>
+                  <th className="py-3.5 px-4 text-right">Accuracy</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-3.5 px-4 text-center"><Skeleton className="h-7 w-7 rounded-full mx-auto" /></td>
+                    <td className="py-3.5 px-4"><Skeleton className="h-4 w-32 rounded" /></td>
+                    <td className="py-3.5 px-4"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="py-3.5 px-4"><Skeleton className="h-4 w-24 rounded" /></td>
+                    <td className="py-3.5 px-4 text-right"><Skeleton className="h-4 w-12 rounded ml-auto" /></td>
+                    <td className="py-3.5 px-4 text-right"><Skeleton className="h-4 w-14 rounded ml-auto" /></td>
+                    <td className="py-3.5 px-4 text-right"><Skeleton className="h-4 w-12 rounded ml-auto" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : rankList.length === 0 ? (
             <div className="p-12 text-center">
               <Medal className="mx-auto h-10 w-10 text-slate-300" />
               <h3 className="mt-3 text-sm font-bold text-slate-800">No rank data available</h3>
@@ -904,7 +975,7 @@ export const InstitutionDashboardPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {rankingsData?.data.map((item: InstituteRankItem) => {
+                {rankList.map((item: InstituteRankItem) => {
                   const isGold = item.rank === 1;
                   const isSilver = item.rank === 2;
                   const isBronze = item.rank === 3;
@@ -967,18 +1038,18 @@ export const InstitutionDashboardPage: React.FC = () => {
         </div>
 
         {/* Rank List Pagination */}
-        {rankingsData && rankingsData.meta.totalPages > 0 && (
+        {rankMeta.totalPages > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 bg-slate-50/50 px-5 py-3.5 gap-4">
             <div className="text-xs text-slate-500">
               Showing rank{' '}
               <span className="font-bold text-slate-800">
-                {(rankPage - 1) * rankLimit + (rankingsData.data.length > 0 ? 1 : 0)}
+                {(rankPage - 1) * rankLimit + (rankList.length > 0 ? 1 : 0)}
               </span>{' '}
               to{' '}
               <span className="font-bold text-slate-800">
-                {Math.min(rankPage * rankLimit, rankingsData.meta.total)}
+                {Math.min(rankPage * rankLimit, rankMeta.total)}
               </span>{' '}
-              of <span className="font-bold text-slate-800">{rankingsData.meta.total}</span> ranked students
+              of <span className="font-bold text-slate-800">{rankMeta.total}</span> ranked students
             </div>
 
             <div className="flex items-center gap-1">
@@ -990,11 +1061,11 @@ export const InstitutionDashboardPage: React.FC = () => {
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <span className="px-2 text-xs font-semibold text-slate-700">
-                {rankPage} / {rankingsData.meta.totalPages}
+                {rankPage} / {rankMeta.totalPages}
               </span>
               <button
-                onClick={() => setRankPage((p) => Math.min(rankingsData.meta.totalPages, p + 1))}
-                disabled={rankPage >= rankingsData.meta.totalPages}
+                onClick={() => setRankPage((p) => Math.min(rankMeta.totalPages, p + 1))}
+                disabled={rankPage >= rankMeta.totalPages}
                 className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition"
               >
                 <ChevronRight className="h-4 w-4" />

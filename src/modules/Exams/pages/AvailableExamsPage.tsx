@@ -198,9 +198,9 @@ export const AvailableExamsPage = () => {
         </div>
 
         {/* Search, Target Filter & Sort */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
           {/* Search Input */}
-          <div className="relative min-w-[220px] flex-1 sm:flex-initial">
+          <div className="relative min-w-0 w-full sm:w-auto sm:min-w-[220px] flex-1 sm:flex-initial">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
               size={15}
@@ -221,7 +221,7 @@ export const AvailableExamsPage = () => {
               setSelectedTarget(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+            className="w-full sm:w-auto px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
           >
             <option value="">All Targets</option>
             {examTargets.map((t) => (
@@ -238,7 +238,7 @@ export const AvailableExamsPage = () => {
               setSortOption(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+            className="w-full sm:w-auto px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
           >
             <option value="UPCOMING_SOONEST">Upcoming Soonest</option>
             <option value="NEWEST">Newest First</option>

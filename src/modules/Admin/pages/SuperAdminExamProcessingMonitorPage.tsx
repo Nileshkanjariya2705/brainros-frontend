@@ -1,5 +1,4 @@
-// ** Packages **
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import cn from 'classnames';
 import {
@@ -34,6 +33,7 @@ import {
   usePublishResultsMutation,
 } from '@/modules/Admin/services/examProcessing.queries';
 import { useGetPublicationDashboardAPI } from '@/modules/Exams/services';
+import { completedExamReportsService } from '@/modules/Admin/services/completedExamReports.service';
 
 // ** Hooks **
 import { useExamProcessingMonitor } from '@/hooks/useExamProcessingMonitor';
@@ -54,22 +54,61 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
     { examId: string; examTitle: string; examType: string }[]
   >([]);
 
-  // Load available exams
+  // Load available exams (handles array directly from useAxiosGet or wrapped envelope)
   useEffect(() => {
-    getPublicationDashboardAPI().then((res) => {
-      if (res.data?.data) {
-        const list = res.data.data.map((e) => ({
-          examId: e.examId,
-          examTitle: e.examTitle,
-          examType: e.examType,
-        }));
-        setExamOptions(list);
-        if (!urlExamId && list.length > 0) {
-          setSearchParams({ examId: list[0].examId }, { replace: true });
+    let isMounted = true;
+    const fetchExams = async () => {
+      try {
+        const res = await getPublicationDashboardAPI();
+        let rawList: any[] = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray((res.data as any)?.data)
+          ? (res.data as any).data
+          : Array.isArray(res.response?.data?.data)
+          ? res.response.data.data
+          : [];
+
+        // Fallback: If publication dashboard returned 0 exams, fetch from completed exams service
+        if (rawList.length === 0) {
+          try {
+            const completed = await completedExamReportsService.getCompletedLiveExams();
+            if (Array.isArray(completed) && completed.length > 0) {
+              rawList = completed.map((c) => ({
+                examId: c.id,
+                examTitle: c.title,
+                examType: 'LIVE',
+              }));
+            }
+          } catch (completedErr) {
+            console.warn('Completed exams fallback error:', completedErr);
+          }
         }
+
+        if (isMounted && rawList.length > 0) {
+          const list = rawList.map((e: any) => ({
+            examId: e.examId || e.id,
+            examTitle: e.examTitle || e.title,
+            examType: e.examType || 'LIVE',
+          }));
+          setExamOptions(list);
+
+          const currentValid = list.some((item) => item.examId === urlExamId);
+          if (!urlExamId || !currentValid) {
+            setSearchParams({ examId: list[0].examId }, { replace: true });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load exams for monitor:', err);
       }
-    });
-  }, [getPublicationDashboardAPI, urlExamId, setSearchParams]);
+    };
+
+    fetchExams();
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const selectedExamId = urlExamId || (examOptions[0]?.examId ?? '');
 
@@ -133,14 +172,16 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
     inspectJobId,
   );
 
+  const handleExamCompleted = useCallback(() => {
+    refetchSummary();
+    refetchJobs();
+  }, [refetchSummary, refetchJobs]);
+
   // Real-time WebSocket monitor
   const { isConnected, mergeLiveWithItem } = useExamProcessingMonitor({
     examId: selectedExamId,
     enabled: Boolean(selectedExamId),
-    onExamCompleted: () => {
-      refetchSummary();
-      refetchJobs();
-    },
+    onExamCompleted: handleExamCompleted,
   });
 
   // Mutations
@@ -356,7 +397,7 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
           </div>
 
           {/* Metric Stat Pills */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3">
+          <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-3">
             <div className="bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-3 flex items-center justify-between">
               <div>
                 <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase">
@@ -409,7 +450,7 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
       </div>
 
       {/* ─── Processing Stages Grid ─────────────────────────────────────── */}
-      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 sm:p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <Layers className="w-4 h-4 text-indigo-500" />
           <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">

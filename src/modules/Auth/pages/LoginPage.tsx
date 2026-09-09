@@ -33,12 +33,12 @@ export const LoginPage = () => {
       </div>
 
       {/* Main Form Card */}
-      <div className="bg-white p-6 sm:p-8 shadow-sm rounded-3xl border border-slate-200/80 relative overflow-hidden text-slate-900">
+      <div className="bg-white p-4 min-[360px]:p-6 sm:p-8 shadow-sm rounded-2xl min-[360px]:rounded-3xl border border-slate-200/80 relative overflow-hidden text-slate-900">
         <LoginForm />
       </div>
 
       {/* Trust & Security Highlights Grid */}
-      <div className="grid grid-cols-2 gap-3 pt-1">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-2.5 sm:gap-3 pt-1">
         <div className="flex items-center space-x-2.5 rounded-2xl bg-white p-3.5 border border-slate-200/80 shadow-2xs">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
             <ShieldCheck className="h-4 w-4" />

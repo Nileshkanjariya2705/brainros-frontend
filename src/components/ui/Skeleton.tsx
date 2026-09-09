@@ -58,4 +58,69 @@ export const SkeletonTable: React.FC<{ rows?: number }> = ({ rows = 5 }) => (
   </div>
 );
 
+export const SkeletonKpiGrid: React.FC<{ count?: number; cols?: string }> = ({
+  count = 4,
+  cols = 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4',
+}) => (
+  <div className={`grid gap-3.5 sm:gap-4 ${cols}`}>
+    {Array.from({ length: count }).map((_, i) => (
+      <div
+        key={i}
+        className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs space-y-3"
+      >
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-3.5 w-24" />
+          <Skeleton variant="circular" className="h-8 w-8" />
+        </div>
+        <Skeleton className="h-7 w-20" />
+        <Skeleton className="h-3 w-32" />
+      </div>
+    ))}
+  </div>
+);
+
+export const SkeletonChart: React.FC<{ heightClass?: string }> = ({
+  heightClass = 'h-64 sm:h-72',
+}) => (
+  <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+    <div className="flex items-center justify-between">
+      <div className="space-y-1.5">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-3 w-56" />
+      </div>
+      <Skeleton className="h-8 w-28 rounded-xl" />
+    </div>
+    <div className={`w-full flex items-end gap-3 pt-6 pb-2 px-2 border-b border-slate-100 ${heightClass}`}>
+      {Array.from({ length: 8 }).map((_, i) => {
+        const heights = ['h-24', 'h-40', 'h-32', 'h-48', 'h-36', 'h-56', 'h-44', 'h-60'];
+        return (
+          <div key={i} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+            <Skeleton className={`w-full rounded-t-lg ${heights[i % heights.length]}`} />
+            <Skeleton className="h-2.5 w-6" />
+          </div>
+        );
+      })}
+    </div>
+  </div>
+);
+
+export const DashboardMainContentSkeleton: React.FC = () => (
+  <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-200">
+    {/* Banner placeholder */}
+    <div className="h-36 sm:h-44 rounded-2xl sm:rounded-3xl bg-slate-200/70 animate-pulse border border-slate-200" />
+    {/* KPI cards placeholder */}
+    <SkeletonKpiGrid count={4} />
+    {/* Grid of chart and side section */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2">
+        <SkeletonChart />
+      </div>
+      <div>
+        <SkeletonTable rows={4} />
+      </div>
+    </div>
+  </div>
+);
+
 export default Skeleton;
+

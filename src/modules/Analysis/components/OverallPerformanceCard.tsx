@@ -94,7 +94,7 @@ export const OverallPerformanceCard: React.FC<Props> = ({ overall, examTitle, ex
           : 'text-rose-400';
 
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-[#0f172a] to-indigo-950 p-6 md:p-8 text-white shadow-2xl border border-indigo-500/20">
+    <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-950 via-[#0f172a] to-indigo-950 p-4 sm:p-6 md:p-8 text-white shadow-2xl border border-indigo-500/20">
       {/* Background glow decorations */}
       <div className="absolute right-0 top-0 h-96 w-96 -translate-y-24 translate-x-24 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none" />
       <div className="absolute left-1/4 bottom-0 h-72 w-72 translate-y-24 rounded-full bg-purple-500/15 blur-3xl pointer-events-none" />
@@ -195,9 +195,9 @@ export const OverallPerformanceCard: React.FC<Props> = ({ overall, examTitle, ex
         </div>
 
         {/* Right Side: KPI Grid Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full lg:w-auto shrink-0">
-          <div className="rounded-2xl bg-white/5 border border-white/10 p-4 text-center backdrop-blur shadow-inner">
-            <span className="block text-2xl font-black text-white leading-tight">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full lg:w-auto shrink-0">
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-2.5 min-[360px]:p-3 sm:p-4 text-center backdrop-blur shadow-inner">
+            <span className="block text-xl min-[360px]:text-2xl font-black text-white leading-tight">
               {overall.obtainedMarks}
               <span className="text-xs text-slate-400 font-normal">/{overall.totalMarks}</span>
             </span>
@@ -206,8 +206,8 @@ export const OverallPerformanceCard: React.FC<Props> = ({ overall, examTitle, ex
             </span>
           </div>
 
-          <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-center backdrop-blur shadow-inner">
-            <span className="block text-2xl font-black text-emerald-400 leading-tight">
+          <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-2.5 min-[360px]:p-3 sm:p-4 text-center backdrop-blur shadow-inner">
+            <span className="block text-xl min-[360px]:text-2xl font-black text-emerald-400 leading-tight">
               {overall.correctCount}
               <span className="text-xs text-emerald-200/60 font-normal">
                 /{overall.totalQuestions}
@@ -218,8 +218,8 @@ export const OverallPerformanceCard: React.FC<Props> = ({ overall, examTitle, ex
             </span>
           </div>
 
-          <div className="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-4 text-center backdrop-blur shadow-inner">
-            <span className="block text-2xl font-black text-rose-400 leading-tight">
+          <div className="rounded-2xl bg-rose-500/10 border border-rose-500/20 p-2.5 min-[360px]:p-3 sm:p-4 text-center backdrop-blur shadow-inner">
+            <span className="block text-xl min-[360px]:text-2xl font-black text-rose-400 leading-tight">
               {overall.wrongCount}
               <span className="text-xs text-rose-200/60 font-normal">
                 /{overall.totalQuestions}
@@ -230,8 +230,8 @@ export const OverallPerformanceCard: React.FC<Props> = ({ overall, examTitle, ex
             </span>
           </div>
 
-          <div className="rounded-2xl bg-slate-500/10 border border-slate-500/20 p-4 text-center backdrop-blur shadow-inner">
-            <span className="block text-2xl font-black text-slate-300 leading-tight">
+          <div className="rounded-2xl bg-slate-500/10 border border-slate-500/20 p-2.5 min-[360px]:p-3 sm:p-4 text-center backdrop-blur shadow-inner">
+            <span className="block text-xl min-[360px]:text-2xl font-black text-slate-300 leading-tight">
               {overall.unattemptedCount}
               <span className="text-xs text-slate-400/60 font-normal">
                 /{overall.totalQuestions}

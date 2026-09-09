@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { ShieldCheck, TrendingUp, UserCheck, ArrowRight, BookOpen, Award } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 import { useParentOverviewQuery } from '@/modules/Exams/services/parent.queries';
-import Loader from '@/components/feedback/Loader';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 
 export const ParentDashboardLandingPage = () => {
   const { data: students = [], isLoading } = useParentOverviewQuery();
@@ -46,9 +46,11 @@ export const ParentDashboardLandingPage = () => {
           </span>
         </div>
 
-        {isLoading ? (
-          <div className="py-12">
-            <Loader label="Loading student performance summary..." />
+        {isLoading && students.length === 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
           </div>
         ) : students.length === 0 ? (
           <div className="p-8 text-center rounded-2xl bg-white border border-slate-200 shadow-xs text-xs text-slate-500">

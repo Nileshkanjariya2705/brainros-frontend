@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 
+import { Skeleton } from '@/components/ui/Skeleton';
+
 // Services & Queries
 import {
   useSuperAdminOverviewQuery,
@@ -60,6 +62,7 @@ export const SuperAdminDashboardPage = () => {
   const {
     data: overview,
     isLoading: isLoadingOverview,
+    isFetching: isFetchingOverview,
     refetch: refetchOverview,
   } = useSuperAdminOverviewQuery(filters);
 
@@ -174,7 +177,7 @@ export const SuperAdminDashboardPage = () => {
               onClick={handleRefreshAll}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition cursor-pointer backdrop-blur-sm border border-white/15"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
+              <RefreshCw className={`h-3.5 w-3.5 ${isFetchingOverview ? 'animate-spin' : ''}`} />
               <span>Refresh Metrics</span>
             </button>
           </div>
@@ -248,7 +251,11 @@ export const SuperAdminDashboardPage = () => {
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-black text-slate-900">
-              {isLoadingOverview ? '...' : (overview?.totalRegistrations ?? overview?.totalStudents ?? 0).toLocaleString()}
+              {isLoadingOverview && !overview ? (
+                <Skeleton className="h-8 w-24 rounded-lg my-1" />
+              ) : (
+                (overview?.totalRegistrations ?? overview?.totalStudents ?? 0).toLocaleString()
+              )}
             </div>
             <p className="text-[10px] text-indigo-600 font-semibold">
               Total registered accounts &rarr;
@@ -264,7 +271,11 @@ export const SuperAdminDashboardPage = () => {
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-black text-indigo-700">
-              {isLoadingOverview ? '...' : (overview?.todayRegistrations ?? 0).toLocaleString()}
+              {isLoadingOverview && !overview ? (
+                <Skeleton className="h-8 w-20 rounded-lg my-1" />
+              ) : (
+                (overview?.todayRegistrations ?? 0).toLocaleString()
+              )}
             </div>
             <p className="text-[10px] text-indigo-600 font-semibold">Registered on current date</p>
           </div>
@@ -278,7 +289,11 @@ export const SuperAdminDashboardPage = () => {
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-black text-rose-700">
-              {isLoadingOverview ? '...' : (overview?.neetRegistrations ?? 0).toLocaleString()}
+              {isLoadingOverview && !overview ? (
+                <Skeleton className="h-8 w-20 rounded-lg my-1" />
+              ) : (
+                (overview?.neetRegistrations ?? 0).toLocaleString()
+              )}
             </div>
             <p className="text-[10px] text-rose-600 font-semibold">Medical entrance stream</p>
           </div>
@@ -292,7 +307,11 @@ export const SuperAdminDashboardPage = () => {
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-black text-blue-700">
-              {isLoadingOverview ? '...' : (overview?.jeeRegistrations ?? 0).toLocaleString()}
+              {isLoadingOverview && !overview ? (
+                <Skeleton className="h-8 w-20 rounded-lg my-1" />
+              ) : (
+                (overview?.jeeRegistrations ?? 0).toLocaleString()
+              )}
             </div>
             <p className="text-[10px] text-blue-600 font-semibold">Engineering stream</p>
           </div>
@@ -306,7 +325,11 @@ export const SuperAdminDashboardPage = () => {
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-black text-amber-700">
-              {isLoadingOverview ? '...' : (overview?.cetRegistrations ?? 0).toLocaleString()}
+              {isLoadingOverview && !overview ? (
+                <Skeleton className="h-8 w-20 rounded-lg my-1" />
+              ) : (
+                (overview?.cetRegistrations ?? 0).toLocaleString()
+              )}
             </div>
             <p className="text-[10px] text-amber-600 font-semibold">State common tests</p>
           </div>
@@ -323,7 +346,11 @@ export const SuperAdminDashboardPage = () => {
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-black text-emerald-700">
-              {isLoadingOverview ? '...' : (overview?.activeStudents ?? 0).toLocaleString()}
+              {isLoadingOverview && !overview ? (
+                <Skeleton className="h-8 w-20 rounded-lg my-1" />
+              ) : (
+                (overview?.activeStudents ?? 0).toLocaleString()
+              )}
             </div>
             <p className="text-[10px] text-emerald-600 font-semibold">
               {overview?.activePercentage ?? 0}% verified active ratio
@@ -339,7 +366,11 @@ export const SuperAdminDashboardPage = () => {
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-black text-purple-700">
-              {isLoadingOverview ? '...' : (overview?.examsConducted ?? 0).toLocaleString()}
+              {isLoadingOverview && !overview ? (
+                <Skeleton className="h-8 w-20 rounded-lg my-1" />
+              ) : (
+                (overview?.examsConducted ?? 0).toLocaleString()
+              )}
             </div>
             <p className="text-[10px] text-purple-600 font-semibold">Evaluated & completed tests</p>
           </div>
@@ -353,7 +384,11 @@ export const SuperAdminDashboardPage = () => {
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-black text-amber-700">
-              {isLoadingOverview ? '...' : (overview?.totalAttempts ?? 0).toLocaleString()}
+              {isLoadingOverview && !overview ? (
+                <Skeleton className="h-8 w-20 rounded-lg my-1" />
+              ) : (
+                (overview?.totalAttempts ?? 0).toLocaleString()
+              )}
             </div>
             <p className="text-[10px] text-amber-600 font-semibold">
               {overview?.completedAttempts ?? 0} submitted submissions
@@ -369,7 +404,11 @@ export const SuperAdminDashboardPage = () => {
               </div>
             </div>
             <div className="text-2xl sm:text-3xl font-black text-slate-900">
-              {isLoadingOverview ? '...' : (overview?.totalInstitutions ?? 0).toLocaleString()}
+              {isLoadingOverview && !overview ? (
+                <Skeleton className="h-8 w-20 rounded-lg my-1" />
+              ) : (
+                (overview?.totalInstitutions ?? 0).toLocaleString()
+              )}
             </div>
             <p className="text-[10px] text-slate-500 font-semibold">B2B partner institutions</p>
           </div>

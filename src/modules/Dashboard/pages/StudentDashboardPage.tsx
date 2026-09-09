@@ -17,11 +17,62 @@ import {
   Sparkles,
   BarChart3,
   BookOpen,
+  RotateCw,
 } from 'lucide-react';
 import cn from 'classnames';
 import { useStudentDashboardQuery } from '../services/dashboard.queries';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
-import Loader from '@/components/feedback/Loader';
+import {
+  Skeleton,
+  SkeletonKpiGrid,
+  SkeletonChart,
+  SkeletonTable,
+} from '@/components/ui/Skeleton';
+import SectionError from '@/components/feedback/SectionError';
+
+// ── Student Dashboard Skeleton ───────────────────────────────────────────────
+const StudentDashboardSkeleton: React.FC = () => (
+  <div className="space-y-6 pb-12 animate-in fade-in duration-200">
+    {/* Identity Bar Skeleton */}
+    <div className="rounded-3xl bg-slate-900/90 p-6 md:p-8 space-y-3 border border-slate-800 shadow-xl">
+      <div className="flex gap-2">
+        <Skeleton className="h-6 w-24 bg-slate-800" />
+        <Skeleton className="h-6 w-32 bg-slate-800" />
+      </div>
+      <Skeleton className="h-9 w-64 bg-slate-800" />
+      <Skeleton className="h-4 w-96 max-w-full bg-slate-800" />
+    </div>
+
+    {/* Upcoming Exams Slider Skeleton */}
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+      <div className="flex justify-between items-center">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-4 w-20" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="rounded-2xl border border-slate-100 p-4 space-y-3">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-8 w-full rounded-xl" />
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* 4-Card KPI Grid Skeleton */}
+    <SkeletonKpiGrid count={4} />
+
+    {/* Performance Chart Skeleton */}
+    <SkeletonChart />
+
+    {/* Tables Grid Skeleton */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <SkeletonTable rows={4} />
+      <SkeletonTable rows={4} />
+    </div>
+  </div>
+);
 
 // ── Upcoming Exams Slider Component ──────────────────────────────────────────
 interface UpcomingExamsSliderProps {
@@ -311,7 +362,7 @@ const formatTimer = (sec: number) => {
 
 export const StudentDashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { data, isLoading, refetch } = useStudentDashboardQuery();
+  const { data, isLoading, isFetching, error, refetch } = useStudentDashboardQuery();
   const [trendMetric, setTrendMetric] = useState<'SCORE' | 'ACCURACY' | 'RANK' | 'PERCENTILE'>(
     'SCORE',
   );
@@ -328,9 +379,17 @@ export const StudentDashboardPage: React.FC = () => {
   }, [nextExam?.waitSeconds, refetch]);
 
   if (isLoading && !data) {
+    return <StudentDashboardSkeleton />;
+  }
+
+  if (error && !data) {
     return (
-      <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-        <Loader label="Loading student analytics & personalized dashboard..." />
+      <div className="py-8">
+        <SectionError
+          title="Unable to load personalized student dashboard"
+          message="We encountered an issue fetching your analytics and exam schedule. Your sidebar and navigation remain active."
+          onRetry={refetch}
+        />
       </div>
     );
   }
@@ -364,6 +423,12 @@ export const StudentDashboardPage: React.FC = () => {
               <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-[11px] font-black text-emerald-300 border border-emerald-500/30">
                 {student?.examTarget || 'NEET'} • {student?.class || 'Class 12'}
               </span>
+              {isFetching && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/20 px-2.5 py-0.5 text-[10px] font-bold text-indigo-200 border border-indigo-400/30 animate-pulse">
+                  <RotateCw size={10} className="animate-spin text-indigo-300" />
+                  <span>Syncing...</span>
+                </span>
+              )}
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
@@ -450,8 +515,8 @@ export const StudentDashboardPage: React.FC = () => {
       />
 
       {/* ── 3. Performance Summary Metric Cards ─────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xs">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 min-[360px]:p-4 sm:p-5 shadow-xs">
           <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Latest Score</span>
             <Trophy size={18} className="text-amber-500" />
@@ -467,7 +532,7 @@ export const StudentDashboardPage: React.FC = () => {
           </span>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xs">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 min-[360px]:p-4 sm:p-5 shadow-xs">
           <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Accuracy</span>
             <CheckCircle2 size={18} className="text-emerald-500" />
@@ -482,7 +547,7 @@ export const StudentDashboardPage: React.FC = () => {
           </span>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xs">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 min-[360px]:p-4 sm:p-5 shadow-xs">
           <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Overall Rank</span>
             <Award size={18} className="text-indigo-600" />
@@ -502,7 +567,7 @@ export const StudentDashboardPage: React.FC = () => {
           </span>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xs">
+        <div className="rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 min-[360px]:p-4 sm:p-5 shadow-xs">
           <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Tests Attempted</span>
             <FileText size={18} className="text-purple-600" />
@@ -549,7 +614,7 @@ export const StudentDashboardPage: React.FC = () => {
           </div>
 
           {/* Metric Selector Tabs */}
-          <div className="flex items-center gap-1 rounded-2xl bg-slate-100 p-1 self-start sm:self-auto">
+          <div className="flex items-center gap-1 rounded-2xl bg-slate-100 p-1 self-start sm:self-auto max-w-full overflow-x-auto scrollbar-none shrink-0">
             {(['SCORE', 'ACCURACY', 'RANK', 'PERCENTILE'] as const).map((m) => (
               <button
                 key={m}

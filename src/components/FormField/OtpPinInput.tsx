@@ -93,7 +93,7 @@ export const OtpPinInput: React.FC<OtpPinInputProps> = ({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-center gap-2 sm:gap-3">
+      <div className="flex items-center justify-center gap-1.5 min-[360px]:gap-2 sm:gap-3">
         {Array.from({ length }, (_, index) => {
           const isFilled = Boolean(digits[index]);
           return (
@@ -113,7 +113,7 @@ export const OtpPinInput: React.FC<OtpPinInputProps> = ({
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
               onFocus={(e) => e.target.select()}
-              className={`h-12 w-10 sm:h-14 sm:w-12 text-center text-xl sm:text-2xl font-black font-mono rounded-xl border transition-all duration-150 outline-none select-none ${
+              className={`h-11 w-8 min-[360px]:w-9 min-[400px]:w-10 sm:h-14 sm:w-12 text-center text-lg min-[360px]:text-xl sm:text-2xl font-black font-mono rounded-xl border transition-all duration-150 outline-none select-none shrink-0 ${
                 error
                   ? 'border-red-500 bg-red-50 text-red-600 ring-1 ring-red-500/30'
                   : isFilled

@@ -238,7 +238,7 @@ export const StudentMockTestsPage = () => {
           </div>
 
           {/* Search Box */}
-          <div className="relative min-w-[240px] flex-1 md:max-w-xs">
+          <div className="relative min-w-0 w-full sm:w-auto sm:min-w-[240px] flex-1 md:max-w-xs">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
               size={15}
@@ -262,7 +262,7 @@ export const StudentMockTestsPage = () => {
               setSelectedSubject(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+            className="w-full sm:w-auto px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
           >
             <option value="">All Subjects</option>
             <option value="Physics">Physics</option>
@@ -278,7 +278,7 @@ export const StudentMockTestsPage = () => {
               setSelectedDifficulty(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+            className="w-full sm:w-auto px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
           >
             <option value="ALL">All Difficulties</option>
             <option value="EASY">Easy</option>
@@ -293,7 +293,7 @@ export const StudentMockTestsPage = () => {
               setSelectedTarget(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+            className="w-full sm:w-auto px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
           >
             <option value="">All Targets</option>
             {examTargets.map((t) => (
@@ -310,7 +310,7 @@ export const StudentMockTestsPage = () => {
               setSortOption(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium ml-auto"
+            className="w-full sm:w-auto px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium sm:ml-auto"
           >
             <option value="NEWEST">Newest First</option>
             <option value="OLDEST">Oldest First</option>

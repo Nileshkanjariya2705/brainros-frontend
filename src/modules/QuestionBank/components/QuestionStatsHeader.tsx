@@ -25,7 +25,7 @@ export const QuestionStatsHeader: React.FC<QuestionStatsHeaderProps> = ({
 }) => {
   if (isLoading && !stats) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 animate-pulse">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3 animate-pulse">
         {[...Array(6)].map((_, i) => (
           <div key={i} className="h-24 rounded-2xl bg-slate-200/70" />
         ))}
@@ -100,7 +100,7 @@ export const QuestionStatsHeader: React.FC<QuestionStatsHeaderProps> = ({
   return (
     <div className="space-y-4">
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
         {statCards.map((card) => {
           const Icon = card.icon;
           const isActive = selectedStatus === card.id;
@@ -109,7 +109,7 @@ export const QuestionStatsHeader: React.FC<QuestionStatsHeaderProps> = ({
             <button
               key={card.id}
               onClick={() => onStatusClick && onStatusClick(card.id)}
-              className={`group relative overflow-hidden rounded-2xl border bg-white/80 backdrop-blur-md p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+              className={`group relative overflow-hidden rounded-2xl border bg-white/80 backdrop-blur-md p-3 min-[360px]:p-3.5 sm:p-4 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
                 isActive
                   ? `border-transparent ring-2 ${card.activeRing}`
                   : 'border-slate-200/80 hover:border-slate-300'

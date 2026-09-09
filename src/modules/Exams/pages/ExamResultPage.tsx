@@ -334,16 +334,16 @@ const ExamResultPage = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* ── Top Header Navigation ────────────────────────────── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <button
           onClick={() => navigate(PRIVATE_NAVIGATION.dashboard)}
           className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors"
         >
           <ArrowLeft size={16} />
-          Back to Dashboard
+          <span>Back to Dashboard</span>
         </button>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           {analysis.examId && (
             <Button
               variant="outline"

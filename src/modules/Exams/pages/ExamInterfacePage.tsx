@@ -1220,10 +1220,10 @@ const ExamInterfacePage = () => {
             type="button"
             onClick={() => setIsPaletteOpen((v) => !v)}
             title="Toggle Question Palette"
-            className="flex lg:hidden items-center gap-1 sm:gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs font-bold text-indigo-700 shadow-2xs shrink-0"
+            className="flex lg:hidden items-center gap-1 sm:gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-2 sm:px-3 py-1 sm:py-1.5 text-xs font-bold text-indigo-700 shadow-2xs shrink-0"
           >
             <Grid3X3 size={14} />
-            <span>Palette ({currentIdx + 1}/{questions.length})</span>
+            <span><span className="hidden min-[380px]:inline">Palette </span>({currentIdx + 1}/{questions.length})</span>
           </button>
         </div>
       </div>

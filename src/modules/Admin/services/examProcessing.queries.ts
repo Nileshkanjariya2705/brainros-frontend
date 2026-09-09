@@ -114,10 +114,16 @@ export const useExamProcessingSummaryQuery = (examId?: string | null) => {
       const res = await Axios.get<{ statusCode: number; message: string; data: ExamProcessingSummaryResponse }>(
         `/super-admin/exams/${encodeURIComponent(examId)}/results/processing-summary`,
       );
-      return res.data.data;
+      return (res.data as any)?.data !== undefined ? (res.data as any).data : res.data;
     },
     enabled: Boolean(examId),
     staleTime: 5000,
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error: any) => {
+      const status = error?.response?.status;
+      if (status && status >= 400 && status < 500) return false;
+      return failureCount < 2;
+    },
   });
 };
 
@@ -136,10 +142,16 @@ export const useExamProcessingJobsQuery = (
         `/super-admin/exams/${encodeURIComponent(examId)}/results/processing-jobs`,
         { params },
       );
-      return res.data.data;
+      return (res.data as any)?.data !== undefined ? (res.data as any).data : res.data;
     },
     enabled: Boolean(examId),
     staleTime: 5000,
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error: any) => {
+      const status = error?.response?.status;
+      if (status && status >= 400 && status < 500) return false;
+      return failureCount < 2;
+    },
   });
 };
 
@@ -157,9 +169,15 @@ export const useExamJobDetailQuery = (
       const res = await Axios.get<{ statusCode: number; message: string; data: JobDetailResponse }>(
         `/super-admin/exams/${encodeURIComponent(examId)}/results/processing-jobs/${encodeURIComponent(jobId)}`,
       );
-      return res.data.data;
+      return (res.data as any)?.data !== undefined ? (res.data as any).data : res.data;
     },
     enabled: Boolean(examId && jobId),
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error: any) => {
+      const status = error?.response?.status;
+      if (status && status >= 400 && status < 500) return false;
+      return failureCount < 2;
+    },
   });
 };
 

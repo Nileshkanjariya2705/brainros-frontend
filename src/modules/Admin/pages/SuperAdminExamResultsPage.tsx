@@ -1,5 +1,4 @@
-// ** Packages **
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import cn from 'classnames';
 import {
@@ -69,16 +68,30 @@ export const SuperAdminExamResultsPage: React.FC = () => {
   // Load publication dashboard
   const loadDashboard = useCallback(async () => {
     const res = await getPublicationDashboardAPI();
-    if (res.data && res.data.data) {
-      setExams(res.data.data);
+    const rawList: any[] = Array.isArray(res.data)
+      ? res.data
+      : Array.isArray((res.data as any)?.data)
+      ? (res.data as any).data
+      : Array.isArray(res.response?.data?.data)
+      ? res.response.data.data
+      : [];
+    if (rawList.length > 0) {
+      setExams(rawList);
     }
   }, [getPublicationDashboardAPI]);
 
+  const loadDashboardRef = useRef(loadDashboard);
   useEffect(() => {
-    loadDashboard();
-    const interval = setInterval(loadDashboard, 10000); // Polling every 10s
+    loadDashboardRef.current = loadDashboard;
+  });
+
+  useEffect(() => {
+    loadDashboardRef.current();
+    const interval = setInterval(() => {
+      loadDashboardRef.current();
+    }, 10000); // Stable polling every 10s
     return () => clearInterval(interval);
-  }, [loadDashboard]);
+  }, []);
 
   // Open Preview & Confirmation Modal
   const handleOpenPublishModal = async (examId: string) => {

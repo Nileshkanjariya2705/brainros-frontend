@@ -219,7 +219,7 @@ export const AdminLeaderboardPage: React.FC = () => {
         </div>
 
         {/* Snapshot Summary KPIs */}
-        <div className="lg:col-span-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm grid grid-cols-2 sm:grid-cols-4 gap-4 items-center">
+        <div className="lg:col-span-3 rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-3.5 min-[360px]:p-4 sm:p-5 shadow-sm grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 items-center">
           <div>
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
               Ranked Candidates

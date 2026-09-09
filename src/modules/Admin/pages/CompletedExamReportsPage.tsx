@@ -56,8 +56,11 @@ export const CompletedExamReportsPage: React.FC = () => {
   const [loadingAnalysis, setLoadingAnalysis] = useState<boolean>(false);
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<'overview' | 'subjects' | 'chapters' | 'time_strategy' | 'review'>('overview');
 
-  // Email Confirmation & Action State
+  // Email Confirmation & Pre-Send Inspection State
   const [emailConfirmTarget, setEmailConfirmTarget] = useState<AttendeeItem | null>(null);
+  const [emailPreviewAnalysis, setEmailPreviewAnalysis] = useState<StudentAttemptAnalysisResponse | null>(null);
+  const [loadingEmailPreview, setLoadingEmailPreview] = useState<boolean>(false);
+  const [emailPreviewTab, setEmailPreviewTab] = useState<'overview' | 'subjects_chapters' | 'pacing_strategy' | 'recommendations' | 'questions'>('overview');
   const [sendingEmailAttemptId, setSendingEmailAttemptId] = useState<string | null>(null);
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
@@ -120,6 +123,43 @@ export const CompletedExamReportsPage: React.FC = () => {
   useEffect(() => {
     fetchExamDetails();
   }, [fetchExamDetails]);
+
+  // ── Pre-send Inspection: Load analysis when emailConfirmTarget is selected ──
+  useEffect(() => {
+    if (!emailConfirmTarget || !selectedExamId) {
+      setEmailPreviewAnalysis(null);
+      setEmailPreviewTab('overview');
+      return;
+    }
+
+    // Reuse if already loaded in drawer
+    if (analysisData && selectedAttemptId === emailConfirmTarget.attemptId) {
+      setEmailPreviewAnalysis(analysisData);
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingEmailPreview(true);
+    completedExamReportsService
+      .getStudentAttemptAnalysis(selectedExamId, emailConfirmTarget.attemptId)
+      .then((data) => {
+        if (isMounted) {
+          setEmailPreviewAnalysis(data);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load pre-send email analysis:', err);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoadingEmailPreview(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [emailConfirmTarget, selectedExamId, analysisData, selectedAttemptId]);
 
   // ── Open Student Analysis ──
   const handleOpenAnalysis = async (attemptId: string) => {
@@ -275,7 +315,7 @@ export const CompletedExamReportsPage: React.FC = () => {
           EXAM SUMMARY KPI TILES
       ═══════════════════════════════════════════════════════════════ */}
       {selectedExam && summary && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <div className="grid grid-cols-1 min-[360px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-3.5">
           {/* Registered */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs relative overflow-hidden">
             <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
@@ -617,9 +657,20 @@ export const CompletedExamReportsPage: React.FC = () => {
                         {/* Send Email */}
                         <button
                           onClick={() => setEmailConfirmTarget(item)}
-                          disabled={sendingEmailAttemptId === item.attemptId || !item.score}
+                          disabled={
+                            sendingEmailAttemptId === item.attemptId ||
+                            item.score === null ||
+                            item.score === undefined ||
+                            !item.email
+                          }
                           className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Send Report as PDF by Email"
+                          title={
+                            !item.email
+                              ? 'No registered student email'
+                              : item.score === null || item.score === undefined
+                              ? 'Attempt has not been evaluated yet'
+                              : 'Send Report as PDF by Email'
+                          }
                         >
                           {sendingEmailAttemptId === item.attemptId ? (
                             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -645,7 +696,7 @@ export const CompletedExamReportsPage: React.FC = () => {
         </div>
 
         {/* Pagination Bar */}
-        <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600">
+        <div className="bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
           <div>
             Showing <span className="font-semibold text-slate-900">{attendees.length}</span> of{' '}
             <span className="font-semibold text-slate-900">{totalAttendees.toLocaleString()}</span> attendees
@@ -676,82 +727,534 @@ export const CompletedExamReportsPage: React.FC = () => {
       {/* ═══════════════════════════════════════════════════════════════
           EMAIL CONFIRMATION MODAL
       ═══════════════════════════════════════════════════════════════ */}
-      {emailConfirmTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-                  <Mail className="w-5 h-5" />
+      {/* ═══════════════════════════════════════════════════════════════
+          EMAIL CONFIRMATION & PRE-SEND INSPECTION MODAL
+      ═══════════════════════════════════════════════════════════════ */}
+      {emailConfirmTarget && (() => {
+        const previewAnalysis = emailPreviewAnalysis?.analysis;
+        const previewRank = emailPreviewAnalysis?.rank || {
+          rank: emailConfirmTarget.rank,
+          percentile: emailConfirmTarget.percentile,
+          totalCandidates: null,
+        };
+        const previewQuestions = emailPreviewAnalysis?.questionsReview || [];
+
+        const score = previewAnalysis?.score ?? previewAnalysis?.totalScore ?? emailConfirmTarget.score ?? 0;
+        const maxScore = previewAnalysis?.maxScore ?? emailConfirmTarget.maxScore ?? selectedExam?.totalMarks ?? 0;
+        const percentage = previewAnalysis?.percentage ?? emailConfirmTarget.percentage ?? 0;
+        const accuracy = previewAnalysis?.accuracy ?? emailConfirmTarget.accuracy ?? 0;
+        const correctAnswers = previewAnalysis?.correctAnswers ?? (previewQuestions.filter((q) => q.isCorrect).length);
+        const wrongAnswers = previewAnalysis?.wrongAnswers ?? (previewQuestions.filter((q) => q.isAttempted && !q.isCorrect).length);
+        const unattempted = previewAnalysis?.unattempted ?? (previewQuestions.filter((q) => !q.isAttempted).length);
+        const timeUsedSeconds = previewAnalysis?.timeUsedSeconds ?? 0;
+        const avgTime = Number(previewAnalysis?.averageTimePerQuestion || 0).toFixed(1);
+        const quadrant = (previewAnalysis?.quadrant || 'BALANCED').replace(/_/g, ' ');
+        const avoidableNegatives = previewAnalysis?.strategyAnalysis?.avoidableNegativeMarks ?? previewAnalysis?.attemptStrategy?.avoidableNegativeMarks ?? Math.round(wrongAnswers * 1);
+        const projectedScore = previewAnalysis?.strategyAnalysis?.projectedScore ?? (score + wrongAnswers);
+
+        const subjects = previewAnalysis?.subjectAnalysis || previewAnalysis?.subjectResults || [];
+        const chapters = previewAnalysis?.chapterAnalysis || previewAnalysis?.chapterResults || [];
+        const masteredChapters = chapters.filter((c: any) => (c.accuracy ?? 0) >= 70);
+        const criticalChapters = chapters.filter((c: any) => (c.accuracy ?? 0) < 50);
+        const recommendations = previewAnalysis?.recommendations || [];
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+            <div className="bg-white border border-slate-200 rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="p-5 md:p-6 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-xs">
+                    <Mail className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-lg md:text-xl">
+                      Pre-Send Report Inspection
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Verify complete student diagnostics before dispatching authoritative PDF report
+                    </p>
+                  </div>
                 </div>
-                <h3 className="font-bold text-slate-900 text-lg">Send Report by Email</h3>
+                <button
+                  onClick={() => setEmailConfirmTarget(null)}
+                  className="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={() => setEmailConfirmTarget(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            <div className="space-y-3 text-sm text-slate-600">
-              <p>
-                A branded, multi-page PDF performance analysis report will be generated and dispatched via Resend.
-              </p>
+              {/* Student & Verified Recipient Strip */}
+              <div className="px-6 py-3 bg-indigo-50/60 border-b border-indigo-100/80 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-900">{emailConfirmTarget.studentName}</span>
+                  <span className="font-mono text-indigo-700 bg-white px-2 py-0.5 rounded-md border border-indigo-200 font-semibold">
+                    {emailConfirmTarget.studentCode}
+                  </span>
+                  <span className="text-slate-400">•</span>
+                  <span className="text-slate-600 truncate max-w-[220px]">{selectedExam?.title}</span>
+                </div>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-slate-500 text-xs">Student Name:</span>
-                  <span className="font-semibold text-slate-900">{emailConfirmTarget.studentName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 text-xs">Student Code:</span>
-                  <span className="font-mono text-indigo-600 text-xs">{emailConfirmTarget.studentCode}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 text-xs">Authoritative Email:</span>
-                  <span className="font-semibold text-emerald-600 text-xs font-mono">{emailConfirmTarget.email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 text-xs">Exam:</span>
-                  <span className="text-slate-800 text-xs text-right max-w-[200px] truncate">{selectedExam?.title}</span>
+                <div className="flex items-center gap-1.5 font-mono text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 font-medium">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>{emailConfirmTarget.email}</span>
                 </div>
               </div>
 
-              <div className="text-xs text-slate-500 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                Recipient email is verified server-side from student profile.
+              {/* Tabs Navigation */}
+              <div className="px-6 border-b border-slate-200 bg-slate-50/40 flex gap-1 overflow-x-auto text-xs font-semibold shrink-0">
+                <button
+                  onClick={() => setEmailPreviewTab('overview')}
+                  className={`py-3 px-3.5 border-b-2 transition-all flex items-center gap-1.5 ${
+                    emailPreviewTab === 'overview'
+                      ? 'border-indigo-600 text-indigo-600 font-bold'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Target className="w-3.5 h-3.5" />
+                  Overview & KPIs
+                </button>
+                <button
+                  onClick={() => setEmailPreviewTab('subjects_chapters')}
+                  className={`py-3 px-3.5 border-b-2 transition-all flex items-center gap-1.5 ${
+                    emailPreviewTab === 'subjects_chapters'
+                      ? 'border-indigo-600 text-indigo-600 font-bold'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  Subjects & Chapters ({subjects.length})
+                </button>
+                <button
+                  onClick={() => setEmailPreviewTab('pacing_strategy')}
+                  className={`py-3 px-3.5 border-b-2 transition-all flex items-center gap-1.5 ${
+                    emailPreviewTab === 'pacing_strategy'
+                      ? 'border-indigo-600 text-indigo-600 font-bold'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  Pacing & Strategy
+                </button>
+                <button
+                  onClick={() => setEmailPreviewTab('recommendations')}
+                  className={`py-3 px-3.5 border-b-2 transition-all flex items-center gap-1.5 ${
+                    emailPreviewTab === 'recommendations'
+                      ? 'border-indigo-600 text-indigo-600 font-bold'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Recommendations ({recommendations.length})
+                </button>
+                <button
+                  onClick={() => setEmailPreviewTab('questions')}
+                  className={`py-3 px-3.5 border-b-2 transition-all flex items-center gap-1.5 ${
+                    emailPreviewTab === 'questions'
+                      ? 'border-indigo-600 text-indigo-600 font-bold'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  Questions Audit ({previewQuestions.length})
+                </button>
               </div>
-            </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                onClick={() => setEmailConfirmTarget(null)}
-                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleSendEmail(emailConfirmTarget)}
-                disabled={sendingEmailAttemptId === emailConfirmTarget.attemptId}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-md shadow-indigo-200 flex items-center gap-2 transition-all disabled:opacity-50"
-              >
-                {sendingEmailAttemptId === emailConfirmTarget.attemptId ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    Queueing Job...
-                  </>
+              {/* Modal Body */}
+              <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-5">
+                {loadingEmailPreview ? (
+                  <div className="text-center py-16 text-slate-500">
+                    <RefreshCw className="w-7 h-7 animate-spin mx-auto mb-2 text-indigo-600" />
+                    Loading authoritative student diagnostics for pre-send inspection...
+                  </div>
                 ) : (
                   <>
-                    <Send className="w-4 h-4" />
-                    Confirm & Send Email
+                    {/* TAB 1: OVERVIEW & KPIS */}
+                    {emailPreviewTab === 'overview' && (
+                      <div className="space-y-5">
+                        {/* KPI Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                            <span className="text-[11px] text-slate-500 font-semibold uppercase">Total Score</span>
+                            <div className="text-2xl font-bold text-slate-900 mt-1">
+                              {score}
+                              <span className="text-xs font-normal text-slate-500 ml-1">/ {maxScore}</span>
+                            </div>
+                            <div className="text-xs text-indigo-600 mt-1 font-semibold">
+                              {Number(percentage).toFixed(1)}% Marks
+                            </div>
+                          </div>
+
+                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                            <span className="text-[11px] text-slate-500 font-semibold uppercase">Accuracy</span>
+                            <div className="text-2xl font-bold text-emerald-600 mt-1">
+                              {Number(accuracy).toFixed(1)}%
+                            </div>
+                            <div className="text-[11px] text-slate-500 mt-1">
+                              ✓ {correctAnswers} | ✗ {wrongAnswers} | — {unattempted}
+                            </div>
+                          </div>
+
+                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                            <span className="text-[11px] text-slate-500 font-semibold uppercase">Official Rank</span>
+                            <div className="text-2xl font-bold text-indigo-600 mt-1">
+                              {previewRank?.rank ? `#${previewRank.rank.toLocaleString()}` : '—'}
+                            </div>
+                            <div className="text-[11px] text-slate-500 mt-1">
+                              {previewRank?.percentile !== null && previewRank?.percentile !== undefined
+                                ? `${Number(previewRank.percentile).toFixed(1)}%ile`
+                                : 'Cohort standing'}
+                            </div>
+                          </div>
+
+                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                            <span className="text-[11px] text-slate-500 font-semibold uppercase">Time & Speed</span>
+                            <div className="text-2xl font-bold text-amber-600 mt-1">
+                              {timeUsedSeconds > 0 ? `${Math.floor(timeUsedSeconds / 60)}m ${timeUsedSeconds % 60}s` : '—'}
+                            </div>
+                            <div className="text-[11px] text-slate-500 mt-1">
+                              Avg {avgTime}s / question
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Status & Diagnostics Strip */}
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold text-slate-500 uppercase">Speed-Accuracy Profile</span>
+                              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">
+                                {quadrant}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-600">
+                              Diagnosis:{' '}
+                              <strong>
+                                {quadrant.includes('RUSHED')
+                                  ? 'Candidate answers quickly but incurs avoidable error penalties.'
+                                  : quadrant.includes('METHODICAL')
+                                  ? 'Candidate maintains solid accuracy with disciplined pacing.'
+                                  : 'Candidate has a balanced pace across sections.'}
+                              </strong>
+                            </p>
+                          </div>
+
+                          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold text-slate-500 uppercase">Negative Marking Loss</span>
+                              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
+                                −{avoidableNegatives} Marks
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-600">
+                              Eliminating negative guesses could elevate score to{' '}
+                              <strong className="text-emerald-700 font-mono">~{projectedScore} marks</strong>.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* PDF Dispatch Notice */}
+                        <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-200 text-xs text-indigo-900 flex items-start gap-3">
+                          <Sparkles className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+                          <div className="space-y-1">
+                            <div className="font-bold">Authoritative 3-Page PDF Report Attachment</div>
+                            <p className="text-indigo-800">
+                              The attached PDF generated by the background queue will include Executive KPIs, Subject & Chapter Diagnostics, Time Pacing Quadrants, Strategy Analysis, Personalized Action Steps, and the complete Question Review.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* TAB 2: SUBJECTS & CHAPTERS */}
+                    {emailPreviewTab === 'subjects_chapters' && (
+                      <div className="space-y-5">
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-sm mb-3">Subject-Wise Breakdown</h4>
+                          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+                            <table className="w-full text-left text-xs text-slate-700">
+                              <thead className="bg-slate-50 text-slate-500 uppercase font-semibold">
+                                <tr>
+                                  <th className="px-4 py-3">Subject</th>
+                                  <th className="px-4 py-3 text-right">Score</th>
+                                  <th className="px-4 py-3 text-right">Correct</th>
+                                  <th className="px-4 py-3 text-right">Wrong</th>
+                                  <th className="px-4 py-3 text-right">Skipped</th>
+                                  <th className="px-4 py-3 text-right">Accuracy</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {subjects.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={6} className="text-center py-6 text-slate-400">
+                                      No subject breakdown available
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  subjects.map((sub: any, i: number) => (
+                                    <tr key={i} className="hover:bg-slate-50/80">
+                                      <td className="px-4 py-3 font-bold text-slate-900">
+                                        {sub.subjectName || sub.name || sub.subject?.name}
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-mono font-semibold text-indigo-600">
+                                        {sub.score ?? sub.totalScore ?? 0} / {sub.maxScore ?? '—'}
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-mono text-emerald-600 font-semibold">
+                                        {sub.correct ?? sub.correctAnswers ?? 0}
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-mono text-rose-600 font-semibold">
+                                        {sub.wrong ?? sub.wrongAnswers ?? 0}
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-mono text-slate-500">
+                                        {sub.unattempted ?? 0}
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-mono font-bold text-cyan-600">
+                                        {Number(sub.accuracy || 0).toFixed(1)}%
+                                      </td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Chapter Diagnostic Pills */}
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-200 space-y-2.5">
+                            <span className="text-xs font-bold text-emerald-800 uppercase flex items-center gap-1.5">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                              Mastered Chapters (≥ 70% Accuracy)
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {masteredChapters.length === 0 ? (
+                                <span className="text-xs text-slate-500 italic">No chapters currently ≥70%</span>
+                              ) : (
+                                masteredChapters.map((ch: any, i: number) => (
+                                  <span
+                                    key={i}
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-medium border border-emerald-200"
+                                  >
+                                    {ch.chapterName || ch.name}: {Number(ch.accuracy || 0).toFixed(0)}%
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="p-4 rounded-2xl bg-rose-50/40 border border-rose-200 space-y-2.5">
+                            <span className="text-xs font-bold text-rose-800 uppercase flex items-center gap-1.5">
+                              <AlertTriangle className="w-4 h-4 text-rose-600" />
+                              Critical Revision Focus (&lt; 50% Accuracy)
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {criticalChapters.length === 0 ? (
+                                <span className="text-xs text-slate-500 italic">No critical chapters &lt;50%</span>
+                              ) : (
+                                criticalChapters.map((ch: any, i: number) => (
+                                  <span
+                                    key={i}
+                                    className="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 text-xs font-medium border border-rose-200"
+                                  >
+                                    {ch.chapterName || ch.name}: {Number(ch.accuracy || 0).toFixed(0)}%
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* TAB 3: PACING & STRATEGY */}
+                    {emailPreviewTab === 'pacing_strategy' && (
+                      <div className="space-y-5">
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                            <h5 className="font-bold text-indigo-700 text-xs uppercase tracking-wider">
+                              Time Allocation & Pacing
+                            </h5>
+                            <div className="space-y-2 text-xs text-slate-700">
+                              <div className="flex justify-between py-1.5 border-b border-slate-200">
+                                <span className="text-slate-500">Average Time / Question:</span>
+                                <span className="font-mono font-bold text-slate-900">{avgTime}s</span>
+                              </div>
+                              <div className="flex justify-between py-1.5 border-b border-slate-200">
+                                <span className="text-slate-500">Rushed Questions (&lt;30s):</span>
+                                <span className="font-mono font-bold text-rose-600">
+                                  {previewAnalysis?.timeAnalysis?.rushedCount ?? 0}
+                                </span>
+                              </div>
+                              <div className="flex justify-between py-1.5 border-b border-slate-200">
+                                <span className="text-slate-500">Optimal Pacing (30s–90s):</span>
+                                <span className="font-mono font-bold text-emerald-600">
+                                  {previewAnalysis?.timeAnalysis?.optimalCount ?? 0}
+                                </span>
+                              </div>
+                              <div className="flex justify-between py-1.5 border-b border-slate-200">
+                                <span className="text-slate-500">Overthought (&gt;90s):</span>
+                                <span className="font-mono font-bold text-amber-600">
+                                  {previewAnalysis?.timeAnalysis?.overthoughtCount ?? 0}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                            <h5 className="font-bold text-emerald-700 text-xs uppercase tracking-wider">
+                              Strategy Diagnostics & Negative Marking
+                            </h5>
+                            <div className="space-y-2 text-xs text-slate-700">
+                              <div className="flex justify-between py-1.5 border-b border-slate-200">
+                                <span className="text-slate-500">Avoidable Negative Deductions:</span>
+                                <span className="font-mono font-bold text-rose-600">−{avoidableNegatives} Marks</span>
+                              </div>
+                              <div className="flex justify-between py-1.5 border-b border-slate-200">
+                                <span className="text-slate-500">Potential Score Without Guessing:</span>
+                                <span className="font-mono font-bold text-emerald-600">~{projectedScore} Marks</span>
+                              </div>
+                              <div className="flex justify-between py-1.5 border-b border-slate-200">
+                                <span className="text-slate-500">Risk Profile:</span>
+                                <span className="font-bold text-indigo-700">
+                                  {(previewAnalysis?.attemptStrategy?.riskProfile || previewAnalysis?.strategyAnalysis?.primaryClassification || 'BALANCED').replace(/_/g, ' ')}
+                                </span>
+                              </div>
+                              <div className="flex justify-between py-1.5 border-b border-slate-200">
+                                <span className="text-slate-500">Confidence Level:</span>
+                                <span className="font-semibold text-emerald-700">
+                                  {previewAnalysis?.strategyAnalysis?.confidence || 'HIGH'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {previewAnalysis?.attemptStrategy?.takeaways && (
+                          <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-200 text-xs text-slate-700">
+                            <strong className="font-semibold text-indigo-900 block mb-1">Strategic Takeaway:</strong>
+                            {previewAnalysis.attemptStrategy.takeaways}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* TAB 4: RECOMMENDATIONS */}
+                    {emailPreviewTab === 'recommendations' && (
+                      <div className="space-y-3">
+                        {recommendations.length === 0 ? (
+                          <div className="text-center py-10 text-slate-400 text-xs">
+                            No personalized recommendations available.
+                          </div>
+                        ) : (
+                          recommendations.map((rec: any, i: number) => (
+                            <div key={i} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-slate-900">{rec.title}</span>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                    rec.priority === 'HIGH'
+                                      ? 'bg-rose-100 text-rose-800'
+                                      : 'bg-amber-100 text-amber-800'
+                                  }`}
+                                >
+                                  {rec.priority || 'MEDIUM'} Priority
+                                </span>
+                              </div>
+                              <p className="text-slate-600">{rec.description}</p>
+                              {rec.action && (
+                                <div className="text-indigo-600 font-medium pt-1">
+                                  👉 Action: {rec.action}
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    {/* TAB 5: QUESTIONS AUDIT */}
+                    {emailPreviewTab === 'questions' && (
+                      <div className="space-y-3">
+                        <div className="text-xs text-slate-500 flex justify-between items-center pb-1">
+                          <span>Showing all {previewQuestions.length} responses evaluated</span>
+                          <span className="font-semibold text-indigo-600">Attached to Email PDF Report</span>
+                        </div>
+
+                        <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
+                          {previewQuestions.map((q: any, idx: number) => (
+                            <div
+                              key={idx}
+                              className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
+                                !q.isAttempted
+                                  ? 'bg-slate-50 border-slate-200'
+                                  : q.isCorrect
+                                  ? 'bg-emerald-50/60 border-emerald-200'
+                                  : 'bg-rose-50/60 border-rose-200'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-slate-900">
+                                  Q{q.displayOrder || idx + 1}. {q.sectionName || 'Question'}
+                                </span>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase ${
+                                    !q.isAttempted
+                                      ? 'bg-slate-200 text-slate-700'
+                                      : q.isCorrect
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : 'bg-rose-100 text-rose-800'
+                                  }`}
+                                >
+                                  {!q.isAttempted ? 'Unattempted' : q.isCorrect ? '✓ Correct' : '✗ Incorrect'}
+                                </span>
+                              </div>
+                              <p className="text-slate-700 line-clamp-2">{q.questionText}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
-              </button>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
+                <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="truncate">Email verified: <strong>{emailConfirmTarget.email}</strong></span>
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 sm:gap-3">
+                  <button
+                    onClick={() => setEmailConfirmTarget(null)}
+                    className="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs transition-all shadow-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleSendEmail(emailConfirmTarget)}
+                    disabled={sendingEmailAttemptId === emailConfirmTarget.attemptId}
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-200 flex items-center gap-2 transition-all disabled:opacity-50"
+                  >
+                    {sendingEmailAttemptId === emailConfirmTarget.attemptId ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Queueing Job...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Confirm & Send Email
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ═══════════════════════════════════════════════════════════════
           STUDENT ANALYSIS MODAL / DRAWER
