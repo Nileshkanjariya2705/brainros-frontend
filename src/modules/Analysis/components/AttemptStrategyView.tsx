@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Zap,
   Bookmark,
@@ -11,6 +12,11 @@ import {
   Info,
   BarChart3,
   RotateCw,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
+  ArrowRight,
+  BookOpen,
 } from 'lucide-react';
 import cn from 'classnames';
 import type {
@@ -19,6 +25,8 @@ import type {
   OverallPerformanceMetrics,
   StrategySeverity,
   StrategyClassificationCode,
+  StrategyConfidence,
+  StrategyTrend,
 } from '@/types/exam.types';
 
 interface Props {
@@ -33,68 +41,60 @@ interface Props {
 // ── Classification Styling & Descriptions ───────────────────────
 const getClassificationConfig = (code: StrategyClassificationCode | string) => {
   switch (code) {
+    case 'OVER_ATTEMPTING':
     case 'HIGH_RISK_ATTEMPTING':
       return {
-        label: 'High-Risk Attempting',
+        label: 'Over-Attempting (High Risk)',
         bg: 'bg-rose-50 border-rose-200 text-rose-800',
         badge: 'bg-rose-100 text-rose-800 border-rose-300',
-        icon: <ShieldAlert size={20} className="text-rose-600" />,
+        icon: <ShieldAlert size={22} className="text-rose-600" />,
         description:
-          'A significant portion of negative marks was incurred on hard or high-penalty questions. Calibrating question selection can preserve substantial marks.',
+          'You are attempting high-risk or difficult questions despite lower accuracy. Reducing uncertain guesses will preserve marks and elevate your net score.',
+      };
+    case 'UNDER_ATTEMPTING':
+      return {
+        label: 'Under-Attempting (Conservative)',
+        bg: 'bg-amber-50 border-amber-200 text-amber-800',
+        badge: 'bg-amber-100 text-amber-800 border-amber-300',
+        icon: <Clock size={22} className="text-amber-600" />,
+        description:
+          'Your accuracy on attempted questions is high, but significant questions were left unattempted with surplus time. Expanding your attempt horizon will unlock additional marks.',
+      };
+    case 'TIME_HEAVY':
+      return {
+        label: 'Time-Heavy Inefficiency',
+        bg: 'bg-purple-50 border-purple-200 text-purple-800',
+        badge: 'bg-purple-100 text-purple-800 border-purple-300',
+        icon: <Clock size={22} className="text-purple-600" />,
+        description:
+          'Excessive time spent on uncertain questions created time pressure and avoidable errors. Implementing a 90-second skip protocol will optimize pacing.',
       };
     case 'NEGATIVE_MARKING_HEAVY':
       return {
-        label: 'Heavy Negative Marking Impact',
-        bg: 'bg-amber-50 border-amber-200 text-amber-800',
-        badge: 'bg-amber-100 text-amber-800 border-amber-300',
-        icon: <Zap size={20} className="text-amber-600" />,
-        description:
-          'Losses due to incorrect choices materially impacted your total score. Skipping low-confidence questions would yield higher net marks.',
-      };
-    case 'OVERCONFIDENT_SPEED':
-      return {
-        label: 'Overconfident Speed',
+        label: 'Heavy Negative Marking Penalty',
         bg: 'bg-orange-50 border-orange-200 text-orange-800',
         badge: 'bg-orange-100 text-orange-800 border-orange-300',
-        icon: <Clock size={20} className="text-orange-600" />,
+        icon: <Zap size={22} className="text-orange-600" />,
         description:
-          'Rapid answering on moderate questions resulted in avoidable errors. Slowing down slightly improves precision.',
+          'Negative marking penalty significantly reduced your net score. Calibrating question selection and eliminating blind guesses preserves essential marks.',
       };
-    case 'TIME_STARVED_RUSHING':
+    case 'KNOWLEDGE_GAP':
       return {
-        label: 'Time-Starved End Rushing',
-        bg: 'bg-purple-50 border-purple-200 text-purple-800',
-        badge: 'bg-purple-100 text-purple-800 border-purple-300',
-        icon: <Clock size={20} className="text-purple-600" />,
-        description:
-          'A significant drop in accuracy occurred in the final 20% of exam time. Improving pacing prevents end-game rushing.',
-      };
-    case 'SELECTIVE_PRECISION':
-      return {
-        label: 'Selective Precision',
+        label: 'Foundational Knowledge Focus',
         bg: 'bg-blue-50 border-blue-200 text-blue-800',
         badge: 'bg-blue-100 text-blue-800 border-blue-300',
-        icon: <Sparkles size={20} className="text-blue-600" />,
+        icon: <BookOpen size={22} className="text-blue-600" />,
         description:
-          'High accuracy achieved on attempted items, though overall attempt count was conservative. Expanding attempt coverage can unlock additional marks.',
+          'Errors are distributed across standard questions rather than reckless guessing. Prioritize foundational concept revisions over attempt strategy changes.',
       };
-    case 'EFFECTIVE_REVIEW_MANAGEMENT':
+    case 'INSUFFICIENT_DATA':
       return {
-        label: 'Effective Review Management',
-        bg: 'bg-teal-50 border-teal-200 text-teal-800',
-        badge: 'bg-teal-100 text-teal-800 border-teal-300',
-        icon: <Bookmark size={20} className="text-teal-600" />,
+        label: 'Insufficient Attempt Data',
+        bg: 'bg-slate-50 border-slate-200 text-slate-800',
+        badge: 'bg-slate-100 text-slate-700 border-slate-300',
+        icon: <Info size={22} className="text-slate-600" />,
         description:
-          'Questions marked for review and revisited showed a positive accuracy conversion rate.',
-      };
-    case 'INEFFECTIVE_REVIEW_DOUBT':
-      return {
-        label: 'Ineffective Review Revisions',
-        bg: 'bg-indigo-50 border-indigo-200 text-indigo-800',
-        badge: 'bg-indigo-100 text-indigo-800 border-indigo-300',
-        icon: <RotateCw size={20} className="text-indigo-600" />,
-        description:
-          'Reviewing items caused second-guessing that converted initially correct answers to incorrect options.',
+          'Too few questions were attempted in this session. Complete a full-length mock test to generate high-confidence AI strategy diagnostics.',
       };
     case 'BALANCED':
     default:
@@ -102,10 +102,53 @@ const getClassificationConfig = (code: StrategyClassificationCode | string) => {
         label: 'Balanced Strategy',
         bg: 'bg-emerald-50 border-emerald-200 text-emerald-800',
         badge: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-        icon: <CheckCircle2 size={20} className="text-emerald-600" />,
+        icon: <CheckCircle2 size={22} className="text-emerald-600" />,
         description:
           'You maintained healthy attempt coverage and solid accuracy while keeping negative marking strictly controlled.',
       };
+  }
+};
+
+const getConfidenceBadge = (confidence?: StrategyConfidence) => {
+  switch (confidence) {
+    case 'HIGH':
+      return {
+        label: 'High Confidence',
+        badge: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+      };
+    case 'MEDIUM':
+      return {
+        label: 'Medium Confidence',
+        badge: 'bg-amber-100 text-amber-800 border-amber-300',
+      };
+    case 'LOW':
+    default:
+      return {
+        label: 'Preliminary Signal',
+        badge: 'bg-slate-100 text-slate-700 border-slate-300',
+      };
+  }
+};
+
+const getTrendBadge = (trend?: StrategyTrend) => {
+  switch (trend) {
+    case 'IMPROVING':
+      return {
+        label: '▲ Improving Trajectory',
+        badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      };
+    case 'DECLINING':
+      return {
+        label: '▼ Declining Risk',
+        badge: 'bg-rose-50 text-rose-700 border-rose-200',
+      };
+    case 'STABLE':
+      return {
+        label: '● Stable Pattern',
+        badge: 'bg-slate-50 text-slate-600 border-slate-200',
+      };
+    default:
+      return null;
   }
 };
 
@@ -132,6 +175,7 @@ export const AttemptStrategyView: React.FC<Props> = ({
   onRecalculate,
   isRecalculating,
 }) => {
+  const navigate = useNavigate();
   const strategy = propStrategy || attemptStrategy;
   const overall: OverallPerformanceMetrics = propOverall || {
     totalMarks: 0,
@@ -154,11 +198,14 @@ export const AttemptStrategyView: React.FC<Props> = ({
   const [avoidedGuessesCount, setAvoidedGuessesCount] = useState<number>(
     overall.wrongCount > 0 ? Math.min(3, overall.wrongCount) : 0,
   );
+  const [showEvidenceDrawer, setShowEvidenceDrawer] = useState<boolean>(false);
   const [showEvidenceForId, setShowEvidenceForId] = useState<string | null>(null);
 
-  // Fallback / Normalized values
-  const primaryClass = detailedStrategy?.primaryClassification || 'HIGH_RISK_ATTEMPTING';
+  // Fallback / Normalized values from DetailedStrategyAnalysis
+  const primaryClass = detailedStrategy?.primaryClassification || 'BALANCED';
   const classConfig = getClassificationConfig(primaryClass);
+  const confConfig = getConfidenceBadge(detailedStrategy?.confidence);
+  const trendConfig = getTrendBadge(detailedStrategy?.trend);
 
   const metrics = detailedStrategy?.metrics;
   const negativeMarksLost =
@@ -173,69 +220,168 @@ export const AttemptStrategyView: React.FC<Props> = ({
     metrics?.projectedScore ?? Math.round((overall.obtainedMarks + avoidableLoss) * 10) / 10;
 
   const recommendations = detailedStrategy?.recommendations || [];
+  const signals = detailedStrategy?.signals || [];
 
-  // Simulator
-  const avgNegativePerWrong = overall.wrongCount > 0 ? negativeMarksLost / overall.wrongCount : 1;
-  const simulatedSavedMarks = Math.round(avoidedGuessesCount * avgNegativePerWrong * 10) / 10;
-  const simulatedScore = Math.round((overall.obtainedMarks + simulatedSavedMarks) * 10) / 10;
+  // Simulator calculation
+  const avgNegativePerWrong =
+    overall.wrongCount > 0 ? negativeMarksLost / overall.wrongCount : 1;
+  const simulatedSavedMarks =
+    Math.round(avoidedGuessesCount * avgNegativePerWrong * 10) / 10;
+  const simulatedScore =
+    Math.round((overall.obtainedMarks + simulatedSavedMarks) * 10) / 10;
 
   return (
     <div className="space-y-6">
-      {/* ── 1. Hero Strategy Classification Banner ──────────────────── */}
-      <div className={cn('rounded-3xl border p-6 md:p-8 shadow-sm transition-all', classConfig.bg)}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* ── 1. Hero Strategy Decision Engine Banner ────────────────── */}
+      <div
+        className={cn(
+          'rounded-3xl border p-6 md:p-8 shadow-sm transition-all',
+          classConfig.bg,
+        )}
+      >
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div className="flex items-start gap-4">
-            <div className="p-3 rounded-2xl bg-white shadow-sm border border-slate-100">
+            <div className="p-3.5 rounded-2xl bg-white shadow-sm border border-slate-100 shrink-0">
               {classConfig.icon}
             </div>
-            <div>
+            <div className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Strategy Diagnostic
+                <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                  AI Strategy Diagnostic
                 </span>
                 <span
                   className={cn(
-                    'px-2.5 py-0.5 rounded-full text-xs font-extrabold border',
+                    'px-2.5 py-0.5 rounded-full text-xs font-black border',
                     classConfig.badge,
                   )}
                 >
                   {classConfig.label}
                 </span>
-                {detailedStrategy?.classifications?.map((c) =>
-                  c !== primaryClass ? (
-                    <span
-                      key={c}
-                      className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-white/80 border border-slate-200 text-slate-700"
-                    >
-                      {c.replace(/_/g, ' ')}
-                    </span>
-                  ) : null,
+                <span
+                  className={cn(
+                    'px-2.5 py-0.5 rounded-full text-xs font-bold border',
+                    confConfig.badge,
+                  )}
+                >
+                  {confConfig.label}
+                </span>
+                {trendConfig && (
+                  <span
+                    className={cn(
+                      'px-2.5 py-0.5 rounded-full text-[11px] font-bold border',
+                      trendConfig.badge,
+                    )}
+                  >
+                    {trendConfig.label}
+                  </span>
                 )}
               </div>
-              <h2 className="text-xl md:text-2xl font-black mt-1 text-slate-900">
+
+              <h2 className="text-xl md:text-2xl font-black text-slate-900">
                 {classConfig.label}
               </h2>
-              <p className="text-sm mt-1 max-w-3xl leading-relaxed opacity-90">
-                {classConfig.description}
+
+              <p className="text-sm font-medium text-slate-800 leading-relaxed max-w-3xl">
+                {detailedStrategy?.whyStatement || classConfig.description}
               </p>
+
+              {/* Secondary Classifications */}
+              {detailedStrategy?.secondaryClassifications &&
+                detailedStrategy.secondaryClassifications.length > 0 && (
+                  <div className="flex items-center gap-2 pt-1 flex-wrap">
+                    <span className="text-xs font-bold text-slate-500">Secondary Factors:</span>
+                    {detailedStrategy.secondaryClassifications.map((sec) => (
+                      <span
+                        key={sec}
+                        className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-white/90 border border-slate-200 text-slate-700 shadow-2xs"
+                      >
+                        {sec.replace(/_/g, ' ')}
+                      </span>
+                    ))}
+                  </div>
+                )}
             </div>
           </div>
 
-          {onRecalculate && (
-            <button
-              onClick={onRecalculate}
-              disabled={isRecalculating}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 shadow-sm hover:bg-slate-50 active:scale-95 transition-all self-start md:self-auto"
-            >
-              <RotateCw size={14} className={cn({ 'animate-spin': isRecalculating })} />
-              <span>{isRecalculating ? 'Recalculating...' : 'Recalculate'}</span>
-            </button>
+          {/* Recalculate & Action Links */}
+          <div className="flex items-center gap-2 shrink-0 self-start md:self-auto">
+            {detailedStrategy?.actionRecommendation && (
+              <button
+                onClick={() =>
+                  navigate(detailedStrategy.actionRecommendation!.targetUrl)
+                }
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 active:scale-95 transition-all"
+              >
+                <span>{detailedStrategy.actionRecommendation.label}</span>
+                <ArrowRight size={13} />
+              </button>
+            )}
+
+            {onRecalculate && (
+              <button
+                onClick={onRecalculate}
+                disabled={isRecalculating}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 shadow-sm hover:bg-slate-50 active:scale-95 transition-all"
+              >
+                <RotateCw
+                  size={14}
+                  className={cn({ 'animate-spin': isRecalculating })}
+                />
+                <span>{isRecalculating ? 'Recalculating...' : 'Recalculate'}</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Expandable "Why am I seeing this?" Section */}
+        <div className="mt-6 pt-4 border-t border-slate-200/60 flex flex-col gap-3">
+          <button
+            onClick={() => setShowEvidenceDrawer(!showEvidenceDrawer)}
+            className="inline-flex items-center gap-2 text-xs font-extrabold text-slate-700 hover:text-indigo-600 transition-colors self-start"
+          >
+            <HelpCircle size={14} className="text-indigo-600" />
+            <span>Why am I seeing this decision? (Inspect Behavioral Signals)</span>
+            {showEvidenceDrawer ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+
+          {showEvidenceDrawer && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+              {signals.length > 0 ? (
+                signals.map((sig, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1"
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider truncate">
+                        {sig.name}
+                      </span>
+                      <span className="text-xs font-black text-indigo-700 font-mono">
+                        {sig.value}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-700 font-medium leading-tight">
+                      {sig.evidence}
+                    </p>
+                    {sig.impact && (
+                      <span className="text-[11px] font-bold text-amber-700 block">
+                        Impact: {sig.impact}
+                      </span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 rounded-xl bg-white text-xs text-slate-600">
+                  Decision generated from {overall.totalQuestions} questions across accuracy, pacing, and negative marking penalty data.
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
 
       {/* ── Negative Marking Impact & Recovery Callout ──────────────── */}
-      {(strategy?.potentialScoreGainMessage || negativeMarksLost >= 4) && (
+      {(negativeMarksLost > 0 || avoidableLoss > 0) && (
         <div className="rounded-3xl border border-indigo-200 bg-gradient-to-r from-indigo-900 via-indigo-950 to-purple-950 p-6 text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
           <div className="flex items-start gap-4">
             <div className="h-12 w-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
@@ -244,64 +390,29 @@ export const AttemptStrategyView: React.FC<Props> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-300">
-                  Negative Marking Score Recovery
+                  Evidence-Based Score Recovery
                 </span>
                 <span className="rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-black px-2.5 py-0.5">
-                  +{Math.round(negativeMarksLost)} Marks Recovery Potential
+                  +{avoidableLoss} Marks Avoidable Loss
                 </span>
               </div>
               <p className="text-sm text-indigo-100 font-medium mt-1 leading-relaxed max-w-2xl">
-                {strategy?.potentialScoreGainMessage ||
-                  `Score could improve by ~${Math.round(negativeMarksLost)} marks by eliminating low-confidence wrong guesses. Potential score: ${Math.round(overall.obtainedMarks + negativeMarksLost)}/${overall.totalMarks}.`}
+                Your score could improve by approximately{' '}
+                <strong>{avoidableLoss} marks</strong> by reducing low-probability attempts on high-risk questions.
               </p>
             </div>
           </div>
           <div className="rounded-2xl bg-white/10 border border-white/15 px-5 py-3 text-center shrink-0 w-full sm:w-auto">
             <span className="text-2xl font-black text-emerald-400 block">
-              {Math.round(overall.obtainedMarks + negativeMarksLost)}
-              <span className="text-sm font-normal text-indigo-200">/{overall.totalMarks}</span>
+              {projectedScore}
+              <span className="text-sm font-normal text-indigo-200">
+                /{overall.totalMarks}
+              </span>
             </span>
             <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wide">
               Potential Net Score
             </span>
           </div>
-        </div>
-      )}
-
-      {/* ── Attempt Behavior Warnings (Over/Under Attempting) ────────── */}
-      {(strategy?.overAttemptingWarning || strategy?.underAttemptingWarning) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {strategy?.overAttemptingWarning && (
-            <div className="rounded-3xl border border-rose-200 bg-rose-50/80 p-5 shadow-sm flex items-start gap-3.5">
-              <div className="h-9 w-9 rounded-xl bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-700 shrink-0 mt-0.5">
-                <ShieldAlert size={18} />
-              </div>
-              <div>
-                <h4 className="text-xs font-black uppercase text-rose-900 tracking-wider">
-                  Over-Attempting Behavior Detected
-                </h4>
-                <p className="text-xs text-rose-800 mt-1 leading-relaxed">
-                  {strategy.overAttemptingWarning}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {strategy?.underAttemptingWarning && (
-            <div className="rounded-3xl border border-amber-200 bg-amber-50/80 p-5 shadow-sm flex items-start gap-3.5">
-              <div className="h-9 w-9 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 shrink-0 mt-0.5">
-                <Info size={18} />
-              </div>
-              <div>
-                <h4 className="text-xs font-black uppercase text-amber-900 tracking-wider">
-                  Under-Attempting Behavior Detected
-                </h4>
-                <p className="text-xs text-amber-800 mt-1 leading-relaxed">
-                  {strategy.underAttemptingWarning}
-                </p>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -315,7 +426,9 @@ export const AttemptStrategyView: React.FC<Props> = ({
             {metrics?.attemptedPercentage ??
               strategy?.attemptRatio ??
               Math.round(
-                ((overall.correctCount + overall.wrongCount) / (overall.totalQuestions || 1)) * 100,
+                ((overall.correctCount + overall.wrongCount) /
+                  (overall.totalQuestions || 1)) *
+                  100,
               )}
             %
           </span>
@@ -341,11 +454,10 @@ export const AttemptStrategyView: React.FC<Props> = ({
             High-Risk Attempts
           </span>
           <span className="text-2xl font-black text-rose-600 mt-1 block">
-            {metrics?.highRiskAttemptCount ??
-              (overall.wrongCount > 0 ? Math.ceil(overall.wrongCount * 0.6) : 0)}
+            {metrics?.highRiskAttemptCount ?? 0}
           </span>
           <span className="text-[11px] text-rose-700 font-medium">
-            {metrics?.highRiskWrongCount ?? Math.ceil(overall.wrongCount * 0.4)} Incorrect
+            {metrics?.highRiskWrongCount ?? 0} Incorrect
           </span>
         </div>
 
@@ -353,7 +465,9 @@ export const AttemptStrategyView: React.FC<Props> = ({
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
             Negative Marks Lost
           </span>
-          <span className="text-2xl font-black text-rose-700 mt-1 block">−{negativeMarksLost}</span>
+          <span className="text-2xl font-black text-rose-700 mt-1 block">
+            −{negativeMarksLost}
+          </span>
           <span className="text-[11px] text-slate-500 font-medium">
             across {overall.wrongCount} errors
           </span>
@@ -366,14 +480,18 @@ export const AttemptStrategyView: React.FC<Props> = ({
           <span className="text-2xl font-black text-amber-600 mt-1 block">
             {avoidableLoss} Marks
           </span>
-          <span className="text-[11px] text-amber-700 font-medium">from high-risk errors</span>
+          <span className="text-[11px] text-amber-700 font-medium">
+            from high-risk errors
+          </span>
         </div>
 
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-center shadow-sm">
           <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">
             Projected Score
           </span>
-          <span className="text-2xl font-black text-emerald-700 mt-1 block">{projectedScore}</span>
+          <span className="text-2xl font-black text-emerald-700 mt-1 block">
+            {projectedScore}
+          </span>
           <span className="text-[11px] text-emerald-800 font-bold">
             +{avoidableLoss} potential recovery
           </span>
@@ -418,7 +536,9 @@ export const AttemptStrategyView: React.FC<Props> = ({
                 <span className="text-xs text-emerald-800 font-bold">
                   +{avoidableLoss} Marks (
                   {Math.round(
-                    ((projectedScore - overall.obtainedMarks) / (overall.totalMarks || 1)) * 100,
+                    ((projectedScore - overall.obtainedMarks) /
+                      (overall.totalMarks || 1)) *
+                      100,
                   )}
                   % boost)
                 </span>
@@ -430,14 +550,14 @@ export const AttemptStrategyView: React.FC<Props> = ({
               <p className="text-xs text-amber-900 leading-relaxed font-medium">
                 <strong>Model Note:</strong>{' '}
                 {detailedStrategy?.projectedImprovement?.disclaimer ||
-                  'Projected score improvement is an evidence-based estimate derived from eliminating avoidable losses on high-risk incorrect questions, not a guaranteed future score.'}
+                  'Estimated avoidable loss is calculated strictly from actual exam marking scheme penalties on high-risk incorrect answers. This is an evidence-based potential recovery estimate.'}
               </p>
             </div>
           </div>
 
           <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
-            <span>Algorithm: v1.0.0</span>
-            <span>Deterministic Rule Evaluation</span>
+            <span>Algorithm: v2.0.0</span>
+            <span>Deterministic Multi-Signal Decision Engine</span>
           </div>
         </div>
 
@@ -458,7 +578,10 @@ export const AttemptStrategyView: React.FC<Props> = ({
                   −{negativeMarksLost} Marks
                 </span>
                 <span className="text-xs font-bold text-rose-800 bg-rose-100/80 px-2.5 py-1 rounded-lg">
-                  {Math.round((negativeMarksLost / (overall.totalMarks || 1)) * 100)}% of Max Score
+                  {Math.round(
+                    (negativeMarksLost / (overall.totalMarks || 1)) * 100,
+                  )}
+                  % of Max Score
                 </span>
               </div>
               <p className="text-xs text-rose-900 mt-2 font-medium leading-relaxed">
@@ -491,7 +614,7 @@ export const AttemptStrategyView: React.FC<Props> = ({
 
               <div className="mt-3 flex items-center justify-between text-xs font-bold">
                 <span className="text-slate-500">0 avoided</span>
-                <span className="text-emerald-700 bg-emerald-100/90 px-3 py-1 rounded-lg shadow-xs">
+                <span className="text-emerald-700 bg-emerald-100/90 px-3 py-1 rounded-lg shadow-2xs">
                   Simulated Score: {simulatedScore} (+{simulatedSavedMarks} Marks)
                 </span>
                 <span className="text-slate-500">{overall.wrongCount} avoided</span>
@@ -517,19 +640,19 @@ export const AttemptStrategyView: React.FC<Props> = ({
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-600 font-medium">High Risk Attempts:</span>
               <span className="font-extrabold text-slate-900">
-                {metrics?.highRiskAttemptCount ?? 12}
+                {metrics?.highRiskAttemptCount ?? 0}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-600 font-medium">High Risk Incorrect:</span>
               <span className="font-extrabold text-rose-600">
-                {metrics?.highRiskWrongCount ?? 7}
+                {metrics?.highRiskWrongCount ?? 0}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-600 font-medium">Risk Accuracy:</span>
               <span className="font-extrabold text-slate-900">
-                {metrics?.highRiskAccuracy ?? 41.7}%
+                {metrics?.highRiskAccuracy ?? 0}%
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
@@ -549,24 +672,28 @@ export const AttemptStrategyView: React.FC<Props> = ({
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-600 font-medium">Time-Heavy Attempts:</span>
               <span className="font-extrabold text-slate-900">
-                {metrics?.timeHeavyAttemptCount ?? 8}
+                {metrics?.timeHeavyAttemptCount ?? 0}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-600 font-medium">Time-Heavy Incorrect:</span>
               <span className="font-extrabold text-purple-700">
-                {metrics?.timeHeavyWrongCount ?? 3}
+                {metrics?.timeHeavyWrongCount ?? 0}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-600 font-medium">Average Time / Question:</span>
+              <span className="text-slate-600 font-medium">Unused Exam Time:</span>
+              <span className="font-extrabold text-indigo-700">
+                {metrics?.unusedTimeMinutes ?? 0} mins
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-600 font-medium">Avg Time / Question:</span>
               <span className="font-extrabold text-slate-900">
-                {overall.averageTimePerQuestionSeconds}s
+                {metrics?.averageTimePerQuestionSeconds ??
+                  overall.averageTimePerQuestionSeconds}
+                s
               </span>
-            </div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-600 font-medium">Time Utilization:</span>
-              <span className="font-extrabold text-indigo-700">96.7%</span>
             </div>
           </div>
         </div>
@@ -581,32 +708,29 @@ export const AttemptStrategyView: React.FC<Props> = ({
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-600 font-medium">Marked for Review:</span>
               <span className="font-extrabold text-slate-900">
-                {metrics?.reviewedQuestionCount ??
-                  strategy?.reviewBehavior?.markedForReviewCount ??
-                  14}
+                {metrics?.reviewedQuestionCount ?? 0}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-600 font-medium">Correct on Review:</span>
               <span className="font-extrabold text-emerald-600">
-                {metrics?.reviewedCorrectCount ??
-                  strategy?.reviewBehavior?.markedAndCorrectCount ??
-                  11}
+                {metrics?.reviewedCorrectCount ?? 0}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-600 font-medium">Wrong on Review:</span>
               <span className="font-extrabold text-rose-600">
-                {metrics?.reviewedWrongCount ?? strategy?.reviewBehavior?.markedAndWrongCount ?? 3}
+                {metrics?.reviewedWrongCount ?? 0}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-slate-600 font-medium">Review Conversion Rate:</span>
               <span className="font-extrabold text-emerald-700">
-                {Math.round(
-                  ((metrics?.reviewedCorrectCount ?? 11) / (metrics?.reviewedQuestionCount || 14)) *
-                    100,
-                )}
+                {metrics?.reviewedQuestionCount && metrics.reviewedQuestionCount > 0
+                  ? Math.round(
+                      (metrics.reviewedCorrectCount / metrics.reviewedQuestionCount) * 100,
+                    )
+                  : 0}
                 %
               </span>
             </div>
@@ -614,21 +738,20 @@ export const AttemptStrategyView: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* ── 5. Rule Engine Generated Strategy Recommendations ──────── */}
+      {/* ── 5. AI Decision Engine Generated Strategy Recommendations ── */}
       <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 text-indigo-600 font-extrabold text-sm">
               <BarChart3 size={18} />
-              <span>Evidence-Based Strategy Recommendations</span>
+              <span>Personalized Strategy Next Steps</span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Deterministic insights generated from your observed attempt patterns and calibrated
-              against official marking thresholds.
+              Deterministic, explainable insights generated from your observed behavioral signals and calibrated against official marking schemes.
             </p>
           </div>
           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
-            {recommendations.length} Actionable Rules
+            {recommendations.length} Actionable Recommendations
           </span>
         </div>
 
@@ -648,7 +771,9 @@ export const AttemptStrategyView: React.FC<Props> = ({
                       </span>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="text-base font-extrabold text-slate-900">{rec.title}</h4>
+                          <h4 className="text-base font-extrabold text-slate-900">
+                            {rec.title}
+                          </h4>
                           <span
                             className={cn(
                               'px-2 py-0.5 rounded-full text-[10px] font-extrabold border',
@@ -657,9 +782,11 @@ export const AttemptStrategyView: React.FC<Props> = ({
                           >
                             {rec.severity}
                           </span>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white border border-slate-200 text-slate-600">
-                            {rec.category?.replace(/_/g, ' ')}
-                          </span>
+                          {rec.confidence && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white border border-slate-200 text-slate-600">
+                              {rec.confidence} Confidence
+                            </span>
+                          )}
                         </div>
 
                         <p className="text-xs text-slate-700 mt-1.5 leading-relaxed font-medium">
@@ -669,20 +796,36 @@ export const AttemptStrategyView: React.FC<Props> = ({
                         {rec.estimatedImpactMarks > 0 && (
                           <div className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100/70 text-emerald-800 text-xs font-extrabold">
                             <TrendingUp size={13} />
-                            <span>Estimated Mark Recovery: +{rec.estimatedImpactMarks} Marks</span>
+                            <span>
+                              Estimated Mark Recovery: +{rec.estimatedImpactMarks} Marks
+                            </span>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {rec.evidence && Object.keys(rec.evidence).length > 0 && (
-                      <button
-                        onClick={() => setShowEvidenceForId(isEvidenceOpen ? null : rec.id)}
-                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 self-start sm:self-center flex-shrink-0"
-                      >
-                        {isEvidenceOpen ? 'Hide Evidence' : 'Inspect Evidence'}
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                      {rec.action && (
+                        <button
+                          onClick={() => navigate(rec.action!.targetUrl)}
+                          className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition-all shadow-2xs"
+                        >
+                          <span>{rec.action.label}</span>
+                          <ArrowRight size={12} />
+                        </button>
+                      )}
+
+                      {rec.evidence && Object.keys(rec.evidence).length > 0 && (
+                        <button
+                          onClick={() =>
+                            setShowEvidenceForId(isEvidenceOpen ? null : rec.id)
+                          }
+                          className="text-xs font-bold text-slate-600 hover:text-indigo-600 flex-shrink-0"
+                        >
+                          {isEvidenceOpen ? 'Hide Evidence' : 'Inspect Evidence'}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Evidence Drawer */}
@@ -696,7 +839,10 @@ export const AttemptStrategyView: React.FC<Props> = ({
                         )
                         .slice(0, 8)
                         .map(([k, v]) => (
-                          <div key={k} className="p-2 rounded-xl bg-white border border-slate-200">
+                          <div
+                            key={k}
+                            className="p-2 rounded-xl bg-white border border-slate-200"
+                          >
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block truncate">
                               {k.replace(/([A-Z])/g, ' $1')}
                             </span>
@@ -712,24 +858,8 @@ export const AttemptStrategyView: React.FC<Props> = ({
             })}
           </div>
         ) : (
-          <div className="space-y-3">
-            {(
-              strategy?.strategicTakeaways || [
-                'Maintain high accuracy in core topics while setting strict time limits on uncertain attempts.',
-                'Avoid guessing on hard questions where historical accuracy is below 50%.',
-                'Continue utilizing Mark for Review as your review conversion rate is positive.',
-              ]
-            ).map((takeaway, idx) => (
-              <div
-                key={idx}
-                className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 flex items-start gap-3"
-              >
-                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-extrabold flex items-center justify-center flex-shrink-0 mt-0.5">
-                  {idx + 1}
-                </span>
-                <p className="text-xs text-slate-700 font-medium leading-relaxed">{takeaway}</p>
-              </div>
-            ))}
+          <div className="p-6 rounded-2xl bg-slate-50 text-center text-xs text-slate-500">
+            No severe strategy flaws detected. Keep up your balanced approach!
           </div>
         )}
       </div>

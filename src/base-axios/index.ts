@@ -139,7 +139,7 @@ Axios.interceptors.response.use(
         // 4. Retry original request ONLY ONCE with updated cookies automatically sent by browser
         return Axios(originalConfig);
       } catch (refreshErr) {
-        toast.error('Session expired. Please log in again.');
+        // toast.error('Session expired. Please log in again.');
         return Promise.reject(refreshErr);
       }
     }

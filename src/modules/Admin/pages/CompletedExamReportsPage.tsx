@@ -1023,18 +1023,43 @@ export const CompletedExamReportsPage: React.FC = () => {
                         </div>
 
                         <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3">
-                          <h5 className="font-bold text-emerald-700 text-xs uppercase tracking-wider">Strategy Profile</h5>
+                          <h5 className="font-bold text-emerald-700 text-xs uppercase tracking-wider">
+                            AI Strategy Profile & Diagnostics
+                          </h5>
                           <div className="space-y-2 text-xs text-slate-700">
                             <div className="flex justify-between py-1 border-b border-slate-200">
-                              <span className="text-slate-500">Risk Profile:</span>
-                              <span className="font-bold text-emerald-700">
-                                {(analysisData.analysis?.attemptStrategy?.riskProfile || 'BALANCED').replace('_', ' ')}
+                              <span className="text-slate-500">Primary Strategy Issue:</span>
+                              <span className="font-bold text-indigo-700">
+                                {(
+                                  analysisData.analysis?.strategyAnalysis?.primaryClassification ||
+                                  analysisData.analysis?.attemptStrategy?.riskProfile ||
+                                  'BALANCED'
+                                ).replace(/_/g, ' ')}
                               </span>
                             </div>
                             <div className="flex justify-between py-1 border-b border-slate-200">
-                              <span className="text-slate-500">Avoidable Loss:</span>
+                              <span className="text-slate-500">Confidence Level:</span>
+                              <span className="font-semibold text-emerald-700">
+                                {analysisData.analysis?.strategyAnalysis?.confidence || 'HIGH'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between py-1 border-b border-slate-200">
+                              <span className="text-slate-500">Avoidable Negative Loss:</span>
                               <span className="font-mono font-bold text-rose-600">
-                                ~{(analysisData.analysis?.wrongAnswers || 0) * 1} marks
+                                −{analysisData.analysis?.strategyAnalysis?.avoidableNegativeMarks ??
+                                  analysisData.analysis?.strategyAnalysis?.metrics?.avoidableNegativeMarks ??
+                                  Math.round((analysisData.analysis?.wrongAnswers || 0) * 1)}{' '}
+                                Marks
+                              </span>
+                            </div>
+                            <div className="flex justify-between py-1 border-b border-slate-200">
+                              <span className="text-slate-500">Estimated Projected Score:</span>
+                              <span className="font-mono font-bold text-emerald-600">
+                                {analysisData.analysis?.strategyAnalysis?.projectedScore ??
+                                  analysisData.analysis?.strategyAnalysis?.metrics?.projectedScore ??
+                                  (analysisData.analysis?.score || 0) +
+                                    (analysisData.analysis?.wrongAnswers || 0)}{' '}
+                                Marks
                               </span>
                             </div>
                           </div>

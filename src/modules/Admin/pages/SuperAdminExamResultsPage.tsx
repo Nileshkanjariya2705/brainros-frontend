@@ -18,6 +18,7 @@ import {
   Layers,
   FileCheck2,
   HelpCircle,
+  Activity,
 } from 'lucide-react';
 
 // ** Services **
@@ -440,13 +441,27 @@ export const SuperAdminExamResultsPage: React.FC = () => {
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 animate-pulse">
                                 <Award className="w-3.5 h-3.5" /> Ready to Publish
                               </span>
-                              <Button
-                                size="sm"
-                                onClick={() => handleOpenPublishModal(exam.examId)}
-                                className="mt-2 bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white shadow-md font-semibold text-xs flex items-center gap-1.5"
-                              >
-                                <Send className="w-3.5 h-3.5" /> Publish Results
-                              </Button>
+                              <div className="flex flex-col gap-1.5 mt-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleOpenPublishModal(exam.examId)}
+                                  className="bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white shadow-md font-semibold text-xs flex items-center gap-1.5"
+                                >
+                                  <Send className="w-3.5 h-3.5" /> Publish Results
+                                </Button>
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  onClick={() =>
+                                    navigate(
+                                      `/super-admin/exams/result-processing?examId=${exam.examId}`,
+                                    )
+                                  }
+                                  className="text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-xs flex items-center gap-1"
+                                >
+                                  <Activity className="w-3 h-3" /> Monitor Pipeline
+                                </Button>
+                              </div>
                             </div>
                           ) : (
                             <div>
@@ -458,6 +473,18 @@ export const SuperAdminExamResultsPage: React.FC = () => {
                                   {exam.notReadyReason}
                                 </div>
                               )}
+                              <Button
+                                size="xs"
+                                variant="outline"
+                                onClick={() =>
+                                  navigate(
+                                    `/super-admin/exams/result-processing?examId=${exam.examId}`,
+                                  )
+                                }
+                                className="mt-2 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-xs flex items-center gap-1"
+                              >
+                                <Activity className="w-3 h-3" /> Monitor Pipeline
+                              </Button>
                             </div>
                           )}
                         </div>

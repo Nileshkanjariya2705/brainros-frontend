@@ -94,3 +94,13 @@ export const masterKeys = {
   states: () => [...masterKeys.all, 'states'] as const,
   districts: (stateId: string) => [...masterKeys.all, 'districts', stateId] as const,
 };
+
+export const examProcessingKeys = {
+  all: ['exam-processing'] as const,
+  summary: (examId: string) => [...examProcessingKeys.all, 'summary', examId] as const,
+  jobs: (examId: string, filters: Record<string, any> = {}) =>
+    [...examProcessingKeys.all, 'jobs', examId, filters] as const,
+  jobDetail: (examId: string, jobId: string) =>
+    [...examProcessingKeys.all, 'job-detail', examId, jobId] as const,
+};
+

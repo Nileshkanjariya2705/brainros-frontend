@@ -10,6 +10,9 @@ import {
   RefreshCw,
   Database,
   Sliders,
+  UserCheck,
+  Target,
+  Clock,
 } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 
@@ -210,68 +213,166 @@ export const SuperAdminDashboardPage = () => {
         </div>
       </div>
 
-      {/* ── 1. SUPER ADMIN OVERVIEW METRIC CARDS ────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* TOTAL STUDENTS */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Students</span>
-            <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
-              <Users className="h-5 w-5" />
-            </div>
+      {/* ── 1. SUPER ADMIN REGISTRATION TELEMETRY & OVERVIEW CARDS ────────────────────────────── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4 text-indigo-600" />
+            <h2 className="text-xs font-black uppercase tracking-wider text-slate-700">
+              Live Registration Telemetry
+            </h2>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Live Database
+            </span>
           </div>
-          <div className="text-3xl font-black text-slate-900">
-            {isLoadingOverview ? '...' : (overview?.totalStudents ?? 0).toLocaleString()}
-          </div>
-          <p className="text-[11px] text-indigo-600 font-semibold">
-            Total registered student accounts
-          </p>
+          <Link
+            to={PRIVATE_NAVIGATION.superAdminRegistrations}
+            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:underline flex items-center gap-1"
+          >
+            <span>View All Registrations</span>
+            <span>&rarr;</span>
+          </Link>
         </div>
 
-        {/* ACTIVE STUDENTS */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Active Students</span>
-            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
-              <ShieldCheck className="h-5 w-5" />
+        {/* 5-Card Grid for Registrations */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          {/* TOTAL REGISTRATIONS */}
+          <Link
+            to={PRIVATE_NAVIGATION.superAdminRegistrations}
+            className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1.5 hover:border-indigo-300 hover:shadow-md transition group"
+          >
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Total Registrations</span>
+              <div className="p-1.5 rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition">
+                <Users className="h-4 w-4" />
+              </div>
             </div>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900">
+              {isLoadingOverview ? '...' : (overview?.totalRegistrations ?? overview?.totalStudents ?? 0).toLocaleString()}
+            </div>
+            <p className="text-[10px] text-indigo-600 font-semibold">
+              Total registered accounts &rarr;
+            </p>
+          </Link>
+
+          {/* TODAY (IST) */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Today (IST)</span>
+              <div className="p-1.5 rounded-xl bg-indigo-50 text-indigo-600">
+                <Clock className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-indigo-700">
+              {isLoadingOverview ? '...' : (overview?.todayRegistrations ?? 0).toLocaleString()}
+            </div>
+            <p className="text-[10px] text-indigo-600 font-semibold">Registered on current date</p>
           </div>
-          <div className="text-3xl font-black text-emerald-700">
-            {isLoadingOverview ? '...' : (overview?.activeStudents ?? 0).toLocaleString()}
+
+          {/* NEET ASPIRANTS */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-[10px] font-bold uppercase tracking-wider">NEET Registrations</span>
+              <div className="p-1.5 rounded-xl bg-rose-50 text-rose-600">
+                <Target className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-rose-700">
+              {isLoadingOverview ? '...' : (overview?.neetRegistrations ?? 0).toLocaleString()}
+            </div>
+            <p className="text-[10px] text-rose-600 font-semibold">Medical entrance stream</p>
           </div>
-          <p className="text-[11px] text-emerald-600 font-semibold">
-            {overview?.activePercentage ?? 0}% active account ratio
-          </p>
+
+          {/* JEE ASPIRANTS */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-[10px] font-bold uppercase tracking-wider">JEE Registrations</span>
+              <div className="p-1.5 rounded-xl bg-blue-50 text-blue-600">
+                <Target className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-blue-700">
+              {isLoadingOverview ? '...' : (overview?.jeeRegistrations ?? 0).toLocaleString()}
+            </div>
+            <p className="text-[10px] text-blue-600 font-semibold">Engineering stream</p>
+          </div>
+
+          {/* CET ASPIRANTS */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1.5 col-span-2 sm:col-span-1">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-[10px] font-bold uppercase tracking-wider">CET Registrations</span>
+              <div className="p-1.5 rounded-xl bg-amber-50 text-amber-600">
+                <Target className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-amber-700">
+              {isLoadingOverview ? '...' : (overview?.cetRegistrations ?? 0).toLocaleString()}
+            </div>
+            <p className="text-[10px] text-amber-600 font-semibold">State common tests</p>
+          </div>
         </div>
 
-        {/* EXAMS CONDUCTED */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Exams Conducted</span>
-            <div className="p-2 rounded-xl bg-purple-50 text-purple-600">
-              <Award className="h-5 w-5" />
+        {/* 4-Card Platform Telemetry Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+          {/* ACTIVE STUDENTS */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Active Accounts</span>
+              <div className="p-1.5 rounded-xl bg-emerald-50 text-emerald-600">
+                <ShieldCheck className="h-4 w-4" />
+              </div>
             </div>
+            <div className="text-2xl sm:text-3xl font-black text-emerald-700">
+              {isLoadingOverview ? '...' : (overview?.activeStudents ?? 0).toLocaleString()}
+            </div>
+            <p className="text-[10px] text-emerald-600 font-semibold">
+              {overview?.activePercentage ?? 0}% verified active ratio
+            </p>
           </div>
-          <div className="text-3xl font-black text-purple-700">
-            {isLoadingOverview ? '...' : (overview?.examsConducted ?? 0).toLocaleString()}
-          </div>
-          <p className="text-[11px] text-purple-600 font-semibold">Completed & evaluated tests</p>
-        </div>
 
-        {/* TOTAL ATTEMPTS */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider">Total Attempts</span>
-            <div className="p-2 rounded-xl bg-amber-50 text-amber-600">
-              <BookOpen className="h-5 w-5" />
+          {/* EXAMS CONDUCTED */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Exams Conducted</span>
+              <div className="p-1.5 rounded-xl bg-purple-50 text-purple-600">
+                <Award className="h-4 w-4" />
+              </div>
             </div>
+            <div className="text-2xl sm:text-3xl font-black text-purple-700">
+              {isLoadingOverview ? '...' : (overview?.examsConducted ?? 0).toLocaleString()}
+            </div>
+            <p className="text-[10px] text-purple-600 font-semibold">Evaluated & completed tests</p>
           </div>
-          <div className="text-3xl font-black text-amber-700">
-            {isLoadingOverview ? '...' : (overview?.totalAttempts ?? 0).toLocaleString()}
+
+          {/* TOTAL ATTEMPTS */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Test Attempts</span>
+              <div className="p-1.5 rounded-xl bg-amber-50 text-amber-600">
+                <BookOpen className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-amber-700">
+              {isLoadingOverview ? '...' : (overview?.totalAttempts ?? 0).toLocaleString()}
+            </div>
+            <p className="text-[10px] text-amber-600 font-semibold">
+              {overview?.completedAttempts ?? 0} submitted submissions
+            </p>
           </div>
-          <p className="text-[11px] text-amber-600 font-semibold">
-            {overview?.completedAttempts ?? 0} submitted submissions
-          </p>
+
+          {/* INSTITUTIONS */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-1.5">
+            <div className="flex items-center justify-between text-slate-500">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Active Institutions</span>
+              <div className="p-1.5 rounded-xl bg-slate-100 text-slate-700">
+                <Database className="h-4 w-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-slate-900">
+              {isLoadingOverview ? '...' : (overview?.totalInstitutions ?? 0).toLocaleString()}
+            </div>
+            <p className="text-[10px] text-slate-500 font-semibold">B2B partner institutions</p>
+          </div>
         </div>
       </div>
 

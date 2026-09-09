@@ -144,6 +144,10 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
     path: PRIVATE_NAVIGATION.superAdminDashboard,
     roles: [ROLES.SUPER_ADMIN],
   },
+  [PRIVATE_NAVIGATION.superAdminRegistrations]: {
+    path: PRIVATE_NAVIGATION.superAdminRegistrations,
+    roles: [ROLES.SUPER_ADMIN],
+  },
   [PRIVATE_NAVIGATION.superAdminControlCenter]: {
     path: PRIVATE_NAVIGATION.superAdminControlCenter,
     roles: [ROLES.SUPER_ADMIN],

@@ -197,11 +197,10 @@ export const HomePage: React.FC = () => {
                 key={cat}
                 type="button"
                 onClick={() => setSelectedTarget(cat)}
-                className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
-                  selectedTarget === cat
+                className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${selectedTarget === cat
                     ? 'bg-indigo-600 text-slate-900 shadow-md shadow-indigo-500/30'
                     : 'border border-slate-200 bg-black/5 text-slate-600 hover:bg-black/10 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 {cat}
               </button>

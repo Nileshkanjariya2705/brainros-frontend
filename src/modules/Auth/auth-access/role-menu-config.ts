@@ -34,6 +34,8 @@ import {
   Award,
   Globe,
   UserPlus,
+  UserCheck,
+  Activity,
 } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 import { FEATURES } from '@/constants/feature-flag.constant';
@@ -398,6 +400,12 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         end: true,
       },
       {
+        key: 'registrations',
+        label: 'Registration',
+        to: PRIVATE_NAVIGATION.superAdminRegistrations,
+        icon: UserCheck,
+      },
+      {
         key: 'profile',
         label: 'My Profile',
         to: PRIVATE_NAVIGATION.superAdminProfile,
@@ -502,6 +510,12 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Result Publication Center',
         to: PRIVATE_NAVIGATION.superAdminExamResults,
         icon: Award,
+      },
+      {
+        key: 'super-admin-result-processing',
+        label: 'Result Processing Monitor',
+        to: PRIVATE_NAVIGATION.superAdminExamResultProcessing,
+        icon: Activity,
       },
       {
         key: 'super-admin-completed-live-exams',

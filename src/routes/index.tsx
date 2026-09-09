@@ -38,6 +38,9 @@ const AdminDashboardPage = lazyRoute(() => import('@/modules/Dashboard/pages/Adm
 const SuperAdminDashboardPage = lazyRoute(
   () => import('@/modules/Dashboard/pages/SuperAdminDashboardPage'),
 );
+const SuperAdminRegistrationsPage = lazyRoute(
+  () => import('@/modules/Admin/pages/SuperAdminRegistrationsPage'),
+);
 const ParentDashboardLandingPage = lazyRoute(
   () => import('@/modules/Dashboard/pages/ParentDashboardLandingPage'),
 );
@@ -141,6 +144,9 @@ const StudentComparisonPage = lazyRoute(
 );
 const SuperAdminExamResultsPage = lazyRoute(
   () => import('@/modules/Admin/pages/SuperAdminExamResultsPage'),
+);
+const SuperAdminExamProcessingMonitorPage = lazyRoute(
+  () => import('@/modules/Admin/pages/SuperAdminExamProcessingMonitorPage'),
 );
 const SuperAdminBulkStudentRegistrationPage = lazyRoute(
   () => import('@/modules/Admin/pages/SuperAdminBulkStudentRegistrationPage'),
@@ -423,6 +429,14 @@ const adminRoutes: RouteObject[] = [
         ),
       },
       {
+        path: 'exams/result-processing',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.RESULT_VIEW]}>
+            <SuperAdminExamProcessingMonitorPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'completed-exams',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.RESULT_VIEW]}>
@@ -592,6 +606,7 @@ const superAdminRoutes: RouteObject[] = [
     ),
     children: [
       { path: 'dashboard', element: <SuperAdminDashboardPage /> },
+      { path: 'registrations', element: <SuperAdminRegistrationsPage /> },
       {
         path: 'question-bank',
         element: (
@@ -641,6 +656,7 @@ const superAdminRoutes: RouteObject[] = [
       { path: 'mock-tests', element: <ExamManagementPage /> },
       { path: 'exams', element: <ExamManagementPage /> },
       { path: 'exams/results', element: <SuperAdminExamResultsPage /> },
+      { path: 'exams/result-processing', element: <SuperAdminExamProcessingMonitorPage /> },
       { path: 'completed-exams', element: <CompletedExamReportsPage /> },
       { path: 'exam-manager', element: <ExamManagerDashboardPage /> },
       { path: 'exam-manager/upload', element: <UploadQuestionPaperPage /> },

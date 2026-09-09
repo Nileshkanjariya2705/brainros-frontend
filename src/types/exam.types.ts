@@ -384,13 +384,39 @@ export type StrategyCategory =
 
 export type StrategySeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
+export type StrategyConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
+
+export type StrategyTrend =
+  | 'IMPROVING'
+  | 'STABLE'
+  | 'DECLINING'
+  | 'INSUFFICIENT_HISTORY';
+
 export type StrategyClassificationCode =
   | 'BALANCED'
   | 'OVER_ATTEMPTING'
   | 'UNDER_ATTEMPTING'
   | 'HIGH_RISK_ATTEMPTING'
   | 'TIME_HEAVY'
-  | 'NEGATIVE_MARKING_HEAVY';
+  | 'NEGATIVE_MARKING_HEAVY'
+  | 'KNOWLEDGE_GAP'
+  | 'INSUFFICIENT_DATA';
+
+export interface StrategySignal {
+  code: string;
+  name: string;
+  value: number | string;
+  weight: StrategySeverity;
+  evidence: string;
+  impact?: string;
+}
+
+export interface StrategyAction {
+  type: string;
+  label: string;
+  targetUrl: string;
+  description?: string;
+}
 
 export interface StrategyRecommendationItem {
   id: string;
@@ -400,10 +426,13 @@ export interface StrategyRecommendationItem {
   message: string;
   severity: StrategySeverity;
   priority: number;
+  confidence?: StrategyConfidence;
+  reason?: string;
   targetType?: 'EXAM' | 'SUBJECT' | 'CHAPTER';
   targetId?: string;
   evidence: Record<string, any>;
   estimatedImpactMarks: number;
+  action?: StrategyAction;
 }
 
 export interface StrategySummaryMetrics {
@@ -426,10 +455,14 @@ export interface StrategySummaryMetrics {
   reviewedQuestionCount: number;
   reviewedCorrectCount: number;
   reviewedWrongCount: number;
+  unusedTimeMinutes?: number;
+  unusedTimePercentage?: number;
+  averageTimePerQuestionSeconds?: number;
   projectedImprovementMarks: number;
   projectedScore: number;
   actualObtainedMarks: number;
   maxScore: number;
+  sampleSizeLevel?: 'INSUFFICIENT' | 'LOW' | 'MODERATE' | 'HIGH';
 }
 
 export interface DetailedStrategyAnalysis {
@@ -440,9 +473,16 @@ export interface DetailedStrategyAnalysis {
   algorithmVersion: string;
   generatedAt: string;
   primaryClassification: StrategyClassificationCode;
+  confidence?: StrategyConfidence;
+  confidenceScore?: number;
+  trend?: StrategyTrend;
+  whyStatement?: string;
+  signals?: StrategySignal[];
   classifications: StrategyClassificationCode[];
+  secondaryClassifications?: StrategyClassificationCode[];
   metrics: StrategySummaryMetrics;
   recommendations: StrategyRecommendationItem[];
+  actionRecommendation?: StrategyAction;
   projectedImprovement: {
     estimatedAvoidableLossMarks: number;
     projectedScore: number;
@@ -1500,10 +1540,21 @@ export interface StudentDashboardResponse {
     categoryRank?: number | null;
   } | null;
   predictedRank: {
+    available?: boolean;
+    reason?: string | null;
+    targetExam?: string | null;
+    targetExamName?: string | null;
+    predictedRank?: number | null;
     predictedRankMin: number | null;
     predictedRankMax: number | null;
     confidence: 'HIGH' | 'MEDIUM' | 'LOW' | null;
+    confidenceScore?: number | null;
+    scoreUsed?: number | null;
+    normalizedPercentage?: number | null;
+    attemptsUsed?: number | null;
+    trend?: 'IMPROVING' | 'STABLE' | 'DECLINING' | null;
     modelVersion?: string | null;
+    explanation?: string | null;
     isEstimated: boolean;
   } | null;
   subjects: Array<{
@@ -1538,15 +1589,32 @@ export interface StudentDashboardResponse {
   recommendations: Array<{
     id: string;
     type: 'WARNING' | 'OPPORTUNITY' | 'STRENGTH' | 'TIP';
+    title?: string;
     message: string;
+    reason?: string;
+    priority?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'STRENGTH';
+    priorityScore?: number;
+    confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
     actionLabel?: string | null;
-    actionType?: 'PRACTICE' | 'PRACTICE_MOCK' | 'VIEW_STRATEGY' | 'VIEW_ANALYSIS' | 'VIEW_EXAMS';
+    actionType?: 'PRACTICE' | 'PRACTICE_MOCK' | 'VIEW_STRATEGY' | 'VIEW_ANALYSIS' | 'VIEW_EXAMS' | 'REVIEW_CONCEPTS';
     targetUrl?: string | null;
     subjectId?: string | null;
     subjectName?: string | null;
+    chapterId?: string | null;
+    chapterName?: string | null;
     mockTestId?: string | null;
     mockTestName?: string | null;
     fallbackMessage?: string | null;
+    metrics?: {
+      accuracy?: number;
+      sampleSize?: number;
+      wrongCount?: number;
+      unattemptedCount?: number;
+      avgTimeSeconds?: number;
+      negativeMarksLost?: number;
+      trendDelta?: number;
+      potentialScoreGain?: number;
+    };
   }>;
   timeManagement: {
     averageTimePerQuestionSeconds: number;

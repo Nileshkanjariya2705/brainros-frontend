@@ -94,6 +94,7 @@ export const PRIVATE_NAVIGATION = Object.freeze({
 
   // ── Super Admin role-prefixed routes ──
   superAdminDashboard: '/super-admin/dashboard',
+  superAdminRegistrations: '/super-admin/registrations',
   superAdminBulkStudents: '/super-admin/students/bulk-register',
   superAdminStudents: '/super-admin/students',
   superAdminSchools: '/super-admin/schools',
@@ -110,6 +111,7 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   superAdminMockTests: '/super-admin/mock-tests',
   superAdminExams: '/super-admin/mock-tests',
   superAdminExamResults: '/super-admin/exams/results',
+  superAdminExamResultProcessing: '/super-admin/exams/result-processing',
   superAdminCompletedExams: '/super-admin/completed-exams',
   superAdminExamManager: '/super-admin/exam-manager',
   superAdminUploadPaper: '/super-admin/exam-manager/upload',

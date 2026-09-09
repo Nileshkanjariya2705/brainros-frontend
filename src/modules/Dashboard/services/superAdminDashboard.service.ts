@@ -22,6 +22,12 @@ export interface AnalyticsFilterParams {
 
 export interface SuperAdminOverviewData {
   totalStudents: number;
+  totalRegistrations: number;
+  todayRegistrations: number;
+  neetRegistrations: number;
+  jeeRegistrations: number;
+  cetRegistrations: number;
+  examTargetStats?: Array<{ id: string; name: string; count: number }>;
   activeStudents: number;
   activePercentage: number;
   examsConducted: number;
