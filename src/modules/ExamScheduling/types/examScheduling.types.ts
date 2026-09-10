@@ -60,7 +60,7 @@ export interface ExamLifecycleHistoryItem {
 }
 
 export interface ScheduleExamPayload {
-  examVersionId: string;
+  examVersionId?: string;
   startTime: string;
   endTime: string;
   timezone?: string;

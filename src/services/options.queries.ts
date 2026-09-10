@@ -22,6 +22,8 @@ export const authOptionKeys = {
   all: ['auth-options'] as const,
 };
 
+const ALLOWED_TARGET_EXAMS = ['JEE', 'NEET', 'CET'];
+
 /**
  * Cached TanStack Query hook for master registration/filter options (/auth/options).
  * Master data is stable and cached for 30 minutes to prevent duplicate requests across screens.
@@ -32,10 +34,19 @@ export const useAuthOptionsQuery = () =>
     queryFn: async (): Promise<AuthOptionsData> => {
       const res = await Axios.get<AuthOptionsData | { data: AuthOptionsData }>('/auth/options');
       const payload = res.data;
-      if (payload && 'data' in payload && payload.data) {
-        return payload.data;
+      const data: AuthOptionsData = (payload && 'data' in payload && payload.data)
+        ? payload.data
+        : (payload as AuthOptionsData);
+
+      if (data && Array.isArray(data.examTargets)) {
+        return {
+          ...data,
+          examTargets: data.examTargets.filter((t) =>
+            ALLOWED_TARGET_EXAMS.includes(t.name?.toUpperCase().trim())
+          ),
+        };
       }
-      return payload as AuthOptionsData;
+      return data;
     },
     staleTime: 30 * 60 * 1000, // 30 minutes
     gcTime: 60 * 60 * 1000,    // 1 hour

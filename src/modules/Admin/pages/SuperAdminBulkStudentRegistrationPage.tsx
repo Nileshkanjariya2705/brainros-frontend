@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   UploadCloud,
   FileSpreadsheet,
@@ -32,8 +33,34 @@ import {
   adminSchoolsService,
   SchoolItem,
 } from '../services/admin-schools.service';
+import { WorkflowStepIndicator, type WorkflowStep } from '@/components/ui/WorkflowStepIndicator';
 
 export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
+  const location = useLocation();
+
+  const routePrefix = location.pathname.startsWith('/super-admin')
+    ? '/super-admin'
+    : '/admin';
+
+  const workflowSteps: WorkflowStep[] = [
+    {
+      id: 'bulk-school',
+      stepNumber: 1,
+      title: 'Bulk School',
+      subtitle: 'Onboard schools & examination centers',
+      status: 'completed',
+      to: `${routePrefix}/schools`,
+    },
+    {
+      id: 'bulk-student',
+      stepNumber: 2,
+      title: 'Bulk Student Registration',
+      subtitle: 'Import candidate rosters with OTP login',
+      status: 'current',
+      to: `${routePrefix}/students/bulk-register`,
+    },
+  ];
+
   const [activeTab, setActiveTab] = useState<'upload' | 'history'>('upload');
 
   // Upload & Stepper State
@@ -334,6 +361,12 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 p-4 sm:p-6 lg:p-8 space-y-6">
+      {/* ── Workflow Step Indicator ── */}
+      <WorkflowStepIndicator
+        steps={workflowSteps}
+        workflowTitle="Bulk Onboarding & Student Registration Pipeline"
+      />
+
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200">
         <div>

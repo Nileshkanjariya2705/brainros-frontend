@@ -17,6 +17,7 @@ import { Axios } from '@/base-axios';
 import { useUnreadNotificationCountQuery } from '@/modules/Notification/services/notification.queries';
 import {
   useRole,
+  usePermission,
   useFeatures,
   type MenuGroupConfig,
   ROLE_LABELS,
@@ -130,6 +131,17 @@ export const ROLE_THEMES: Record<string, RoleThemeConfig> = {
     profileHoverBorder: 'hover:border-blue-200',
     brandIconBg: 'bg-gradient-to-br from-blue-600 to-indigo-700',
   },
+  STAFF: {
+    brandGradient: 'from-sky-800 to-indigo-900',
+    activeLinkBg: 'bg-sky-50',
+    activeLinkText: 'text-sky-700',
+    activeLinkBorder: 'border-sky-100',
+    headerBorder: 'border-slate-200',
+    bellAccent: 'bg-sky-600',
+    profileHoverBg: 'hover:bg-sky-50/70',
+    profileHoverBorder: 'hover:border-sky-200',
+    brandIconBg: 'bg-gradient-to-br from-sky-600 to-indigo-700',
+  },
 };
 
 // ─── RoleLayoutShell Component ─────────────────────────────────────────────
@@ -146,6 +158,7 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const { roles, activeRole, activeRoleMeta, hasMultipleRoles, switchActiveRole } = useRole();
+  const { can } = usePermission();
   const { isEnabled: isFeatureActive } = useFeatures();
 
   const { theme, menuGroups, dashboardPath, notificationsPath, profilePath, ctaWidget } = config;
@@ -158,19 +171,19 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
     const fetchUser = async () => {
       try {
         const res = await Axios.get('/auth/me');
-        if (active && res.data) {
-          const userData = res.data?.data || res.data;
-          dispatch(setUserData(userData));
+        if (!active) return;
+        if (res.data?.data) {
+          dispatch(setUserData(res.data.data));
         }
       } catch {
-        // Ignored; axios interceptor handles invalid auth
+        // Ignored — Axios interceptor handles auth failure
       }
     };
     fetchUser();
     return () => {
       active = false;
     };
-  }, [dispatch, user?.id]);
+  }, [user?.id, dispatch]);
 
   // Prevent background scroll when mobile sidebar drawer is open
   useEffect(() => {
@@ -197,10 +210,10 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200',
+      'flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all group',
       isActive
-        ? `${theme.activeLinkBg} ${theme.activeLinkText} font-bold shadow-xs border ${theme.activeLinkBorder}`
-        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+        ? `${theme.activeLinkBg} ${theme.activeLinkText} font-semibold border ${theme.activeLinkBorder} shadow-xs`
+        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
     );
 
   const handleRoleSelect = (role: string) => {
@@ -218,8 +231,24 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
   const renderNavList = (onItemClick?: () => void) => (
     <div className="space-y-6">
       {menuGroups.map((group) => {
+        if (group.roles && group.roles.length > 0 && !group.roles.some((r) => roles.includes(r))) {
+          return null;
+        }
+        if (group.permissions && group.permissions.length > 0 && !group.permissions.some((p) => can(p))) {
+          return null;
+        }
+
         const visibleItems = group.items.filter((item) => {
           if (item.feature && !isFeatureActive(item.feature)) {
+            return false;
+          }
+          if (item.roles && item.roles.length > 0 && !item.roles.some((r) => roles.includes(r))) {
+            return false;
+          }
+          if (item.permission && !can(item.permission)) {
+            return false;
+          }
+          if (item.permissions && item.permissions.length > 0 && !item.permissions.some((p) => can(p))) {
             return false;
           }
           return true;
@@ -264,11 +293,11 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
   );
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-slate-50">
       {/* ══════════════════════════════════════════════════════════════════════
           1. DESKTOP PERMANENT SIDEBAR (ALWAYS VISIBLE & NON-CLOSABLE >= 1024px)
           ══════════════════════════════════════════════════════════════════════ */}
-      <aside className="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-slate-200 bg-white z-20">
+      <aside className="hidden lg:flex flex-col w-64 shrink-0 h-full border-r border-slate-200 bg-white z-20">
         {/* Sidebar Brand Header */}
         <div
           className="flex h-16 items-center gap-2.5 px-6 border-b border-slate-100 shrink-0 cursor-pointer"
@@ -352,10 +381,10 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
       {/* ══════════════════════════════════════════════════════════════════════
           3. MAIN CONTENT COLUMN (HEADER + PAGE VIEWPORT)
           ══════════════════════════════════════════════════════════════════════ */}
-      <div className="flex flex-1 flex-col min-w-0 min-h-screen">
+      <div className="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
         {/* Top Header */}
         <header
-          className={`sticky top-0 z-20 flex h-16 items-center justify-between ${theme.headerBorder} border-b bg-white/85 backdrop-blur-xl px-4 sm:px-6 shadow-xs`}
+          className={`shrink-0 z-20 flex h-16 items-center justify-between ${theme.headerBorder} border-b bg-white/85 backdrop-blur-xl px-4 sm:px-6 shadow-xs`}
         >
           {/* Left: Mobile hamburger + Mobile Brand + Desktop Active Role */}
           <div className="flex items-center gap-3">

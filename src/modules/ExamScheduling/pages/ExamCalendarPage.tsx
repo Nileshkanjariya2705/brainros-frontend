@@ -1,662 +1,798 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Clock,
-  Globe,
-  Plus,
-  AlertTriangle,
-  RefreshCw,
-  Edit2,
   CalendarDays,
-  FolderPlus,
+  Calendar,
+  Clock,
+  Search,
+  RefreshCw,
+  PlayCircle,
+  CheckCircle2,
+  AlertCircle,
+  ArrowDownWideNarrow,
+  X,
+  Layers,
+  Award,
+  BookOpen,
+  ChevronRight,
+  Filter,
 } from 'lucide-react';
 import { Axios } from '@/base-axios';
-import { ExamCycleItem, ExamCalendarEvent } from '@/types/exam.types';
+import Button from '@/components/ui/Button';
+
+export interface CalendarExamItem {
+  id: string;
+  examId: string;
+  title: string;
+  description?: string;
+  examTarget?: string;
+  subjects?: string[];
+  plannedDate: string; // ISO date or string
+  plannedStartTime: string; // ISO string
+  plannedEndTime: string; // ISO string
+  timezone: string;
+  durationMinutes: number;
+  totalQuestions: number;
+  totalMarks: number;
+  status: 'LIVE' | 'UPCOMING' | 'COMPLETED';
+  rawStatus?: string;
+  canStart: boolean;
+  activeAttemptId?: string | null;
+  attempt?: {
+    id: string;
+    status: string;
+    result?: {
+      id: string;
+      totalScore: number;
+      maxScore: number;
+      percentage: number;
+    } | null;
+  } | null;
+  cycleName?: string;
+  academicYear?: string;
+  createdAt: string;
+}
 
 export const ExamCalendarPage: React.FC = () => {
-  const [cycles, setCycles] = useState<ExamCycleItem[]>([]);
-  const [selectedCycleId, setSelectedCycleId] = useState<string>('');
-  const [events, setEvents] = useState<ExamCalendarEvent[]>([]);
+  const navigate = useNavigate();
+
+  const [exams, setExams] = useState<CalendarExamItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Create Cycle Modal State
-  const [showCreateCycleModal, setShowCreateCycleModal] = useState<boolean>(false);
-  const [cycleData, setCycleData] = useState({
-    name: '',
-    academicYear: '2026-2027',
-    startDate: '2026-04-01',
-    endDate: '2027-03-31',
-  });
+  // ─── Filters State ────────────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilterPreset, setDateFilterPreset] = useState<
+    'ALL' | 'TODAY' | 'UPCOMING' | 'THIS_WEEK' | 'THIS_MONTH' | 'COMPLETED'
+  >('ALL');
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
-  // Reschedule Modal State
-  const [reschedulingEvent, setReschedulingEvent] = useState<ExamCalendarEvent | null>(null);
-  const [rescheduleData, setRescheduleData] = useState({
-    plannedDate: '',
-    plannedStartTime: '',
-    plannedEndTime: '',
-    reason: '',
-  });
+  // ─── Fetch All Exams for Student ──────────────────────────────────────────
+  const fetchAllExams = useCallback(async () => {
+    setLoading(true);
+    setError(null);
 
-  // Create Event Modal State
-  const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
-  const [createData, setCreateData] = useState({
-    examId: '',
-    plannedDate: '',
-    plannedStartTime: '',
-    plannedEndTime: '',
-    timezone: 'Asia/Kolkata',
-    notes: '',
-  });
+    try {
+      // 1. Fetch student enrolled / accessible exams
+      const [studentExamsRes, calendarRes] = await Promise.allSettled([
+        Axios.get('/students/me/exams', { params: { limit: 100 } }),
+        Axios.get('/exam-calendar', { params: { limit: 100 } }),
+      ]);
 
-  const [availableExams, setAvailableExams] = useState<Array<{ id: string; title: string }>>([]);
-  const [submitting, setSubmitting] = useState<boolean>(false);
+      const itemsMap = new Map<string, CalendarExamItem>();
 
-  useEffect(() => {
-    fetchCycles();
-    fetchExams();
+      // Process /students/me/exams
+      if (studentExamsRes.status === 'fulfilled') {
+        const raw = studentExamsRes.value?.data;
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.data)
+            ? raw.data
+            : Array.isArray(raw?.data?.data)
+              ? raw.data.data
+              : [];
+
+        list.forEach((item: any) => {
+          const startTime = item.startTime || item.plannedStartTime || item.createdAt || new Date().toISOString();
+          const endTime = item.endTime || item.plannedEndTime || new Date(new Date(startTime).getTime() + (item.durationMinutes || 180) * 60000).toISOString();
+          const plannedDate = item.plannedDate || startTime.substring(0, 10);
+
+          let status: 'LIVE' | 'UPCOMING' | 'COMPLETED' = 'UPCOMING';
+          const now = new Date();
+          const start = new Date(startTime);
+          const end = new Date(endTime);
+
+          if (item.status === 'COMPLETED' || item.rawStatus === 'COMPLETED' || (item.attempt && item.attempt.status === 'SUBMITTED')) {
+            status = 'COMPLETED';
+          } else if (now >= start && now <= end) {
+            status = 'LIVE';
+          } else if (now < start) {
+            status = 'UPCOMING';
+          } else {
+            status = 'COMPLETED';
+          }
+
+          itemsMap.set(item.id, {
+            id: item.id,
+            examId: item.examId || item.id,
+            title: item.title || 'Examination',
+            description: item.description || '',
+            examTarget: item.examTarget || item.examTarget?.name || 'General',
+            subjects: Array.isArray(item.subjects) ? item.subjects : [],
+            plannedDate,
+            plannedStartTime: startTime,
+            plannedEndTime: endTime,
+            timezone: item.timezone || 'Asia/Kolkata',
+            durationMinutes: item.durationMinutes || 180,
+            totalQuestions: item.totalQuestions || 0,
+            totalMarks: item.totalMarks || 0,
+            status,
+            rawStatus: item.status || item.rawStatus,
+            canStart: Boolean(item.canStart),
+            activeAttemptId: item.activeAttemptId || null,
+            attempt: item.attempt || null,
+            createdAt: item.createdAt || startTime,
+          });
+        });
+      }
+
+      // Process /exam-calendar events if present
+      if (calendarRes.status === 'fulfilled') {
+        const rawCal = calendarRes.value?.data;
+        const calList = Array.isArray(rawCal)
+          ? rawCal
+          : Array.isArray(rawCal?.data)
+            ? rawCal.data
+            : [];
+
+        calList.forEach((ev: any) => {
+          const examId = ev.exam?.id || ev.examId;
+          const startTime = ev.plannedStartTime || ev.plannedDate;
+          const endTime = ev.plannedEndTime || startTime;
+          const plannedDate = ev.plannedDate || startTime.substring(0, 10);
+
+          // If not already present from student exams, add it
+          if (!itemsMap.has(examId) && !itemsMap.has(ev.id)) {
+            let status: 'LIVE' | 'UPCOMING' | 'COMPLETED' = 'UPCOMING';
+            const now = new Date();
+            const start = new Date(startTime);
+            const end = new Date(endTime);
+
+            if (ev.status === 'COMPLETED' || now > end) {
+              status = 'COMPLETED';
+            } else if (now >= start && now <= end) {
+              status = 'LIVE';
+            } else {
+              status = 'UPCOMING';
+            }
+
+            itemsMap.set(ev.id, {
+              id: ev.id,
+              examId,
+              title: ev.exam?.title || 'Academic Mock Exam',
+              description: ev.notes || '',
+              examTarget: 'Academic Mock',
+              subjects: [],
+              plannedDate,
+              plannedStartTime: startTime,
+              plannedEndTime: endTime,
+              timezone: ev.timezone || 'Asia/Kolkata',
+              durationMinutes: ev.exam?.durationMinutes || 180,
+              totalQuestions: ev.exam?.totalQuestions || 0,
+              totalMarks: ev.exam?.totalMarks || 0,
+              status,
+              rawStatus: ev.status,
+              canStart: status === 'LIVE',
+              cycleName: ev.cycle?.name,
+              academicYear: ev.cycle?.academicYear,
+              createdAt: ev.createdAt || startTime,
+            });
+          }
+        });
+      }
+
+      // If both were empty, fallback to /exams
+      if (itemsMap.size === 0) {
+        try {
+          const fallbackRes = await Axios.get('/exams');
+          const fallbackList = Array.isArray(fallbackRes.data)
+            ? fallbackRes.data
+            : Array.isArray(fallbackRes.data?.data)
+              ? fallbackRes.data.data
+              : [];
+
+          fallbackList.forEach((item: any) => {
+            const startTime = item.createdAt || new Date().toISOString();
+            itemsMap.set(item.id, {
+              id: item.id,
+              examId: item.id,
+              title: item.title,
+              description: item.description || '',
+              examTarget: item.examTarget?.name || 'General',
+              subjects: [],
+              plannedDate: startTime.substring(0, 10),
+              plannedStartTime: startTime,
+              plannedEndTime: new Date(new Date(startTime).getTime() + (item.durationMinutes || 180) * 60000).toISOString(),
+              timezone: 'Asia/Kolkata',
+              durationMinutes: item.durationMinutes || 180,
+              totalQuestions: item.totalQuestions || 0,
+              totalMarks: item.totalMarks || 0,
+              status: 'UPCOMING',
+              canStart: false,
+              createdAt: startTime,
+            });
+          });
+        } catch {
+          // ignore
+        }
+      }
+
+      const allList = Array.from(itemsMap.values());
+
+      // ─── Sort strictly by latest (newest / most recent first) ───────────────
+      allList.sort((a, b) => {
+        const timeA = new Date(a.plannedStartTime || a.plannedDate || a.createdAt).getTime();
+        const timeB = new Date(b.plannedStartTime || b.plannedDate || b.createdAt).getTime();
+        return timeB - timeA;
+      });
+
+      setExams(allList);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.message || 'Failed to load examination calendar.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    if (selectedCycleId) {
-      fetchEvents(selectedCycleId);
-    } else {
-      setEvents([]);
-    }
-  }, [selectedCycleId]);
+    fetchAllExams();
+  }, [fetchAllExams]);
 
-  const getArrayData = (response: any): any[] => {
-    if (!response) return [];
-    if (Array.isArray(response)) return response;
-    if (Array.isArray(response.data)) return response.data;
-    if (Array.isArray(response.data?.data)) return response.data.data;
-    return [];
-  };
-
-  const fetchCycles = async () => {
-    try {
-      setLoading(true);
-      const res = await Axios.get('/exam-cycles');
-      const data = getArrayData(res);
-      setCycles(data);
-      if (data.length > 0) {
-        setSelectedCycleId((prev) => (prev ? prev : data[0].id));
+  // ─── Filter Logic: Date-wise & Search Filtered Exams ───────────────────────
+  const filteredExams = useMemo(() => {
+    return exams.filter((exam) => {
+      // 1. Search query filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const matchesTitle = exam.title.toLowerCase().includes(query);
+        const matchesTarget = (exam.examTarget || '').toLowerCase().includes(query);
+        const matchesSubject = (exam.subjects || []).some((s) => s.toLowerCase().includes(query));
+        if (!matchesTitle && !matchesTarget && !matchesSubject) {
+          return false;
+        }
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load exam cycles');
-      setCycles([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const fetchExams = async () => {
-    try {
-      const res = await Axios.get('/exams');
-      setAvailableExams(getArrayData(res));
-    } catch {
-      setAvailableExams([]);
-    }
-  };
+      const examDate = new Date(exam.plannedStartTime || exam.plannedDate);
+      const examDateStr = examDate.toISOString().substring(0, 10);
 
-  const fetchEvents = async (cycleId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await Axios.get('/exam-calendar', { params: { cycleId } });
-      setEvents(getArrayData(res));
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load calendar events');
-      setEvents([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateCycle = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setSubmitting(true);
-      setError(null);
-      const res = await Axios.post('/exam-cycles', {
-        name: cycleData.name,
-        academicYear: cycleData.academicYear,
-        startDate: new Date(cycleData.startDate).toISOString(),
-        endDate: new Date(cycleData.endDate).toISOString(),
-      });
-      setShowCreateCycleModal(false);
-      setCycleData({
-        name: '',
-        academicYear: '2026-2027',
-        startDate: '2026-04-01',
-        endDate: '2027-03-31',
-      });
-      await fetchCycles();
-      if (res.data?.id) {
-        setSelectedCycleId(res.data.id);
+      // 2. Specific Date Picker Filter
+      if (selectedDate) {
+        if (examDateStr !== selectedDate) {
+          return false;
+        }
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create academic cycle');
-    } finally {
-      setSubmitting(false);
-    }
+
+      // 3. Date Range Filter
+      if (startDate) {
+        if (examDateStr < startDate) return false;
+      }
+      if (endDate) {
+        if (examDateStr > endDate) return false;
+      }
+
+      // 4. Quick Date Presets
+      if (dateFilterPreset !== 'ALL') {
+        const todayStr = new Date().toISOString().substring(0, 10);
+        const now = new Date();
+
+        if (dateFilterPreset === 'TODAY') {
+          if (examDateStr !== todayStr) return false;
+        } else if (dateFilterPreset === 'UPCOMING') {
+          if (exam.status === 'COMPLETED' || examDate < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+            return false;
+          }
+        } else if (dateFilterPreset === 'THIS_WEEK') {
+          const startOfWeek = new Date(now);
+          startOfWeek.setDate(now.getDate() - now.getDay());
+          startOfWeek.setHours(0, 0, 0, 0);
+
+          const endOfWeek = new Date(startOfWeek);
+          endOfWeek.setDate(startOfWeek.getDate() + 6);
+          endOfWeek.setHours(23, 59, 59, 999);
+
+          if (examDate < startOfWeek || examDate > endOfWeek) return false;
+        } else if (dateFilterPreset === 'THIS_MONTH') {
+          if (examDate.getFullYear() !== now.getFullYear() || examDate.getMonth() !== now.getMonth()) {
+            return false;
+          }
+        } else if (dateFilterPreset === 'COMPLETED') {
+          if (exam.status !== 'COMPLETED') return false;
+        }
+      }
+
+      return true;
+    });
+  }, [exams, searchQuery, selectedDate, startDate, endDate, dateFilterPreset]);
+
+  // Metric counts
+  const metrics = useMemo(() => {
+    const total = exams.length;
+    const live = exams.filter((e) => e.status === 'LIVE').length;
+    const upcoming = exams.filter((e) => e.status === 'UPCOMING').length;
+    const completed = exams.filter((e) => e.status === 'COMPLETED').length;
+    return { total, live, upcoming, completed };
+  }, [exams]);
+
+  const clearAllDateFilters = () => {
+    setSelectedDate('');
+    setStartDate('');
+    setEndDate('');
+    setDateFilterPreset('ALL');
   };
 
-  const handleCreateEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCycleId || !createData.examId) return;
-
-    try {
-      setSubmitting(true);
-      setError(null);
-      await Axios.post('/exam-calendar', {
-        cycleId: selectedCycleId,
-        examId: createData.examId,
-        plannedDate: new Date(createData.plannedDate).toISOString(),
-        plannedStartTime: new Date(createData.plannedStartTime).toISOString(),
-        plannedEndTime: new Date(createData.plannedEndTime).toISOString(),
-        timezone: createData.timezone || 'Asia/Kolkata',
-        notes: createData.notes || undefined,
-      });
-      setShowCreateModal(false);
-      setCreateData({
-        examId: '',
-        plannedDate: '',
-        plannedStartTime: '',
-        plannedEndTime: '',
-        timezone: 'Asia/Kolkata',
-        notes: '',
-      });
-      await fetchEvents(selectedCycleId);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to schedule calendar event');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleReschedule = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reschedulingEvent || !rescheduleData.reason.trim()) return;
-
-    try {
-      setSubmitting(true);
-      setError(null);
-      await Axios.patch(`/exam-calendar/${reschedulingEvent.id}/reschedule`, {
-        plannedDate: new Date(rescheduleData.plannedDate).toISOString(),
-        plannedStartTime: new Date(rescheduleData.plannedStartTime).toISOString(),
-        plannedEndTime: new Date(rescheduleData.plannedEndTime).toISOString(),
-        reason: rescheduleData.reason,
-      });
-      setReschedulingEvent(null);
-      setRescheduleData({
-        plannedDate: '',
-        plannedStartTime: '',
-        plannedEndTime: '',
-        reason: '',
-      });
-      await fetchEvents(selectedCycleId);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Rescheduling failed');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const safeCycles = Array.isArray(cycles) ? cycles : [];
-  const safeEvents = Array.isArray(events) ? events : [];
-  const activeCycle = safeCycles.find((c) => c.id === selectedCycleId);
+  const hasActiveDateFilter = Boolean(selectedDate || startDate || endDate || dateFilterPreset !== 'ALL');
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Academic Exam Calendar & Roadmap</h1>
-          <p className="text-sm text-slate-500">
-            Authoritative UTC timeline planning with IANA timezone governance and versioned
-            automated reminder synchronization.
-          </p>
+    <div className="space-y-6 pb-16 max-w-7xl mx-auto px-2 sm:px-4">
+      {/* ── Header Bar ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5 bg-white p-6 rounded-3xl shadow-xs">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 shadow-xs">
+            <CalendarDays size={24} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
+                Academic Exam Calendar
+              </h1>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                <ArrowDownWideNarrow size={12} /> Sorted by Latest
+              </span>
+            </div>
+            <p className="text-xs font-semibold text-slate-500 mt-0.5">
+              All scheduled examinations, test dates, and timings sorted by latest • Filter date-wise
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowCreateCycleModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50"
+
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <Button
+            variant="outline"
+            onClick={fetchAllExams}
+            disabled={loading}
+            className="flex items-center gap-1.5 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-bold px-3.5 py-2 rounded-xl shadow-2xs"
           >
-            <FolderPlus className="h-4 w-4 text-slate-600" /> New Academic Cycle
-          </button>
-          <button
-            disabled={!selectedCycleId}
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-500 disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" /> Plan Exam Event
-          </button>
-          <button
-            onClick={() => {
-              fetchCycles();
-              if (selectedCycleId) fetchEvents(selectedCycleId);
-            }}
-            className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50"
-            title="Refresh"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh Calendar</span>
+          </Button>
         </div>
       </div>
 
-      {error && (
-        <div className="flex items-center gap-2 rounded-xl bg-red-50 p-4 text-xs font-semibold text-red-700">
-          <AlertTriangle className="h-4 w-4 shrink-0 text-red-600" />
-          {error}
+      {/* ── Metric Summary Strip ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-4 rounded-3xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-3 p-3 bg-slate-50/80 rounded-2xl">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+            <Layers size={18} />
+          </div>
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Total Exams
+            </div>
+            <div className="text-base font-extrabold text-slate-900">
+              {metrics.total} Examinations
+            </div>
+          </div>
         </div>
-      )}
 
-      {/* Cycle Selector Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
-        <div className="flex items-center gap-3">
-          <CalendarDays className="h-5 w-5 text-indigo-600" />
-          <span className="text-xs font-bold uppercase text-slate-400">Academic Cycle:</span>
-          {safeCycles.length > 0 ? (
-            <select
-              value={selectedCycleId}
-              onChange={(e) => setSelectedCycleId(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-sm font-bold text-slate-900 focus:border-indigo-600 focus:outline-none"
+        <div className="flex items-center gap-3 p-3 bg-slate-50/80 rounded-2xl">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+            <PlayCircle size={18} />
+          </div>
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Active / Live
+            </div>
+            <div className="text-base font-extrabold text-emerald-700">
+              {metrics.live} Live Now
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-3 bg-slate-50/80 rounded-2xl">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+            <Clock size={18} />
+          </div>
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Upcoming
+            </div>
+            <div className="text-base font-extrabold text-blue-700">
+              {metrics.upcoming} Scheduled
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-3 bg-slate-50/80 rounded-2xl">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
+            <CheckCircle2 size={18} />
+          </div>
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Completed
+            </div>
+            <div className="text-base font-extrabold text-purple-700">
+              {metrics.completed} Finished
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Date-Wise Filtering & Search Controls ── */}
+      <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xs space-y-4">
+        {/* Quick Date Preset Chips */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+              <Filter size={12} /> Filter:
+            </span>
+            {(
+              [
+                { key: 'ALL', label: 'All Dates' },
+                { key: 'TODAY', label: 'Today' },
+                { key: 'UPCOMING', label: 'Upcoming' },
+                { key: 'THIS_WEEK', label: 'This Week' },
+                { key: 'THIS_MONTH', label: 'This Month' },
+                { key: 'COMPLETED', label: 'Concluded' },
+              ] as const
+            ).map((preset) => {
+              const isActive = dateFilterPreset === preset.key && !selectedDate && !startDate;
+              return (
+                <button
+                  key={preset.key}
+                  onClick={() => {
+                    setDateFilterPreset(preset.key);
+                    setSelectedDate('');
+                    setStartDate('');
+                    setEndDate('');
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                    isActive
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {hasActiveDateFilter && (
+            <button
+              onClick={clearAllDateFilters}
+              className="inline-flex items-center gap-1 text-xs font-bold text-rose-600 hover:text-rose-700 transition"
             >
-              {safeCycles.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.academicYear})
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span className="text-xs font-medium text-slate-500">No cycle available</span>
+              <X size={13} /> Clear Date Filters
+            </button>
           )}
         </div>
 
-        {activeCycle ? (
-          <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
-            <span>
-              Window: {new Date(activeCycle.startDate).toLocaleDateString()} –{' '}
-              {new Date(activeCycle.endDate).toLocaleDateString()}
-            </span>
-            <span className="rounded-md bg-emerald-50 px-2.5 py-1 font-bold text-emerald-700">
-              {activeCycle.status}
-            </span>
+        {/* Date Inputs & Search Row */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+          {/* Search Box */}
+          <div className="md:col-span-4 relative">
+            <Search
+              size={14}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              type="text"
+              placeholder="Search by exam title or subject..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 rounded-xl text-xs font-semibold bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-indigo-500 transition"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
-        ) : (
-          <button
-            onClick={() => setShowCreateCycleModal(true)}
-            className="text-xs font-bold text-indigo-600 hover:text-indigo-700"
-          >
-            + Create Academic Year Cycle
-          </button>
-        )}
-      </div>
 
-      {/* Events Timeline */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <h2 className="text-base font-bold text-slate-900">Planned Mock Examinations</h2>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <Globe className="h-3.5 w-3.5 text-indigo-600" /> Default Timezone:{' '}
-            <span className="font-bold">Asia/Kolkata (IST)</span>
+          {/* Specific Date Picker */}
+          <div className="md:col-span-4 flex items-center gap-2">
+            <span className="text-[11px] font-bold text-slate-500 whitespace-nowrap">
+              Pick Date:
+            </span>
+            <div className="relative flex-1">
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => {
+                  setSelectedDate(e.target.value);
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                className="w-full px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-indigo-500 transition text-slate-800"
+              />
+              {selectedDate && (
+                <button
+                  onClick={() => setSelectedDate('')}
+                  className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  title="Clear date"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Date Range: From / To */}
+          <div className="md:col-span-4 flex items-center gap-2">
+            <div className="flex-1">
+              <input
+                type="date"
+                placeholder="From"
+                value={startDate}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setSelectedDate('');
+                }}
+                className="w-full px-2.5 py-2 rounded-xl text-xs font-semibold bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-indigo-500 transition text-slate-800"
+              />
+            </div>
+            <span className="text-slate-400 text-xs font-bold">to</span>
+            <div className="flex-1">
+              <input
+                type="date"
+                placeholder="To"
+                value={endDate}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setSelectedDate('');
+                }}
+                className="w-full px-2.5 py-2 rounded-xl text-xs font-semibold bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-indigo-500 transition text-slate-800"
+              />
+            </div>
           </div>
         </div>
+      </div>
 
-        {loading ? (
-          <div className="py-12 text-center text-sm text-slate-400">
-            Loading academic calendar...
+      {/* ── Error Banner ── */}
+      {error && (
+        <div className="flex items-center gap-2 rounded-2xl bg-rose-50 p-4 text-xs font-semibold text-rose-700 border border-rose-200">
+          <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+          <span>{error}</span>
+          <button
+            onClick={fetchAllExams}
+            className="ml-auto text-xs font-bold underline hover:text-rose-800"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* ── Loading State ── */}
+      {loading && (
+        <div className="bg-white rounded-3xl border border-slate-200 p-16 flex flex-col items-center justify-center text-slate-500 shadow-xs">
+          <RefreshCw size={32} className="animate-spin text-indigo-600 mb-3" />
+          <span className="text-sm font-bold text-slate-800">
+            Loading scheduled exams...
+          </span>
+          <span className="text-xs text-slate-400 mt-1">
+            Fetching latest examination dates, test windows, and subjects
+          </span>
+        </div>
+      )}
+
+      {/* ── Empty State ── */}
+      {!loading && filteredExams.length === 0 && (
+        <div className="bg-white rounded-3xl border border-dashed border-slate-200 p-16 text-center shadow-xs space-y-3">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mx-auto">
+            <Calendar size={28} />
           </div>
-        ) : safeCycles.length === 0 ? (
-          <div className="py-12 text-center text-sm text-slate-500 space-y-3">
-            <p>No academic year cycle exists yet.</p>
-            <button
-              onClick={() => setShowCreateCycleModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-500"
+          <h3 className="text-base font-bold text-slate-900">
+            {hasActiveDateFilter
+              ? 'No Examinations Found for Selected Date / Filter'
+              : 'No Scheduled Examinations Found'}
+          </h3>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            {hasActiveDateFilter
+              ? 'Try adjusting your date range or clearing the active filters to see all scheduled examinations.'
+              : 'There are currently no academic examinations scheduled. Please check back later.'}
+          </p>
+          {hasActiveDateFilter && (
+            <Button
+              onClick={clearAllDateFilters}
+              className="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl"
             >
-              <FolderPlus className="h-4 w-4" /> Create Academic Cycle
-            </button>
+              Clear All Date Filters
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* ── All List of Exams (Sorted by Latest) ── */}
+      {!loading && filteredExams.length > 0 && (
+        <div className="space-y-3.5">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-bold text-slate-500">
+              Showing {filteredExams.length} of {exams.length} examinations • Latest First
+            </span>
+            <span className="text-[11px] font-mono text-slate-400">
+              Timezone: Asia/Kolkata (IST)
+            </span>
           </div>
-        ) : safeEvents.length === 0 ? (
-          <div className="py-12 text-center text-sm text-slate-400 space-y-3">
-            <p>No planned events in this academic cycle.</p>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-500"
-            >
-              <Plus className="h-4 w-4" /> Plan First Exam
-            </button>
-          </div>
-        ) : (
-          <div className="mt-4 divide-y divide-slate-100">
-            {safeEvents.map((event) => (
-              <div
-                key={event.id}
-                className="flex flex-wrap items-center justify-between gap-4 py-4 hover:bg-slate-50/60 rounded-xl px-2"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 flex-col items-center justify-center rounded-2xl bg-indigo-50 font-black text-indigo-700">
-                    <span className="text-xs uppercase leading-none">
-                      {new Date(event.plannedDate).toLocaleString('default', { month: 'short' })}
-                    </span>
-                    <span className="text-lg leading-tight">
-                      {new Date(event.plannedDate).getDate()}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900">
-                      {event.exam?.title || 'National Mock Exam'}
-                    </h3>
-                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                      <span className="inline-flex items-center gap-1 font-medium">
-                        <Clock className="h-3.5 w-3.5 text-slate-400" />
-                        {new Date(event.plannedStartTime).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}{' '}
-                        –{' '}
-                        {new Date(event.plannedEndTime).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+
+          <div className="space-y-3">
+            {filteredExams.map((exam) => {
+              const startDateObj = new Date(exam.plannedStartTime || exam.plannedDate);
+              const endDateObj = new Date(exam.plannedEndTime || exam.plannedStartTime);
+
+              const monthStr = startDateObj.toLocaleString('en-IN', { month: 'short' }).toUpperCase();
+              const dayStr = startDateObj.getDate();
+              const yearStr = startDateObj.getFullYear();
+              const weekdayStr = startDateObj.toLocaleString('en-IN', { weekday: 'short' });
+
+              const isLive = exam.status === 'LIVE';
+              const isCompleted = exam.status === 'COMPLETED';
+
+              return (
+                <div
+                  key={exam.id}
+                  className={`bg-white rounded-3xl border p-5 shadow-xs transition hover:shadow-md flex flex-col md:flex-row md:items-center justify-between gap-5 ${
+                    isLive
+                      ? 'border-emerald-300 ring-2 ring-emerald-100 bg-emerald-50/20'
+                      : 'border-slate-200 hover:border-indigo-100'
+                  }`}
+                >
+                  {/* Left Block: Date Badge & Title Info */}
+                  <div className="flex items-start sm:items-center gap-4">
+                    {/* Date Block */}
+                    <div
+                      className={`flex flex-col items-center justify-center shrink-0 w-14 h-16 sm:w-16 sm:h-18 rounded-2xl border text-center shadow-2xs ${
+                        isLive
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : isCompleted
+                            ? 'bg-slate-100 text-slate-700 border-slate-200'
+                            : 'bg-indigo-50 text-indigo-900 border-indigo-100'
+                      }`}
+                    >
+                      <span className="text-[10px] font-black tracking-wider uppercase opacity-90">
+                        {monthStr}
                       </span>
-                      <span>• {event.timezone}</span>
-                      {event.scheduleVersion > 1 && (
-                        <span className="rounded-md bg-amber-50 px-1.5 py-0.5 font-bold text-amber-700">
-                          v{event.scheduleVersion} Rescheduled
+                      <span className="text-xl sm:text-2xl font-black leading-tight">
+                        {dayStr}
+                      </span>
+                      <span className="text-[9px] font-semibold opacity-75">
+                        {yearStr} • {weekdayStr}
+                      </span>
+                    </div>
+
+                    {/* Examination Details */}
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-base font-extrabold text-slate-900 leading-snug">
+                          {exam.title}
+                        </h2>
+                        {exam.examTarget && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                            {exam.examTarget}
+                          </span>
+                        )}
+                        {isLive ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 animate-pulse">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" /> LIVE NOW
+                          </span>
+                        ) : isCompleted ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[10px] font-bold text-slate-600">
+                            <CheckCircle2 size={11} /> Concluded
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2.5 py-0.5 text-[10px] font-bold text-blue-700">
+                            <Clock size={11} /> Upcoming
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Time Window & Duration Strip */}
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-medium">
+                        <span className="inline-flex items-center gap-1.5 font-bold text-slate-700">
+                          <Clock size={13} className="text-indigo-600" />
+                          {startDateObj.toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                          })}{' '}
+                          –{' '}
+                          {endDateObj.toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                          })}
                         </span>
+                        <span>•</span>
+                        <span className="inline-flex items-center gap-1">
+                          <BookOpen size={13} className="text-slate-400" />
+                          {exam.durationMinutes} Mins
+                        </span>
+                        {exam.totalQuestions > 0 && (
+                          <>
+                            <span>•</span>
+                            <span className="inline-flex items-center gap-1">
+                              <Layers size={13} className="text-slate-400" />
+                              {exam.totalQuestions} Questions
+                            </span>
+                          </>
+                        )}
+                        {exam.totalMarks > 0 && (
+                          <>
+                            <span>•</span>
+                            <span className="inline-flex items-center gap-1 font-semibold text-slate-700">
+                              <Award size={13} className="text-amber-500" />
+                              {exam.totalMarks} Marks
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Subjects Pills */}
+                      {exam.subjects && exam.subjects.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          {exam.subjects.map((sub, sIdx) => (
+                            <span
+                              key={sIdx}
+                              className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200"
+                            >
+                              {sub}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
                   </div>
+
+                  {/* Right Action Block */}
+                  <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0 pt-2 sm:pt-0">
+                    {isLive ? (
+                      <Button
+                        size="sm"
+                        onClick={() => navigate(`/student/exams/${exam.examId || exam.id}`)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition"
+                      >
+                        <PlayCircle size={14} />
+                        <span>Start Examination</span>
+                        <ChevronRight size={13} />
+                      </Button>
+                    ) : isCompleted ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate(`/student/history`)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition"
+                      >
+                        <CheckCircle2 size={13} className="text-purple-600" />
+                        <span>View Result</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() => navigate(`/student/exams/${exam.examId || exam.id}`)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-2xs"
+                      >
+                        <span>View Details</span>
+                        <ChevronRight size={13} />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-bold ${
-                      event.status === 'CONFIRMED'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : event.status === 'RESCHEDULED'
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-slate-100 text-slate-700'
-                    }`}
-                  >
-                    {event.status}
-                  </span>
-                  <button
-                    onClick={() => {
-                      setReschedulingEvent(event);
-                      setRescheduleData({
-                        plannedDate: event.plannedDate.substring(0, 10),
-                        plannedStartTime: event.plannedStartTime.substring(0, 16),
-                        plannedEndTime: event.plannedEndTime.substring(0, 16),
-                        reason: '',
-                      });
-                    }}
-                    className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50"
-                  >
-                    <Edit2 className="h-3.5 w-3.5 text-slate-500" /> Reschedule
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Create Cycle Modal */}
-      {showCreateCycleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-slate-900">Create Academic Year Cycle</h3>
-            <p className="text-xs text-slate-500">
-              Defines the academic boundary and lifecycle for planning national and institutional
-              mock examinations.
-            </p>
-
-            <form onSubmit={handleCreateCycle} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700">Cycle Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 2026-2027 NEET Mock Exam Cycle"
-                  value={cycleData.name}
-                  onChange={(e) => setCycleData({ ...cycleData, name: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700">Academic Year</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 2026-2027"
-                  value={cycleData.academicYear}
-                  onChange={(e) => setCycleData({ ...cycleData, academicYear: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">Start Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={cycleData.startDate}
-                    onChange={(e) => setCycleData({ ...cycleData, startDate: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">End Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={cycleData.endDate}
-                    onChange={(e) => setCycleData({ ...cycleData, endDate: e.target.value })}
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateCycleModal(false)}
-                  className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500 disabled:opacity-50"
-                >
-                  {submitting ? 'Creating...' : 'Create Cycle'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Plan Event Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-slate-900">Plan Calendar Exam Event</h3>
-            <p className="text-xs text-slate-500">
-              Schedules a planned exam timeline in UTC. Authoritative live student access requires
-              Super Admin activation.
-            </p>
-
-            <form onSubmit={handleCreateEvent} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700">Exam</label>
-                <select
-                  required
-                  value={createData.examId}
-                  onChange={(e) => setCreateData({ ...createData, examId: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"
-                >
-                  <option value="">Select an exam...</option>
-                  {availableExams.map((ex) => (
-                    <option key={ex.id} value={ex.id}>
-                      {ex.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700">Planned Date</label>
-                <input
-                  type="date"
-                  required
-                  value={createData.plannedDate}
-                  onChange={(e) => setCreateData({ ...createData, plannedDate: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">Start Time</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={createData.plannedStartTime}
-                    onChange={(e) =>
-                      setCreateData({ ...createData, plannedStartTime: e.target.value })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">End Time</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={createData.plannedEndTime}
-                    onChange={(e) =>
-                      setCreateData({ ...createData, plannedEndTime: e.target.value })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-500 disabled:opacity-50"
-                >
-                  {submitting ? 'Scheduling...' : 'Confirm Plan'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Reschedule Modal */}
-      {reschedulingEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold text-slate-900">
-              Reschedule Event: {reschedulingEvent.exam?.title}
-            </h3>
-            <p className="text-xs text-slate-500">
-              Rescheduling invalidates prior automated reminder jobs and registers a new schedule
-              version.
-            </p>
-
-            <form onSubmit={handleReschedule} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700">
-                  New Planned Date
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={rescheduleData.plannedDate}
-                  onChange={(e) =>
-                    setRescheduleData({ ...rescheduleData, plannedDate: e.target.value })
-                  }
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">
-                    New Start Time
-                  </label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={rescheduleData.plannedStartTime}
-                    onChange={(e) =>
-                      setRescheduleData({ ...rescheduleData, plannedStartTime: e.target.value })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">New End Time</label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={rescheduleData.plannedEndTime}
-                    onChange={(e) =>
-                      setRescheduleData({ ...rescheduleData, plannedEndTime: e.target.value })
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700">
-                  Mandatory Reason
-                </label>
-                <textarea
-                  required
-                  rows={2}
-                  placeholder="Explain why this exam was rescheduled..."
-                  value={rescheduleData.reason}
-                  onChange={(e) => setRescheduleData({ ...rescheduleData, reason: e.target.value })}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setReschedulingEvent(null)}
-                  className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting || !rescheduleData.reason.trim()}
-                  className="rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-500 disabled:opacity-50"
-                >
-                  {submitting ? 'Rescheduling...' : 'Apply Reschedule'}
-                </button>
-              </div>
-            </form>
+              );
+            })}
           </div>
         </div>
       )}

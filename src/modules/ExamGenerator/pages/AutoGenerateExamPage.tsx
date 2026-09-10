@@ -146,9 +146,12 @@ export const AutoGenerateExamPage: React.FC = () => {
     getAllExamsAPI().then(({ data }: any) => {
       if (data && data.length > 0) {
         // Extract unique targets from exams if present
+        const ALLOWED = ['JEE', 'NEET', 'CET'];
         const targetsMap = new Map<string, any>();
         data.forEach((e: any) => {
-          if (e.examTarget) targetsMap.set(e.examTarget.id, e.examTarget);
+          if (e.examTarget && ALLOWED.includes(e.examTarget.name?.toUpperCase().trim())) {
+            targetsMap.set(e.examTarget.id, e.examTarget);
+          }
         });
         const targetsList = Array.from(targetsMap.values());
         if (targetsList.length > 0) {

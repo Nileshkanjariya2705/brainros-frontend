@@ -25,7 +25,6 @@ import { BlueprintSelectionModal } from '../components/BlueprintSelectionModal';
 import { UploadQuestionPaperWizardModal } from '../components/UploadQuestionPaperWizardModal';
 import { MockTestDetailsModal } from '@/modules/ExamScheduling/components/MockTestDetailsModal';
 import ExamTranslationManager from '@/modules/RegionalLanguage/components/ExamTranslationManager';
-import { AnswerKeyModal } from '../components/AnswerKeyModal';
 import { toast } from '@/utils/toast';
 
 export const ExamManagerDashboardPage: React.FC = () => {
@@ -55,10 +54,6 @@ export const ExamManagerDashboardPage: React.FC = () => {
   const [isUploadWizardOpen, setIsUploadWizardOpen] = useState(false);
   const [selectedExamForDetails, setSelectedExamForDetails] = useState<any | null>(null);
   const [drilldownTranslationExam, setDrilldownTranslationExam] = useState<any | null>(null);
-  const [selectedScheduleForAnswerKey, setSelectedScheduleForAnswerKey] = useState<{
-    scheduleId: string;
-    examTitle: string;
-  } | null>(null);
 
   // APIs
   const { getExamsListAPI, isLoading } = useGetExamsListAPI();
@@ -450,10 +445,7 @@ export const ExamManagerDashboardPage: React.FC = () => {
                         variant="outline"
                         size="sm"
                         onClick={() =>
-                          setSelectedScheduleForAnswerKey({
-                            scheduleId: exam.schedule!.id,
-                            examTitle: exam.title,
-                          })
+                          navigate(`${routePrefix}/exam-manager/answer-key/${exam.schedule!.id}`)
                         }
                         className={`flex items-center gap-1.5 text-xs font-bold ${
                           exam.schedule.hasAnswerKey
@@ -546,17 +538,6 @@ export const ExamManagerDashboardPage: React.FC = () => {
         exam={selectedExamForDetails}
         onUpdate={loadExams}
       />
-
-      {/* ── 4. Answer Key Management Modal ────────────────────────── */}
-      {selectedScheduleForAnswerKey && (
-        <AnswerKeyModal
-          isOpen={Boolean(selectedScheduleForAnswerKey)}
-          onClose={() => setSelectedScheduleForAnswerKey(null)}
-          scheduleId={selectedScheduleForAnswerKey.scheduleId}
-          examTitle={selectedScheduleForAnswerKey.examTitle}
-          onSuccess={loadExams}
-        />
-      )}
     </div>
   );
 };

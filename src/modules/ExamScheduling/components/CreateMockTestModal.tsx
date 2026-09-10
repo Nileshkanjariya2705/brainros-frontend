@@ -174,11 +174,13 @@ export const CreateMockTestModal: React.FC<CreateMockTestModalProps> = ({
                     className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-xs font-semibold focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
                   >
                     <option value="">Select Target Curriculum...</option>
-                    {examTargets.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
+                    {(examTargets || [])
+                      .filter((t) => ['JEE', 'NEET', 'CET'].includes(t.name?.toUpperCase().trim()))
+                      .map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
                   </select>
                 </div>
 

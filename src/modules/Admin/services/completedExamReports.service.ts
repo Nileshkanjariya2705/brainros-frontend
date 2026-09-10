@@ -17,6 +17,8 @@ export interface CompletedLiveExamItem {
   status?: string;
   publicationStatus: string;
   totalAttempts: number;
+  scheduleId?: string | null;
+  hasAnswerKey?: boolean;
 }
 
 export interface LiveExamSummaryMetrics {

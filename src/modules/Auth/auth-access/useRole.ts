@@ -52,6 +52,11 @@ export const useRole = () => {
 
   const isSuperAdmin = userRoles.includes(ROLES.SUPER_ADMIN);
   const isAdmin = userRoles.includes(ROLES.ADMIN);
+  const isGeneralManager = userRoles.includes(ROLES.GENERAL_MANAGER);
+  const isManager = userRoles.includes(ROLES.MANAGER);
+  const isOperator = userRoles.includes(ROLES.OPERATOR);
+  const isAccountant = userRoles.includes(ROLES.ACCOUNTANT);
+  const isStaff = isGeneralManager || isManager || isOperator || isAccountant;
   const isInstitutionAdmin = userRoles.includes(ROLES.INSTITUTION_ADMIN);
   const isSalesAgent = userRoles.includes(ROLES.SALES_AGENT);
   const isParent = userRoles.includes(ROLES.PARENT);
@@ -71,6 +76,11 @@ export const useRole = () => {
     isAnyRole,
     isSuperAdmin,
     isAdmin,
+    isGeneralManager,
+    isManager,
+    isOperator,
+    isAccountant,
+    isStaff,
     isInstitutionAdmin,
     isSalesAgent,
     isParent,

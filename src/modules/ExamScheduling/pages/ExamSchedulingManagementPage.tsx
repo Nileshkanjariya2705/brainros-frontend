@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   CalendarClock,
   Send,
@@ -12,6 +12,9 @@ import {
   Layers,
   Server,
   LayoutDashboard,
+  CheckCircle2,
+  AlertCircle,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useGetAllExamsAPI } from '@/modules/ExamGenerator/services/examGenerator.service';
 import {
@@ -26,6 +29,7 @@ import { ExamLifecycleTimelineModal } from '../components/ExamLifecycleTimelineM
 import { ExamAccessCheckModal } from '../components/ExamAccessCheckModal';
 import type { ExamScheduleItem } from '../types/examScheduling.types';
 import Button from '@/components/ui/Button';
+import { WorkflowStepIndicator, type WorkflowStep } from '@/components/ui/WorkflowStepIndicator';
 
 const LIFECYCLE_STEPS = [
   'DRAFT',
@@ -39,8 +43,41 @@ const LIFECYCLE_STEPS = [
 
 const ExamSchedulingManagementPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const routePrefix = location.pathname.startsWith('/super-admin')
+    ? '/super-admin'
+    : '/admin';
+
   const [exams, setExams] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+
+  const workflowSteps: WorkflowStep[] = [
+    {
+      id: 'schedule-exam',
+      stepNumber: 1,
+      title: 'Schedule Exam',
+      subtitle: 'Create slots, dates & examination windows',
+      status: 'current',
+      to: `${routePrefix}/exam-scheduling`,
+    },
+    {
+      id: 'upload-paper',
+      stepNumber: 2,
+      title: 'Upload Question Paper',
+      subtitle: 'Upload CSV/Excel bilingual paper',
+      status: 'pending',
+      to: `${routePrefix}/exam-manager/upload`,
+    },
+    {
+      id: 'upload-key',
+      stepNumber: 3,
+      title: 'Upload Answer Key',
+      subtitle: 'Set correct options and scoring scheme',
+      status: 'pending',
+      to: `${routePrefix}/exam-manager/answer-key`,
+    },
+  ];
 
   // Modals
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
@@ -60,7 +97,9 @@ const ExamSchedulingManagementPage: React.FC = () => {
 
   const loadExams = useCallback(async () => {
     const { data } = await getAllExamsAPI();
-    if (data) setExams(data);
+    if (data) {
+      setExams(Array.isArray(data) ? data : (data as any)?.data || []);
+    }
   }, [getAllExamsAPI]);
 
   useEffect(() => {
@@ -89,7 +128,14 @@ const ExamSchedulingManagementPage: React.FC = () => {
     loadExams();
   };
 
-  const handleActivateExam = async (scheduleId: string) => {
+  const handleActivateExam = async (scheduleId: string, questionCount: number = 0) => {
+    if (questionCount === 0) {
+      alert(
+        'Cannot activate exam: No question paper has been uploaded for this exam yet.\n\nPlease upload the question paper via Question Paper Manager before activating.',
+      );
+      return;
+    }
+
     if (
       !window.confirm(
         'Super Admin Activation: Students will be granted live access during the configured window. Proceed?',
@@ -147,6 +193,12 @@ const ExamSchedulingManagementPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-16">
+      {/* Workflow Step Indicator */}
+      <WorkflowStepIndicator
+        steps={workflowSteps}
+        workflowTitle="Admin Examination Lifecycle & Setup"
+      />
+
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -165,9 +217,7 @@ const ExamSchedulingManagementPage: React.FC = () => {
 
         <Button
           onClick={() => {
-            if (exams.length > 0) {
-              setActiveExam(exams[0]);
-            }
+            setActiveExam(null);
             setIsScheduleOpen(true);
           }}
           className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200 shrink-0"
@@ -270,6 +320,15 @@ const ExamSchedulingManagementPage: React.FC = () => {
                       <span className="rounded-lg px-2 py-0.5 text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                         Type: {exam.examType || exam.type || 'Standard'}
                       </span>
+                      {exam._count?.examQuestions > 0 ? (
+                        <span className="rounded-lg px-2 py-0.5 text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
+                          <CheckCircle2 size={11} /> Paper: Uploaded ({exam._count.examQuestions} Qs)
+                        </span>
+                      ) : (
+                        <span className="rounded-lg px-2 py-0.5 text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
+                          <AlertCircle size={11} /> Paper: Not Uploaded
+                        </span>
+                      )}
                     </div>
 
                     <p className="text-xs text-slate-500 font-mono mt-1 flex items-center gap-2 flex-wrap">
@@ -311,6 +370,32 @@ const ExamSchedulingManagementPage: React.FC = () => {
                     >
                       <CalendarClock size={13} />
                       <span>Schedule</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const routePrefix = window.location.pathname.startsWith('/super-admin')
+                          ? '/super-admin'
+                          : '/admin';
+                        navigate(`${routePrefix}/exam-manager/upload?activeExamId=${exam.id}`);
+                      }}
+                      className={`flex items-center gap-1.5 text-xs font-bold ${
+                        (exam._count?.examQuestions || 0) > 0
+                          ? 'text-slate-700 bg-slate-50 hover:bg-slate-100 border-slate-200'
+                          : 'text-amber-800 bg-amber-50/80 hover:bg-amber-100 border-amber-300 shadow-xs'
+                      }`}
+                    >
+                      <FileSpreadsheet
+                        size={13}
+                        className={
+                          (exam._count?.examQuestions || 0) > 0 ? 'text-slate-500' : 'text-amber-600'
+                        }
+                      />
+                      <span>
+                        {(exam._count?.examQuestions || 0) > 0 ? 'View Paper' : 'Upload Paper'}
+                      </span>
                     </Button>
 
                     <Button
@@ -469,10 +554,28 @@ const ExamSchedulingManagementPage: React.FC = () => {
                     </Button>
                   )}
 
+                  {stName === 'SCHEDULED' && (exam._count?.examQuestions || 0) === 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const routePrefix = window.location.pathname.startsWith('/super-admin')
+                          ? '/super-admin'
+                          : '/admin';
+                        navigate(`${routePrefix}/exam-manager/upload?activeExamId=${exam.id}`);
+                      }}
+                      className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm"
+                    >
+                      <FileSpreadsheet size={13} />
+                      <span>Upload Question Paper First</span>
+                    </Button>
+                  )}
+
                   {stName === 'SCHEDULED' && schedule && (
                     <Button
                       size="sm"
-                      onClick={() => handleActivateExam(schedule.id)}
+                      onClick={() =>
+                        handleActivateExam(schedule.id, exam._count?.examQuestions || 0)
+                      }
                       className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-200 animate-pulse"
                     >
                       <Zap size={14} />
@@ -502,15 +605,18 @@ const ExamSchedulingManagementPage: React.FC = () => {
       )}
 
       {/* Modals */}
-      {(activeExam || exams.length > 0) && (
+      {isScheduleOpen && (
         <ScheduleExamModal
-          examId={activeExam?.id || exams[0]?.id}
-          examTitle={activeExam?.title || exams[0]?.title}
-          examDuration={activeExam?.durationMinutes || exams[0]?.durationMinutes}
+          examId={activeExam?.id}
+          examTitle={activeExam?.title}
+          examDuration={activeExam?.durationMinutes}
           examsList={exams}
           onSelectExam={setActiveExam}
           isOpen={isScheduleOpen}
-          onClose={() => setIsScheduleOpen(false)}
+          onClose={() => {
+            setIsScheduleOpen(false);
+            setActiveExam(null);
+          }}
           onScheduled={loadExams}
         />
       )}

@@ -46,16 +46,23 @@ export const MODULES = {
 
   PROFILE: 'profile',
   SETTINGS: 'settings',
+
+  STAFF: 'staff',
+  BILLING: 'billing',
 } as const;
 
 export const PERMISSIONS = {
-  // User Management
+  // User & Staff Management
   USER_VIEW: 'user:view',
   USER_CREATE: 'user:create',
   USER_UPDATE: 'user:update',
   USER_DELETE: 'user:delete',
   USER_ROLE_MANAGE: 'user-role:manage',
   PERMISSION_MANAGE: 'permission:manage',
+  STAFF_VIEW: 'staff:view',
+  STAFF_CREATE: 'staff:create',
+  STAFF_UPDATE: 'staff:update',
+  STAFF_STATUS_UPDATE: 'staff:status-update',
 
   // Students & Parents
   STUDENT_VIEW: 'student:view',
@@ -130,6 +137,14 @@ export const PERMISSIONS = {
   SALES_VIEW: 'sales:view',
   SALES_MANAGE: 'sales:manage',
   REVENUE_VIEW: 'revenue:view',
+
+  // Billing & Invoicing
+  BILL_VIEW: 'bill:view',
+  BILL_CREATE: 'bill:create',
+  BILL_SUBMIT: 'bill:submit',
+  BILL_APPROVE: 'bill:approve',
+  BILL_REJECT: 'bill:reject',
+  BILL_SEND: 'bill:send',
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS] | string;

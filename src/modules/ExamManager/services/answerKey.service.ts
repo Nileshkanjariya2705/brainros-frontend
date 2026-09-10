@@ -17,16 +17,48 @@ export interface AnswerKeyStatus {
   isFullyConfigured: boolean;
 }
 
+export interface AnswerKeyOptionItem {
+  id?: string;
+  optionKey: string;
+  optionLabel?: string;
+  optionText: string;
+  isCorrect: boolean;
+  displayOrder?: number;
+}
+
 export interface AnswerKeyQuestionItem {
+  questionId?: string;
   questionNumber: number;
   subject: string;
+  chapter?: string | null;
   section: string;
   questionType: string;
+  questionText?: string;
+  passageText?: string | null;
+  assertionText?: string | null;
+  reasonText?: string | null;
   marks: number;
   negativeMarks: number;
   availableOptions: string;
   correctOption: string;
   explanation: string;
+  options?: AnswerKeyOptionItem[];
+}
+
+export interface AnswerKeyTemplateData {
+  scheduleId: string;
+  examId: string;
+  examTitle: string;
+  examTarget?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  durationMinutes?: number;
+  totalMarks?: number;
+  hasAnswerKey?: boolean;
+  answerKeyUploadedAt?: string | null;
+  totalQuestions: number;
+  csvContent?: string;
+  questions: AnswerKeyQuestionItem[];
 }
 
 export const useAnswerKeyAPI = () => {
@@ -53,7 +85,7 @@ export const useAnswerKeyAPI = () => {
   }, []);
 
   /**
-   * 2. Get Questions for Inline Answer Entry
+   * 2. Get Questions for Inline Answer Entry & View
    */
   const getQuestions = useCallback(async (scheduleId: string) => {
     setIsLoading(true);
@@ -63,12 +95,7 @@ export const useAnswerKeyAPI = () => {
       setIsLoading(false);
       const data = response?.data?.data !== undefined ? response.data.data : response?.data;
       return {
-        data: data as {
-          scheduleId: string;
-          examTitle: string;
-          totalQuestions: number;
-          questions: AnswerKeyQuestionItem[];
-        },
+        data: data as AnswerKeyTemplateData,
         error: null,
       };
     } catch (err: any) {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Building2,
   Plus,
@@ -30,6 +31,7 @@ import {
 import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
 import { useJobProgress } from '@/hooks/useJobProgress';
+import { WorkflowStepIndicator, type WorkflowStep } from '@/components/ui/WorkflowStepIndicator';
 
 /* ── WebSocket Live Job Progress Modal ───────────────────────────────────── */
 interface SchoolBulkProgressModalProps {
@@ -150,6 +152,13 @@ const SchoolBulkProgressModal: React.FC<SchoolBulkProgressModalProps> = ({
 
 /* ── Main Admin Schools Page ─────────────────────────────────────────────── */
 export const AdminSchoolsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const routePrefix = location.pathname.startsWith('/super-admin')
+    ? '/super-admin'
+    : '/admin';
+
   // State
   const [schools, setSchools] = useState<SchoolItem[]>([]);
   const [total, setTotal] = useState<number>(0);
@@ -193,6 +202,25 @@ export const AdminSchoolsPage: React.FC = () => {
 
   // Live WebSocket Job Progress State
   const [activeProgressUploadId, setActiveProgressUploadId] = useState<string | null>(null);
+
+  const workflowSteps: WorkflowStep[] = [
+    {
+      id: 'bulk-school',
+      stepNumber: 1,
+      title: 'Bulk School',
+      subtitle: 'Onboard schools & examination centers',
+      status: 'current',
+      to: `${routePrefix}/schools`,
+    },
+    {
+      id: 'bulk-student',
+      stepNumber: 2,
+      title: 'Bulk Student Registration',
+      subtitle: 'Import candidate rosters with OTP login',
+      status: 'pending',
+      to: `${routePrefix}/students/bulk-register`,
+    },
+  ];
 
   // Load filter options once
   useEffect(() => {
@@ -309,6 +337,18 @@ export const AdminSchoolsPage: React.FC = () => {
     }
   };
 
+  const handleBulkCompleteAndRedirect = () => {
+    setActiveProgressUploadId(null);
+    setIsBulkModalOpen(false);
+    setSelectedFile(null);
+    setUploadResult(null);
+    setUploadSuccess(null);
+    setIsConfirming(false);
+    fetchSchools();
+    // Automatically redirect Admin/Super Admin to Bulk Student Registration
+    navigate(`${routePrefix}/students/bulk-register`);
+  };
+
   const handleCloseProgressModal = () => {
     setActiveProgressUploadId(null);
     setIsBulkModalOpen(false);
@@ -332,6 +372,12 @@ export const AdminSchoolsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* ─── Workflow Step Indicator ─────────────────────────────────── */}
+      <WorkflowStepIndicator
+        steps={workflowSteps}
+        workflowTitle="Bulk Onboarding & Student Registration Pipeline"
+      />
+
       {/* ─── Page Header ────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -997,7 +1043,7 @@ export const AdminSchoolsPage: React.FC = () => {
           uploadId={activeProgressUploadId}
           totalValid={uploadResult?.upload?.validRows || 0}
           onClose={handleCloseProgressModal}
-          onComplete={handleCloseProgressModal}
+          onComplete={handleBulkCompleteAndRedirect}
         />
       )}
 

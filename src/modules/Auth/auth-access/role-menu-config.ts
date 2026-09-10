@@ -36,9 +36,13 @@ import {
   UserPlus,
   UserCheck,
   Activity,
+  Receipt,
+  UserCog,
+  KeyRound,
 } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 import { FEATURES } from '@/constants/feature-flag.constant';
+import { PERMISSIONS } from './permission.constants';
 import type { MenuGroupConfig } from './menu-config';
 
 // ─── STUDENT Menu Groups ───────────────────────────────────────────────────
@@ -389,15 +393,45 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
 // ─── SUPER ADMIN Menu Groups ───────────────────────────────────────────────
 export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
   {
-    categoryKey: 'OVERVIEW',
-    categoryLabel: 'Executive Overview',
+    categoryKey: 'CORE_OPERATIONS',
+    categoryLabel: 'Core Operations',
     items: [
       {
         key: 'dashboard',
-        label: 'Command Center',
+        label: 'Dashboard',
         to: PRIVATE_NAVIGATION.superAdminDashboard,
         icon: LayoutDashboard,
         end: true,
+      },
+      {
+        key: 'schedule-exam',
+        label: 'Schedule Exam',
+        to: PRIVATE_NAVIGATION.superAdminExamScheduling,
+        icon: CalendarClock,
+      },
+      {
+        key: 'academic-calendar',
+        label: 'Academic Calendar',
+        to: PRIVATE_NAVIGATION.superAdminAcademicCalendar,
+        icon: CalendarDays,
+      },
+      {
+        key: 'upload-question-paper',
+        label: 'Upload Question Paper',
+        to: PRIVATE_NAVIGATION.superAdminUploadPaper,
+        icon: UploadCloud,
+      },
+      {
+        key: 'upload-answer-key',
+        label: 'Upload Answer Key',
+        to: PRIVATE_NAVIGATION.superAdminAnswerKey,
+        icon: KeyRound,
+      },
+      {
+        key: 'super-admin-schools',
+        label: 'Schools / Colleges',
+        to: PRIVATE_NAVIGATION.superAdminSchools,
+        icon: Building2,
       },
       {
         key: 'registrations',
@@ -406,10 +440,16 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         icon: UserCheck,
       },
       {
-        key: 'profile',
-        label: 'My Profile',
-        to: PRIVATE_NAVIGATION.superAdminProfile,
-        icon: User,
+        key: 'staff-management',
+        label: 'Staff Management',
+        to: PRIVATE_NAVIGATION.superAdminStaff,
+        icon: UserCog,
+      },
+      {
+        key: 'billing-management',
+        label: 'Billing & Approvals',
+        to: PRIVATE_NAVIGATION.superAdminBilling,
+        icon: Receipt,
       },
     ],
   },
@@ -481,12 +521,16 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
     categoryKey: 'EXAM_STUDIO',
     categoryLabel: 'Mock Test Studio',
     items: [
-      {
-        key: 'auto-generate-exam',
-        label: 'Auto-Generate Exam Paper',
-        to: PRIVATE_NAVIGATION.superAdminAutoGenerateExam,
-        icon: Sparkles,
-      },
+      // ──────────────────────────────────────────────────────────────────────────
+      // AUTO EXAM GENERATION DISABLED FROM SIDEBAR PER WORKSPACE REQUIREMENT
+      // Functionality preserved in code (see AutoGenerateExamPage)
+      // ──────────────────────────────────────────────────────────────────────────
+      // {
+      //   key: 'auto-generate-exam',
+      //   label: 'Auto-Generate Exam Paper',
+      //   to: PRIVATE_NAVIGATION.superAdminAutoGenerateExam,
+      //   icon: Sparkles,
+      // },
       {
         key: 'exam-blueprints',
         label: 'Blueprint Generator',
@@ -498,12 +542,6 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Mock Test Manager',
         to: PRIVATE_NAVIGATION.superAdminMockTests,
         icon: FileSpreadsheet,
-      },
-      {
-        key: 'exam-scheduling',
-        label: 'Exam Scheduling',
-        to: PRIVATE_NAVIGATION.superAdminExamScheduling,
-        icon: CalendarClock,
       },
       {
         key: 'super-admin-exam-results',
@@ -522,30 +560,6 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Completed Live Exam Reports',
         to: PRIVATE_NAVIGATION.superAdminCompletedExams,
         icon: FileText,
-      },
-    ],
-  },
-  {
-    categoryKey: 'EXAM_MANAGEMENT',
-    categoryLabel: 'Exam Manager (Question Papers)',
-    items: [
-      {
-        key: 'exam-manager-list',
-        label: 'Exam Manager',
-        to: PRIVATE_NAVIGATION.superAdminExamManager,
-        icon: BookOpen,
-      },
-      {
-        key: 'upload-question-paper',
-        label: 'Upload Question Paper',
-        to: PRIVATE_NAVIGATION.superAdminUploadPaper,
-        icon: UploadCloud,
-      },
-      {
-        key: 'exam-import-history',
-        label: 'Import History',
-        to: PRIVATE_NAVIGATION.superAdminExamImportHistory,
-        icon: History,
       },
     ],
   },
@@ -619,36 +633,135 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         to: PRIVATE_NAVIGATION.superAdminLanguages,
         icon: Languages,
       },
+    ],
+  },
+  {
+    categoryKey: 'ACCOUNT',
+    categoryLabel: 'Account',
+    items: [
       {
-        key: 'import-translations',
-        label: 'Question Bank Translations',
-        to: PRIVATE_NAVIGATION.superAdminImportTranslations,
-        icon: UploadCloud,
-        feature: FEATURES.BULK_IMPORT_TRANSLATION,
+        key: 'profile',
+        label: 'My Profile',
+        to: PRIVATE_NAVIGATION.superAdminProfile,
+        icon: User,
+      },
+    ],
+  },
+];
+
+// ─── STAFF Menu Groups (OPERATOR, MANAGER, GENERAL_MANAGER, ACCOUNTANT) ────
+export const STAFF_MENU_GROUPS: MenuGroupConfig[] = [
+  {
+    categoryKey: 'OVERVIEW',
+    categoryLabel: 'Overview',
+    items: [
+      {
+        key: 'staff-dashboard',
+        label: 'Staff Dashboard',
+        to: PRIVATE_NAVIGATION.staffDashboard,
+        icon: LayoutDashboard,
+        end: true,
+      },
+      {
+        key: 'staff-profile',
+        label: 'My Profile',
+        to: PRIVATE_NAVIGATION.superAdminProfile,
+        icon: User,
       },
     ],
   },
   {
-    categoryKey: 'B2B_MANAGEMENT',
-    categoryLabel: 'Schools & Candidates',
+    categoryKey: 'FINANCE',
+    categoryLabel: 'Billing & Accounting',
     items: [
       {
-        key: 'super-admin-schools',
-        label: 'Schools & Centers',
-        to: PRIVATE_NAVIGATION.superAdminSchools,
+        key: 'staff-billing',
+        label: 'Bills & Invoices',
+        to: PRIVATE_NAVIGATION.staffBilling,
+        icon: Receipt,
+        permission: PERMISSIONS.BILL_VIEW,
+      },
+    ],
+  },
+  {
+    categoryKey: 'BULK_OPERATIONS',
+    categoryLabel: 'Bulk Operations',
+    items: [
+      {
+        key: 'staff-schools-bulk',
+        label: 'Schools & Centers Upload',
+        to: PRIVATE_NAVIGATION.staffSchools,
         icon: Building2,
+        permission: PERMISSIONS.BULK_UPLOAD,
       },
       {
-        key: 'super-admin-students',
-        label: 'Candidate Directory',
+        key: 'staff-bulk-students',
+        label: 'Bulk Student Registration',
+        to: PRIVATE_NAVIGATION.staffBulkStudents,
+        icon: UserPlus,
+        permission: PERMISSIONS.BULK_UPLOAD,
+      },
+      {
+        key: 'staff-answer-key',
+        label: 'Answer Key Upload',
+        to: PRIVATE_NAVIGATION.staffAnswerKey,
+        icon: KeyRound,
+        permission: PERMISSIONS.BULK_UPLOAD,
+      },
+    ],
+  },
+  {
+    categoryKey: 'OPERATIONS',
+    categoryLabel: 'Operations Management',
+    items: [
+      {
+        key: 'staff-schools',
+        label: 'Schools & Centers',
+        to: PRIVATE_NAVIGATION.staffSchools,
+        icon: Building2,
+        permission: PERMISSIONS.INSTITUTION_VIEW,
+      },
+      {
+        key: 'staff-students',
+        label: 'Student Directory',
         to: PRIVATE_NAVIGATION.superAdminStudents,
         icon: Users,
+        permission: PERMISSIONS.STUDENT_VIEW,
       },
       {
-        key: 'super-admin-bulk-students',
-        label: 'Bulk Candidate Upload',
-        to: PRIVATE_NAVIGATION.superAdminBulkStudents,
-        icon: UserPlus,
+        key: 'staff-questions',
+        label: 'Question Bank',
+        to: PRIVATE_NAVIGATION.superAdminQuestionBank,
+        icon: Database,
+        permission: PERMISSIONS.QUESTION_VIEW,
+      },
+      {
+        key: 'staff-translations',
+        label: 'Translations',
+        to: PRIVATE_NAVIGATION.superAdminTranslations,
+        icon: Globe,
+        permission: PERMISSIONS.TRANSLATION_VIEW,
+      },
+      {
+        key: 'staff-exams',
+        label: 'Mock Tests & Exams',
+        to: PRIVATE_NAVIGATION.superAdminMockTests,
+        icon: FileSpreadsheet,
+        permission: PERMISSIONS.EXAM_VIEW,
+      },
+      {
+        key: 'staff-reports',
+        label: 'Exam Reports',
+        to: PRIVATE_NAVIGATION.superAdminCompletedExams,
+        icon: FileText,
+        permission: PERMISSIONS.REPORT_VIEW,
+      },
+      {
+        key: 'staff-notifications',
+        label: 'Notification Center',
+        to: PRIVATE_NAVIGATION.superAdminNotifications,
+        icon: Bell,
+        permission: PERMISSIONS.NOTIFICATION_VIEW,
       },
     ],
   },

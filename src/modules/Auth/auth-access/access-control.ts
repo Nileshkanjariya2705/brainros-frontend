@@ -63,6 +63,7 @@ export const hasRole = (
   role: RoleType,
 ): boolean => {
   if (!userContext || !userContext.roles) return false;
+  if (userContext.roles.includes(ROLES.SUPER_ADMIN)) return true;
   return userContext.roles.includes(role);
 };
 
@@ -75,6 +76,7 @@ export const hasAnyRole = (
 ): boolean => {
   if (!roles || roles.length === 0) return true;
   if (!userContext || !userContext.roles) return false;
+  if (userContext.roles.includes(ROLES.SUPER_ADMIN)) return true;
   return roles.some((r) => userContext.roles!.includes(r));
 };
 
@@ -104,6 +106,11 @@ export const getDefaultLandingRoute = (userContext: UserAuthContext | null | und
       return PRIVATE_NAVIGATION.superAdminDashboard;
     case ROLES.ADMIN:
       return PRIVATE_NAVIGATION.adminDashboard;
+    case ROLES.OPERATOR:
+    case ROLES.MANAGER:
+    case ROLES.GENERAL_MANAGER:
+    case ROLES.ACCOUNTANT:
+      return PRIVATE_NAVIGATION.staffDashboard;
     case ROLES.PARENT:
       return PRIVATE_NAVIGATION.parentDashboardHome;
     case ROLES.INSTITUTION_ADMIN:

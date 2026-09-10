@@ -75,6 +75,7 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   adminExams: '/admin/mock-tests',
   adminExamManager: '/admin/exam-manager',
   adminUploadPaper: '/admin/exam-manager/upload',
+  adminAnswerKey: '/admin/exam-manager/answer-key',
   adminExamImportHistory: '/admin/exam-manager/history',
   adminExamScheduling: '/admin/exam-scheduling',
   adminStrategyRules: '/admin/strategy-rules',
@@ -115,6 +116,7 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   superAdminCompletedExams: '/super-admin/completed-exams',
   superAdminExamManager: '/super-admin/exam-manager',
   superAdminUploadPaper: '/super-admin/exam-manager/upload',
+  superAdminAnswerKey: '/super-admin/exam-manager/answer-key',
   superAdminExamImportHistory: '/super-admin/exam-manager/history',
   superAdminExamScheduling: '/super-admin/exam-scheduling',
   superAdminStrategyRules: '/super-admin/strategy-rules',
@@ -128,7 +130,22 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   superAdminInstitutionBatches: '/super-admin/institution/batches',
   superAdminInstitutionBulkUpload: '/super-admin/institution/bulk-upload',
   superAdminInstitutionReports: '/super-admin/institution/reports',
+  superAdminStaff: '/super-admin/staff',
+  superAdminBilling: '/super-admin/billing',
+  superAdminAcademicCalendar: '/super-admin/academic-calendar',
   superAdminProfile: '/super-admin/profile',
+
+  // ── Staff role-prefixed routes (all staff roles land on staffDashboard) ──
+  staffDashboard: '/staff/dashboard',
+  staffBilling: '/staff/billing',
+  staffSchools: '/staff/schools',
+  staffBulkStudents: '/staff/students/bulk-register',
+  staffStudents: '/staff/students',
+  staffQuestionBank: '/staff/question-bank',
+  staffExams: '/staff/exams',
+  staffReports: '/staff/reports',
+  staffAnswerKey: '/staff/answer-key',
+  staffProfile: '/staff/profile',
 
   // ── Parent role-prefixed routes ──
   parentDashboardHome: '/parent/dashboard',

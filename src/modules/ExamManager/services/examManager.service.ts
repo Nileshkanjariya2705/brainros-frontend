@@ -9,6 +9,8 @@ import type {
   CreateExamFromUploadPayload,
   ExamManagerFilterParams,
   ExamListResponse,
+  QuestionPaperPreviewResult,
+  ExamQuestionPaperDetail,
 } from '../types/examManager.types';
 
 const EXAM_MANAGER_BASE_PATH = '/admin/exam-manager';
@@ -351,3 +353,135 @@ export const useGetExamImportHistoryAPI = () => {
 
   return { getExamImportHistoryAPI, isLoading, error };
 };
+
+// ─── 8. Preview Question Paper Upload (CSV/Excel) ───────────────
+export const usePreviewQuestionPaperUploadAPI = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const previewQuestionPaperUploadAPI = useCallback(
+    async (examId: string, file: File) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await Axios.post(
+          `${EXAM_MANAGER_BASE_PATH}/exams/${examId}/preview-upload`,
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data' } },
+        );
+        setIsLoading(false);
+        const data = response?.data?.data !== undefined ? response.data.data : response?.data;
+        return { data: data as QuestionPaperPreviewResult, error: null };
+      } catch (err: any) {
+        setIsLoading(false);
+        const errorMsg =
+          err?.response?.data?.message || err?.message || 'Failed to preview question paper.';
+        setError(errorMsg);
+        return { data: null, error: errorMsg };
+      }
+    },
+    [],
+  );
+
+  return { previewQuestionPaperUploadAPI, isLoading, error };
+};
+
+// ─── 9. Submit Question Paper For Background Processing ──────────
+export const useSubmitQuestionPaperUploadAPI = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submitQuestionPaperUploadAPI = useCallback(
+    async (examId: string, file: File) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await Axios.post(
+          `${EXAM_MANAGER_BASE_PATH}/exams/${examId}/submit-upload`,
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data' } },
+        );
+        setIsLoading(false);
+        const data = response?.data?.data !== undefined ? response.data.data : response?.data;
+        return {
+          data: data as { importId: string; jobId: string; message: string },
+          error: null,
+        };
+      } catch (err: any) {
+        setIsLoading(false);
+        const errorMsg =
+          err?.response?.data?.message || err?.message || 'Failed to submit question paper.';
+        setError(errorMsg);
+        return { data: null, error: errorMsg };
+      }
+    },
+    [],
+  );
+
+  return { submitQuestionPaperUploadAPI, isLoading, error };
+};
+
+// ─── 10. Get Complete Question Paper For Admin View ─────────────
+export const useGetExamQuestionPaperAPI = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const getExamQuestionPaperAPI = useCallback(
+    async (examId: string) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await Axios.get(
+          `${EXAM_MANAGER_BASE_PATH}/exams/${examId}/question-paper`,
+        );
+        setIsLoading(false);
+        const data = response?.data?.data !== undefined ? response.data.data : response?.data;
+        return { data: data as ExamQuestionPaperDetail, error: null };
+      } catch (err: any) {
+        setIsLoading(false);
+        const errorMsg =
+          err?.response?.data?.message || err?.message || 'Failed to load question paper.';
+        setError(errorMsg);
+        return { data: null, error: errorMsg };
+      }
+    },
+    [],
+  );
+
+  return { getExamQuestionPaperAPI, isLoading, error };
+};
+
+// ─── 11. Retry Failed Question Paper Upload ───────────────────────
+export const useRetryQuestionPaperUploadAPI = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const retryQuestionPaperUploadAPI = useCallback(
+    async (examId: string) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await Axios.post(
+          `${EXAM_MANAGER_BASE_PATH}/exams/${examId}/retry-upload`,
+        );
+        setIsLoading(false);
+        const data = response?.data?.data !== undefined ? response.data.data : response?.data;
+        return { data, error: null };
+      } catch (err: any) {
+        setIsLoading(false);
+        const errorMsg =
+          err?.response?.data?.message || err?.message || 'Failed to retry question paper upload.';
+        setError(errorMsg);
+        return { data: null, error: errorMsg };
+      }
+    },
+    [],
+  );
+
+  return { retryQuestionPaperUploadAPI, isLoading, error };
+};
+

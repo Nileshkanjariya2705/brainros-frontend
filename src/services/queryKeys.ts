@@ -60,6 +60,13 @@ export const adminKeys = {
     [...adminKeys.all, 'completed-exams', examId, 'attendees', filters] as const,
   completedExamEmailStatus: (attemptId: string) =>
     [...adminKeys.all, 'completed-exams', 'email-status', attemptId] as const,
+  scheduledExams: (filters: Record<string, any> = {}) =>
+    [...adminKeys.all, 'scheduled-exams', filters] as const,
+  blueprints: () => [...adminKeys.all, 'blueprints'] as const,
+  answerKeyStatus: (scheduleId: string) =>
+    [...adminKeys.all, 'answer-key', scheduleId, 'status'] as const,
+  answerKeyQuestions: (scheduleId: string) =>
+    [...adminKeys.all, 'answer-key', scheduleId, 'questions'] as const,
   approvals: (params: Record<string, any> = {}) =>
     [...adminKeys.all, 'approvals', params] as const,
   auditLogs: (params: Record<string, any> = {}) =>

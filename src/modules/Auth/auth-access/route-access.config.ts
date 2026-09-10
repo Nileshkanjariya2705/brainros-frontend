@@ -62,81 +62,81 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
   // Admin Role Routes
   [PRIVATE_NAVIGATION.adminDashboard]: {
     path: PRIVATE_NAVIGATION.adminDashboard,
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminQuestionBank]: {
     path: PRIVATE_NAVIGATION.adminQuestionBank,
     permissions: [PERMISSIONS.QUESTION_VIEW],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminCreateQuestion]: {
     path: PRIVATE_NAVIGATION.adminCreateQuestion,
     permissions: [PERMISSIONS.QUESTION_CREATE],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminEditQuestion]: {
     path: PRIVATE_NAVIGATION.adminEditQuestion,
     permissions: [PERMISSIONS.QUESTION_UPDATE],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminLanguages]: {
     path: PRIVATE_NAVIGATION.adminLanguages,
     permissions: [PERMISSIONS.TRANSLATION_VIEW],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminExamBlueprints]: {
     path: PRIVATE_NAVIGATION.adminExamBlueprints,
     permissions: [PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminExams]: {
     path: PRIVATE_NAVIGATION.adminExams,
     permissions: [PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminExamScheduling]: {
     path: PRIVATE_NAVIGATION.adminExamScheduling,
     permissions: [PERMISSIONS.EXAM_SCHEDULE, PERMISSIONS.EXAM_VIEW],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminStrategyRules]: {
     path: PRIVATE_NAVIGATION.adminStrategyRules,
     permissions: [PERMISSIONS.STRATEGY_VIEW],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminLeaderboard]: {
     path: PRIVATE_NAVIGATION.adminLeaderboard,
     permissions: [PERMISSIONS.RANK_VIEW],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminHistoricalDatasets]: {
     path: PRIVATE_NAVIGATION.adminHistoricalDatasets,
     permissions: [PERMISSIONS.ANALYSIS_VIEW],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminControlCenterPage]: {
     path: PRIVATE_NAVIGATION.adminControlCenterPage,
     permissions: [PERMISSIONS.APPROVAL_VIEW, PERMISSIONS.USER_VIEW],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminApprovalQueuePage]: {
     path: PRIVATE_NAVIGATION.adminApprovalQueuePage,
     permissions: [PERMISSIONS.APPROVAL_VIEW],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminAuditLogsPage]: {
     path: PRIVATE_NAVIGATION.adminAuditLogsPage,
     permissions: [PERMISSIONS.AUDIT_VIEW],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminNotificationsPage]: {
     path: PRIVATE_NAVIGATION.adminNotificationsPage,
     permissions: [PERMISSIONS.NOTIFICATION_VIEW],
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminProfile]: {
     path: PRIVATE_NAVIGATION.adminProfile,
-    roles: [ROLES.ADMIN],
+    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
 
   // Super Admin Role Routes

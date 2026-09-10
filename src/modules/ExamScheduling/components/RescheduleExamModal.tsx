@@ -27,6 +27,41 @@ export const RescheduleExamModal: React.FC<RescheduleExamModalProps> = ({
 
   const { rescheduleExamAPI, isLoading } = useRescheduleExamAPI();
 
+  const durationMinutes =
+    (schedule?.exam as any)?.durationMinutes ||
+    (schedule
+      ? Math.max(
+          1,
+          Math.round(
+            (new Date(schedule.endTime).getTime() - new Date(schedule.startTime).getTime()) /
+              (60 * 1000),
+          ),
+        )
+      : 180);
+
+  // Auto-calculate end time whenever startDate or startTime changes
+  useEffect(() => {
+    if (!startDate || !startTime) return;
+    try {
+      const [hours, minutes] = startTime.split(':').map(Number);
+      const startObj = new Date(`${startDate}T00:00:00`);
+      startObj.setHours(hours || 0, minutes || 0, 0, 0);
+
+      const endObj = new Date(startObj.getTime() + durationMinutes * 60 * 1000);
+
+      const endYear = endObj.getFullYear();
+      const endMonth = String(endObj.getMonth() + 1).padStart(2, '0');
+      const endDay = String(endObj.getDate()).padStart(2, '0');
+      setEndDate(`${endYear}-${endMonth}-${endDay}`);
+
+      const endHours = String(endObj.getHours()).padStart(2, '0');
+      const endMinutes = String(endObj.getMinutes()).padStart(2, '0');
+      setEndTime(`${endHours}:${endMinutes}`);
+    } catch {
+      // ignore
+    }
+  }, [startDate, startTime, durationMinutes]);
+
   useEffect(() => {
     if (!isOpen || !schedule) return;
 
@@ -52,7 +87,7 @@ export const RescheduleExamModal: React.FC<RescheduleExamModalProps> = ({
     setErrorMsg(null);
 
     if (!startDate || !startTime || !endDate || !endTime) {
-      setErrorMsg('Please provide complete start and end date/time.');
+      setErrorMsg('Please provide a valid start date and start time.');
       return;
     }
 
@@ -60,7 +95,7 @@ export const RescheduleExamModal: React.FC<RescheduleExamModalProps> = ({
     const endISO = new Date(`${endDate}T${endTime}:00`).toISOString();
 
     if (new Date(startISO) >= new Date(endISO)) {
-      setErrorMsg('New start time must be strictly before new end time.');
+      setErrorMsg('New start time must be strictly before calculated end time.');
       return;
     }
 
@@ -94,7 +129,7 @@ export const RescheduleExamModal: React.FC<RescheduleExamModalProps> = ({
                 Reschedule Exam Window
               </h2>
               <p className="text-xs text-slate-500 font-mono">
-                Schedule ID: {schedule.id.slice(0, 8)}...
+                Duration: {durationMinutes} mins | Schedule ID: {schedule.id.slice(0, 8)}...
               </p>
             </div>
           </div>
@@ -125,7 +160,7 @@ export const RescheduleExamModal: React.FC<RescheduleExamModalProps> = ({
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-semibold text-slate-900"
+                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-semibold text-slate-900 focus:border-indigo-500 focus:outline-none"
                 />
               </div>
               <div className="space-y-1">
@@ -134,28 +169,36 @@ export const RescheduleExamModal: React.FC<RescheduleExamModalProps> = ({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-bold text-slate-900"
+                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-bold text-slate-900 focus:border-indigo-500 focus:outline-none"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700">New End Date</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700">Calculated End Date</label>
+                  <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Auto</span>
+                </div>
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-semibold text-slate-900"
+                  disabled
+                  readOnly
+                  className="w-full rounded-xl border border-slate-200 bg-slate-100 p-2.5 text-xs font-semibold text-slate-600 cursor-not-allowed"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700">New End Time</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700">Calculated End Time</label>
+                  <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Auto</span>
+                </div>
                 <input
                   type="time"
                   value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-bold text-slate-900"
+                  disabled
+                  readOnly
+                  className="w-full rounded-xl border border-slate-200 bg-slate-100 p-2.5 text-xs font-bold text-slate-600 cursor-not-allowed"
                 />
               </div>
             </div>

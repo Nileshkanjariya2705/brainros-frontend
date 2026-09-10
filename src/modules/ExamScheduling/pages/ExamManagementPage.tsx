@@ -52,7 +52,10 @@ export const ExamManagementPage: React.FC = () => {
   useEffect(() => {
     getReq<any>('/auth/options').then(({ data }) => {
       const opts = data?.examTargets ? data : (data as any)?.data || {};
-      if (opts.examTargets) setExamTargets(opts.examTargets);
+      if (opts.examTargets) {
+        const ALLOWED = ['JEE', 'NEET', 'CET'];
+        setExamTargets(opts.examTargets.filter((t: any) => ALLOWED.includes(t.name?.toUpperCase().trim())));
+      }
       if (opts.languages) setAvailableLanguages(opts.languages);
     });
   }, [getReq]);

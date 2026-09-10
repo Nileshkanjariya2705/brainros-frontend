@@ -9,6 +9,7 @@ import AuthLayout from '@/components/layout/AuthLayout';
 import StudentLayout from '@/components/layouts/StudentLayout';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
+import StaffLayout from '@/components/layouts/StaffLayout';
 import ParentLayout from '@/components/layouts/ParentLayout';
 import InstitutionLayout from '@/components/layouts/InstitutionLayout';
 import PageLoader from '@/components/feedback/PageLoader';
@@ -37,6 +38,15 @@ const StudentDashboardPage = lazyRoute(
 const AdminDashboardPage = lazyRoute(() => import('@/modules/Dashboard/pages/AdminDashboardPage'));
 const SuperAdminDashboardPage = lazyRoute(
   () => import('@/modules/Dashboard/pages/SuperAdminDashboardPage'),
+);
+const StaffDashboardPage = lazyRoute(
+  () => import('@/modules/Dashboard/pages/StaffDashboardPage'),
+);
+const StaffManagementPage = lazyRoute(
+  () => import('@/modules/Admin/pages/StaffManagementPage'),
+);
+const SuperAdminBillingPage = lazyRoute(
+  () => import('@/modules/Billing/pages/SuperAdminBillingPage'),
 );
 const SuperAdminRegistrationsPage = lazyRoute(
   () => import('@/modules/Admin/pages/SuperAdminRegistrationsPage'),
@@ -96,6 +106,18 @@ const TranslationManagerPage = lazyRoute(
 );
 const UploadQuestionPaperPage = lazyRoute(
   () => import('@/modules/ExamManager/pages/UploadQuestionPaperPage'),
+);
+const UploadExamQuestionPaperPage = lazyRoute(
+  () => import('@/modules/ExamManager/pages/UploadExamQuestionPaperPage'),
+);
+const ViewQuestionPaperPage = lazyRoute(
+  () => import('@/modules/ExamManager/pages/ViewQuestionPaperPage'),
+);
+const ViewAnswerKeyPage = lazyRoute(
+  () => import('@/modules/ExamManager/pages/ViewAnswerKeyPage'),
+);
+const AnswerKeyManagementPage = lazyRoute(
+  () => import('@/modules/ExamManager/pages/AnswerKeyManagementPage'),
 );
 const ImportHistoryPage = lazyRoute(
   () => import('@/modules/ExamManager/pages/ImportHistoryPage'),
@@ -157,6 +179,10 @@ const CompletedExamReportsPage = lazyRoute(
 const AdminStudentsPage = lazyRoute(() => import('@/modules/Admin/pages/AdminStudentsPage'));
 const AdminSchoolsPage = lazyRoute(() => import('@/modules/Admin/pages/AdminSchoolsPage'));
 const NotFoundPage = lazyRoute(() => import('@/components/feedback/NotFoundPage'));
+const SuperAdminAcademicCalendarPage = lazyRoute(
+  () => import('@/modules/Admin/pages/SuperAdminAcademicCalendarPage'),
+);
+
 
 // ══════════════════════════════════════════════════════════════════════════
 // 1. PUBLIC ROUTES (Unauthenticated Only)
@@ -287,7 +313,7 @@ const adminRoutes: RouteObject[] = [
   {
     path: '/admin',
     element: (
-      <ProtectedRoute roles={[ROLES.ADMIN]}>
+      <ProtectedRoute roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}>
         <AdminLayout />
       </ProtectedRoute>
     ),
@@ -477,6 +503,54 @@ const adminRoutes: RouteObject[] = [
         ),
       },
       {
+        path: 'exams/:examId/question-paper/upload',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE]}>
+            <UploadExamQuestionPaperPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exams/:examId/question-paper/view',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
+            <ViewQuestionPaperPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exams/:scheduleId/answer-key/view',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
+            <ViewAnswerKeyPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exam-manager/answer-key/:scheduleId/view',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
+            <ViewAnswerKeyPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exam-manager/answer-key',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
+            <AnswerKeyManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exam-manager/answer-key/:scheduleId',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
+            <AnswerKeyManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'exam-manager/history',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
@@ -660,6 +734,12 @@ const superAdminRoutes: RouteObject[] = [
       { path: 'completed-exams', element: <CompletedExamReportsPage /> },
       { path: 'exam-manager', element: <ExamManagerDashboardPage /> },
       { path: 'exam-manager/upload', element: <UploadQuestionPaperPage /> },
+      { path: 'exams/:examId/question-paper/upload', element: <UploadExamQuestionPaperPage /> },
+      { path: 'exams/:examId/question-paper/view', element: <ViewQuestionPaperPage /> },
+      { path: 'exams/:scheduleId/answer-key/view', element: <ViewAnswerKeyPage /> },
+      { path: 'exam-manager/answer-key/:scheduleId/view', element: <ViewAnswerKeyPage /> },
+      { path: 'exam-manager/answer-key', element: <AnswerKeyManagementPage /> },
+      { path: 'exam-manager/answer-key/:scheduleId', element: <AnswerKeyManagementPage /> },
       { path: 'exam-manager/history', element: <ImportHistoryPage /> },
       { path: 'exam-scheduling', element: <ExamSchedulingManagementPage /> },
       { path: 'strategy-rules', element: <StrategyRuleManagementPage /> },
@@ -675,13 +755,52 @@ const superAdminRoutes: RouteObject[] = [
       { path: 'students', element: <AdminStudentsPage /> },
       { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
       { path: 'schools', element: <AdminSchoolsPage /> },
+      { path: 'staff', element: <StaffManagementPage /> },
+      { path: 'billing', element: <SuperAdminBillingPage /> },
+      { path: 'academic-calendar', element: <SuperAdminAcademicCalendarPage /> },
       { path: 'profile', element: <StudentProfilePage /> },
     ],
   },
 ];
 
 // ══════════════════════════════════════════════════════════════════════════
-// 5. PARENT ROLE DASHBOARD & ROUTES (/parent/*)
+// 5. STAFF ROLE DASHBOARD & ROUTES (/staff/*)
+// ══════════════════════════════════════════════════════════════════════════
+const staffRoutes: RouteObject[] = [
+  {
+    path: '/staff',
+    element: (
+      <ProtectedRoute
+        roles={[
+          ROLES.OPERATOR,
+          ROLES.MANAGER,
+          ROLES.GENERAL_MANAGER,
+          ROLES.ACCOUNTANT,
+          ROLES.SUPER_ADMIN,
+        ]}
+      >
+        <StaffLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: '', element: <Navigate to="dashboard" replace /> },
+      { path: 'dashboard', element: <StaffDashboardPage /> },
+      { path: 'billing', element: <SuperAdminBillingPage /> },
+      { path: 'schools', element: <AdminSchoolsPage /> },
+      { path: 'students', element: <AdminStudentsPage /> },
+      { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
+      { path: 'answer-key', element: <AnswerKeyManagementPage /> },
+      { path: 'question-bank', element: <QuestionBankPage /> },
+      { path: 'exams', element: <ExamManagementPage /> },
+      { path: 'reports', element: <CompletedExamReportsPage /> },
+      { path: 'notifications', element: <AdminNotificationsPage /> },
+      { path: 'profile', element: <StudentProfilePage /> },
+    ],
+  },
+];
+
+// ══════════════════════════════════════════════════════════════════════════
+// 6. PARENT ROLE DASHBOARD & ROUTES (/parent/*)
 // ══════════════════════════════════════════════════════════════════════════
 const parentRoutes: RouteObject[] = [
   {
@@ -846,6 +965,7 @@ const router = createBrowserRouter([
       ...studentRoutes,
       ...adminRoutes,
       ...superAdminRoutes,
+      ...staffRoutes,
       ...parentRoutes,
       ...institutionRoutes,
       ...legacyAndSharedRoutes,

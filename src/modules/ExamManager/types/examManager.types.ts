@@ -194,6 +194,12 @@ export interface ExamItem {
     hasAnswerKey: boolean;
     answerKeyUploadedAt?: string | null;
   } | null;
+  questionPaperStatus?: 'NOT_UPLOADED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  latestImportId?: string | null;
+  importStatus?: string | null;
+  importError?: string | null;
+  validRows?: number;
+  totalRows?: number;
   createdBy?: {
     id: string;
     email: string;
@@ -201,6 +207,93 @@ export interface ExamItem {
   };
   createdAt: string;
   updatedAt: string;
+}
+
+export interface QuestionPaperPreviewRow {
+  rowNumber: number;
+  questionText: string;
+  questionType: string;
+  subject: string;
+  chapter: string;
+  options: {
+    A: string;
+    B: string;
+    C: string;
+    D: string;
+  };
+  correctAnswer: string;
+  marks: number;
+  negativeMarks: number;
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface QuestionPaperPreviewResult {
+  isValid: boolean;
+  examId: string;
+  examTitle: string;
+  examTarget: string;
+  totalQuestions: number;
+  validQuestions: number;
+  invalidQuestions: number;
+  subjects: string[];
+  chapters: string[];
+  questionTypes: string[];
+  errors: Array<{ row: number; column?: string; message: string }>;
+  warnings: string[];
+  previewRows: QuestionPaperPreviewRow[];
+}
+
+export interface QuestionPaperOption {
+  id: string;
+  optionKey: string;
+  optionText: string;
+  isCorrect: boolean;
+  displayOrder: number;
+}
+
+export interface QuestionPaperQuestion {
+  id: string;
+  questionNumber: number;
+  displayOrder: number;
+  questionText: string;
+  passageText?: string | null;
+  assertionText?: string | null;
+  reasonText?: string | null;
+  type: string;
+  difficultyLevel?: string;
+  subject: string;
+  chapter?: string | null;
+  section?: string | null;
+  marks: number;
+  negativeMarks: number;
+  options: QuestionPaperOption[];
+  correctAnswer?: any;
+  explanation?: string;
+}
+
+export interface ExamQuestionPaperDetail {
+  id: string;
+  title: string;
+  description?: string;
+  examTarget?: { id: string; name: string; description?: string };
+  status: string;
+  durationMinutes: number;
+  totalMarks: number;
+  totalQuestions: number;
+  schedule?: {
+    startTime: string;
+    endTime: string;
+    status: string;
+  } | null;
+  sections: Array<{
+    id: string;
+    name: string;
+    subject: string;
+    totalQuestions: number;
+  }>;
+  questions: QuestionPaperQuestion[];
 }
 
 export interface ExamListResponse {
@@ -212,3 +305,4 @@ export interface ExamListResponse {
     totalPages: number;
   };
 }
+

@@ -65,22 +65,71 @@ export const useScheduleExamAPI = () => {
   return { scheduleExamAPI, ...state };
 };
 
+export interface ScheduleAdminExamPayload {
+  examType: 'SPECIFIC_SUBJECT' | 'SPECIFIC_CHAPTER' | 'FULL_EXAM' | string;
+  examTargetName?: string;
+  examTargetId?: string;
+  examName?: string;
+  title?: string;
+  configurationMode?: 'MANUAL' | 'BLUEPRINT';
+  subjectId?: string;
+  chapterId?: string;
+  blueprintId?: string;
+  questionCount?: number;
+  totalQuestions?: number;
+  duration?: number;
+  durationMinutes?: number;
+  marksPerQuestion?: number;
+  negativeMarks?: number;
+  languageId?: string;
+  startTime: string;
+  timezone?: string;
+}
+
+export interface CheckQuestionAvailabilityParams {
+  examType: string;
+  examTargetId?: string;
+  examTargetName?: string;
+  subjectId?: string;
+  chapterId?: string;
+  blueprintId?: string;
+  questionCount: number;
+}
+
+export interface QuestionAvailabilityResult {
+  availableCount: number;
+  requiredCount: number;
+  isAvailable: boolean;
+  message: string;
+}
+
+export const useCheckQuestionAvailabilityAPI = () => {
+  const [getReq, state] = useAxiosGet();
+
+  const checkQuestionAvailabilityAPI = useCallback(
+    async (params: CheckQuestionAvailabilityParams) => {
+      const query = new URLSearchParams({
+        examType: params.examType,
+        questionCount: String(params.questionCount),
+        ...(params.examTargetId ? { examTargetId: params.examTargetId } : {}),
+        ...(params.examTargetName ? { examTargetName: params.examTargetName } : {}),
+        ...(params.subjectId ? { subjectId: params.subjectId } : {}),
+        ...(params.chapterId ? { chapterId: params.chapterId } : {}),
+        ...(params.blueprintId ? { blueprintId: params.blueprintId } : {}),
+      }).toString();
+      return getReq<QuestionAvailabilityResult>(`/admin/exams/check-availability?${query}`);
+    },
+    [getReq],
+  );
+
+  return { checkQuestionAvailabilityAPI, ...state };
+};
+
 export const useScheduleAdminExamAPI = () => {
   const [postReq, state] = useAxiosPost();
 
   const scheduleAdminExamAPI = useCallback(
-    async (payload: {
-      examType: string;
-      title?: string;
-      subjectId?: string;
-      chapterId?: string;
-      examTargetId?: string;
-      blueprintId?: string;
-      totalQuestions?: number;
-      durationMinutes?: number;
-      startTime: string;
-      timezone?: string;
-    }) => {
+    async (payload: ScheduleAdminExamPayload) => {
       return postReq<ExamScheduleItem>(`/admin/exams/schedule`, payload);
     },
     [postReq],

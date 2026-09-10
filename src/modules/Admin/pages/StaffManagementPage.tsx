@@ -1,0 +1,739 @@
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  UserCog,
+  Plus,
+  Search,
+  Eye,
+  Edit2,
+  Power,
+  Building2,
+  Phone,
+  Mail,
+  X,
+  RefreshCw,
+} from 'lucide-react';
+import {
+  AdminStaffApi,
+  type StaffUserItem,
+  type CreateStaffPayload,
+  type UpdateStaffPayload,
+} from '../services/admin-staff.service';
+import Button from '@/components/ui/Button';
+import Loader from '@/components/feedback/Loader';
+import { toast } from '@/utils/toast';
+
+const ROLE_BADGES: Record<string, { label: string; color: string }> = {
+  OPERATOR: { label: 'Operator', color: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+  MANAGER: { label: 'Manager', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  GENERAL_MANAGER: {
+    label: 'General Manager',
+    color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  },
+  ACCOUNTANT: { label: 'Accountant', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+};
+
+export const StaffManagementPage: React.FC = () => {
+  const queryClient = useQueryClient();
+
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+
+  // Modals state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [viewingStaff, setViewingStaff] = useState<StaffUserItem | null>(null);
+  const [editingStaff, setEditingStaff] = useState<StaffUserItem | null>(null);
+
+  // Form states for Create
+  const [createForm, setCreateForm] = useState<CreateStaffPayload>({
+    name: '',
+    mobileNumber: '',
+    email: '',
+    role: 'OPERATOR',
+    institutionId: '',
+  });
+
+  // Form states for Edit
+  const [editForm, setEditForm] = useState<UpdateStaffPayload>({
+    name: '',
+    email: '',
+    role: 'OPERATOR',
+    institutionId: '',
+  });
+
+  // Fetch Staff List
+  const {
+    data: staffData,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useQuery({
+    queryKey: ['admin-staff', page, search, roleFilter, statusFilter],
+    queryFn: () =>
+      AdminStaffApi.getStaffList({
+        page,
+        limit: 10,
+        search: search.trim() || undefined,
+        role: roleFilter || undefined,
+        status: statusFilter || undefined,
+      }),
+  });
+
+  // Fetch dynamic schools dropdown for assignment
+  const { data: schoolsData } = useQuery({
+    queryKey: ['billing-schools-dropdown'],
+    queryFn: AdminStaffApi.getSchoolsDropdown,
+  });
+
+  const schools = schoolsData?.data || [];
+  const staffList: StaffUserItem[] = staffData?.data?.items || [];
+  const pagination = staffData?.data?.pagination || { total: 0, totalPages: 1 };
+
+  // Create Staff Mutation
+  const createMutation = useMutation({
+    mutationFn: (payload: CreateStaffPayload) => AdminStaffApi.createStaff(payload),
+    onSuccess: (res) => {
+      toast.success(res.message || 'Staff member created successfully!');
+      queryClient.invalidateQueries({ queryKey: ['admin-staff'] });
+      setIsCreateModalOpen(false);
+      setCreateForm({
+        name: '',
+        mobileNumber: '',
+        email: '',
+        role: 'OPERATOR',
+        institutionId: '',
+      });
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || 'Failed to create staff member.';
+      toast.error(msg);
+    },
+  });
+
+  // Update Staff Mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateStaffPayload }) =>
+      AdminStaffApi.updateStaff(id, payload),
+    onSuccess: (res) => {
+      toast.success(res.message || 'Staff member updated successfully!');
+      queryClient.invalidateQueries({ queryKey: ['admin-staff'] });
+      setEditingStaff(null);
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || 'Failed to update staff member.';
+      toast.error(msg);
+    },
+  });
+
+  // Toggle Status Mutation
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' }) =>
+      AdminStaffApi.updateStaffStatus(id, status),
+    onSuccess: (res) => {
+      toast.success(res.message || 'Staff status updated!');
+      queryClient.invalidateQueries({ queryKey: ['admin-staff'] });
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || 'Failed to update status.';
+      toast.error(msg);
+    },
+  });
+
+  const handleOpenEdit = (staff: StaffUserItem) => {
+    setEditingStaff(staff);
+    setEditForm({
+      name: staff.name || '',
+      email: staff.email || '',
+      role: (staff.roles[0] as any) || 'OPERATOR',
+      institutionId: staff.institutionId || '',
+    });
+  };
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      {/* ── Page Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+            <UserCog size={26} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Staff Management</h1>
+            <p className="text-sm text-slate-500">
+              Manage operational staff accounts, roles, institution scopes and status
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw size={15} className={isFetching ? 'animate-spin' : ''} />
+            Refresh
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            <Plus size={16} />
+            Create Staff
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Filter & Search Toolbar ── */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="relative">
+          <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by name, mobile, email..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            className="w-full pl-10 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+          />
+        </div>
+
+        <div>
+          <select
+            value={roleFilter}
+            onChange={(e) => {
+              setRoleFilter(e.target.value);
+              setPage(1);
+            }}
+            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+          >
+            <option value="">All Roles</option>
+            <option value="OPERATOR">Operator</option>
+            <option value="MANAGER">Manager</option>
+            <option value="GENERAL_MANAGER">General Manager</option>
+            <option value="ACCOUNTANT">Accountant</option>
+          </select>
+        </div>
+
+        <div>
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+          >
+            <option value="">All Statuses</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+            <option value="SUSPENDED">Suspended</option>
+          </select>
+        </div>
+      </div>
+
+      {/* ── Staff Table (Section-level loader) ── */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        {isLoading ? (
+          <div className="py-16 flex flex-col items-center justify-center">
+            <Loader label="Loading staff records..." />
+          </div>
+        ) : staffList.length === 0 ? (
+          <div className="py-16 text-center">
+            <UserCog size={44} className="mx-auto text-slate-300 mb-3" />
+            <p className="text-base font-medium text-slate-700">No staff members found</p>
+            <p className="text-sm text-slate-400 max-w-sm mx-auto mt-1">
+              Adjust your search filters or click "Create Staff" to add operational team members.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/75 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="py-3.5 px-4 sm:px-6">Staff Member</th>
+                  <th className="py-3.5 px-4">Contact</th>
+                  <th className="py-3.5 px-4">Role</th>
+                  <th className="py-3.5 px-4">Institution Scope</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4">Created At</th>
+                  <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {staffList.map((staff) => {
+                  const primaryRole = staff.roles[0] || 'OPERATOR';
+                  const roleMeta = ROLE_BADGES[primaryRole] || {
+                    label: primaryRole,
+                    color: 'bg-slate-100 text-slate-700 border-slate-200',
+                  };
+                  const isActive = staff.status === 'ACTIVE';
+
+                  return (
+                    <tr key={staff.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-4 px-4 sm:px-6">
+                        <div className="font-semibold text-slate-900">
+                          {staff.name || 'Unnamed Staff'}
+                        </div>
+                        <div className="text-xs text-slate-400 font-mono">ID: {staff.id.slice(0, 8)}...</div>
+                      </td>
+
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-1.5 text-slate-700">
+                          <Phone size={13} className="text-slate-400" />
+                          <span className="font-mono text-xs">{staff.mobileNumber}</span>
+                        </div>
+                        {staff.email && (
+                          <div className="flex items-center gap-1.5 text-slate-500 text-xs mt-0.5">
+                            <Mail size={13} className="text-slate-400" />
+                            <span>{staff.email}</span>
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="py-4 px-4">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${roleMeta.color}`}
+                        >
+                          {roleMeta.label}
+                        </span>
+                      </td>
+
+                      <td className="py-4 px-4">
+                        {staff.institutionName ? (
+                          <div className="flex items-center gap-1.5 text-slate-700 text-xs font-medium">
+                            <Building2 size={13} className="text-indigo-500" />
+                            <span>{staff.institutionName}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">Platform-wide</span>
+                        )}
+                      </td>
+
+                      <td className="py-4 px-4">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                            isActive
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-slate-100 text-slate-600 border border-slate-200'
+                          }`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              isActive ? 'bg-emerald-500' : 'bg-slate-400'
+                            }`}
+                          />
+                          {staff.status}
+                        </span>
+                      </td>
+
+                      <td className="py-4 px-4 text-xs text-slate-500">
+                        {new Date(staff.createdAt).toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </td>
+
+                      <td className="py-4 px-4 sm:px-6 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setViewingStaff(staff)}
+                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                            title="View Staff Details"
+                          >
+                            <Eye size={16} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(staff)}
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            title="Edit Staff Member"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              statusMutation.mutate({
+                                id: staff.id,
+                                status: isActive ? 'INACTIVE' : 'ACTIVE',
+                              })
+                            }
+                            className={`p-1.5 rounded-lg transition ${
+                              isActive
+                                ? 'text-amber-600 hover:bg-amber-50'
+                                : 'text-emerald-600 hover:bg-emerald-50'
+                            }`}
+                            title={isActive ? 'Deactivate Staff' : 'Activate Staff'}
+                          >
+                            <Power size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination Footer */}
+        {pagination.totalPages > 1 && (
+          <div className="p-4 border-t border-slate-100 flex items-center justify-between text-sm text-slate-500">
+            <span>
+              Showing page {page} of {pagination.totalPages} ({pagination.total} total staff)
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= pagination.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── CREATE STAFF MODAL ── */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 relative animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={() => setIsCreateModalOpen(false)}
+              className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 p-1"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="h-10 w-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                <Plus size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Create Staff Account</h2>
+                <p className="text-xs text-slate-500">Staff will log in via Mobile OTP</p>
+              </div>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                createMutation.mutate(createForm);
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                  placeholder="e.g. Ramesh Kumar"
+                  className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Mobile Number * (10 digits)
+                </label>
+                <input
+                  type="tel"
+                  required
+                  maxLength={10}
+                  pattern="[0-9]{10}"
+                  value={createForm.mobileNumber}
+                  onChange={(e) =>
+                    setCreateForm({
+                      ...createForm,
+                      mobileNumber: e.target.value.replace(/\D/g, ''),
+                    })
+                  }
+                  placeholder="9876543210"
+                  className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Email Address (Optional)
+                </label>
+                <input
+                  type="email"
+                  value={createForm.email}
+                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                  placeholder="staff@example.com"
+                  className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Staff Role *
+                </label>
+                <select
+                  value={createForm.role}
+                  onChange={(e) =>
+                    setCreateForm({
+                      ...createForm,
+                      role: e.target.value as any,
+                    })
+                  }
+                  className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                >
+                  <option value="OPERATOR">Operator (Operational tasks, questions, exams)</option>
+                  <option value="MANAGER">Manager (Operational + management tasks)</option>
+                  <option value="GENERAL_MANAGER">General Manager (Broad management oversight)</option>
+                  <option value="ACCOUNTANT">Accountant (Billing & institutional invoices)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Assigned School / Institution (Optional)
+                </label>
+                <select
+                  value={createForm.institutionId}
+                  onChange={(e) => setCreateForm({ ...createForm, institutionId: e.target.value })}
+                  className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                >
+                  <option value="">Platform-wide (No specific institution)</option>
+                  {schools.map((school: any) => (
+                    <option key={school.id} value={school.id}>
+                      {school.name} ({school.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsCreateModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={createMutation.isPending}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  {createMutation.isPending ? 'Creating...' : 'Create Staff Member'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── EDIT STAFF MODAL ── */}
+      {editingStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 relative animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={() => setEditingStaff(null)}
+              className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 p-1"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="h-10 w-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                <Edit2 size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Edit Staff Account</h2>
+                <p className="text-xs text-slate-500">Mobile: {editingStaff.mobileNumber}</p>
+              </div>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                updateMutation.mutate({ id: editingStaff.id, payload: editForm });
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Staff Role
+                </label>
+                <select
+                  value={editForm.role}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      role: e.target.value as any,
+                    })
+                  }
+                  className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                >
+                  <option value="OPERATOR">Operator</option>
+                  <option value="MANAGER">Manager</option>
+                  <option value="GENERAL_MANAGER">General Manager</option>
+                  <option value="ACCOUNTANT">Accountant</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Assigned Institution Scope
+                </label>
+                <select
+                  value={editForm.institutionId}
+                  onChange={(e) => setEditForm({ ...editForm, institutionId: e.target.value })}
+                  className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                >
+                  <option value="">Platform-wide (No specific institution)</option>
+                  {schools.map((school: any) => (
+                    <option key={school.id} value={school.id}>
+                      {school.name} ({school.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditingStaff(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={updateMutation.isPending}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── VIEW STAFF DETAILS MODAL ── */}
+      {viewingStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={() => setViewingStaff(null)}
+              className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 p-1"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-12 w-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-lg">
+                {(viewingStaff.name || 'S').charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">{viewingStaff.name || 'Staff User'}</h3>
+                <p className="text-xs text-slate-400 font-mono">User ID: {viewingStaff.id}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm">
+              <div className="flex justify-between py-1 border-b border-slate-200/60">
+                <span className="text-slate-500">Mobile:</span>
+                <span className="font-semibold text-slate-800 font-mono">{viewingStaff.mobileNumber}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200/60">
+                <span className="text-slate-500">Email:</span>
+                <span className="font-medium text-slate-800">{viewingStaff.email || '—'}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200/60">
+                <span className="text-slate-500">Role:</span>
+                <span className="font-semibold text-indigo-600">{viewingStaff.roles.join(', ')}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200/60">
+                <span className="text-slate-500">Institution:</span>
+                <span className="font-medium text-slate-800">{viewingStaff.institutionName || 'Platform-wide'}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200/60">
+                <span className="text-slate-500">Account Status:</span>
+                <span className="font-semibold text-emerald-600">{viewingStaff.status}</span>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-slate-500">Joined On:</span>
+                <span className="text-slate-700">
+                  {new Date(viewingStaff.createdAt).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <Button variant="outline" size="sm" onClick={() => setViewingStaff(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default StaffManagementPage;
