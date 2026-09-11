@@ -3,10 +3,10 @@ import {
   Database,
   Sliders,
   ShieldCheck,
-  CheckCircle2,
   Trophy,
   FileSpreadsheet,
   UploadCloud,
+  Globe,
 } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 
@@ -103,17 +103,17 @@ export const AdminDashboardPage = () => {
 
         <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-2">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Approvals</span>
-            <div className="p-2 rounded-xl bg-rose-50 text-rose-600">
-              <CheckCircle2 className="h-5 w-5" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Translations</span>
+            <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+              <Globe className="h-5 w-5" />
             </div>
           </div>
-          <div className="text-2xl font-black text-rose-600">Review Queue</div>
+          <div className="text-2xl font-black text-slate-900">Multi-Language</div>
           <Link
-            to={PRIVATE_NAVIGATION.adminApprovalQueuePage}
-            className="text-xs font-bold text-rose-600 hover:underline block pt-1"
+            to={PRIVATE_NAVIGATION.adminTranslations}
+            className="text-xs font-bold text-emerald-600 hover:underline block pt-1"
           >
-            Review Queue &rarr;
+            Manage Translations &rarr;
           </Link>
         </div>
       </div>

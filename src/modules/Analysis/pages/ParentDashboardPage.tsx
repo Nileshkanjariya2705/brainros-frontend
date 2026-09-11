@@ -19,10 +19,11 @@ import {
   Activity,
 } from 'lucide-react';
 import cn from 'classnames';
-import { useGetParentStudentsAPI, useGetParentChildDashboardAPI } from '@/modules/Exams/services';
+import {
+  useParentStudentsQuery,
+  useParentChildDashboardQuery,
+} from '@/modules/Exams/services/parent.queries';
 import type {
-  ParentStudentInfo,
-  ParentDashboardResponse,
   RecommendedRevisionItem,
 } from '@/types/exam.types';
 import Button from '@/components/ui/Button';
@@ -32,48 +33,33 @@ export const ParentDashboardPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlStudentId = searchParams.get('studentId') || '';
 
-  const { getParentStudentsAPI, isLoading: isLoadingStudents } = useGetParentStudentsAPI();
-  const { getParentChildDashboardAPI, isLoading: isLoadingDashboard } =
-    useGetParentChildDashboardAPI();
+  // ─── React Query Cached Server State ────────────────────────────────────────
+  const { data: students = [], isLoading: isLoadingStudents } = useParentStudentsQuery();
 
-  const [students, setStudents] = useState<ParentStudentInfo[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string>(urlStudentId);
-  const [dashboardData, setDashboardData] = useState<ParentDashboardResponse | null>(null);
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SUBJECTS' | 'REVISION' | 'TESTS'>(
     'OVERVIEW',
   );
   const [hoveredTrendIdx, setHoveredTrendIdx] = useState<number | null>(null);
 
-  const loadStudents = async () => {
-    const res = await getParentStudentsAPI();
-    if (res.data && res.data.length > 0) {
-      setStudents(res.data);
-      const match = res.data.find((s) => s.studentId === urlStudentId);
+  // Sync selectedStudentId with loaded students list or URL param
+  useEffect(() => {
+    if (students.length > 0) {
+      const match = students.find((s) => s.studentId === urlStudentId);
       if (match) {
         setSelectedStudentId(match.studentId);
       } else if (!selectedStudentId) {
-        setSelectedStudentId(res.data[0].studentId);
+        setSelectedStudentId(students[0].studentId);
       }
     }
-  };
+  }, [students, urlStudentId, selectedStudentId]);
 
-  useEffect(() => {
-    loadStudents();
-  }, []);
-
-  const loadChildDashboard = async (id: string) => {
-    if (!id) return;
-    const res = await getParentChildDashboardAPI(id);
-    if (res.data) {
-      setDashboardData(res.data);
-    }
-  };
-
-  useEffect(() => {
-    if (selectedStudentId) {
-      loadChildDashboard(selectedStudentId);
-    }
-  }, [selectedStudentId]);
+  const {
+    data: dashboardData,
+    isLoading: isLoadingDashboard,
+    isFetching: isFetchingDashboard,
+    refetch: refetchChildDashboard,
+  } = useParentChildDashboardQuery(selectedStudentId);
 
   const trend = dashboardData?.trendHistory || [];
   const maxScore = Math.max(...trend.map((t) => t.score), 100);
@@ -104,13 +90,13 @@ export const ParentDashboardPage: React.FC = () => {
         <div className="flex items-center gap-2 self-start md:self-auto">
           <Button
             variant="secondary"
-            onClick={() => selectedStudentId && loadChildDashboard(selectedStudentId)}
+            onClick={() => selectedStudentId && refetchChildDashboard()}
             className="gap-1.5"
             size="sm"
-            disabled={isLoadingDashboard}
+            disabled={isFetchingDashboard}
           >
-            <RotateCw size={14} className={isLoadingDashboard ? 'animate-spin text-teal-600' : ''} />
-            <span>{isLoadingDashboard ? 'Refreshing...' : 'Refresh Analytics'}</span>
+            <RotateCw size={14} className={isFetchingDashboard ? 'animate-spin text-teal-600' : ''} />
+            <span>{isFetchingDashboard ? 'Refreshing...' : 'Refresh Analytics'}</span>
           </Button>
         </div>
       </div>
@@ -147,7 +133,10 @@ export const ParentDashboardPage: React.FC = () => {
                 <div>
                   <h4 className="text-xs font-black text-slate-900">{st.name}</h4>
                   <span className="text-[10px] text-slate-500 font-bold block">
-                    {st.examTarget || 'General'} • {st.grade || 'Student'}
+                    {(typeof st.examTarget === 'object'
+                      ? (st.examTarget as any)?.name
+                      : st.examTarget) || 'General'}{' '}
+                    • {st.grade || 'Student'}
                   </span>
                 </div>
               </button>
@@ -171,7 +160,9 @@ export const ParentDashboardPage: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="px-3 py-0.5 rounded-full text-xs font-black bg-teal-500/20 border border-teal-400/30 text-teal-300">
-                    {dashboardData.student.examTarget || 'Exam Candidate'}
+                    {(typeof dashboardData.student.examTarget === 'object'
+                      ? (dashboardData.student.examTarget as any)?.name
+                      : dashboardData.student.examTarget) || 'Exam Candidate'}
                   </span>
                   {dashboardData.student.grade && (
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/10 text-slate-200">

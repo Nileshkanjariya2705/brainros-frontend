@@ -110,7 +110,9 @@ export const MockAttemptsModal: React.FC<MockAttemptsModalProps> = ({
                 <>
                   <span>•</span>
                   <span className="text-purple-600 dark:text-purple-400 font-bold">
-                    {summary.examTarget}
+                    {typeof summary.examTarget === 'object'
+                      ? (summary.examTarget as any)?.name
+                      : summary.examTarget}
                   </span>
                 </>
               )}

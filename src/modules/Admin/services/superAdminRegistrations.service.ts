@@ -102,11 +102,11 @@ export const useSuperAdminRegistrationsQuery = (
   return useQuery({
     queryKey: superAdminRegistrationKeys.list(params),
     queryFn: async () => {
-      const res = await Axios.get<SuperAdminRegistrationsResponse>(
+      const res = await Axios.get<SuperAdminRegistrationsResponse | { data: SuperAdminRegistrationsResponse }>(
         '/super-admin/registrations',
         { params },
       );
-      return res.data;
+      return (res.data as any)?.data || res.data;
     },
     placeholderData: (previousData) => previousData,
     staleTime: 30 * 1000,
@@ -119,11 +119,11 @@ export const useSuperAdminRegistrationStatsQuery = (
   return useQuery({
     queryKey: superAdminRegistrationKeys.stats(params),
     queryFn: async () => {
-      const res = await Axios.get<RegistrationStats>(
+      const res = await Axios.get<RegistrationStats | { data: RegistrationStats }>(
         '/super-admin/registrations/stats',
         { params },
       );
-      return res.data;
+      return (res.data as any)?.data || res.data;
     },
     staleTime: 60 * 1000,
   });
@@ -133,11 +133,11 @@ export const useSuperAdminRegistrationFiltersQuery = (stateId?: string) => {
   return useQuery({
     queryKey: superAdminRegistrationKeys.filters(stateId),
     queryFn: async () => {
-      const res = await Axios.get<RegistrationFilterOptions>(
+      const res = await Axios.get<RegistrationFilterOptions | { data: RegistrationFilterOptions }>(
         '/super-admin/registrations/filter-options',
         { params: stateId ? { stateId } : undefined },
       );
-      return res.data;
+      return (res.data as any)?.data || res.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes cache for master data
   });

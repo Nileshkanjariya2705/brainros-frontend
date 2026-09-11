@@ -14,7 +14,6 @@ import type {
   QuestionTypeEnum,
   ExamBlueprintItem,
 } from '../types/examGenerator.types';
-import { isAllowedSubject, formatSubjectDisplayName } from '@/constants/subjects.constant';
 import type { NamedEntity } from '@/modules/QuestionBank/types/questionBank.types';
 import Button from '@/components/ui/Button';
 
@@ -68,9 +67,8 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
     getSubjectsAPI().then((res) => {
       const data = res?.data;
       if (data) {
-        const list = (Array.isArray(data) ? data : (data as any)?.data || []).filter((s: any) =>
-          isAllowedSubject(s.name),
-        );
+        const list: NamedEntity[] = (Array.isArray(data) ? data : (data as any)?.data || []).slice();
+        list.sort((a, b) => a.name.localeCompare(b.name));
         setSubjects(list);
       }
     });
@@ -118,12 +116,12 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
       setName(`${examTitle || 'JEE Main'} Fixed Blueprint`);
       setTotalQuestions(75);
 
-      const phy = subjects.find(
-        (s) => s.name.toLowerCase().includes('physics') && s.name.toLowerCase().includes('jee'),
-      );
-      const chem = subjects.find(
-        (s) => s.name.toLowerCase().includes('chemistry') && s.name.toLowerCase().includes('jee'),
-      );
+      const phy =
+        subjects.find((s) => s.name.toLowerCase().includes('physics') && s.name.toLowerCase().includes('jee')) ||
+        subjects.find((s) => s.name.toLowerCase().includes('physics'));
+      const chem =
+        subjects.find((s) => s.name.toLowerCase().includes('chemistry') && s.name.toLowerCase().includes('jee')) ||
+        subjects.find((s) => s.name.toLowerCase().includes('chemistry'));
       const math = subjects.find((s) => s.name.toLowerCase().includes('math'));
 
       const newRules: CreateBlueprintRulePayload[] = [];
@@ -177,14 +175,18 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
       setName(`${examTitle || 'NEET UG'} Fixed Blueprint`);
       setTotalQuestions(180);
 
-      const phy = subjects.find(
-        (s) => s.name.toLowerCase().includes('physics') && s.name.toLowerCase().includes('neet'),
-      );
-      const chem = subjects.find(
-        (s) => s.name.toLowerCase().includes('chemistry') && s.name.toLowerCase().includes('neet'),
-      );
-      const bot = subjects.find((s) => s.name.toLowerCase().includes('botany'));
-      const zoo = subjects.find((s) => s.name.toLowerCase().includes('zoology'));
+      const phy =
+        subjects.find((s) => s.name.toLowerCase().includes('physics') && s.name.toLowerCase().includes('neet')) ||
+        subjects.find((s) => s.name.toLowerCase().includes('physics'));
+      const chem =
+        subjects.find((s) => s.name.toLowerCase().includes('chemistry') && s.name.toLowerCase().includes('neet')) ||
+        subjects.find((s) => s.name.toLowerCase().includes('chemistry'));
+      const bot =
+        subjects.find((s) => s.name.toLowerCase().includes('botany')) ||
+        subjects.find((s) => s.name.toLowerCase().includes('bio'));
+      const zoo =
+        subjects.find((s) => s.name.toLowerCase().includes('zoology')) ||
+        subjects.find((s) => s.name.toLowerCase().includes('bio'));
 
       const newRules: CreateBlueprintRulePayload[] = [];
       let priority = 1;
@@ -304,8 +306,12 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
   };
 
   const getSubjectName = (id?: string) => {
+    if (!id) return 'Any Subject';
     const raw = subjects.find((s) => s.id === id)?.name;
-    return raw ? formatSubjectDisplayName(raw) : 'Any Subject';
+    if (raw) return raw;
+    const bpRule = blueprint?.rules?.find((r) => r.subjectId === id);
+    if (bpRule?.subject?.name) return bpRule.subject.name;
+    return 'Any Subject';
   };
   const getChapterName = (id?: string) => chapters.find((c) => c.id === id)?.name || 'Any Chapter';
 
@@ -429,7 +435,7 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
                   <option value="">All Subjects</option>
                   {subjects.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {formatSubjectDisplayName(s.name)}
+                      {s.name}
                     </option>
                   ))}
                 </select>

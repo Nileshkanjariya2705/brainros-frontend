@@ -348,7 +348,9 @@ export const SuperAdminExamResultsPage: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                            {exam.examTarget}
+                            {typeof exam.examTarget === 'object'
+                              ? (exam.examTarget as any)?.name
+                              : exam.examTarget || 'General'}
                           </span>
                           <span
                             className={cn(
@@ -543,7 +545,12 @@ export const SuperAdminExamResultsPage: React.FC = () => {
                   {previewData.examTitle}
                 </h3>
                 <div className="text-xs text-slate-500 flex items-center gap-4">
-                  <span>Target: {previewData.examTarget}</span>
+                  <span>
+                    Target:{' '}
+                    {typeof previewData.examTarget === 'object'
+                      ? (previewData.examTarget as any)?.name
+                      : previewData.examTarget || 'General'}
+                  </span>
                   <span>Version: v{previewData.currentPublicationVersion}</span>
                 </div>
               </div>

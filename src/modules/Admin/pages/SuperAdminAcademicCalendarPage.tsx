@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { Axios } from '@/base-axios';
 import Button from '@/components/ui/Button';
+import { ScheduleExamModal } from '@/modules/ExamScheduling/components/ScheduleExamModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,8 +75,8 @@ interface FormState {
 
 const QUERY_KEYS = {
   years: ['academic-calendar', 'years'] as const,
-  events: (year: number, search: string) =>
-    ['academic-calendar', { year, search }] as const,
+  events: (params: { year: number; page: number; limit: number; search?: string }) =>
+    ['academic-calendar', params] as const,
   exams: ['exams-list-for-calendar'] as const,
 };
 
@@ -88,20 +89,27 @@ async function fetchYears(): Promise<number[]> {
   return [];
 }
 
-async function fetchEvents(
-  year: number,
-  search: string,
-): Promise<CalendarListResponse> {
+async function fetchEvents(params: {
+  year: number;
+  page: number;
+  limit: number;
+  search?: string;
+}): Promise<CalendarListResponse> {
   const res = await Axios.get('/exam-calendar', {
-    params: { year, search: search || undefined, limit: 500 },
+    params: {
+      year: params.year,
+      page: params.page,
+      limit: params.limit,
+      search: params.search || undefined,
+    },
   });
   const raw = res.data;
   // Normalize to expected shape
   if (Array.isArray(raw)) {
-    return { data: raw, meta: { total: raw.length, page: 1, limit: 500, pages: 1 } };
+    return { data: raw, meta: { total: raw.length, page: params.page, limit: params.limit, pages: 1 } };
   }
   if (raw && Array.isArray(raw.data)) return raw;
-  return { data: [], meta: { total: 0, page: 1, limit: 500, pages: 0 } };
+  return { data: [], meta: { total: 0, page: params.page, limit: params.limit, pages: 0 } };
 }
 
 async function fetchExams(): Promise<Exam[]> {
@@ -472,6 +480,8 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
 
   // ── State ───────────────────────────────────────────────────────────────────
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [page, setPage] = useState<number>(1);
+  const limit = 20;
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -483,7 +493,10 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
   const handleSearchChange = (val: string) => {
     setSearch(val);
     clearTimeout((window as any)._calSearchTimer);
-    (window as any)._calSearchTimer = setTimeout(() => setDebouncedSearch(val), 400);
+    (window as any)._calSearchTimer = setTimeout(() => {
+      setDebouncedSearch(val);
+      setPage(1);
+    }, 400);
   };
 
   // ── Queries ─────────────────────────────────────────────────────────────────
@@ -499,8 +512,8 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
     isError: eventsError,
     refetch: refetchEvents,
   } = useQuery<CalendarListResponse>({
-    queryKey: QUERY_KEYS.events(selectedYear, debouncedSearch),
-    queryFn: () => fetchEvents(selectedYear, debouncedSearch),
+    queryKey: QUERY_KEYS.events({ year: selectedYear, page, limit, search: debouncedSearch }),
+    queryFn: () => fetchEvents({ year: selectedYear, page, limit, search: debouncedSearch }),
     staleTime: 30_000,
   });
 
@@ -514,31 +527,6 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
   const invalidateCalendar = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['academic-calendar'] });
   }, [queryClient]);
-
-  const createMutation = useMutation({
-    mutationFn: async (form: FormState) => {
-      const plannedStartTime = buildISODateTime(form.plannedDate, form.startTime);
-      const res = await Axios.post('/exam-calendar', {
-        examId: form.examId,
-        plannedDate: form.plannedDate,
-        plannedStartTime,
-        durationMinutes: form.durationMinutes,
-      });
-      return res.data;
-    },
-    onSuccess: () => {
-      invalidateCalendar();
-      setShowCreateModal(false);
-      setModalError(null);
-    },
-    onError: (err: any) => {
-      const msg =
-        err?.response?.data?.message ||
-        err?.message ||
-        'Unable to create calendar entry. Please try again.';
-      setModalError(Array.isArray(msg) ? msg.join('; ') : msg);
-    },
-  });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, form }: { id: string; form: FormState }) => {
@@ -596,11 +584,6 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
   }, [events]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
-  const handleCreate = (form: FormState) => {
-    setModalError(null);
-    createMutation.mutate(form);
-  };
-
   const handleUpdate = (form: FormState) => {
     if (!editEvent) return;
     setModalError(null);
@@ -652,7 +635,10 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
           <div className="relative">
             <select
               value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              onChange={(e) => {
+                setSelectedYear(Number(e.target.value));
+                setPage(1);
+              }}
               className="appearance-none pl-3 pr-8 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer shadow-xs hover:bg-slate-50 transition"
             >
               {yearOptions.map((y) => (
@@ -901,25 +887,60 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
 
           {/* Summary footer */}
           <div className="text-xs text-slate-400 text-center pb-2">
-            {events.length} calendar {events.length === 1 ? 'entry' : 'entries'} in {selectedYear} ·
+            {eventsData?.meta?.total ?? events.length} calendar {(eventsData?.meta?.total ?? events.length) === 1 ? 'entry' : 'entries'} in {selectedYear} ·
             Ordered chronologically
           </div>
+
+          {/* Server-Side Pagination Controls */}
+          {eventsData?.meta && eventsData.meta.pages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-200 bg-white px-5 py-4 rounded-2xl shadow-xs">
+              <p className="text-xs font-semibold text-slate-500">
+                Showing {(eventsData.meta.page - 1) * eventsData.meta.limit + 1} to{' '}
+                {Math.min(eventsData.meta.page * eventsData.meta.limit, eventsData.meta.total)} of{' '}
+                {eventsData.meta.total} entries
+              </p>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={eventsData.meta.page <= 1}
+                  className="rounded-xl text-xs font-bold"
+                >
+                  Previous
+                </Button>
+                <span className="text-xs font-bold text-slate-700 px-2">
+                  Page {eventsData.meta.page} of {eventsData.meta.pages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(eventsData.meta.pages, p + 1))}
+                  disabled={eventsData.meta.page >= eventsData.meta.pages}
+                  className="rounded-xl text-xs font-bold"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── Create Modal ── */}
+      {/* ── Create / Schedule Exam Modal (Shared with Schedule Exam) ── */}
       {showCreateModal && (
-        <CalendarEntryModal
-          mode="create"
-          exams={exams}
-          examsLoading={examsLoading}
-          onSave={handleCreate}
+        <ScheduleExamModal
+          isOpen={showCreateModal}
           onClose={() => {
             setShowCreateModal(false);
             setModalError(null);
           }}
-          isSaving={createMutation.isPending}
-          saveError={modalError}
+          onScheduled={() => {
+            invalidateCalendar();
+            setShowCreateModal(false);
+            setModalError(null);
+          }}
         />
       )}
 

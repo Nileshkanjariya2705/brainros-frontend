@@ -71,7 +71,10 @@ export const ParentDashboardLandingPage = () => {
                     <div>
                       <h4 className="text-sm font-black text-slate-900">{st.name}</h4>
                       <span className="text-[11px] text-slate-500 font-bold">
-                        Target: {st.examTarget || 'General'}
+                        Target:{' '}
+                        {(typeof st.examTarget === 'object'
+                          ? (st.examTarget as any)?.name
+                          : st.examTarget) || 'General'}
                       </span>
                     </div>
                   </div>

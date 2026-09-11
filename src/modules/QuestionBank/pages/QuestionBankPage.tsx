@@ -27,6 +27,7 @@ import Button from '@/components/ui/Button';
 import { useAuth } from '@/hooks/useAuth';
 import { FeatureGuard } from '@/components/guards/FeatureGuard';
 import { FEATURES } from '@/constants/feature-flag.constant';
+import { ExportPdfButton } from '@/components/export/ExportPdfButton';
 
 const QuestionBankPage: React.FC = () => {
   const navigate = useNavigate();
@@ -248,6 +249,21 @@ const QuestionBankPage: React.FC = () => {
 
         {/* Action CTAs */}
         <div className="flex flex-wrap items-center gap-2.5">
+          <ExportPdfButton
+            resource="questions"
+            filters={{
+              examTargetId: filters.examTargetId,
+              subjectId: filters.subjectId,
+              chapterId: filters.chapterId,
+              difficultyLevel: filters.difficultyLevel,
+              status: filters.status,
+            }}
+            search={filters.search}
+            page={filters.page}
+            pageSize={filters.limit}
+            filename="question-bank.pdf"
+          />
+
           <FeatureGuard feature={FEATURES.BULK_IMPORT_QUESTION}>
             <Button
               variant="outline"

@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   FileText,
   Search,
-  Calendar,
   Clock,
   CheckCircle2,
   PlayCircle,
@@ -317,7 +316,9 @@ export const AvailableExamsPage = () => {
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <span className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/40 px-2.5 py-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
                       <Target size={12} />
-                      {exam.examTarget}
+                      {typeof exam.examTarget === 'object'
+                        ? (exam.examTarget as any)?.name
+                        : exam.examTarget || 'General'}
                     </span>
 
                     {/* Status Badge */}
@@ -389,9 +390,25 @@ export const AvailableExamsPage = () => {
                   </div>
 
                   {/* Schedule Window */}
-                  <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                    <Calendar size={13} className="text-slate-400" />
-                    <span className="truncate">Start: {formatScheduleTime(exam.startTime)}</span>
+                  <div className="mt-3 space-y-1 rounded-2xl bg-slate-50/80 dark:bg-slate-900/60 p-2.5 border border-slate-100 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-300">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 font-medium">Start:</span>
+                      <span className="font-semibold">{formatScheduleTime(exam.startTime)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 font-medium">End:</span>
+                      <span className="font-semibold">{formatScheduleTime(exam.endTime)}</span>
+                    </div>
+                    {exam.status === 'LIVE' && exam.endTime && (
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-800 text-emerald-600 dark:text-emerald-400 font-bold">
+                        <span className="flex items-center gap-1">
+                          <Clock size={11} /> Remaining:
+                        </span>
+                        <span>
+                          {Math.max(0, Math.ceil((new Date(exam.endTime).getTime() - Date.now()) / (1000 * 60)))} minutes
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Persisted Result Banner if Completed */}

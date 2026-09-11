@@ -4,6 +4,7 @@ import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig 
 // ** Config / Utils **
 import { API_URL, API_TIMEOUT } from '@config';
 import { toast } from '@/utils/toast';
+import { clearUserSessionCache } from '@/queryClient';
 
 // ** Types **
 import type { ApiErrorResponse } from './types';
@@ -126,6 +127,7 @@ Axios.interceptors.response.use(
               if (logoutCallback) {
                 logoutCallback();
               }
+              clearUserSessionCache();
               throw refreshErr;
             })
             .finally(() => {

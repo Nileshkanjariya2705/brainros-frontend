@@ -27,8 +27,12 @@ import {
   useSuperAdminRegistrationStatsQuery,
   useSuperAdminRegistrationFiltersQuery,
   type SuperAdminRegistrationItem,
+  type SuperAdminRegistrationsResponse,
+  type RegistrationStats,
+  type RegistrationFilterOptions,
   type RegistrationFilterParams,
 } from '../services/superAdminRegistrations.service';
+import { ExportPdfButton } from '@/components/export/ExportPdfButton';
 
 export const SuperAdminRegistrationsPage: React.FC = () => {
   // ── State for Filters ──────────────────────────────────────────────────────
@@ -95,20 +99,33 @@ export const SuperAdminRegistrationsPage: React.FC = () => {
 
   // ── React Query Hooks ──────────────────────────────────────────────────────
   const {
-    data: registrationData,
+    data: rawRegistrationData,
     isLoading: isLoadingList,
     isFetching: isFetchingList,
     refetch: refetchList,
   } = useSuperAdminRegistrationsQuery(queryParams);
 
   const {
-    data: statsData,
+    data: rawStatsData,
     isLoading: isLoadingStats,
     refetch: refetchStats,
   } = useSuperAdminRegistrationStatsQuery(queryParams);
 
-  const { data: filterOptions, isLoading: isLoadingFilters } =
+  const { data: rawFilterOptions, isLoading: isLoadingFilters } =
     useSuperAdminRegistrationFiltersQuery(selectedState || undefined);
+
+  // Safe unwrapping: handle direct or wrapped payload
+  const registrationData: SuperAdminRegistrationsResponse | undefined = useMemo(() => {
+    return (rawRegistrationData as any)?.data || rawRegistrationData;
+  }, [rawRegistrationData]);
+
+  const statsData: RegistrationStats | undefined = useMemo(() => {
+    return (rawStatsData as any)?.data || rawStatsData;
+  }, [rawStatsData]);
+
+  const filterOptions: RegistrationFilterOptions | undefined = useMemo(() => {
+    return (rawFilterOptions as any)?.data || rawFilterOptions;
+  }, [rawFilterOptions]);
 
   // Active filters count
   const activeFiltersCount = [
@@ -468,6 +485,21 @@ export const SuperAdminRegistrationsPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <ExportPdfButton
+              resource="registrations"
+              filters={{
+                status: selectedStatus !== 'ALL' ? selectedStatus : undefined,
+                examTargetId: selectedExamTarget !== 'ALL' ? selectedExamTarget : undefined,
+                stateId: selectedState || undefined,
+                districtId: selectedDistrict || undefined,
+                institutionId: selectedInstitution || undefined,
+              }}
+              search={debouncedSearch}
+              page={page}
+              pageSize={pageSize}
+              filename="registrations-report.pdf"
+            />
+
             {/* Quick Date Toggle [ All | Today ] */}
             <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold">
               <button

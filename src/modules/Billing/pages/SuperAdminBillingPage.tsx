@@ -182,6 +182,10 @@ export const SuperAdminBillingPage: React.FC = () => {
   const [page, setPage] = useState<number>(1);
   const [pageSize] = useState<number>(15);
 
+  // Main View Mode (Invoices vs Schools Directory)
+  const [mainTab, setMainTab] = useState<'INVOICES' | 'SCHOOLS'>('INVOICES');
+  const [schoolSearch, setSchoolSearch] = useState<string>('');
+
   // Modals state
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
@@ -219,6 +223,26 @@ export const SuperAdminBillingPage: React.FC = () => {
     ],
     schools: [],
     currentPrice: 300,
+  };
+
+  const filteredSchoolsList = useMemo(() => {
+    if (!filterOptions.schools) return [];
+    if (!schoolSearch.trim()) return filterOptions.schools;
+    const query = schoolSearch.toLowerCase().trim();
+    return filterOptions.schools.filter(
+      (s: any) =>
+        s.name?.toLowerCase().includes(query) ||
+        s.code?.toLowerCase().includes(query) ||
+        s.city?.toLowerCase().includes(query) ||
+        s.email?.toLowerCase().includes(query),
+    );
+  }, [filterOptions.schools, schoolSearch]);
+
+  const openGenerateInvoiceForSchool = (schoolId: string) => {
+    setGenSchoolId(schoolId);
+    setGenMonth(lastMonth);
+    setGenYear(lastMonthYear);
+    setIsGenerateModalOpen(true);
   };
 
   const currentPricing = filterOptions.currentPrice ?? 300;
@@ -473,8 +497,126 @@ export const SuperAdminBillingPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ── 2. Filters & Search Bar ── */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3.5">
+      {/* ── Main View Mode Switcher (Invoices vs Schools Directory) ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMainTab('INVOICES')}
+            className={`px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-2 ${
+              mainTab === 'INVOICES'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-slate-600 hover:bg-slate-100 border border-transparent'
+            }`}
+          >
+            <Receipt size={16} />
+            Invoices History ({meta.total})
+          </button>
+          <button
+            type="button"
+            onClick={() => setMainTab('SCHOOLS')}
+            className={`px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-2 ${
+              mainTab === 'SCHOOLS'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-slate-600 hover:bg-slate-100 border border-transparent'
+            }`}
+          >
+            <Building2 size={16} />
+            Schools & Colleges Directory ({filterOptions.schools.length})
+          </button>
+        </div>
+        <div className="text-xs text-slate-500 font-medium px-2">
+          {mainTab === 'INVOICES'
+            ? 'Manage invoices, statuses, PDF downloads & email dispatches'
+            : 'Generate invoice individually for any specific school in 1-click'}
+        </div>
+      </div>
+
+      {mainTab === 'SCHOOLS' ? (
+        /* ── Schools & Colleges Directory View ── */
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Building2 size={18} className="text-indigo-600" />
+                Schools & Colleges Directory
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                List of all registered institutions. Click <strong>Generate Invoice</strong> on any row to create an invoice for that specific school.
+              </p>
+            </div>
+            <div className="relative w-full sm:w-72">
+              <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search school name, code, city..."
+                value={schoolSearch}
+                onChange={(e) => setSchoolSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-slate-100">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/75 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="py-3.5 px-4 sm:px-6">School / College Name</th>
+                  <th className="py-3.5 px-4">School Code</th>
+                  <th className="py-3.5 px-4">City / Location</th>
+                  <th className="py-3.5 px-4">Contact Email</th>
+                  <th className="py-3.5 px-4 sm:px-6 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {filteredSchoolsList.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-slate-400">
+                      No schools found matching search criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSchoolsList.map((school: any) => (
+                    <tr key={school.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-4 px-4 sm:px-6 font-bold text-slate-900">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-9 w-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                            <Building2 size={16} />
+                          </div>
+                          <span>{school.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 font-mono text-xs font-semibold text-slate-600">
+                        {school.code || 'N/A'}
+                      </td>
+                      <td className="py-4 px-4 text-slate-600 text-xs">
+                        {school.city || '—'}
+                      </td>
+                      <td className="py-4 px-4 text-slate-600 text-xs font-mono">
+                        {school.email || '—'}
+                      </td>
+                      <td className="py-4 px-4 sm:px-6 text-right">
+                        <Button
+                          size="sm"
+                          onClick={() => openGenerateInvoiceForSchool(school.id)}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1.5 shadow-xs text-xs ml-auto"
+                          title={`Generate Invoice for ${school.name}`}
+                        >
+                          <Zap size={14} />
+                          Generate Invoice
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* ── 2. Filters & Search Bar ── */}
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3.5">
         {/* Quick Period Presets */}
         <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
           <div className="flex flex-wrap items-center gap-2">
@@ -918,6 +1060,16 @@ export const SuperAdminBillingPage: React.FC = () => {
                             <Download size={16} />
                           </button>
 
+                          {/* Quick Generate Invoice for this School */}
+                          <button
+                            type="button"
+                            onClick={() => openGenerateInvoiceForSchool(bill.institutionId)}
+                            className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
+                            title={`Generate new invoice for ${bill.institution?.name}`}
+                          >
+                            <Zap size={16} />
+                          </button>
+
                           {/* Send Email Action */}
                           {isGeneratedOrApproved && (
                             <Button
@@ -996,6 +1148,8 @@ export const SuperAdminBillingPage: React.FC = () => {
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* ── 4. GENERATE INVOICES MODAL ── */}
       {isGenerateModalOpen && (

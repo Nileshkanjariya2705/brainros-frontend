@@ -239,17 +239,17 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-16">
       {/* ─── Top Control Header ────────────────────────────────────────── */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-800/40 rounded-2xl p-6 shadow-xl text-white">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm">
         <div>
-          <div className="flex items-center gap-2 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-1">
             <Activity className="w-4 h-4" />
             Live Result Pipeline Observability
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">
-            Real-Time Exam Result Processing Monitor
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Exam Result Processing
           </h1>
-          <p className="text-sm text-slate-300 mt-1 max-w-2xl">
-            Live BullMQ job tracker monitoring student evaluation, time/strategy analytics, batch ranking snapshots, and publication readiness.
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
+            Live BullMQ processing pipeline monitoring student evaluation, time/strategy analytics, batch ranking snapshots, and publication readiness.
           </p>
         </div>
 
@@ -259,7 +259,7 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
             <select
               value={selectedExamId}
               onChange={(e) => handleSelectExam(e.target.value)}
-              className="w-full bg-slate-800/90 border border-slate-700 text-white text-xs md:text-sm rounded-xl px-3 py-2.5 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+              className="w-full bg-slate-50 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 text-xs md:text-sm rounded-xl px-3 py-2.5 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
             >
               {isExamsListLoading ? (
                 <option value="">Loading exams...</option>
@@ -280,20 +280,20 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
             className={cn(
               'flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border shadow-sm transition-colors',
               isConnected
-                ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/50'
-                : 'bg-amber-950/40 text-amber-300 border-amber-800/50',
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50'
+                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/50',
             )}
             title={isConnected ? 'Connected to WebSocket /ws/jobs' : 'Reconnecting or Polling'}
           >
             {isConnected ? (
               <>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                 <Wifi className="w-3.5 h-3.5" />
                 <span>Live Real-Time</span>
               </>
             ) : (
               <>
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                 <WifiOff className="w-3.5 h-3.5" />
                 <span>Reconnecting...</span>
               </>
@@ -308,7 +308,7 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
               refetchSummary();
               refetchJobs();
             }}
-            className="border-slate-700 bg-slate-800/60 hover:bg-slate-700 text-slate-200"
+            className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200"
           >
             <RotateCw className={cn('w-4 h-4 mr-1.5', (isSummaryLoading || isJobsLoading) && 'animate-spin')} />
             Refresh

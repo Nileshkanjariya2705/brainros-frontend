@@ -1827,14 +1827,16 @@ export const ImportQuestionsPage: React.FC = () => {
               <span>View Question Bank</span>
             </Button>
 
-            <Button
-              variant="outline"
-              onClick={() => navigate(`${routePrefix}/exams/generate`)}
-              className="w-full sm:w-auto text-xs font-bold text-indigo-700 border-indigo-200 hover:bg-indigo-50"
-            >
-              <Sparkles size={14} className="mr-1.5" />
-              <span>Filter-Based Generator Wizard →</span>
-            </Button>
+            {routePrefix !== '/admin' && (
+              <Button
+                variant="outline"
+                onClick={() => navigate(`${routePrefix}/exams/generate`)}
+                className="w-full sm:w-auto text-xs font-bold text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+              >
+                <Sparkles size={14} className="mr-1.5" />
+                <span>Filter-Based Generator Wizard →</span>
+              </Button>
+            )}
           </div>
         </div>
       )}

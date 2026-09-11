@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   CalendarDays,
   Calendar,
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Axios } from '@/base-axios';
 import Button from '@/components/ui/Button';
+import { academicCalendarKeys } from '@/services/queryKeys';
 
 export interface CalendarExamItem {
   id: string;
@@ -56,25 +58,16 @@ export interface CalendarExamItem {
 export const ExamCalendarPage: React.FC = () => {
   const navigate = useNavigate();
 
-  const [exams, setExams] = useState<CalendarExamItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // ─── Filters State ────────────────────────────────────────────────────────
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilterPreset, setDateFilterPreset] = useState<
-    'ALL' | 'TODAY' | 'UPCOMING' | 'THIS_WEEK' | 'THIS_MONTH' | 'COMPLETED'
-  >('ALL');
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-
-  // ─── Fetch All Exams for Student ──────────────────────────────────────────
-  const fetchAllExams = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
+  // ─── Query: All Academic Exams & Calendar Entries (Cached Server State) ──
+  const {
+    data: exams = [],
+    isLoading: loading,
+    isFetching,
+    error: queryError,
+    refetch: fetchAllExams,
+  } = useQuery<CalendarExamItem[]>({
+    queryKey: academicCalendarKeys.list({ limit: 100 }),
+    queryFn: async () => {
       // 1. Fetch student enrolled / accessible exams
       const [studentExamsRes, calendarRes] = await Promise.allSettled([
         Axios.get('/students/me/exams', { params: { limit: 100 } }),
@@ -131,65 +124,80 @@ export const ExamCalendarPage: React.FC = () => {
             status,
             rawStatus: item.status || item.rawStatus,
             canStart: Boolean(item.canStart),
-            activeAttemptId: item.activeAttemptId || null,
+            activeAttemptId: item.activeAttemptId || item.attempt?.id || null,
             attempt: item.attempt || null,
+            cycleName: item.cycleName,
+            academicYear: item.academicYear,
             createdAt: item.createdAt || startTime,
           });
         });
       }
 
-      // Process /exam-calendar events if present
+      // Process /exam-calendar
       if (calendarRes.status === 'fulfilled') {
-        const rawCal = calendarRes.value?.data;
-        const calList = Array.isArray(rawCal)
-          ? rawCal
-          : Array.isArray(rawCal?.data)
-            ? rawCal.data
-            : [];
+        const raw = calendarRes.value?.data;
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray(raw?.data)
+            ? raw.data
+            : Array.isArray(raw?.data?.data)
+              ? raw.data.data
+              : [];
 
-        calList.forEach((ev: any) => {
-          const examId = ev.exam?.id || ev.examId;
-          const startTime = ev.plannedStartTime || ev.plannedDate;
-          const endTime = ev.plannedEndTime || startTime;
-          const plannedDate = ev.plannedDate || startTime.substring(0, 10);
-
-          // If not already present from student exams, add it
-          if (!itemsMap.has(examId) && !itemsMap.has(ev.id)) {
-            let status: 'LIVE' | 'UPCOMING' | 'COMPLETED' = 'UPCOMING';
-            const now = new Date();
-            const start = new Date(startTime);
-            const end = new Date(endTime);
-
-            if (ev.status === 'COMPLETED' || now > end) {
-              status = 'COMPLETED';
-            } else if (now >= start && now <= end) {
-              status = 'LIVE';
-            } else {
-              status = 'UPCOMING';
-            }
-
-            itemsMap.set(ev.id, {
-              id: ev.id,
-              examId,
-              title: ev.exam?.title || 'Academic Mock Exam',
-              description: ev.notes || '',
-              examTarget: 'Academic Mock',
-              subjects: [],
-              plannedDate,
-              plannedStartTime: startTime,
-              plannedEndTime: endTime,
-              timezone: ev.timezone || 'Asia/Kolkata',
-              durationMinutes: ev.exam?.durationMinutes || 180,
-              totalQuestions: ev.exam?.totalQuestions || 0,
-              totalMarks: ev.exam?.totalMarks || 0,
-              status,
-              rawStatus: ev.status,
-              canStart: status === 'LIVE',
-              cycleName: ev.cycle?.name,
-              academicYear: ev.cycle?.academicYear,
-              createdAt: ev.createdAt || startTime,
+        list.forEach((item: any) => {
+          if (itemsMap.has(item.id)) {
+            const existing = itemsMap.get(item.id)!;
+            itemsMap.set(item.id, {
+              ...existing,
+              canStart: existing.canStart || Boolean(item.canStart),
+              activeAttemptId: existing.activeAttemptId || item.activeAttemptId || null,
             });
+            return;
           }
+
+          const examId = item.examId || item.exam?.id || item.id;
+          const startTime = item.plannedStartTime || item.startTime || new Date().toISOString();
+          const endTime = item.plannedEndTime || item.endTime || new Date(new Date(startTime).getTime() + (item.durationMinutes || item.exam?.durationMinutes || 180) * 60000).toISOString();
+          const plannedDate = item.plannedDate || startTime.substring(0, 10);
+
+          let status: 'LIVE' | 'UPCOMING' | 'COMPLETED' = 'UPCOMING';
+          const now = new Date();
+          const start = new Date(startTime);
+          const end = new Date(endTime);
+
+          if (item.status === 'COMPLETED' || (item.attempt && item.attempt.status === 'SUBMITTED')) {
+            status = 'COMPLETED';
+          } else if (now >= start && now <= end) {
+            status = 'LIVE';
+          } else if (now < start) {
+            status = 'UPCOMING';
+          } else {
+            status = 'COMPLETED';
+          }
+
+          itemsMap.set(item.id, {
+            id: item.id,
+            examId,
+            title: item.title || item.exam?.title || 'Academic Mock Exam',
+            description: item.description || item.notes || '',
+            examTarget: item.examTarget || item.exam?.examTarget?.name || 'Academic Mock',
+            subjects: Array.isArray(item.subjects) ? item.subjects : [],
+            plannedDate,
+            plannedStartTime: startTime,
+            plannedEndTime: endTime,
+            timezone: item.timezone || 'Asia/Kolkata',
+            durationMinutes: item.durationMinutes || item.exam?.durationMinutes || 180,
+            totalQuestions: item.totalQuestions || item.exam?.totalQuestions || 0,
+            totalMarks: item.totalMarks || item.exam?.totalMarks || 0,
+            status,
+            rawStatus: item.status,
+            canStart: Boolean(item.canStart) || status === 'LIVE',
+            activeAttemptId: item.activeAttemptId || item.attempt?.id || null,
+            attempt: item.attempt || null,
+            cycleName: item.cycleName || item.cycle?.name,
+            academicYear: item.academicYear || item.cycle?.academicYear,
+            createdAt: item.createdAt || startTime,
+          });
         });
       }
 
@@ -230,25 +238,29 @@ export const ExamCalendarPage: React.FC = () => {
       }
 
       const allList = Array.from(itemsMap.values());
-
-      // ─── Sort strictly by latest (newest / most recent first) ───────────────
       allList.sort((a, b) => {
         const timeA = new Date(a.plannedStartTime || a.plannedDate || a.createdAt).getTime();
         const timeB = new Date(b.plannedStartTime || b.plannedDate || b.createdAt).getTime();
         return timeB - timeA;
       });
 
-      setExams(allList);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Failed to load examination calendar.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return allList;
+    },
+    staleTime: 60 * 1000,
+  });
 
-  useEffect(() => {
-    fetchAllExams();
-  }, [fetchAllExams]);
+  const error = queryError
+    ? ((queryError as any)?.response?.data?.message || (queryError as any)?.message || 'Failed to load examination calendar.')
+    : null;
+
+  // ─── Filters State ────────────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilterPreset, setDateFilterPreset] = useState<
+    'ALL' | 'TODAY' | 'UPCOMING' | 'THIS_WEEK' | 'THIS_MONTH' | 'COMPLETED'
+  >('ALL');
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   // ─── Filter Logic: Date-wise & Search Filtered Exams ───────────────────────
   const filteredExams = useMemo(() => {
@@ -360,11 +372,11 @@ export const ExamCalendarPage: React.FC = () => {
         <div className="flex items-center gap-2.5 self-start sm:self-auto">
           <Button
             variant="outline"
-            onClick={fetchAllExams}
-            disabled={loading}
+            onClick={() => fetchAllExams()}
+            disabled={isFetching}
             className="flex items-center gap-1.5 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-bold px-3.5 py-2 rounded-xl shadow-2xs"
           >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={13} className={isFetching ? 'animate-spin text-indigo-600' : ''} />
             <span>Refresh Calendar</span>
           </Button>
         </div>
@@ -569,7 +581,7 @@ export const ExamCalendarPage: React.FC = () => {
           <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
           <span>{error}</span>
           <button
-            onClick={fetchAllExams}
+            onClick={() => fetchAllExams()}
             className="ml-auto text-xs font-bold underline hover:text-rose-800"
           >
             Retry
@@ -682,7 +694,9 @@ export const ExamCalendarPage: React.FC = () => {
                         </h2>
                         {exam.examTarget && (
                           <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                            {exam.examTarget}
+                            {typeof exam.examTarget === 'object'
+                              ? (exam.examTarget as any)?.name
+                              : exam.examTarget}
                           </span>
                         )}
                         {isLive ? (

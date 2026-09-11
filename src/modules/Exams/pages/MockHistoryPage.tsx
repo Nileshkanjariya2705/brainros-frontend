@@ -25,7 +25,8 @@ import {
 import cn from 'classnames';
 
 // ** Services & Constants **
-import { useGetStudentMockHistoryAPI } from '../services';
+import { useStudentMockHistoryQuery } from '../services/exams.queries';
+import { useAuthOptionsQuery } from '@/services/options.queries';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 
 // ** Components **
@@ -37,42 +38,49 @@ import type { AttemptSummary } from '@/types/exam.types';
 
 export const MockHistoryPage = () => {
   const navigate = useNavigate();
-  const { getStudentMockHistoryAPI, isLoading } = useGetStudentMockHistoryAPI();
 
-  const [attempts, setAttempts] = useState<AttemptSummary[]>([]);
+  const [page, setPage] = useState(1);
+  const limit = 20;
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [targetFilter, setTargetFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState<'NEWEST' | 'OLDEST' | 'SCORE_HIGH' | 'ACCURACY_HIGH'>('NEWEST');
   const [expandedAttemptId, setExpandedAttemptId] = useState<string | null>(null);
 
-  const fetchAttempts = async () => {
-    try {
-      const res = await getStudentMockHistoryAPI();
-      const list = Array.isArray(res.data)
-        ? res.data
-        : Array.isArray((res.data as any)?.data)
-          ? (res.data as any).data
-          : [];
-      setAttempts(list);
-    } catch {
-      setAttempts([]);
-    }
+  const { data: authOptions } = useAuthOptionsQuery();
+  const availableTargets = authOptions?.examTargets || [];
+
+  // Debounce search and reset to page 1
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const queryParams = useMemo(() => {
+    const p: Record<string, any> = {
+      page,
+      limit,
+      sort: sortBy,
+    };
+    if (debouncedSearch.trim()) p.search = debouncedSearch.trim();
+    if (statusFilter !== 'ALL') p.status = statusFilter;
+    if (targetFilter !== 'ALL') p.targetId = targetFilter;
+    return p;
+  }, [page, limit, debouncedSearch, statusFilter, targetFilter, sortBy]);
+
+  const { data: mockHistoryResult, isLoading } = useStudentMockHistoryQuery(queryParams);
+  const attempts: AttemptSummary[] = mockHistoryResult?.data || [];
+  const pagination = mockHistoryResult?.meta || {
+    page,
+    limit,
+    total: attempts.length,
+    totalPages: 1,
   };
 
-  useEffect(() => {
-    fetchAttempts();
-  }, []);
-
-  // Distinct exam targets for filtering
-  const availableTargets = useMemo(() => {
-    const targets = new Set<string>();
-    attempts.forEach((a) => {
-      const t = a.exam?.examTarget?.name;
-      if (t) targets.add(t);
-    });
-    return Array.from(targets);
-  }, [attempts]);
 
   // Overall analytics calculation
   const summaryStats = useMemo(() => {
@@ -115,51 +123,14 @@ export const MockHistoryPage = () => {
     });
 
     return {
-      totalCompleted: completed.length,
+      totalCompleted: pagination.total,
       inProgressCount: attempts.filter((a) => a.status?.name === 'IN_PROGRESS').length,
-      averagePercentage: Math.round((totalScorePerc / completed.length) * 10) / 10,
+      averagePercentage: Math.round((totalScorePerc / (completed.length || 1)) * 10) / 10,
       bestPercentage: Math.round(bestPerc * 10) / 10,
       averageAccuracy: accuracyCount > 0 ? Math.round((totalAccuracy / accuracyCount) * 10) / 10 : 0,
       totalTimeSpentHours: Math.round((totalTimeSeconds / 3600) * 10) / 10,
     };
-  }, [attempts]);
-
-  // Filter and sort attempts
-  const filteredAttempts = useMemo(() => {
-    return attempts
-      .filter((attempt) => {
-        const matchesSearch =
-          (attempt.exam?.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (attempt.exam?.examTarget?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
-
-        const matchesStatus =
-          statusFilter === 'ALL'
-            ? true
-            : statusFilter === 'COMPLETED'
-              ? ['SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED', 'COMPLETED'].includes(attempt.status?.name)
-              : attempt.status?.name === statusFilter;
-
-        const matchesTarget =
-          targetFilter === 'ALL'
-            ? true
-            : (attempt.exam?.examTarget?.name || '').toLowerCase() === targetFilter.toLowerCase();
-
-        return matchesSearch && matchesStatus && matchesTarget;
-      })
-      .sort((a, b) => {
-        if (sortBy === 'SCORE_HIGH') {
-          return (b.result?.percentage ?? 0) - (a.result?.percentage ?? 0);
-        }
-        if (sortBy === 'ACCURACY_HIGH') {
-          return (b.result?.accuracy ?? 0) - (a.result?.accuracy ?? 0);
-        }
-        if (sortBy === 'OLDEST') {
-          return new Date(a.startedAt || 0).getTime() - new Date(b.startedAt || 0).getTime();
-        }
-        // Default: NEWEST
-        return new Date(b.startedAt || 0).getTime() - new Date(a.startedAt || 0).getTime();
-      });
-  }, [attempts, searchTerm, statusFilter, targetFilter, sortBy]);
+  }, [attempts, pagination.total]);
 
   const toggleExpand = (attemptId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -289,7 +260,10 @@ export const MockHistoryPage = () => {
 
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
             className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:bg-white focus:outline-none"
           >
             <option value="ALL">All Statuses</option>
@@ -297,16 +271,19 @@ export const MockHistoryPage = () => {
             <option value="IN_PROGRESS">In Progress</option>
           </select>
 
-          {availableTargets.length > 1 && (
+          {availableTargets.length > 0 && (
             <select
               value={targetFilter}
-              onChange={(e) => setTargetFilter(e.target.value)}
+              onChange={(e) => {
+                setTargetFilter(e.target.value);
+                setPage(1);
+              }}
               className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:bg-white focus:outline-none"
             >
               <option value="ALL">All Targets</option>
-              {availableTargets.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              {availableTargets.map((t: any) => (
+                <option key={t.id || t.name} value={t.id || t.name}>
+                  {t.name}
                 </option>
               ))}
             </select>
@@ -314,7 +291,10 @@ export const MockHistoryPage = () => {
 
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(e) => {
+              setSortBy(e.target.value as any);
+              setPage(1);
+            }}
             className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:bg-white focus:outline-none"
           >
             <option value="NEWEST">Most Recent</option>
@@ -328,7 +308,7 @@ export const MockHistoryPage = () => {
       {/* History List */}
       {isLoading ? (
         <Loader label="Loading mock test history..." />
-      ) : filteredAttempts.length === 0 ? (
+      ) : attempts.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
           <Award className="mx-auto text-slate-300 mb-3" size={48} />
           <h3 className="text-lg font-bold text-slate-800">No mock tests found</h3>
@@ -349,7 +329,7 @@ export const MockHistoryPage = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredAttempts.map((attempt) => {
+          {attempts.map((attempt) => {
             const isCompleted = ['SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED', 'COMPLETED'].includes(
               attempt.status?.name,
             );
@@ -694,6 +674,41 @@ export const MockHistoryPage = () => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Server-Side Pagination Controls */}
+      {pagination.totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 bg-white px-5 py-4 rounded-2xl shadow-xs mt-6">
+          <p className="text-xs font-semibold text-slate-500">
+            Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
+            {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+            {pagination.total} mock attempts
+          </p>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={pagination.page <= 1}
+              className="rounded-xl text-xs font-bold"
+            >
+              Previous
+            </Button>
+            <span className="text-xs font-bold text-slate-700 px-2">
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+              disabled={pagination.page >= pagination.totalPages}
+              className="rounded-xl text-xs font-bold"
+            >
+              Next
+            </Button>
+          </div>
         </div>
       )}
     </div>

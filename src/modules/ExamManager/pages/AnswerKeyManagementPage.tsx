@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   UserCheck,
   Eye,
+  X,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { toast } from '@/utils/toast';
@@ -46,6 +47,257 @@ interface InlineAnswerKeyProgress {
   total: number;
   message?: string;
 }
+
+export interface AnswerKeyPreviewRow {
+  rowNumber: number;
+  questionNumber: number;
+  subject: string;
+  section: string;
+  questionType: string;
+  questionText: string;
+  marks: number;
+  negativeMarks: number;
+  availableOptions: string;
+  correctOption: string;
+  explanation: string;
+  isValid: boolean;
+  errorMessage?: string;
+}
+
+export interface AnswerKeyPreviewResult {
+  fileName: string;
+  fileSize: number;
+  totalQuestions: number;
+  validQuestions: number;
+  invalidQuestions: number;
+  isValid: boolean;
+  errors: Array<{ row: number; message: string }>;
+  warnings: Array<{ row: number; message: string }>;
+  previewRows: AnswerKeyPreviewRow[];
+}
+
+export const parseAndValidateAnswerKey = (
+  content: string,
+  fileName: string,
+  fileSize: number,
+  examQuestions: AnswerKeyQuestionItem[],
+): AnswerKeyPreviewResult => {
+  const lines = content
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  if (lines.length <= 1) {
+    return {
+      fileName,
+      fileSize,
+      totalQuestions: 0,
+      validQuestions: 0,
+      invalidQuestions: 0,
+      isValid: false,
+      errors: [{ row: 1, message: 'CSV file is empty or missing headers.' }],
+      warnings: [],
+      previewRows: [],
+    };
+  }
+
+  // Split line with quote awareness
+  const parseLine = (line: string): string[] => {
+    const res: string[] = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (charIsComma(ch, inQuotes)) {
+        res.push(cur.trim());
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    res.push(cur.trim());
+    return res;
+  };
+
+  function charIsComma(ch: string, inQuotes: boolean) {
+    return ch === ',' && !inQuotes;
+  }
+
+  const headerLine = lines[0];
+  const headers = parseLine(headerLine).map((h) =>
+    h.toLowerCase().trim().replace(/[\s_()\-]/g, ''),
+  );
+
+  const qNumIdx = headers.findIndex(
+    (h) => h.includes('questionnumber') || h === 'qnum' || h === 'q#' || h === 'question' || h === 'questionid',
+  );
+  const correctOptIdx = headers.findIndex(
+    (h) =>
+      h.includes('correctanswer') ||
+      h.includes('correctoption') ||
+      h.includes('answer') ||
+      h === 'key',
+  );
+  const explIdx = headers.findIndex((h) => h.includes('explanation'));
+
+  if (qNumIdx === -1 || correctOptIdx === -1) {
+    return {
+      fileName,
+      fileSize,
+      totalQuestions: 0,
+      validQuestions: 0,
+      invalidQuestions: lines.length - 1,
+      isValid: false,
+      errors: [
+        {
+          row: 1,
+          message:
+            'Missing required column(s). CSV must contain "question_number" and "correct_answer" headers.',
+        },
+      ],
+      warnings: [],
+      previewRows: [],
+    };
+  }
+
+  const questionMap = new Map<number, AnswerKeyQuestionItem>();
+  examQuestions.forEach((q) => questionMap.set(q.questionNumber, q));
+
+  const seenQNums = new Set<number>();
+  const previewRows: AnswerKeyPreviewRow[] = [];
+  const errors: Array<{ row: number; message: string }> = [];
+  const warnings: Array<{ row: number; message: string }> = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const parts = parseLine(lines[i]);
+    const rowNumber = i + 1;
+    const rawQNum = parts[qNumIdx];
+    const rawCorrectOpt = (parts[correctOptIdx] || '').trim().replace(/^"+|"+$/g, '');
+    const rawExplanation = explIdx >= 0 ? (parts[explIdx] || '').replace(/^"+|"+$/g, '') : '';
+
+    const qNum = parseInt(rawQNum, 10);
+    let rowValid = true;
+    let rowError = '';
+
+    if (isNaN(qNum) || qNum <= 0) {
+      rowValid = false;
+      rowError = `Invalid Question Number: "${rawQNum}". Must be a positive integer.`;
+      errors.push({ row: rowNumber, message: rowError });
+    } else if (seenQNums.has(qNum)) {
+      rowValid = false;
+      rowError = `Duplicate question number: ${qNum}`;
+      errors.push({ row: rowNumber, message: rowError });
+    } else {
+      seenQNums.add(qNum);
+      const matchedQ = questionMap.get(qNum);
+      if (!matchedQ) {
+        rowValid = false;
+        rowError = `Question number ${qNum} does not exist in this exam.`;
+        errors.push({ row: rowNumber, message: rowError });
+      } else {
+        if (!rawCorrectOpt) {
+          rowValid = false;
+          rowError = `Missing answer for question number: ${qNum}`;
+          errors.push({ row: rowNumber, message: rowError });
+        } else if (matchedQ.questionType === 'NUMERICAL') {
+          if (isNaN(Number(rawCorrectOpt))) {
+            rowValid = false;
+            rowError = `Question ${qNum} requires a numerical answer.`;
+            errors.push({ row: rowNumber, message: rowError });
+          }
+        } else if (matchedQ.questionType === 'SINGLE_CORRECT') {
+          if (rawCorrectOpt.includes('|') || rawCorrectOpt.includes(',') || rawCorrectOpt.includes(';')) {
+            rowValid = false;
+            rowError = `Question ${qNum} is a single-choice question and accepts only one option.`;
+            errors.push({ row: rowNumber, message: rowError });
+          } else {
+            const availOptions = (matchedQ.options || []).map((o) => o.optionKey.toUpperCase());
+            if (availOptions.length > 0 && !availOptions.includes(rawCorrectOpt.toUpperCase())) {
+              rowValid = false;
+              rowError = `Invalid answer '${rawCorrectOpt}' for question ${qNum}.`;
+              errors.push({ row: rowNumber, message: rowError });
+            }
+          }
+        } else if (matchedQ.questionType === 'MULTIPLE_CORRECT') {
+          const availOptions = (matchedQ.options || []).map((o) => o.optionKey.toUpperCase());
+          const keys = rawCorrectOpt.toUpperCase().split(/[\s,|;]+/).map((k) => k.trim()).filter(Boolean);
+          const invalidKey = keys.find((k) => !availOptions.includes(k));
+          if (invalidKey) {
+            rowValid = false;
+            rowError = `Invalid answer '${invalidKey}' for question ${qNum}.`;
+            errors.push({ row: rowNumber, message: rowError });
+          }
+        }
+
+        previewRows.push({
+          rowNumber,
+          questionNumber: qNum,
+          subject: matchedQ.subject || 'General',
+          section: matchedQ.section || 'Main',
+          questionType: matchedQ.questionType || 'SINGLE_CORRECT',
+          questionText: matchedQ.questionText || `Question #${qNum}`,
+          marks: matchedQ.marks || 4,
+          negativeMarks: matchedQ.negativeMarks || 1,
+          availableOptions: matchedQ.availableOptions || 'A/B/C/D',
+          correctOption: rawCorrectOpt,
+          explanation: rawExplanation || matchedQ.explanation || '',
+          isValid: rowValid,
+          errorMessage: rowError || undefined,
+        });
+        continue;
+      }
+    }
+
+    // Fallback row if question not matched
+    previewRows.push({
+      rowNumber,
+      questionNumber: isNaN(qNum) ? 0 : qNum,
+      subject: 'Unknown',
+      section: 'Unknown',
+      questionType: 'UNKNOWN',
+      questionText: `Question statement (unmatched)`,
+      marks: 0,
+      negativeMarks: 0,
+      availableOptions: '-',
+      correctOption: rawCorrectOpt,
+      explanation: rawExplanation,
+      isValid: false,
+      errorMessage: rowError,
+    });
+  }
+
+  // Check missing questions
+  examQuestions.forEach((eq) => {
+    if (!seenQNums.has(eq.questionNumber)) {
+      errors.push({
+        row: 0,
+        message: `Missing answer for question number: ${eq.questionNumber}`,
+      });
+    }
+  });
+
+  const validCount = previewRows.filter((r) => r.isValid).length;
+  const invalidCount = previewRows.filter((r) => !r.isValid).length;
+
+  return {
+    fileName,
+    fileSize,
+    totalQuestions: previewRows.length,
+    validQuestions: validCount,
+    invalidQuestions: invalidCount,
+    isValid: errors.length === 0 && invalidCount === 0 && previewRows.length === examQuestions.length && previewRows.length > 0,
+    errors,
+    warnings,
+    previewRows,
+  };
+};
 
 export const AnswerKeyManagementPage: React.FC = () => {
   const navigate = useNavigate();
@@ -93,6 +345,8 @@ export const AnswerKeyManagementPage: React.FC = () => {
     getStatus,
     getQuestions,
     downloadTemplate,
+    downloadSampleCsv,
+    downloadSampleExcel,
     uploadAnswerKey,
     isLoading: isAnswerKeyLoading,
   } = useAnswerKeyAPI();
@@ -108,6 +362,8 @@ export const AnswerKeyManagementPage: React.FC = () => {
   const [statusData, setStatusData] = useState<AnswerKeyStatus | null>(null);
   const [questions, setQuestions] = useState<AnswerKeyQuestionItem[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewData, setPreviewData] = useState<AnswerKeyPreviewResult | null>(null);
+  const [isValidatingFile, setIsValidatingFile] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editedAnswers, setEditedAnswers] = useState<Record<number, string>>({});
   const [gridSearch, setGridSearch] = useState('');
@@ -285,7 +541,23 @@ export const AnswerKeyManagementPage: React.FC = () => {
     }
   }, [activeScheduleId, loadAnswerKeyData]);
 
-  // Handle Download CSV Template
+  // Handle Download Sample CSV Template
+  const handleDownloadSampleCsv = async () => {
+    await downloadSampleCsv(activeScheduleId);
+    toast.success('Sample CSV template downloaded!');
+  };
+
+  // Handle Download Sample Excel Template
+  const handleDownloadSampleExcel = async () => {
+    const res = await downloadSampleExcel(activeScheduleId);
+    if (res.success) {
+      toast.success('Sample Excel template downloaded!');
+    } else {
+      toast.error(res.error || 'Failed to download Excel template');
+    }
+  };
+
+  // Handle Download Pre-filled CSV Template
   const handleDownload = async () => {
     if (!activeScheduleId) return;
     const res = await downloadTemplate(activeScheduleId, examTitle);
@@ -296,16 +568,83 @@ export const AnswerKeyManagementPage: React.FC = () => {
     }
   };
 
-  // Handle CSV File Upload
+  // Handle File Selected -> Parse & Validate immediately
+  const handleFileChange = async (file: File) => {
+    setSelectedFile(file);
+    setIsValidatingFile(true);
+    setPreviewData(null);
+    try {
+      if (file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls')) {
+        setPreviewData({
+          fileName: file.name,
+          fileSize: file.size,
+          totalQuestions: questions.length,
+          validQuestions: questions.length,
+          invalidQuestions: 0,
+          isValid: true,
+          errors: [],
+          warnings: [],
+          previewRows: questions.map((q) => ({
+            rowNumber: q.questionNumber,
+            questionNumber: q.questionNumber,
+            subject: q.subject || 'General',
+            section: q.section || 'Main',
+            questionType: q.questionType,
+            questionText: q.questionText || `Question #${q.questionNumber}`,
+            marks: q.marks,
+            negativeMarks: q.negativeMarks,
+            availableOptions: q.availableOptions,
+            correctOption: '(Excel file: verified on submit)',
+            explanation: '',
+            isValid: true,
+          })),
+        });
+        toast.success(`Excel file selected (${file.name}). Ready for verification and submission.`);
+        return;
+      }
+
+      const text = await file.text();
+      const result = parseAndValidateAnswerKey(text, file.name, file.size, questions);
+      setPreviewData(result);
+      if (!result.isValid) {
+        toast.error(`Validation found ${result.errors.length} issue(s). Please inspect diagnostics below.`);
+      } else {
+        toast.success(`Answer Key validated successfully! ${result.validQuestions} questions ready.`);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to parse file.');
+      setPreviewData(null);
+    } finally {
+      setIsValidatingFile(false);
+    }
+  };
+
+  // Handle CSV File Upload & Submission
   const handleFileUpload = async () => {
+    if (statusData && statusData.isCompleted === false) {
+      toast.error('Cannot upload answer key before completing exam.');
+      return;
+    }
     if (!selectedFile) {
       toast.error('Please select a CSV file to upload.');
+      return;
+    }
+    if (previewData && !previewData.isValid) {
+      toast.error('Cannot submit answer key with validation errors. Please resolve issues first.');
       return;
     }
     if (!activeScheduleId) return;
 
     setIsSubmitting(true);
-    const res = await uploadAnswerKey(activeScheduleId, { file: selectedFile });
+    const rowsPayload = previewData?.previewRows
+      ? previewData.previewRows.map((r) => ({
+          questionNumber: r.questionNumber,
+          correctOption: r.correctOption,
+          explanation: r.explanation,
+        }))
+      : undefined;
+
+    const res = await uploadAnswerKey(activeScheduleId, { file: selectedFile, rows: rowsPayload });
     setIsSubmitting(false);
 
     if (res.error) {
@@ -315,6 +654,7 @@ export const AnswerKeyManagementPage: React.FC = () => {
 
     toast.success(res.data?.message || 'Answer Key uploaded and verified successfully!');
     setSelectedFile(null);
+    setPreviewData(null);
     await loadAnswerKeyData();
     await loadCompletedExams();
 
@@ -324,10 +664,15 @@ export const AnswerKeyManagementPage: React.FC = () => {
 
     queryClient.invalidateQueries({ queryKey: adminKeys.completedExams() });
     queryClient.invalidateQueries({ queryKey: adminKeys.answerKeyStatus(activeScheduleId) });
+    queryClient.invalidateQueries({ queryKey: adminKeys.answerKeyQuestions(activeScheduleId) });
   };
 
   // Handle Grid Save
   const handleSaveGrid = async () => {
+    if (statusData && statusData.isCompleted === false) {
+      toast.error('Cannot upload answer key before completing exam.');
+      return;
+    }
     if (!activeScheduleId) return;
 
     const rows = questions.map((q) => ({
@@ -742,6 +1087,21 @@ export const AnswerKeyManagementPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Uncompleted Exam Warning Banner */}
+        {statusData && statusData.isCompleted === false && (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center gap-3 text-rose-800 shadow-xs">
+            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+            <div>
+              <p className="text-xs font-bold text-rose-900">
+                Cannot upload answer key before completing exam
+              </p>
+              <p className="text-[11px] text-rose-700 mt-0.5">
+                This examination is currently scheduled or in progress. Answer key upload and manual editing are locked until the official examination has ended.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Snapshot Metric Cards (White/Light Theme) */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
@@ -845,43 +1205,173 @@ export const AnswerKeyManagementPage: React.FC = () => {
         ) : activeTab === 'UPLOAD' ? (
           /* ── TAB 1: SPREADSHEET UPLOAD ── */
           <div className="space-y-5">
-            {/* Step 1: Download Pre-filled Template */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* Selected Exam Context Banner (Requirement 15) */}
+            <div className="rounded-3xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 via-white to-indigo-50/40 p-6 shadow-xs space-y-2">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-600 block">
+                Selected Examination Context
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                <div className="p-3 rounded-2xl bg-white border border-indigo-100 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Exam
+                  </span>
+                  <span className="font-extrabold text-slate-900 text-sm truncate block mt-0.5">
+                    {examTitle || 'Official Exam'}
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-white border border-indigo-100 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Version
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-xs font-bold text-indigo-700 mt-0.5">
+                    Current ExamVersion
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-white border border-indigo-100 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Question Count
+                  </span>
+                  <span className="font-extrabold text-slate-900 text-sm block mt-0.5">
+                    {statusData?.totalQuestions || questions.length || 0} Questions
+                  </span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500 pt-1">
+                Question numbers in your upload are strictly scoped to this <b>ExamVersion</b>. The backend maps each question number to its persistent Question ID, preserving student question randomization.
+              </p>
+            </div>
+
+            {/* Step 1: Download Templates (Requirement 11, 12, 13, 14) */}
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
                     <FileSpreadsheet size={18} className="text-emerald-600" />
-                    Step 1: Download Pre-filled Template
+                    Answer Key Upload Format
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-                    Generates a customized CSV pre-populated with all {questions.length} questions, subjects, sections, and available option choices for this exam.
+                  <p className="text-xs text-slate-500 mt-1 max-w-xl">
+                    Upload a CSV/Excel file using the following simple columns:
                   </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 font-mono text-xs">
+                    <span className="rounded-md bg-slate-100 px-2.5 py-1 text-indigo-700 font-bold border border-slate-200">
+                      question_number
+                    </span>
+                    <span className="text-slate-400">,</span>
+                    <span className="rounded-md bg-slate-100 px-2.5 py-1 text-indigo-700 font-bold border border-slate-200">
+                      correct_answer
+                    </span>
+                  </div>
                 </div>
-                <Button
-                  onClick={handleDownload}
-                  disabled={isAnswerKeyLoading}
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shrink-0 shadow-xs"
-                >
-                  <Download size={14} />
-                  Download CSV Template
-                </Button>
+
+                {/* Template Download Actions */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <Button
+                    onClick={handleDownloadSampleCsv}
+                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs"
+                  >
+                    <Download size={14} />
+                    Download Sample CSV
+                  </Button>
+                  <Button
+                    onClick={handleDownloadSampleExcel}
+                    className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs"
+                  >
+                    <Download size={14} />
+                    Download Sample Excel
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleDownload}
+                    disabled={isAnswerKeyLoading}
+                    className="flex items-center gap-2 border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs"
+                  >
+                    <Download size={14} />
+                    Pre-filled Paper CSV
+                  </Button>
+                </div>
+              </div>
+
+              {/* Sample Format Preview Callout */}
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 text-xs text-slate-600 font-mono flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                    Sample Structure
+                  </span>
+                  <code>1,A &nbsp;|&nbsp; 2,B &nbsp;|&nbsp; 3,D &nbsp;|&nbsp; 4,C &nbsp;|&nbsp; 5,A</code>
+                </div>
+                <span className="text-[11px] text-slate-400 italic">No Question IDs or UUIDs required</span>
               </div>
             </div>
 
             {/* Step 2: Upload Completed Answer Key */}
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs">
-              <h3 className="text-sm font-black text-slate-900 flex items-center gap-2 mb-3">
-                <Upload size={18} className="text-indigo-600" />
-                Step 2: Upload Completed Answer Key
-              </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                  <Upload size={18} className="text-indigo-600" />
+                  Step 2: Upload Completed Answer Key
+                </h3>
+                {/* Sample Test File Shortcuts */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] font-bold text-slate-400">Test Samples:</span>
+                  <button
+                    type="button"
+                    id="btn-load-valid-answer-key"
+                    onClick={() => {
+                      const csv = `question_number,correct_answer\n1,A\n2,B\n3,C\n4,D\n5,A\n6,25\n7,10.5\n8,0\n9,100\n10,42\n11,A\n12,B\n13,C\n14,D\n15,A`;
+                      const f = new File([csv], 'AnswerKey_Valid_Simple_Format.csv', { type: 'text/csv' });
+                      handleFileChange(f);
+                    }}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition"
+                  >
+                    Sample: Valid 2-Column Key
+                  </button>
+                  <button
+                    type="button"
+                    id="btn-load-invalid-option"
+                    onClick={() => {
+                      const csv = `question_number,correct_answer\n1,Z\n2,B\n3,C\n4,D\n5,A\n6,25\n7,10.5\n8,0\n9,100\n10,42\n11,A\n12,B\n13,C\n14,D\n15,A`;
+                      const f = new File([csv], 'AnswerKey_Invalid_Option.csv', { type: 'text/csv' });
+                      handleFileChange(f);
+                    }}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition"
+                  >
+                    Sample: Invalid Option 'Z'
+                  </button>
+                  <button
+                    type="button"
+                    id="btn-load-duplicate-number"
+                    onClick={() => {
+                      const csv = `question_number,correct_answer\n1,A\n1,B\n3,C\n4,D\n5,A\n6,25\n7,10.5\n8,0\n9,100\n10,42\n11,A\n12,B\n13,C\n14,D\n15,A`;
+                      const f = new File([csv], 'AnswerKey_Duplicate_Number.csv', { type: 'text/csv' });
+                      handleFileChange(f);
+                    }}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition"
+                  >
+                    Sample: Duplicate Q#1
+                  </button>
+                  <button
+                    type="button"
+                    id="btn-load-missing-number"
+                    onClick={() => {
+                      const csv = `question_number,correct_answer\n1,A\n2,B\n4,D\n5,A\n6,25\n7,10.5\n8,0\n9,100\n10,42\n11,A\n12,B\n13,C\n14,D\n15,A`;
+                      const f = new File([csv], 'AnswerKey_Missing_Q3.csv', { type: 'text/csv' });
+                      handleFileChange(f);
+                    }}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 transition"
+                  >
+                    Sample: Missing Q#3
+                  </button>
+                </div>
+              </div>
 
               <div className="relative border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-2xl p-8 text-center transition bg-slate-50/60">
                 <input
+                  id="answer-key-file-input"
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx,.xls"
                   onChange={(e) => {
                     if (e.target.files && e.target.files[0]) {
-                      setSelectedFile(e.target.files[0]);
+                      handleFileChange(e.target.files[0]);
                     }
                   }}
                   className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
@@ -892,7 +1382,7 @@ export const AnswerKeyManagementPage: React.FC = () => {
                   </div>
                   {selectedFile ? (
                     <div>
-                      <p className="text-sm font-black text-emerald-600">
+                      <p id="selected-file-name" className="text-sm font-black text-indigo-700">
                         {selectedFile.name}
                       </p>
                       <p className="text-xs text-slate-400 mt-0.5">
@@ -902,36 +1392,237 @@ export const AnswerKeyManagementPage: React.FC = () => {
                   ) : (
                     <div>
                       <p className="text-xs font-bold text-slate-800">
-                        Drop your filled Answer Key CSV here, or <span className="text-indigo-600 underline">browse</span>
+                        Drop your filled Answer Key CSV/Excel here, or <span className="text-indigo-600 underline">browse</span>
                       </p>
                       <p className="text-[11px] text-slate-400 mt-1">
-                        Requires "Question Number" and "Correct Option" columns
+                        Requires "question_number" and "correct_answer" columns (.csv or .xlsx)
                       </p>
                     </div>
                   )}
                 </div>
               </div>
+            </div>
 
-              {selectedFile && (
-                <div className="mt-4 flex justify-end">
+            {/* Validation Loading Card */}
+            {isValidatingFile && (
+              <div className="rounded-3xl border border-indigo-100 bg-white p-8 flex flex-col items-center justify-center text-center shadow-xs">
+                <RefreshCw size={26} className="animate-spin text-indigo-600 mb-2" />
+                <span className="text-xs font-bold text-slate-900">Validating Answer Key Against Examination Paper...</span>
+                <span className="text-[11px] text-slate-400 mt-0.5">Verifying question numbers, question types, available option keys, and scoring parameters</span>
+              </div>
+            )}
+
+            {/* Step 3: Pre-Submission Preview & Diagnostics */}
+            {previewData && !isValidatingFile && (
+              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs space-y-5 animate-in fade-in duration-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-white text-xs font-black">
+                        3
+                      </span>
+                      <span>Pre-Submission Preview & Diagnostics</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Inspect parsed answer options and validation diagnostics before persisting and triggering evaluation
+                    </p>
+                  </div>
+                  <div>
+                    {previewData.isValid ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                        <CheckCircle2 size={14} /> Ready for Submission
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs">
+                        <AlertTriangle size={14} /> Validation Errors Found ({previewData.errors.length})
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Validation Metrics Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Total Questions in File
+                    </div>
+                    <div className="text-lg font-black text-slate-900 mt-0.5">
+                      {previewData.totalQuestions}
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200">
+                    <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
+                      Valid Questions
+                    </div>
+                    <div className="text-lg font-black text-emerald-700 mt-0.5">
+                      {previewData.validQuestions}
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-rose-50/60 border border-rose-200">
+                    <div className="text-[10px] font-bold text-rose-800 uppercase tracking-wider">
+                      Invalid Questions
+                    </div>
+                    <div className="text-lg font-black text-rose-700 mt-0.5">
+                      {previewData.invalidQuestions}
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100">
+                    <div className="text-[10px] font-bold text-indigo-800 uppercase tracking-wider">
+                      Target Exam
+                    </div>
+                    <div className="text-xs font-bold text-indigo-950 mt-1 truncate">
+                      {examTitle}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Error Diagnostics Callout */}
+                {previewData.errors.length > 0 && (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 space-y-2">
+                    <div className="flex items-center gap-2 font-bold text-xs text-rose-900">
+                      <AlertTriangle size={15} className="text-rose-600 shrink-0" />
+                      <span>Validation Diagnostics ({previewData.errors.length} Issue(s) Detected)</span>
+                    </div>
+                    <div className="max-h-36 overflow-y-auto space-y-1.5 pl-6 text-xs text-rose-700 font-medium divide-y divide-rose-100/60">
+                      {previewData.errors.map((err, eIdx) => (
+                        <div key={eIdx} className="pt-1 first:pt-0">
+                          <span className="font-mono font-bold text-rose-900">Row {err.row}:</span> {err.message}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Warnings Callout */}
+                {previewData.warnings.length > 0 && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 space-y-1 text-xs text-amber-800 font-medium">
+                    <div className="flex items-center gap-2 font-bold text-amber-900 mb-1">
+                      <HelpCircle size={14} className="text-amber-600 shrink-0" />
+                      <span>File Completeness Notices ({previewData.warnings.length})</span>
+                    </div>
+                    {previewData.warnings.map((w, wIdx) => (
+                      <div key={wIdx} className="pl-5">
+                        • {w.message}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Preview Table */}
+                <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                  <div className="overflow-x-auto max-h-96">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 z-10 text-[11px] uppercase tracking-wider font-bold text-slate-600">
+                        <tr>
+                          <th className="p-3 pl-4">Row / Q#</th>
+                          <th className="p-3">Subject / Section</th>
+                          <th className="p-3">Question Statement</th>
+                          <th className="p-3">Type</th>
+                          <th className="p-3">Marks (+ / -)</th>
+                          <th className="p-3">Available Options</th>
+                          <th className="p-3">Correct Key</th>
+                          <th className="p-3 pr-4 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {previewData.previewRows.map((row) => (
+                          <tr
+                            key={row.rowNumber}
+                            className={row.isValid ? 'hover:bg-slate-50/60' : 'bg-rose-50/30'}
+                          >
+                            <td className="p-3 pl-4 font-mono font-bold text-slate-700">
+                              Row {row.rowNumber} (Q#{row.questionNumber})
+                            </td>
+                            <td className="p-3 text-slate-600">
+                              <span className="font-semibold text-slate-800">{row.subject}</span>
+                              <span className="text-[10px] text-slate-400 block">{row.section}</span>
+                            </td>
+                            <td className="p-3 max-w-xs sm:max-w-md">
+                              <div className="font-medium text-slate-900 line-clamp-1">
+                                {row.questionText}
+                              </div>
+                              {row.explanation && (
+                                <span className="text-[10px] text-slate-400 block line-clamp-1">
+                                  Expl: {row.explanation}
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-3 font-mono text-[11px] text-slate-600">
+                              {row.questionType}
+                            </td>
+                            <td className="p-3 font-mono font-semibold text-slate-700">
+                              +{row.marks} / -{row.negativeMarks}
+                            </td>
+                            <td className="p-3 font-mono text-slate-500">
+                              {row.availableOptions}
+                            </td>
+                            <td className="p-3 font-mono font-bold text-indigo-600 text-sm">
+                              {row.correctOption || '—'}
+                            </td>
+                            <td className="p-3 pr-4 text-center">
+                              {row.isValid ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold">
+                                  <CheckCircle2 size={11} /> Valid
+                                </span>
+                              ) : (
+                                <span
+                                  className="inline-flex items-center gap-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 text-[10px] font-bold cursor-help"
+                                  title={row.errorMessage}
+                                >
+                                  <AlertTriangle size={11} /> Invalid
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Actions Footer */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100">
                   <Button
-                    onClick={handleFileUpload}
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      setPreviewData(null);
+                    }}
                     disabled={isSubmitting}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-xs"
+                    className="w-full sm:w-auto text-xs font-bold border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl px-4 py-2"
+                  >
+                    <X size={14} className="mr-1.5" /> Clear & Select Different File
+                  </Button>
+
+                  <Button
+                    id="submit-answer-key-button"
+                    onClick={handleFileUpload}
+                    disabled={isSubmitting || !previewData.isValid || statusData?.isCompleted === false}
+                    title={
+                      statusData?.isCompleted === false
+                        ? 'Cannot upload answer key before completing exam'
+                        : !previewData.isValid
+                        ? 'Resolve all validation diagnostics above to enable submission'
+                        : undefined
+                    }
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-6 py-2.5 rounded-xl shadow-xs"
                   >
                     {isSubmitting ? (
                       <>
-                        <RefreshCw size={14} className="animate-spin" /> Verifying & Saving...
+                        <RefreshCw size={14} className="animate-spin" /> Persisting & Enqueueing Evaluation...
                       </>
                     ) : (
                       <>
-                        <Save size={14} /> Upload & Verify Answer Key
+                        <Save size={14} /> Submit & Process Answer Key ({previewData.validQuestions} Questions)
                       </>
                     )}
                   </Button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* CSV Format Requirements */}
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
@@ -985,8 +1676,9 @@ export const AnswerKeyManagementPage: React.FC = () => {
 
                 <Button
                   onClick={handleSaveGrid}
-                  disabled={isSubmitting}
-                  className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs"
+                  disabled={isSubmitting || statusData?.isCompleted === false}
+                  title={statusData?.isCompleted === false ? 'Cannot upload answer key before completing exam' : undefined}
+                  className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs"
                 >
                   {isSubmitting ? (
                     <>

@@ -104,7 +104,9 @@ export const ViewAnswerKeyPage: React.FC = () => {
                 </h1>
                 {data?.examTarget && (
                   <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                    {data.examTarget}
+                    {typeof data.examTarget === 'object'
+                      ? (data.examTarget as any)?.name
+                      : data.examTarget}
                   </span>
                 )}
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">

@@ -30,6 +30,7 @@ import { lazyRoute } from '@/utils/lazyRoute';
 // ** Pages (lazy — one chunk each) **
 const HomePage = lazyRoute(() => import('@/modules/Home/pages/HomePage'));
 const LoginPage = lazyRoute(() => import('@/modules/Auth/pages/LoginPage'));
+const RegisterPage = lazyRoute(() => import('@/modules/Auth/pages/RegisterPage'));
 
 // Role Dashboards
 const StudentDashboardPage = lazyRoute(
@@ -141,7 +142,6 @@ const InstitutionDashboardPage = lazyRoute(
 const BatchManagementPage = lazyRoute(
   () => import('@/modules/Institution/pages/BatchManagementPage'),
 );
-const BulkUploadPage = lazyRoute(() => import('@/modules/Institution/pages/BulkUploadPage'));
 const ReportsPage = lazyRoute(() => import('@/modules/Institution/pages/ReportsPage'));
 const AdminControlCenterPage = lazyRoute(
   () => import('@/modules/Admin/pages/AdminControlCenterPage'),
@@ -182,6 +182,9 @@ const NotFoundPage = lazyRoute(() => import('@/components/feedback/NotFoundPage'
 const SuperAdminAcademicCalendarPage = lazyRoute(
   () => import('@/modules/Admin/pages/SuperAdminAcademicCalendarPage'),
 );
+const OperatorScheduledExamsPage = lazyRoute(
+  () => import('@/modules/ExamManager/pages/OperatorScheduledExamsPage'),
+);
 
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -189,7 +192,7 @@ const SuperAdminAcademicCalendarPage = lazyRoute(
 // ══════════════════════════════════════════════════════════════════════════
 const publicRoutes: RouteObject[] = [
   { path: PUBLIC_NAVIGATION.login, element: <LoginPage /> },
-  { path: '/register', element: <Navigate to={PUBLIC_NAVIGATION.login} replace /> },
+  { path: '/register', element: <RegisterPage /> },
 ];
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -416,11 +419,7 @@ const adminRoutes: RouteObject[] = [
       },
       {
         path: 'exams/generate',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
-            <AutoGenerateExamPage />
-          </ProtectedRoute>
-        ),
+        element: <Navigate to="/admin/dashboard" replace />,
       },
       {
         path: 'exam-scheduling',
@@ -585,24 +584,8 @@ const adminRoutes: RouteObject[] = [
       {
         path: 'control-center',
         element: (
-          <ProtectedRoute permissions={[PERMISSIONS.APPROVAL_VIEW, PERMISSIONS.USER_VIEW]}>
+          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW]}>
             <AdminControlCenterPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'approvals',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.APPROVAL_VIEW]}>
-            <AdminApprovalQueuePage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'approval-queue',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.APPROVAL_VIEW]}>
-            <AdminApprovalQueuePage />
           </ProtectedRoute>
         ),
       },
@@ -785,6 +768,8 @@ const staffRoutes: RouteObject[] = [
     children: [
       { path: '', element: <Navigate to="dashboard" replace /> },
       { path: 'dashboard', element: <StaffDashboardPage /> },
+      { path: 'approvals', element: <AdminApprovalQueuePage /> },
+      { path: 'exams/pending-paper', element: <OperatorScheduledExamsPage /> },
       { path: 'billing', element: <SuperAdminBillingPage /> },
       { path: 'schools', element: <AdminSchoolsPage /> },
       { path: 'students', element: <AdminStudentsPage /> },
@@ -842,7 +827,7 @@ const institutionRoutes: RouteObject[] = [
       { path: '', element: <Navigate to="dashboard" replace /> },
       { path: 'dashboard', element: <InstitutionDashboardPage /> },
       { path: 'batches', element: <BatchManagementPage /> },
-      { path: 'bulk-upload', element: <BulkUploadPage /> },
+      { path: 'bulk-upload', element: <Navigate to="/institution/batches" replace /> },
       { path: 'reports', element: <ReportsPage /> },
       { path: 'profile', element: <StudentProfilePage /> },
     ],

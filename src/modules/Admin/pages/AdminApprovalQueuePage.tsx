@@ -23,10 +23,25 @@ import {
   UserCheck,
   Languages,
   BookOpen,
+  GraduationCap,
+  User,
+  Phone,
+  Mail,
+  MapPin,
 } from 'lucide-react';
 import { Axios } from '@/base-axios';
 import { API_URL } from '@config';
 import { io, Socket } from 'socket.io-client';
+import {
+  approvalQueueKeys,
+  adminKeys,
+  examKeys,
+  academicCalendarKeys,
+  superAdminRegistrationKeys,
+  institutionKeys,
+  billingKeys,
+  staffKeys,
+} from '@/services/queryKeys';
 
 export interface QueueTypeOption {
   key: string;
@@ -99,18 +114,23 @@ export const AdminApprovalQueuePage: React.FC = () => {
     data: queueTypesData,
     refetch: refetchQueueTypes,
   } = useQuery<{ queueTypes: QueueTypeOption[]; totalPending: number }>({
-    queryKey: ['approval-queue-types'],
+    queryKey: approvalQueueKeys.types(),
     queryFn: async () => {
       try {
         const res = await Axios.get('/admin/approvals/queue-types');
-        return res.data;
+        const raw = res.data?.data || res.data;
+        return {
+          queueTypes: raw?.queueTypes || [],
+          totalPending: raw?.totalPending || 0,
+        };
       } catch {
         // Fallback default structure
         return {
           queueTypes: [
             { key: 'ALL', label: 'All Requests', resourceType: 'ALL', pendingCount: 0 },
-            { key: 'STUDENT_REGISTRATION', label: 'Student Registration', resourceType: 'BULK_UPLOAD', pendingCount: 0 },
-            { key: 'SCHOOL_REGISTRATION', label: 'School Registration', resourceType: 'INSTITUTION', pendingCount: 0 },
+            { key: 'STUDENT_REGISTRATION', label: 'Student Registrations', resourceType: 'STUDENT', pendingCount: 0 },
+            { key: 'SCHOOL_REGISTRATION', label: 'School Onboarding', resourceType: 'INSTITUTION', pendingCount: 0 },
+            { key: 'BULK_UPLOAD', label: 'Bulk Imports', resourceType: 'BULK_UPLOAD', pendingCount: 0 },
             { key: 'EXAM', label: 'Live Exams & Mocks', resourceType: 'EXAM', pendingCount: 0 },
             { key: 'QUESTION', label: 'Question Bank', resourceType: 'QUESTION', pendingCount: 0 },
             { key: 'TRANSLATION', label: 'Translations', resourceType: 'QUESTION_TRANSLATION', pendingCount: 0 },
@@ -141,7 +161,7 @@ export const AdminApprovalQueuePage: React.FC = () => {
     isFetching: isFetchingItems,
     refetch: refetchItems,
   } = useQuery<{ data: ApprovalRequestItem[]; meta: { total: number; page: number; limit: number; pages: number } }>({
-    queryKey: ['approval-queue', queryParams],
+    queryKey: approvalQueueKeys.list(queryParams),
     queryFn: async () => {
       const params: any = {
         page,
@@ -155,17 +175,21 @@ export const AdminApprovalQueuePage: React.FC = () => {
 
       const res = await Axios.get('/admin/approvals', { params });
       const raw = res.data;
-      if (Array.isArray(raw)) {
-        return {
-          data: raw,
-          meta: { total: raw.length, page: 1, limit: pageSize, pages: 1 },
-        };
-      }
+      const payload = raw?.data !== undefined ? raw.data : raw;
+      const items: ApprovalRequestItem[] = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload?.items)
+            ? payload.items
+            : [];
+      const meta = raw?.meta || payload?.meta || { total: items.length, page: 1, limit: pageSize, pages: Math.ceil(items.length / pageSize) || 1 };
       return {
-        data: raw.data || [],
-        meta: raw.meta || { total: (raw.data || []).length, page, limit: pageSize, pages: 1 },
+        data: items,
+        meta,
       };
     },
+    placeholderData: (previousData) => previousData,
     staleTime: 5000,
   });
 
@@ -184,14 +208,12 @@ export const AdminApprovalQueuePage: React.FC = () => {
       });
 
       socket.on('approval-updated', () => {
-        queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
-        queryClient.invalidateQueries({ queryKey: ['approval-queue-types'] });
+        queryClient.invalidateQueries({ queryKey: approvalQueueKeys.all });
       });
 
       socket.on('notification', (data: any) => {
         if (data?.type?.includes('APPROVAL') || data?.type?.includes('QUEUE')) {
-          queryClient.invalidateQueries({ queryKey: ['approval-queue'] });
-          queryClient.invalidateQueries({ queryKey: ['approval-queue-types'] });
+          queryClient.invalidateQueries({ queryKey: approvalQueueKeys.all });
         }
       });
     } catch {
@@ -205,10 +227,43 @@ export const AdminApprovalQueuePage: React.FC = () => {
 
   // ── 4. Approval Actions with Targeted React Query Invalidation ─────────────
   const invalidateQueueData = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['approval-queue'] }),
-      queryClient.invalidateQueries({ queryKey: ['approval-queue-types'] }),
-    ]);
+    await queryClient.invalidateQueries({ queryKey: approvalQueueKeys.all });
+  };
+
+  const invalidateTargetResource = async (resourceType?: string) => {
+    switch (resourceType) {
+      case 'EXAM':
+      case 'MOCK_TEST':
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: adminKeys.scheduledExams() }),
+          queryClient.invalidateQueries({ queryKey: examKeys.public() }),
+          queryClient.invalidateQueries({ queryKey: academicCalendarKeys.all }),
+        ]);
+        break;
+      case 'STUDENT':
+      case 'STUDENT_REGISTRATION':
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: adminKeys.students() }),
+          queryClient.invalidateQueries({ queryKey: superAdminRegistrationKeys.all }),
+        ]);
+        break;
+      case 'INSTITUTION':
+      case 'SCHOOL_REGISTRATION':
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: institutionKeys.all }),
+          queryClient.invalidateQueries({ queryKey: superAdminRegistrationKeys.all }),
+        ]);
+        break;
+      case 'BILL':
+        await queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
+        break;
+      case 'STAFF_UPDATE':
+      case 'STAFF':
+        await queryClient.invalidateQueries({ queryKey: staffKeys.all });
+        break;
+      default:
+        break;
+    }
   };
 
   const handleApproveConfirm = async (item: ApprovalRequestItem) => {
@@ -223,6 +278,7 @@ export const AdminApprovalQueuePage: React.FC = () => {
       await Axios.post(`/admin/approvals/${item.id}/approve`, { comment });
       setApprovingItem(null);
       await invalidateQueueData();
+      await invalidateTargetResource(item.resourceType);
     } catch (err: any) {
       setActionError(err.response?.data?.message || 'Approval failed');
     } finally {
@@ -237,12 +293,14 @@ export const AdminApprovalQueuePage: React.FC = () => {
     try {
       setProcessing(true);
       setActionError(null);
+      const rejectedType = rejectingItem.resourceType;
       await Axios.post(`/admin/approvals/${rejectingItem.id}/reject`, {
         reason: rejectionReason,
       });
       setRejectingItem(null);
       setRejectionReason('');
       await invalidateQueueData();
+      await invalidateTargetResource(rejectedType);
     } catch (err: any) {
       setActionError(err.response?.data?.message || 'Rejection failed');
     } finally {
@@ -261,6 +319,7 @@ export const AdminApprovalQueuePage: React.FC = () => {
       });
       setSelectedIds([]);
       await invalidateQueueData();
+      await invalidateTargetResource(selectedQueue !== 'ALL' ? selectedQueue : undefined);
     } catch (err: any) {
       setActionError(err.response?.data?.message || 'Bulk approval failed');
     } finally {
@@ -285,6 +344,8 @@ export const AdminApprovalQueuePage: React.FC = () => {
   // ── Helper to resolve icon & label for queue types ─────────────────────────
   const getQueueIcon = (type: string) => {
     switch (type) {
+      case 'STUDENT':
+        return <GraduationCap className="h-4 w-4 text-indigo-600" />;
       case 'BULK_UPLOAD':
       case 'STUDENT_REGISTRATION':
         return <Users className="h-4 w-4 text-sky-600" />;
@@ -313,8 +374,10 @@ export const AdminApprovalQueuePage: React.FC = () => {
   const getFriendlyTypeName = (resourceType: string, isMock?: boolean) => {
     if (isMock || resourceType === 'MOCK_TEST') return 'Mock Test';
     switch (resourceType) {
-      case 'BULK_UPLOAD':
+      case 'STUDENT':
         return 'Student Registration';
+      case 'BULK_UPLOAD':
+        return 'Bulk Student Upload';
       case 'INSTITUTION':
         return 'School Onboarding';
       case 'EXAM':
@@ -610,6 +673,16 @@ export const AdminApprovalQueuePage: React.FC = () => {
                                   {item.entitySummary.durationMinutes} mins
                                 </span>
                               )}
+                              {item.entitySummary.targetExam && (
+                                <span className="inline-flex items-center gap-1 font-semibold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">
+                                  {item.entitySummary.targetExam}
+                                </span>
+                              )}
+                              {item.entitySummary.startTime && (
+                                <span className="inline-flex items-center gap-1 font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                  Scheduled: {new Date(item.entitySummary.startTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              )}
                               {item.entitySummary.validRowCount !== undefined && (
                                 <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
                                   {item.entitySummary.validRowCount} Candidates
@@ -794,14 +867,158 @@ export const AdminApprovalQueuePage: React.FC = () => {
                 <span className="font-bold text-indigo-700">{viewingItem.status}</span>
               </div>
 
-              {viewingItem.metadata && Object.keys(viewingItem.metadata).length > 0 && (
-                <div className="pt-2 border-t border-slate-200">
-                  <span className="text-slate-400 font-bold block mb-1">Attached Metadata:</span>
-                  <pre className="p-2.5 rounded-xl bg-white border border-slate-200 text-[11px] font-mono text-slate-700 overflow-x-auto max-h-36">
-                    {JSON.stringify(viewingItem.metadata, null, 2)}
-                  </pre>
+              {/* Formatted Human-Readable Metadata Details (No Raw JSON) */}
+              {viewingItem.resourceType === 'STUDENT' ? (
+                <div className="space-y-2.5 pt-3 border-t border-slate-200">
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <GraduationCap className="h-4 w-4 text-indigo-600" />
+                    <span>Student Profile Details</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="rounded-xl bg-white p-2.5 border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">Student Name</span>
+                      <span className="text-xs font-black text-slate-900 flex items-center gap-1 mt-0.5">
+                        <User className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                        <span>{viewingItem.metadata?.name || viewingItem.entitySummary?.title || 'Student'}</span>
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-2.5 border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">Student Code & ID</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="font-mono font-black text-indigo-700 text-xs">
+                          {viewingItem.metadata?.studentCode || viewingItem.entitySummary?.studentCode || 'N/A'}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400">
+                          ({viewingItem.metadata?.studentId || viewingItem.entitySummary?.studentId || 'N/A'})
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-2.5 border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">Mobile Number</span>
+                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1 mt-0.5">
+                        <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <span>{viewingItem.metadata?.mobile || viewingItem.metadata?.phone || viewingItem.entitySummary?.mobile || 'N/A'}</span>
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-2.5 border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">Email Address</span>
+                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1 mt-0.5 truncate" title={viewingItem.metadata?.email}>
+                        <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{viewingItem.metadata?.email || viewingItem.entitySummary?.email || 'N/A'}</span>
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-2.5 border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">School / College</span>
+                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1 mt-0.5 truncate" title={viewingItem.metadata?.schoolCollege}>
+                        <Building2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{viewingItem.metadata?.schoolCollege || viewingItem.entitySummary?.schoolName || 'N/A'}</span>
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-2.5 border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">Class & Target Exam</span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-slate-700">
+                          {viewingItem.entitySummary?.grade || viewingItem.metadata?.grade || 'Class 11'}
+                        </span>
+                        <span className="inline-flex items-center rounded-md bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 text-[11px] font-black text-indigo-700">
+                          {viewingItem.entitySummary?.targetExam || viewingItem.metadata?.targetExam || viewingItem.metadata?.examTarget || 'General'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-2.5 border border-slate-200 sm:col-span-2">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">Location</span>
+                      <span className="text-xs font-bold text-slate-800 flex items-center gap-1 mt-0.5">
+                        <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                        <span>
+                          {viewingItem.metadata?.district || viewingItem.entitySummary?.city || 'N/A'}, {viewingItem.metadata?.state || viewingItem.entitySummary?.state || 'N/A'}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              )}
+              ) : (viewingItem.resourceType === 'EXAM' || viewingItem.resourceType === 'MOCK_TEST') ? (
+                <div className="space-y-2.5 pt-3 border-t border-slate-200">
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <BookOpen className="h-4 w-4 text-indigo-600" />
+                    <span>Examination & Schedule Details</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="rounded-xl bg-white p-2.5 border border-slate-200 sm:col-span-2">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">Exam Title</span>
+                      <span className="text-xs font-black text-slate-900 block mt-0.5">
+                        {viewingItem.entitySummary?.title || viewingItem.metadata?.title || 'Exam Paper'}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-2.5 border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">Target Exam</span>
+                      <span className="inline-flex items-center rounded-md bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 text-[11px] font-black text-indigo-700 mt-1">
+                        {viewingItem.entitySummary?.targetExam || viewingItem.metadata?.targetExam || 'General'}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-2.5 border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">Exam Format</span>
+                      <span className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-slate-700 mt-1">
+                        {viewingItem.entitySummary?.isMock ? 'Practice Mock Test' : 'Official Live Examination'}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-2.5 border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">Questions & Marks</span>
+                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5 mt-0.5">
+                        <HelpCircle className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                        <span>{viewingItem.entitySummary?.totalQuestions || viewingItem.metadata?.totalQuestions || 0} Questions ({viewingItem.entitySummary?.totalMarks || (Number(viewingItem.metadata?.totalQuestions || 0) * 4)} Marks)</span>
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-2.5 border border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-400 block uppercase">Duration</span>
+                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5 mt-0.5">
+                        <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <span>{viewingItem.entitySummary?.durationMinutes || viewingItem.metadata?.durationMinutes || 60} Minutes</span>
+                      </span>
+                    </div>
+
+                    {(viewingItem.entitySummary?.startTime || viewingItem.metadata?.startTime) && (
+                      <div className="rounded-xl bg-amber-50/50 p-2.5 border border-amber-200 sm:col-span-2">
+                        <span className="text-[10px] font-bold text-amber-800 block uppercase">Scheduled Examination Window</span>
+                        <div className="text-xs font-bold text-amber-950 mt-0.5 flex flex-wrap items-center gap-2">
+                          <span>Start: {new Date(viewingItem.entitySummary?.startTime || viewingItem.metadata?.startTime).toLocaleString()}</span>
+                          <span>→</span>
+                          <span>End: {new Date(viewingItem.entitySummary?.endTime || viewingItem.metadata?.endTime).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : viewingItem.metadata && Object.keys(viewingItem.metadata).length > 0 ? (
+                <div className="space-y-2 pt-3 border-t border-slate-200">
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-700">
+                    Submission Details
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {Object.entries(viewingItem.metadata)
+                      .filter(([k]) => !['registrationType'].includes(k))
+                      .map(([key, val]) => (
+                        <div key={key} className="rounded-xl bg-white p-2.5 border border-slate-200">
+                          <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                            {key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()).replace(/_/g, ' ')}
+                          </span>
+                          <span className="text-xs font-bold text-slate-900 block mt-0.5 break-words">
+                            {typeof val === 'object' && val !== null ? JSON.stringify(val) : String(val)}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="flex items-center justify-between pt-2">

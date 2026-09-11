@@ -7,6 +7,7 @@
 export const PUBLIC_NAVIGATION = Object.freeze({
   home: '/',
   login: '/login',
+  register: '/register',
 });
 
 // ** Authenticated paths **
@@ -143,8 +144,10 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   staffStudents: '/staff/students',
   staffQuestionBank: '/staff/question-bank',
   staffExams: '/staff/exams',
+  staffScheduledExams: '/staff/exams/pending-paper',
   staffReports: '/staff/reports',
   staffAnswerKey: '/staff/answer-key',
+  staffApprovalQueue: '/staff/approvals',
   staffProfile: '/staff/profile',
 
   // ── Parent role-prefixed routes ──

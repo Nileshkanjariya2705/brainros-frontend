@@ -32,6 +32,7 @@ import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
 import { useJobProgress } from '@/hooks/useJobProgress';
 import { WorkflowStepIndicator, type WorkflowStep } from '@/components/ui/WorkflowStepIndicator';
+import { ExportPdfButton } from '@/components/export/ExportPdfButton';
 
 /* ── WebSocket Live Job Progress Modal ───────────────────────────────────── */
 interface SchoolBulkProgressModalProps {
@@ -553,6 +554,16 @@ export const AdminSchoolsPage: React.FC = () => {
           >
             <RotateCw className="h-3.5 w-3.5" />
           </button>
+
+          {/* Print / Download PDF */}
+          <ExportPdfButton
+            resource="schools"
+            filters={{ stateId: stateFilter, status: statusFilter }}
+            search={search}
+            page={page}
+            pageSize={limit}
+            filename="schools-roster.pdf"
+          />
         </div>
       </div>
 

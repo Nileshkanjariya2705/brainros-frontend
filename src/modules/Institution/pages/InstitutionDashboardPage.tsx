@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   TrendingUp,
   AlertTriangle,
-  FileSpreadsheet,
   Layers,
   Search,
   Download,
@@ -25,8 +24,7 @@ import {
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
-import {
-  useInstitutionDashboardSummaryQuery,
+import { useInstitutionDashboardSummaryQuery,
   useInstitutionStudentsQuery,
   useInstitutionAdmissionYearsQuery,
   useInstitutionBatchesQuery,
@@ -38,10 +36,12 @@ import {
 } from '../services/institutionDashboard.service';
 import { SectionError } from '@/components/feedback/SectionError';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useDebounce } from '@/hooks/useDebounce';
 
 export const InstitutionDashboardPage: React.FC = () => {
   // ── Global Filter State for Student Directory ──
   const [studentSearch, setStudentSearch] = useState('');
+  const debouncedStudentSearch = useDebounce(studentSearch, 350);
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [selectedAdmissionYear, setSelectedAdmissionYear] = useState<number | ''>('');
   const [studentPage, setStudentPage] = useState(1);
@@ -79,7 +79,7 @@ export const InstitutionDashboardPage: React.FC = () => {
   } = useInstitutionStudentsQuery({
     page: studentPage,
     limit: studentLimit,
-    search: studentSearch,
+    search: debouncedStudentSearch,
     batchId: selectedBatchId || undefined,
     admissionYear: selectedAdmissionYear || undefined,
     sortBy,
@@ -227,13 +227,7 @@ export const InstitutionDashboardPage: React.FC = () => {
               to={PRIVATE_NAVIGATION.institutionBatches}
               className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-xs sm:text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20 active:scale-95"
             >
-              <Layers className="h-4 w-4" /> Manage Batches
-            </NavLink>
-            <NavLink
-              to={PRIVATE_NAVIGATION.institutionBulkUpload}
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 transition hover:bg-indigo-500 active:scale-95"
-            >
-              <FileSpreadsheet className="h-4 w-4" /> Bulk Onboarding
+              <Layers className="h-4 w-4" /> View Batches
             </NavLink>
           </div>
         </div>
@@ -495,7 +489,16 @@ export const InstitutionDashboardPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button
+                onClick={() => refetchStudents()}
+                disabled={isStudentsFetching}
+                title="Refresh student records"
+                className="inline-flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-indigo-600 active:scale-95 disabled:opacity-50 transition"
+              >
+                <RefreshCw className={`h-4 w-4 ${isStudentsFetching ? 'animate-spin text-indigo-600' : ''}`} />
+              </button>
+
               <button
                 onClick={handleExportExcel}
                 disabled={isExporting}

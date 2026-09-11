@@ -76,6 +76,7 @@ export interface GenerateInvoicePayload {
   billingMonth: number;
   billingYear: number;
   generateAll?: boolean;
+  pricePerStudent?: number;
 }
 
 export interface FilterOptionsResponse {
@@ -175,15 +176,35 @@ export const BillingApi = {
     return res.data;
   },
 
-  getInvoicePreview: async (institutionId: string, month: number, year: number) => {
+  getInvoicePreview: async (
+    institutionId: string,
+    month: number,
+    year: number,
+    pricePerStudent?: number,
+  ) => {
     const res = await Axios.get('/billing/invoices/preview', {
-      params: { institutionId, month, year },
+      params: {
+        institutionId,
+        month,
+        year,
+        ...(pricePerStudent && pricePerStudent > 0 ? { pricePerStudent } : {}),
+      },
     });
     return res.data;
   },
 
   generateInvoice: async (payload: GenerateInvoicePayload) => {
     const res = await Axios.post('/billing/invoices/generate', payload);
+    return res.data;
+  },
+
+  getTaxConfiguration: async () => {
+    const res = await Axios.get('/billing/tax-configuration');
+    return res.data;
+  },
+
+  updateTaxConfiguration: async (payload: any) => {
+    const res = await Axios.put('/billing/tax-configuration', payload);
     return res.data;
   },
 };

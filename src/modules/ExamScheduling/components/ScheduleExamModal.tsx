@@ -22,7 +22,7 @@ import {
 } from '../services/examScheduling.service';
 import { useAxiosGet } from '@/hooks/useAxios';
 import { useQueryClient } from '@tanstack/react-query';
-import { adminKeys, examKeys } from '@/services/queryKeys';
+import { adminKeys, examKeys, academicCalendarKeys } from '@/services/queryKeys';
 import Button from '@/components/ui/Button';
 
 interface ScheduleExamModalProps {
@@ -400,7 +400,8 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
       }
 
       queryClient.invalidateQueries({ queryKey: adminKeys.scheduledExams() });
-      queryClient.invalidateQueries({ queryKey: examKeys.all });
+      queryClient.invalidateQueries({ queryKey: academicCalendarKeys.all });
+      queryClient.invalidateQueries({ queryKey: examKeys.public() });
       onScheduled?.();
       onClose();
       return;
@@ -445,7 +446,8 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
     }
 
     queryClient.invalidateQueries({ queryKey: adminKeys.scheduledExams() });
-    queryClient.invalidateQueries({ queryKey: examKeys.all });
+    queryClient.invalidateQueries({ queryKey: academicCalendarKeys.all });
+    queryClient.invalidateQueries({ queryKey: examKeys.public() });
     onScheduled?.();
 
     const createdExamId =

@@ -32,9 +32,32 @@ export const handleNotificationClick = async ({
 
   const { data, type } = notification;
 
+  // 1.5 Direct actionUrl support
+  if (data?.actionUrl) {
+    navigate(data.actionUrl);
+    return;
+  }
+
+  const isSuperAdmin = window.location.pathname.startsWith('/super-admin');
+  const adminPrefix = isSuperAdmin ? '/super-admin' : '/admin';
+
   // 2. Resolve target route dynamically from structured metadata
   const entityType = data?.entityType?.toUpperCase();
   const entityId = data?.entityId;
+
+  if (type === 'EXAM_ENDED' || entityType === 'ANSWER_KEY') {
+    const targetScheduleId = data?.scheduleId || entityId;
+    if (targetScheduleId) {
+      navigate(`${adminPrefix}/exam-manager/answer-key/${targetScheduleId}`);
+      return;
+    }
+  }
+
+  if (entityType === 'EXAM_RESULT' && (data?.examId || entityId)) {
+    const targetExamId = data?.examId || entityId;
+    navigate(`${adminPrefix}/exams/result-processing?examId=${targetExamId}`);
+    return;
+  }
 
   if (entityType === 'EXAM' && entityId) {
     navigate(`/student/exams/${entityId}`);

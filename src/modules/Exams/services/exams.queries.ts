@@ -7,6 +7,7 @@ import type {
   DetailedStrategyAnalysis,
   MyRanksResponse,
   QuestionReviewItem,
+  AttemptSummary,
 } from '@/types/exam.types';
 import type {
   StudentExamItem,
@@ -228,8 +229,10 @@ export const useSubmitAttemptMutation = () => {
     onSuccess: (_data, { attemptId }) => {
       qc.invalidateQueries({ queryKey: attemptKeys.status(attemptId) });
       qc.invalidateQueries({ queryKey: resultKeys.status(attemptId) });
-      qc.invalidateQueries({ queryKey: studentKeys.exams() });
-      qc.invalidateQueries({ queryKey: studentKeys.mockTests() });
+      qc.invalidateQueries({ queryKey: ['all-exams'] });
+      qc.invalidateQueries({ queryKey: ['mock-tests'] });
+      qc.invalidateQueries({ queryKey: ['exam-history'] });
+      qc.invalidateQueries({ queryKey: ['mock-test-history'] });
     },
   });
 };
@@ -243,8 +246,66 @@ export const useLeaveAttemptMutation = () => {
     },
     onSuccess: (_data, { attemptId }) => {
       qc.invalidateQueries({ queryKey: attemptKeys.status(attemptId) });
-      qc.invalidateQueries({ queryKey: studentKeys.exams() });
-      qc.invalidateQueries({ queryKey: studentKeys.mockTests() });
+      qc.invalidateQueries({ queryKey: ['all-exams'] });
+      qc.invalidateQueries({ queryKey: ['mock-tests'] });
     },
   });
 };
+
+export interface ExamHistoryResult {
+  data: AttemptSummary[];
+  meta: StudentPaginationMeta;
+}
+
+export const useStudentExamHistoryQuery = (params: Record<string, any> = {}) =>
+  useQuery<ExamHistoryResult>({
+    queryKey: studentKeys.examHistory(params),
+    queryFn: async () => {
+      const res = await Axios.get<any>('/attempts/my-history', { params });
+      const raw = res.data;
+      const data = Array.isArray(raw)
+        ? raw
+        : Array.isArray(raw?.data)
+          ? raw.data
+          : Array.isArray(raw?.data?.data)
+            ? raw.data.data
+            : [];
+      const meta = raw?.meta || raw?.data?.meta || {
+        page: params.page || 1,
+        limit: params.limit || 20,
+        total: data.length,
+        totalPages: 1,
+      };
+      return { data, meta };
+    },
+    staleTime: 30_000,
+  });
+
+export interface MockHistoryResult {
+  data: any[];
+  meta: StudentPaginationMeta;
+}
+
+export const useStudentMockHistoryQuery = (params: Record<string, any> = {}) =>
+  useQuery<MockHistoryResult>({
+    queryKey: studentKeys.mockHistory(params),
+    queryFn: async () => {
+      const res = await Axios.get<any>('/students/me/mock-history', { params });
+      const raw = res.data;
+      const data = Array.isArray(raw)
+        ? raw
+        : Array.isArray(raw?.data)
+          ? raw.data
+          : Array.isArray(raw?.data?.data)
+            ? raw.data.data
+            : [];
+      const meta = raw?.meta || raw?.data?.meta || {
+        page: params.page || 1,
+        limit: params.limit || 20,
+        total: data.length,
+        totalPages: 1,
+      };
+      return { data, meta };
+    },
+    staleTime: 30_000,
+  });

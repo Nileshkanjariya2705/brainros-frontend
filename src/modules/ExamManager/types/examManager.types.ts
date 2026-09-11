@@ -158,11 +158,14 @@ export interface ExamManagerFilterParams {
   limit?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  missingQuestionPaperOnly?: boolean;
 }
 
 export interface ExamItem {
   id: string;
+  code?: string;
   title: string;
+  target?: string;
   description?: string;
   type: string;
   typeLabel?: string;
@@ -173,6 +176,7 @@ export interface ExamItem {
   defaultNegativeMarks?: number;
   status: string;
   examTarget?: { id: string; name: string };
+  blueprint?: { id: string; name: string; totalQuestions?: number; durationMinutes?: number } | null;
   subjectsSummary?: string;
   sections?: Array<{
     id: string;
@@ -189,6 +193,7 @@ export interface ExamItem {
   schedule?: {
     id: string;
     status: string;
+    startDate?: string | Date;
     startTime: string;
     endTime: string;
     hasAnswerKey: boolean;

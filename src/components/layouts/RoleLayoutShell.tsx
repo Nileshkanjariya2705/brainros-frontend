@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button';
 import { ActiveExamBanner } from './ActiveExamBanner';
 import { LogoutConfirmationModal } from '@/components/feedback/LogoutConfirmationModal';
 import { DashboardMainContentSkeleton } from '@/components/ui/Skeleton';
+import { RecentNotificationPreview } from '@/modules/Notification/components/RecentNotificationPreview';
 
 // ** Hooks & Auth Access **
 import { useAuth } from '@/hooks/useAuth';
@@ -546,6 +547,9 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
       />
+
+      {/* WhatsApp-style recent unread notification preview */}
+      <RecentNotificationPreview />
     </div>
   );
 };

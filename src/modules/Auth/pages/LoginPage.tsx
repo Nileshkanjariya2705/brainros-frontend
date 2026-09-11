@@ -1,6 +1,6 @@
 import LoginForm from '../components/LoginForm';
 import { APP_NAME } from '@config';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { ShieldCheck, GraduationCap, LockKeyhole } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import PageLoader from '@/components/feedback/PageLoader';
@@ -58,6 +58,19 @@ export const LoginPage = () => {
             <p className="text-[10px] text-slate-400 font-semibold">Active Token Rotation</p>
           </div>
         </div>
+      </div>
+
+      {/* Student Self-Registration Link */}
+      <div className="text-center pt-2">
+        <p className="text-xs font-semibold text-slate-600">
+          New Student?{' '}
+          <Link
+            to="/register"
+            className="text-indigo-600 font-bold hover:text-indigo-700 hover:underline transition"
+          >
+            Register for Examination Portal
+          </Link>
+        </p>
       </div>
 
       {/* B2B School Enrolled Candidate Note */}

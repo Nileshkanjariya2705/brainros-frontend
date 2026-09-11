@@ -49,6 +49,7 @@ import {
 } from '@/modules/Auth/services';
 import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
+import { ExportPdfButton } from '@/components/export/ExportPdfButton';
 
 /* ── Edit Student Modal Component ────────────────────────────────────────── */
 interface EditStudentModalProps {
@@ -744,6 +745,22 @@ export const AdminStudentsPage: React.FC = () => {
             <RotateCw size={14} className={isLoadingStudents ? 'animate-spin' : ''} />
             <span>Refresh</span>
           </Button>
+
+          <ExportPdfButton
+            resource="students"
+            filters={{
+              status: statusFilter,
+              classId: classFilter,
+              examTargetId: examTargetFilter,
+              stateId: stateFilter,
+              districtId: districtFilter,
+              institutionId: institutionFilter,
+            }}
+            search={searchInput}
+            page={page}
+            pageSize={pageSize}
+            filename="students-directory.pdf"
+          />
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   UserCog,
@@ -22,14 +22,17 @@ import {
 import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
 import { toast } from '@/utils/toast';
+import { ExportPdfButton } from '@/components/export/ExportPdfButton';
 
 const ROLE_BADGES: Record<string, { label: string; color: string }> = {
-  OPERATOR: { label: 'Operator', color: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
-  MANAGER: { label: 'Manager', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  SUPER_ADMIN: { label: 'Super Admin', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+  ADMIN: { label: 'Admin', color: 'bg-rose-50 text-rose-700 border-rose-200' },
   GENERAL_MANAGER: {
     label: 'General Manager',
     color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   },
+  MANAGER: { label: 'Manager', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  OPERATOR: { label: 'Operator', color: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
   ACCOUNTANT: { label: 'Accountant', color: 'bg-amber-50 text-amber-700 border-amber-200' },
 };
 
@@ -52,7 +55,6 @@ export const StaffManagementPage: React.FC = () => {
     mobileNumber: '',
     email: '',
     role: 'OPERATOR',
-    institutionId: '',
   });
 
   // Form states for Edit
@@ -60,7 +62,6 @@ export const StaffManagementPage: React.FC = () => {
     name: '',
     email: '',
     role: 'OPERATOR',
-    institutionId: '',
   });
 
   // Fetch Staff List
@@ -74,22 +75,32 @@ export const StaffManagementPage: React.FC = () => {
     queryFn: () =>
       AdminStaffApi.getStaffList({
         page,
-        limit: 10,
+        limit: 50,
         search: search.trim() || undefined,
         role: roleFilter || undefined,
         status: statusFilter || undefined,
       }),
   });
 
-  // Fetch dynamic schools dropdown for assignment
-  const { data: schoolsData } = useQuery({
-    queryKey: ['billing-schools-dropdown'],
-    queryFn: AdminStaffApi.getSchoolsDropdown,
-  });
+  const staffList: StaffUserItem[] = useMemo(() => {
+    if (Array.isArray(staffData)) return staffData;
+    if (Array.isArray((staffData as any)?.data)) return (staffData as any).data;
+    if (Array.isArray((staffData as any)?.data?.items)) return (staffData as any).data.items;
+    if (Array.isArray((staffData as any)?.items)) return (staffData as any).items;
+    return [];
+  }, [staffData]);
 
-  const schools = schoolsData?.data || [];
-  const staffList: StaffUserItem[] = staffData?.data?.items || [];
-  const pagination = staffData?.data?.pagination || { total: 0, totalPages: 1 };
+  const pagination = useMemo(() => {
+    const p =
+      (staffData as any)?.meta ||
+      (staffData as any)?.pagination ||
+      (staffData as any)?.data?.pagination ||
+      (staffData as any)?.data?.meta;
+    return {
+      total: p?.total ?? staffList.length,
+      totalPages: p?.totalPages || p?.pages || 1,
+    };
+  }, [staffData, staffList]);
 
   // Create Staff Mutation
   const createMutation = useMutation({
@@ -103,7 +114,6 @@ export const StaffManagementPage: React.FC = () => {
         mobileNumber: '',
         email: '',
         role: 'OPERATOR',
-        institutionId: '',
       });
     },
     onError: (err: any) => {
@@ -146,8 +156,7 @@ export const StaffManagementPage: React.FC = () => {
     setEditForm({
       name: staff.name || '',
       email: staff.email || '',
-      role: (staff.roles[0] as any) || 'OPERATOR',
-      institutionId: staff.institutionId || '',
+      role: ((staff.roles && staff.roles[0]) as any) || (staff as any).role || 'OPERATOR',
     });
   };
 
@@ -178,6 +187,15 @@ export const StaffManagementPage: React.FC = () => {
             <RefreshCw size={15} className={isFetching ? 'animate-spin' : ''} />
             Refresh
           </Button>
+
+          <ExportPdfButton
+            resource="staff"
+            filters={{ role: roleFilter, status: statusFilter }}
+            search={search}
+            page={page}
+            pageSize={50}
+            filename="staff-register.pdf"
+          />
 
           <Button
             size="sm"
@@ -216,9 +234,11 @@ export const StaffManagementPage: React.FC = () => {
             className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
           >
             <option value="">All Roles</option>
-            <option value="OPERATOR">Operator</option>
-            <option value="MANAGER">Manager</option>
+            <option value="SUPER_ADMIN">Super Admin</option>
+            <option value="ADMIN">Admin</option>
             <option value="GENERAL_MANAGER">General Manager</option>
+            <option value="MANAGER">Manager</option>
+            <option value="OPERATOR">Operator</option>
             <option value="ACCOUNTANT">Accountant</option>
           </select>
         </div>
@@ -270,7 +290,11 @@ export const StaffManagementPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
                 {staffList.map((staff) => {
-                  const primaryRole = staff.roles[0] || 'OPERATOR';
+                  const rawRole = (staff.roles && staff.roles[0]) || (staff as any).role || 'OPERATOR';
+                  const primaryRole =
+                    typeof rawRole === 'object'
+                      ? (rawRole as any)?.name || 'OPERATOR'
+                      : String(rawRole);
                   const roleMeta = ROLE_BADGES[primaryRole] || {
                     label: primaryRole,
                     color: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -442,7 +466,20 @@ export const StaffManagementPage: React.FC = () => {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                createMutation.mutate(createForm);
+                if (!createForm.name.trim()) {
+                  toast.error('Staff name is required.');
+                  return;
+                }
+                const cleanedPhone = (createForm.mobileNumber || '').replace(/\D/g, '');
+                if (cleanedPhone.length !== 10) {
+                  toast.error('Mobile/phone number must be exactly 10 digits.');
+                  return;
+                }
+                createMutation.mutate({
+                  ...createForm,
+                  mobileNumber: cleanedPhone,
+                  phoneNumber: cleanedPhone,
+                });
               }}
               className="space-y-4"
             >
@@ -462,7 +499,7 @@ export const StaffManagementPage: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Mobile Number * (10 digits)
+                  Phone / Mobile Number * <span className="text-indigo-600 font-bold">(Must be unique)</span>
                 </label>
                 <input
                   type="tel"
@@ -479,6 +516,9 @@ export const StaffManagementPage: React.FC = () => {
                   placeholder="9876543210"
                   className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono"
                 />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Enter 10-digit number. Phone number must be unique across all system accounts.
+                </p>
               </div>
 
               <div>
@@ -512,24 +552,7 @@ export const StaffManagementPage: React.FC = () => {
                   <option value="MANAGER">Manager (Operational + management tasks)</option>
                   <option value="GENERAL_MANAGER">General Manager (Broad management oversight)</option>
                   <option value="ACCOUNTANT">Accountant (Billing & institutional invoices)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Assigned School / Institution (Optional)
-                </label>
-                <select
-                  value={createForm.institutionId}
-                  onChange={(e) => setCreateForm({ ...createForm, institutionId: e.target.value })}
-                  className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
-                >
-                  <option value="">Platform-wide (No specific institution)</option>
-                  {schools.map((school: any) => (
-                    <option key={school.id} value={school.id}>
-                      {school.name} ({school.code})
-                    </option>
-                  ))}
+                  <option value="ADMIN">Admin (Academic & system administration)</option>
                 </select>
               </div>
 
@@ -626,24 +649,7 @@ export const StaffManagementPage: React.FC = () => {
                   <option value="MANAGER">Manager</option>
                   <option value="GENERAL_MANAGER">General Manager</option>
                   <option value="ACCOUNTANT">Accountant</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Assigned Institution Scope
-                </label>
-                <select
-                  value={editForm.institutionId}
-                  onChange={(e) => setEditForm({ ...editForm, institutionId: e.target.value })}
-                  className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
-                >
-                  <option value="">Platform-wide (No specific institution)</option>
-                  {schools.map((school: any) => (
-                    <option key={school.id} value={school.id}>
-                      {school.name} ({school.code})
-                    </option>
-                  ))}
+                  <option value="ADMIN">Admin</option>
                 </select>
               </div>
 

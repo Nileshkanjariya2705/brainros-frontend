@@ -3,7 +3,7 @@ import { GraduationCap, X, CheckCircle2, AlertCircle, Save, ShieldCheck } from '
 import Button from '@/components/ui/Button';
 import { useStudentProfile } from '../hooks/useStudentProfile';
 import { useGetRegisterOptionsAPI } from '../services';
-import type { OptionItem, State, District } from '../types/auth.types';
+import type { OptionItem } from '../types/auth.types';
 
 interface StudentProfileModalProps {
   isOpen: boolean;
@@ -15,52 +15,26 @@ export const StudentProfileModal = ({ isOpen, onClose }: StudentProfileModalProp
     useStudentProfile();
   const { getRegisterOptionsAPI } = useGetRegisterOptionsAPI();
 
-  const [classes, setClasses] = useState<OptionItem[]>([]);
   const [languages, setLanguages] = useState<OptionItem[]>([]);
-  const [examTargets, setExamTargets] = useState<OptionItem[]>([]);
-  const [statesList, setStatesList] = useState<State[]>([]);
-  const [filteredDistricts, setFilteredDistricts] = useState<District[]>([]);
 
-  // Form editable state
+  // Form editable state: ONLY Name and Preferred Language
   const [name, setName] = useState('');
-  const [schoolCollege, setSchoolCollege] = useState('');
-  const [stateId, setStateId] = useState('');
-  const [districtId, setDistrictId] = useState('');
-  const [classId, setClassId] = useState('');
-  const [examTargetId, setExamTargetId] = useState('');
   const [preferredLanguageId, setPreferredLanguageId] = useState('');
 
   useEffect(() => {
     if (profile) {
       setName(profile.name || '');
-      setSchoolCollege(profile.schoolCollege || '');
-
-      const resolvedStateId =
-        profile.stateId ||
-        (profile as any).stateRef?.id ||
-        statesList.find((s) => s.name === profile.state)?.id ||
-        '';
-      setStateId(resolvedStateId);
-
-      const resolvedDistrictId = profile.districtId || (profile as any).districtRef?.id || '';
-      setDistrictId(resolvedDistrictId);
-
-      setClassId(profile.classId || (profile as any).studentClass?.id || '');
-      setExamTargetId(profile.examTargetId || (profile as any).examTarget?.id || '');
       setPreferredLanguageId(
         profile.preferredLanguageId || (profile as any).preferredLanguage?.id || '',
       );
     }
-  }, [profile, statesList]);
+  }, [profile]);
 
   useEffect(() => {
     const fetchOptions = async () => {
       const { data } = await getRegisterOptionsAPI();
       if (data) {
-        setClasses(data.classes || []);
         setLanguages(data.languages || []);
-        setExamTargets(data.examTargets || []);
-        setStatesList(data.states || []);
       }
     };
     if (isOpen) {
@@ -68,31 +42,16 @@ export const StudentProfileModal = ({ isOpen, onClose }: StudentProfileModalProp
     }
   }, [isOpen, getRegisterOptionsAPI]);
 
-  useEffect(() => {
-    if (stateId && statesList.length > 0) {
-      const selected = statesList.find((s) => s.id === stateId || s.name === stateId);
-      if (selected) {
-        setFilteredDistricts(selected.districts || []);
-      } else {
-        setFilteredDistricts([]);
-      }
-    }
-  }, [stateId, statesList]);
-
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await updateProfile({
       name: name.trim(),
-      schoolCollege: schoolCollege.trim(),
-      stateId: stateId || undefined,
-      districtId: districtId || undefined,
-      classId: classId || undefined,
-      examTargetId: examTargetId || undefined,
       preferredLanguageId: preferredLanguageId || undefined,
     });
     fetchProfile();
+    onClose();
   };
 
   return (
@@ -107,7 +66,7 @@ export const StudentProfileModal = ({ isOpen, onClose }: StudentProfileModalProp
             <div>
               <h2 className="text-base font-bold text-slate-900">Student Profile & Identity</h2>
               <p className="text-xs text-slate-500">
-                View your official credentials and update academic details
+                View official credentials and update allowed personal preferences
               </p>
             </div>
           </div>
@@ -132,7 +91,7 @@ export const StudentProfileModal = ({ isOpen, onClose }: StudentProfileModalProp
                 {profile?.studentCode || profile?.studentId || 'BRN-2026-STUDENT'}
               </p>
               <p className="text-[11px] text-slate-500">
-                Use this unique code or your registered mobile to sign in passwordless
+                Permanent student identifier (Read-only)
               </p>
             </div>
             <div className="flex flex-col items-end space-y-1">
@@ -160,9 +119,15 @@ export const StudentProfileModal = ({ isOpen, onClose }: StudentProfileModalProp
             </div>
           )}
 
+          {/* Editable Fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-700">Full Name</label>
+              <label className="block text-xs font-semibold text-slate-700 flex items-center justify-between">
+                <span>Full Name</span>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                  Editable
+                </span>
+              </label>
               <input
                 type="text"
                 value={name}
@@ -173,92 +138,11 @@ export const StudentProfileModal = ({ isOpen, onClose }: StudentProfileModalProp
             </div>
 
             <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-700">School / College</label>
-              <input
-                type="text"
-                value={schoolCollege}
-                onChange={(e) => setSchoolCollege(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-700">State</label>
-              <select
-                value={stateId}
-                onChange={(e) => {
-                  setStateId(e.target.value);
-                  setDistrictId('');
-                }}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              >
-                <option value="">Select State</option>
-                {statesList.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-700">District</label>
-              <select
-                value={districtId}
-                onChange={(e) => setDistrictId(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              >
-                <option value="">Select District</option>
-                {filteredDistricts.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-700">Class / Standard</label>
-              <select
-                value={classId}
-                onChange={(e) => setClassId(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              >
-                <option value="">Select Class</option>
-                {classes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-700">
-                Target Examination
-              </label>
-              <select
-                value={examTargetId}
-                onChange={(e) => setExamTargetId(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-              >
-                <option value="">Select Target Exam</option>
-                {examTargets.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-700">
-                Medium / Language
+              <label className="block text-xs font-semibold text-slate-700 flex items-center justify-between">
+                <span>Preferred Language</span>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                  Editable
+                </span>
               </label>
               <select
                 value={preferredLanguageId}
@@ -272,6 +156,51 @@ export const StudentProfileModal = ({ isOpen, onClose }: StudentProfileModalProp
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Read-Only Details Grid */}
+          <div className="pt-2 border-t border-slate-100">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+              Official Identity & Registration Details (Read-only)
+            </span>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                <span className="text-[10px] text-slate-400 block">Mobile Number</span>
+                <span className="font-semibold text-slate-700 font-mono">
+                  {(profile as any)?.user?.mobileNumber || (profile as any)?.user?.phone || '—'}
+                </span>
+              </div>
+              <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                <span className="text-[10px] text-slate-400 block">Email Address</span>
+                <span className="font-semibold text-slate-700 truncate block">
+                  {(profile as any)?.user?.email || '—'}
+                </span>
+              </div>
+              <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                <span className="text-[10px] text-slate-400 block">State</span>
+                <span className="font-semibold text-slate-700">
+                  {profile?.state || (profile as any)?.stateRef?.name || '—'}
+                </span>
+              </div>
+              <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                <span className="text-[10px] text-slate-400 block">City / District</span>
+                <span className="font-semibold text-slate-700">
+                  {profile?.district || (profile as any)?.districtRef?.name || '—'}
+                </span>
+              </div>
+              <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                <span className="text-[10px] text-slate-400 block">School / College</span>
+                <span className="font-semibold text-slate-700 truncate block">
+                  {profile?.schoolCollege || '—'}
+                </span>
+              </div>
+              <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                <span className="text-[10px] text-slate-400 block">Target Exam</span>
+                <span className="font-semibold text-slate-700">
+                  {(profile as any)?.examTarget?.name || (profile as any)?.examTarget || '—'}
+                </span>
+              </div>
             </div>
           </div>
 

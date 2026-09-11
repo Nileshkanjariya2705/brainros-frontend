@@ -202,3 +202,68 @@ body {
 .glass-panel {
   @apply bg-white/80 backdrop-blur-md border border-white/40 shadow-sm;
 }
+
+/*
+ * ==========================================================================
+ * Professional Print Styles
+ * ==========================================================================
+ */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 10pt;
+  }
+
+  /* Hide navigation, sidebars, floating widgets, buttons, and action controls */
+  header,
+  aside,
+  nav,
+  button,
+  .print\\:hidden,
+  [role="navigation"],
+  [aria-label="Sidebar"],
+  .toast,
+  #webpack-dev-server-client-overlay {
+    display: none !important;
+  }
+
+  /* Expand main content container to full page width */
+  main,
+  #root,
+  .app-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Table print optimization */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  th,
+  td {
+    border: 1px solid #e2e8f0 !important;
+    padding: 6px 8px !important;
+  }
+
+  /* Ensure card backgrounds and borders don't waste ink */
+  .brainros-card {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}
+

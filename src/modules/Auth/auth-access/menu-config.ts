@@ -19,7 +19,6 @@ import {
   Bell,
   BarChart3,
   User,
-  FileCheck,
 } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 import { type FeatureKey } from '@/constants/feature-flag.constant';
@@ -217,13 +216,6 @@ export const MENU_GROUPS: MenuGroupConfig[] = [
         permissions: [PERMISSIONS.BATCH_MANAGE, PERMISSIONS.INSTITUTION_VIEW],
       },
       {
-        key: 'institution-bulk-upload',
-        label: 'Student Bulk Upload',
-        to: PRIVATE_NAVIGATION.institutionBulkUpload,
-        icon: FileCheck,
-        permissions: [PERMISSIONS.BULK_UPLOAD, PERMISSIONS.INSTITUTION_MANAGE],
-      },
-      {
         key: 'institution-reports',
         label: 'Institutional Reports',
         to: PRIVATE_NAVIGATION.institutionReports,
@@ -251,14 +243,14 @@ export const MENU_GROUPS: MenuGroupConfig[] = [
   {
     categoryKey: 'PLATFORM_GOVERNANCE',
     categoryLabel: 'Administration & Governance',
-    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
+    roles: [ROLES.SUPER_ADMIN],
     items: [
       {
         key: 'admin-control-center',
         label: 'Admin Control Center',
         to: PRIVATE_NAVIGATION.adminControlCenter,
         icon: ShieldAlert,
-        permissions: [PERMISSIONS.APPROVAL_VIEW, PERMISSIONS.USER_VIEW],
+        permissions: [PERMISSIONS.USER_VIEW],
       },
       {
         key: 'admin-approvals',
@@ -266,6 +258,7 @@ export const MENU_GROUPS: MenuGroupConfig[] = [
         to: PRIVATE_NAVIGATION.adminApprovalQueue,
         icon: CheckCircle2,
         permissions: [PERMISSIONS.APPROVAL_VIEW],
+        roles: [ROLES.SUPER_ADMIN, ROLES.GENERAL_MANAGER],
       },
       {
         key: 'admin-audit-logs',

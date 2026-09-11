@@ -16,16 +16,17 @@ export interface StaffUserItem {
 export interface CreateStaffPayload {
   name: string;
   mobileNumber: string;
+  phoneNumber?: string;
   email?: string;
-  role: 'OPERATOR' | 'MANAGER' | 'GENERAL_MANAGER' | 'ACCOUNTANT';
-  institutionId?: string;
+  role: 'OPERATOR' | 'MANAGER' | 'GENERAL_MANAGER' | 'ACCOUNTANT' | 'ADMIN';
 }
 
 export interface UpdateStaffPayload {
   name?: string;
+  mobileNumber?: string;
+  phoneNumber?: string;
   email?: string;
-  role?: 'OPERATOR' | 'MANAGER' | 'GENERAL_MANAGER' | 'ACCOUNTANT';
-  institutionId?: string;
+  role?: 'OPERATOR' | 'MANAGER' | 'GENERAL_MANAGER' | 'ACCOUNTANT' | 'ADMIN';
 }
 
 export const AdminStaffApi = {

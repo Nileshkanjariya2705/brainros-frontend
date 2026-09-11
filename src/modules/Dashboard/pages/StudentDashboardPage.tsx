@@ -236,7 +236,28 @@ const UpcomingExamsSlider: React.FC<UpcomingExamsSliderProps> = ({ exams }) => {
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {exams.map((exam, idx) => {
-          const isLive = exam.canStart || exam.status === 'ACTIVE';
+          const isLive = exam.status === 'LIVE';
+          const remainingMinutes = isLive && exam.endTime
+            ? Math.max(0, Math.ceil((new Date(exam.endTime).getTime() - Date.now()) / (1000 * 60)))
+            : null;
+
+          const formatCardTime = (isoString?: string | null) => {
+            if (!isoString) return 'Flexible Schedule';
+            try {
+              const d = new Date(isoString);
+              return d.toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+                timeZone: 'Asia/Kolkata',
+              }).replace(',', ' •');
+            } catch {
+              return 'Flexible Schedule';
+            }
+          };
 
           return (
             <div
@@ -252,20 +273,20 @@ const UpcomingExamsSlider: React.FC<UpcomingExamsSliderProps> = ({ exams }) => {
                 {/* Top Badge Row */}
                 <div className="flex items-center justify-between gap-2">
                   <span className="rounded-lg bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 text-[11px] font-black text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900">
-                    {exam.examTarget || 'General'}
+                    {typeof exam.examTarget === 'object'
+                      ? (exam.examTarget as any)?.name
+                      : exam.examTarget || 'General'}
                   </span>
 
                   {isLive ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 px-2.5 py-0.5 text-[10px] font-black text-emerald-700 dark:text-emerald-300 border border-emerald-300/60 animate-pulse">
                       <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                      LIVE NOW
+                      LIVE
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                       <Clock size={11} />
-                      {exam.message && exam.message.includes('Starts in')
-                        ? exam.message
-                        : 'Scheduled'}
+                      UPCOMING
                     </span>
                   )}
                 </div>
@@ -289,18 +310,24 @@ const UpcomingExamsSlider: React.FC<UpcomingExamsSliderProps> = ({ exams }) => {
                   </span>
                 </div>
 
-                {/* Date & Time */}
-                <div className="flex items-center gap-2 text-[11px] font-medium text-slate-600 dark:text-slate-400 rounded-xl bg-slate-50/80 dark:bg-slate-900/60 px-3 py-2 border border-slate-100 dark:border-slate-800">
-                  <Calendar size={13} className="text-slate-400 shrink-0" />
-                  <span className="truncate">
-                    {exam.startTime
-                      ? new Date(exam.startTime).toLocaleString('en-IN', {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                          timeZone: 'Asia/Kolkata',
-                        })
-                      : 'Flexible Schedule'}
-                  </span>
+                {/* Start Time & End Time */}
+                <div className="space-y-1.5 rounded-2xl bg-slate-50/80 dark:bg-slate-900/60 p-3 border border-slate-100 dark:border-slate-800 text-xs">
+                  <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                    <span className="text-slate-400 font-medium">Start:</span>
+                    <span className="font-semibold">{formatCardTime(exam.startTime)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                    <span className="text-slate-400 font-medium">End:</span>
+                    <span className="font-semibold">{formatCardTime(exam.endTime)}</span>
+                  </div>
+                  {isLive && remainingMinutes !== null && (
+                    <div className="flex items-center justify-between pt-1.5 border-t border-slate-200/60 dark:border-slate-800 text-emerald-600 dark:text-emerald-400 font-bold">
+                      <span className="flex items-center gap-1">
+                        <Clock size={12} /> Remaining:
+                      </span>
+                      <span>{remainingMinutes} minutes</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -316,7 +343,7 @@ const UpcomingExamsSlider: React.FC<UpcomingExamsSliderProps> = ({ exams }) => {
                   )}
                 >
                   {isLive ? <PlayCircle size={15} /> : <Calendar size={15} />}
-                  <span>{isLive ? 'Start Live Exam' : 'View Details & Blueprint'}</span>
+                  <span>{isLive ? 'Start Exam' : 'View Details'}</span>
                 </button>
               </div>
             </div>
@@ -377,6 +404,27 @@ export const StudentDashboardPage: React.FC = () => {
     }, nextExam.waitSeconds * 1000);
     return () => clearTimeout(timer);
   }, [nextExam?.waitSeconds, refetch]);
+
+  // Auto-refresh when any live exam end-time is reached to transition away from LIVE
+  useEffect(() => {
+    const liveExams = data?.upcomingExams?.filter((e) => e.status === 'LIVE' && e.endTime) || [];
+    if (liveExams.length === 0) return;
+
+    const timers = liveExams.map((e) => {
+      const msUntilEnd = new Date(e.endTime!).getTime() - Date.now();
+      if (msUntilEnd <= 0) {
+        refetch();
+        return null;
+      }
+      return setTimeout(() => {
+        refetch();
+      }, Math.min(msUntilEnd + 1000, 2147483647));
+    });
+
+    return () => {
+      timers.forEach((t) => t && clearTimeout(t));
+    };
+  }, [data?.upcomingExams, refetch]);
 
   if (isLoading && !data) {
     return <StudentDashboardSkeleton />;

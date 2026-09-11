@@ -15,6 +15,8 @@ export interface AnswerKeyStatus {
   totalQuestions: number;
   configuredKeysCount: number;
   isFullyConfigured: boolean;
+  isCompleted?: boolean;
+  isLive?: boolean;
 }
 
 export interface AnswerKeyOptionItem {
@@ -140,7 +142,84 @@ export const useAnswerKeyAPI = () => {
   }, []);
 
   /**
-   * 4. Upload Answer Key (CSV File or JSON rows)
+   * 4. Download Generic Sample CSV Template
+   */
+  const downloadSampleCsv = useCallback(async (scheduleId?: string) => {
+    try {
+      if (scheduleId) {
+        const response = await Axios.get(
+          `/admin/schedules/${scheduleId}/answer-key/sample-csv`,
+          { responseType: 'blob' },
+        );
+        const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'sample-answer-key.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        return { success: true, error: null };
+      }
+    } catch {
+      // Fallback to client-generated template
+    }
+
+    const csvContent = [
+      'question_number,correct_answer',
+      '1,A',
+      '2,B',
+      '3,D',
+      '4,C',
+      '5,A',
+      '6,B',
+      '7,C',
+      '8,D',
+      '9,A',
+      '10,B',
+    ].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'sample-answer-key.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    return { success: true, error: null };
+  }, []);
+
+  /**
+   * 5. Download Generic Sample Excel Template
+   */
+  const downloadSampleExcel = useCallback(async (scheduleId?: string) => {
+    try {
+      const targetUrl = scheduleId
+        ? `/admin/schedules/${scheduleId}/answer-key/sample-excel`
+        : `/admin/schedules/sample-excel`;
+      const response = await Axios.get(targetUrl, { responseType: 'blob' });
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'sample-answer-key.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      return { success: true, error: null };
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to download sample Excel';
+      return { success: false, error: msg };
+    }
+  }, []);
+
+  /**
+   * 6. Upload Answer Key (CSV/Excel File or JSON rows)
    */
   const uploadAnswerKey = useCallback(
     async (
@@ -154,9 +233,10 @@ export const useAnswerKeyAPI = () => {
         if (payload.file) {
           const formData = new FormData();
           formData.append('file', payload.file);
-          response = await Axios.post(`/admin/schedules/${scheduleId}/answer-key`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
+          if (payload.rows) {
+            formData.append('rows', JSON.stringify(payload.rows));
+          }
+          response = await Axios.post(`/admin/schedules/${scheduleId}/answer-key`, formData);
         } else {
           response = await Axios.post(`/admin/schedules/${scheduleId}/answer-key`, {
             rows: payload.rows,
@@ -179,6 +259,8 @@ export const useAnswerKeyAPI = () => {
     getStatus,
     getQuestions,
     downloadTemplate,
+    downloadSampleCsv,
+    downloadSampleExcel,
     uploadAnswerKey,
     isLoading,
     error,

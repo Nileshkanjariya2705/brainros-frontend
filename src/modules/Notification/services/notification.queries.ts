@@ -53,6 +53,22 @@ export const useUnreadNotificationCountQuery = (enabled = true) =>
   });
 
 /**
+ * Server-side query for the single most recent unread notification.
+ * Authoritative backend filter: isRead = false, ORDER BY createdAt DESC, LIMIT 1.
+ */
+export const useRecentUnreadNotificationQuery = (enabled = true) =>
+  useQuery<InAppNotification | null>({
+    queryKey: notificationKeys.recentUnread(),
+    queryFn: async () => {
+      const res = await Axios.get<any>('/notifications/recent-unread');
+      const data = res.data?.data ?? res.data;
+      return data && data.id ? data : null;
+    },
+    enabled,
+    staleTime: 30_000,
+  });
+
+/**
  * Mutation to mark a single notification as read.
  */
 export const useMarkNotificationReadMutation = () => {
@@ -66,6 +82,7 @@ export const useMarkNotificationReadMutation = () => {
       return (res.data as any).data || res.data;
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: notificationKeys.recentUnread() });
       qc.invalidateQueries({ queryKey: notificationKeys.unreadCount() });
       qc.invalidateQueries({ queryKey: notificationKeys.list() });
     },

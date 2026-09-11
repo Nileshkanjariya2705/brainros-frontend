@@ -14,7 +14,9 @@ export const studentKeys = {
   mockAttempts: (mockTestId: string) =>
     [...studentKeys.all, 'mock-tests', mockTestId, 'attempts'] as const,
   mockHistory: (params: Record<string, any> = {}) =>
-    [...studentKeys.all, 'mock-history', params] as const,
+    ['mock-test-history', params] as const,
+  examHistory: (params: Record<string, any> = {}) =>
+    ['exam-history', params] as const,
   profile: () => [...studentKeys.all, 'profile'] as const,
   trends: (params: Record<string, any> = {}) => [...studentKeys.all, 'trends', params] as const,
   comparison: (params: Record<string, any> = {}) =>
@@ -92,6 +94,7 @@ export const notificationKeys = {
   list: (params: Record<string, any> = {}) =>
     [...notificationKeys.all, 'list', params] as const,
   unreadCount: () => [...notificationKeys.all, 'unread-count'] as const,
+  recentUnread: () => ['notifications', 'recent-unread'] as const,
 };
 
 export const masterKeys = {
@@ -109,5 +112,66 @@ export const examProcessingKeys = {
     [...examProcessingKeys.all, 'jobs', examId, filters] as const,
   jobDetail: (examId: string, jobId: string) =>
     [...examProcessingKeys.all, 'job-detail', examId, jobId] as const,
+};
+
+export const institutionKeys = {
+  all: ['institution'] as const,
+  dashboard: (filters?: Record<string, any>) =>
+    [...institutionKeys.all, 'dashboard', filters || {}] as const,
+  students: (filters?: Record<string, any>) =>
+    [...institutionKeys.all, 'students', filters || {}] as const,
+  admissionYears: () => [...institutionKeys.all, 'admission-years'] as const,
+  batches: () => [...institutionKeys.all, 'batches'] as const,
+  rankExams: () => [...institutionKeys.all, 'rank-exams'] as const,
+  rankings: (filters?: Record<string, any>) =>
+    [...institutionKeys.all, 'rankings', filters || {}] as const,
+  reports: (filters?: Record<string, any>) =>
+    [...institutionKeys.all, 'reports', filters || {}] as const,
+};
+
+export const billingKeys = {
+  all: ['billing'] as const,
+  invoices: (params: Record<string, any> = {}) =>
+    [...billingKeys.all, 'invoices', params] as const,
+  invoiceDetail: (invoiceId: string) =>
+    [...billingKeys.all, 'invoices', 'detail', invoiceId] as const,
+  invoicePreview: (schoolId: string, month: number, year: number, pricePerStudent?: number) =>
+    [...billingKeys.all, 'preview', schoolId, month, year, pricePerStudent] as const,
+  stats: (params: Record<string, any> = {}) =>
+    [...billingKeys.all, 'stats', params] as const,
+  filterOptions: () => [...billingKeys.all, 'filter-options'] as const,
+  taxConfig: () => [...billingKeys.all, 'tax-configuration'] as const,
+  schools: () => [...billingKeys.all, 'schools'] as const,
+};
+
+export const academicCalendarKeys = {
+  all: ['academic-calendar'] as const,
+  list: (params: Record<string, any> = {}) =>
+    [...academicCalendarKeys.all, 'list', params] as const,
+};
+
+export const staffKeys = {
+  all: ['staff'] as const,
+  list: (params: Record<string, any> = {}) =>
+    [...staffKeys.all, 'list', params] as const,
+  detail: (staffId: string) =>
+    [...staffKeys.all, 'detail', staffId] as const,
+};
+
+export const approvalQueueKeys = {
+  all: ['approval-queue'] as const,
+  list: (params: Record<string, any> = {}) =>
+    [...approvalQueueKeys.all, 'list', params] as const,
+  types: () => [...approvalQueueKeys.all, 'types'] as const,
+};
+
+export const superAdminRegistrationKeys = {
+  all: ['super-admin-registrations'] as const,
+  list: (params: Record<string, any> = {}) =>
+    [...superAdminRegistrationKeys.all, 'list', params] as const,
+  stats: (params: Record<string, any> = {}) =>
+    [...superAdminRegistrationKeys.all, 'stats', params] as const,
+  filters: (stateId?: string) =>
+    [...superAdminRegistrationKeys.all, 'filters', stateId || 'all'] as const,
 };
 

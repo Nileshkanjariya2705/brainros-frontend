@@ -116,13 +116,13 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
   },
   [PRIVATE_NAVIGATION.adminControlCenterPage]: {
     path: PRIVATE_NAVIGATION.adminControlCenterPage,
-    permissions: [PERMISSIONS.APPROVAL_VIEW, PERMISSIONS.USER_VIEW],
+    permissions: [PERMISSIONS.USER_VIEW],
     roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminApprovalQueuePage]: {
     path: PRIVATE_NAVIGATION.adminApprovalQueuePage,
     permissions: [PERMISSIONS.APPROVAL_VIEW],
-    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
+    roles: [ROLES.SUPER_ADMIN, ROLES.GENERAL_MANAGER],
   },
   [PRIVATE_NAVIGATION.adminAuditLogsPage]: {
     path: PRIVATE_NAVIGATION.adminAuditLogsPage,
@@ -171,6 +171,10 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
   [PRIVATE_NAVIGATION.superAdminProfile]: {
     path: PRIVATE_NAVIGATION.superAdminProfile,
     roles: [ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.staffProfile]: {
+    path: PRIVATE_NAVIGATION.staffProfile,
+    allowAnyRole: true,
   },
   [PRIVATE_NAVIGATION.superAdminExams]: {
     path: PRIVATE_NAVIGATION.superAdminExams,
@@ -303,13 +307,13 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
   // Governance & Approvals
   [PRIVATE_NAVIGATION.adminControlCenter]: {
     path: PRIVATE_NAVIGATION.adminControlCenter,
-    permissions: [PERMISSIONS.APPROVAL_VIEW, PERMISSIONS.USER_VIEW],
+    permissions: [PERMISSIONS.USER_VIEW],
     roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminApprovalQueue]: {
     path: PRIVATE_NAVIGATION.adminApprovalQueue,
     permissions: [PERMISSIONS.APPROVAL_VIEW],
-    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
+    roles: [ROLES.SUPER_ADMIN, ROLES.GENERAL_MANAGER],
   },
   [PRIVATE_NAVIGATION.adminAuditLogs]: {
     path: PRIVATE_NAVIGATION.adminAuditLogs,

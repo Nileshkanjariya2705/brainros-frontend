@@ -25,7 +25,6 @@ import {
   Bell,
   BarChart3,
   User,
-  FileCheck,
   Plus,
   FileSpreadsheet,
   UploadCloud,
@@ -174,6 +173,18 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
     ],
   },
   {
+    categoryKey: 'B2B_SCHOOLS',
+    categoryLabel: 'Schools & Institutions',
+    items: [
+      {
+        key: 'schools-management',
+        label: 'Schools / Colleges',
+        to: PRIVATE_NAVIGATION.adminSchools,
+        icon: Building2,
+      },
+    ],
+  },
+  {
     categoryKey: 'QUESTION_STUDIO',
     categoryLabel: 'Question & Content Studio',
     items: [
@@ -223,12 +234,6 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
     categoryKey: 'EXAM_STUDIO',
     categoryLabel: 'Mock Test Studio',
     items: [
-      {
-        key: 'auto-generate-exam',
-        label: 'Auto-Generate Exam Paper',
-        to: PRIVATE_NAVIGATION.adminAutoGenerateExam,
-        icon: Sparkles,
-      },
       {
         key: 'exam-blueprints',
         label: 'Blueprint Generator',
@@ -310,36 +315,6 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
     ],
   },
   {
-    categoryKey: 'GOVERNANCE',
-    categoryLabel: 'Administration & Governance',
-    items: [
-      {
-        key: 'control-center',
-        label: 'Admin Control Center',
-        to: PRIVATE_NAVIGATION.adminControlCenterPage,
-        icon: ShieldAlert,
-      },
-      {
-        key: 'approvals',
-        label: 'Approval Queue',
-        to: PRIVATE_NAVIGATION.adminApprovalQueuePage,
-        icon: CheckCircle2,
-      },
-      {
-        key: 'audit-logs',
-        label: 'Security Audit Logs',
-        to: PRIVATE_NAVIGATION.adminAuditLogsPage,
-        icon: ShieldCheck,
-      },
-      {
-        key: 'notifications',
-        label: 'Notification Center',
-        to: PRIVATE_NAVIGATION.adminNotificationsPage,
-        icon: Bell,
-      },
-    ],
-  },
-  {
     categoryKey: 'LOCALIZATION',
     categoryLabel: 'Regional Languages & Translations',
     items: [
@@ -364,30 +339,6 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
       },
     ],
   },
-  {
-    categoryKey: 'B2B_MANAGEMENT',
-    categoryLabel: 'Schools & Candidates',
-    items: [
-      {
-        key: 'schools-management',
-        label: 'Schools & Centers',
-        to: PRIVATE_NAVIGATION.adminSchools,
-        icon: Building2,
-      },
-      {
-        key: 'students-directory',
-        label: 'Candidate Directory',
-        to: PRIVATE_NAVIGATION.adminStudents,
-        icon: Users,
-      },
-      {
-        key: 'bulk-student-onboarding',
-        label: 'Bulk Candidate Upload',
-        to: PRIVATE_NAVIGATION.adminBulkStudents,
-        icon: UserPlus,
-      },
-    ],
-  },
 ];
 
 // ─── SUPER ADMIN Menu Groups ───────────────────────────────────────────────
@@ -402,12 +353,6 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         to: PRIVATE_NAVIGATION.superAdminDashboard,
         icon: LayoutDashboard,
         end: true,
-      },
-      {
-        key: 'schedule-exam',
-        label: 'Schedule Exam',
-        to: PRIVATE_NAVIGATION.superAdminExamScheduling,
-        icon: CalendarClock,
       },
       {
         key: 'academic-calendar',
@@ -428,17 +373,41 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         icon: KeyRound,
       },
       {
-        key: 'super-admin-schools',
-        label: 'Schools / Colleges',
-        to: PRIVATE_NAVIGATION.superAdminSchools,
-        icon: Building2,
+        key: 'translation-management',
+        label: 'Translation Management',
+        to: PRIVATE_NAVIGATION.superAdminTranslations,
+        icon: Globe,
       },
+    ],
+  },
+  {
+    categoryKey: 'REGISTRATIONS_SCHOOLS',
+    categoryLabel: 'Registrations & Schools',
+    items: [
       {
         key: 'registrations',
         label: 'Registration',
         to: PRIVATE_NAVIGATION.superAdminRegistrations,
         icon: UserCheck,
       },
+      {
+        key: 'super-admin-schools',
+        label: 'Schools / Colleges',
+        to: PRIVATE_NAVIGATION.superAdminSchools,
+        icon: Building2,
+      },
+      {
+        key: 'bulk-register-students',
+        label: 'Bulk Student Registration',
+        to: PRIVATE_NAVIGATION.superAdminBulkStudents,
+        icon: UserPlus,
+      },
+    ],
+  },
+  {
+    categoryKey: 'ADMINISTRATION_MASTERS',
+    categoryLabel: 'Administration & Masters',
+    items: [
       {
         key: 'staff-management',
         label: 'Staff Management',
@@ -450,6 +419,18 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Billing & Approvals',
         to: PRIVATE_NAVIGATION.superAdminBilling,
         icon: Receipt,
+      },
+      {
+        key: 'chapter-master',
+        label: 'Chapter Master',
+        to: PRIVATE_NAVIGATION.superAdminChapters,
+        icon: BookOpen,
+      },
+      {
+        key: 'languages',
+        label: 'Language Master',
+        to: PRIVATE_NAVIGATION.superAdminLanguages,
+        icon: Languages,
       },
     ],
   },
@@ -463,12 +444,6 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         to: PRIVATE_NAVIGATION.superAdminStudents,
         icon: Users,
       },
-      {
-        key: 'bulk-register-students',
-        label: 'Bulk Register Students',
-        to: PRIVATE_NAVIGATION.superAdminBulkStudents,
-        icon: UserPlus,
-      },
     ],
   },
   {
@@ -481,12 +456,6 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         to: PRIVATE_NAVIGATION.superAdminQuestionBank,
         icon: Database,
         feature: FEATURES.QUESTION_BANK,
-      },
-      {
-        key: 'chapter-master',
-        label: 'Chapter Master',
-        to: PRIVATE_NAVIGATION.superAdminChapters,
-        icon: BookOpen,
       },
       {
         key: 'create-question',
@@ -503,12 +472,6 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         feature: FEATURES.BULK_IMPORT_QUESTION,
       },
       {
-        key: 'regional-languages',
-        label: 'Regional Languages',
-        to: PRIVATE_NAVIGATION.superAdminLanguages,
-        icon: Globe2,
-      },
-      {
         key: 'import-translations',
         label: 'Bulk Import Translations',
         to: PRIVATE_NAVIGATION.superAdminImportTranslations,
@@ -521,16 +484,12 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
     categoryKey: 'EXAM_STUDIO',
     categoryLabel: 'Mock Test Studio',
     items: [
-      // ──────────────────────────────────────────────────────────────────────────
-      // AUTO EXAM GENERATION DISABLED FROM SIDEBAR PER WORKSPACE REQUIREMENT
-      // Functionality preserved in code (see AutoGenerateExamPage)
-      // ──────────────────────────────────────────────────────────────────────────
-      // {
-      //   key: 'auto-generate-exam',
-      //   label: 'Auto-Generate Exam Paper',
-      //   to: PRIVATE_NAVIGATION.superAdminAutoGenerateExam,
-      //   icon: Sparkles,
-      // },
+      {
+        key: 'schedule-exam',
+        label: 'Schedule Exam',
+        to: PRIVATE_NAVIGATION.superAdminExamScheduling,
+        icon: CalendarClock,
+      },
       {
         key: 'exam-blueprints',
         label: 'Blueprint Generator',
@@ -551,7 +510,7 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
       },
       {
         key: 'super-admin-result-processing',
-        label: 'Result Processing Monitor',
+        label: 'Exam Result Processing',
         to: PRIVATE_NAVIGATION.superAdminExamResultProcessing,
         icon: Activity,
       },
@@ -618,24 +577,6 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
     ],
   },
   {
-    categoryKey: 'LOCALIZATION',
-    categoryLabel: 'Regional Languages & Translations',
-    items: [
-      {
-        key: 'translation-management',
-        label: 'Translation Management',
-        to: PRIVATE_NAVIGATION.superAdminTranslations,
-        icon: Globe,
-      },
-      {
-        key: 'languages',
-        label: 'Language Master',
-        to: PRIVATE_NAVIGATION.superAdminLanguages,
-        icon: Languages,
-      },
-    ],
-  },
-  {
     categoryKey: 'ACCOUNT',
     categoryLabel: 'Account',
     items: [
@@ -665,7 +606,7 @@ export const STAFF_MENU_GROUPS: MenuGroupConfig[] = [
       {
         key: 'staff-profile',
         label: 'My Profile',
-        to: PRIVATE_NAVIGATION.superAdminProfile,
+        to: PRIVATE_NAVIGATION.staffProfile,
         icon: User,
       },
     ],
@@ -702,6 +643,13 @@ export const STAFF_MENU_GROUPS: MenuGroupConfig[] = [
         permission: PERMISSIONS.BULK_UPLOAD,
       },
       {
+        key: 'staff-pending-paper',
+        label: 'Upload Exam Papers',
+        to: PRIVATE_NAVIGATION.staffScheduledExams,
+        icon: FileSpreadsheet,
+        permission: PERMISSIONS.BULK_UPLOAD,
+      },
+      {
         key: 'staff-answer-key',
         label: 'Answer Key Upload',
         to: PRIVATE_NAVIGATION.staffAnswerKey,
@@ -714,6 +662,13 @@ export const STAFF_MENU_GROUPS: MenuGroupConfig[] = [
     categoryKey: 'OPERATIONS',
     categoryLabel: 'Operations Management',
     items: [
+      {
+        key: 'staff-approvals',
+        label: 'Approval Queue',
+        to: PRIVATE_NAVIGATION.staffApprovalQueue,
+        icon: ShieldCheck,
+        permission: PERMISSIONS.APPROVAL_VIEW,
+      },
       {
         key: 'staff-schools',
         label: 'Schools & Centers',
@@ -826,12 +781,6 @@ export const INSTITUTION_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Batch Management',
         to: PRIVATE_NAVIGATION.institutionBatches,
         icon: Users,
-      },
-      {
-        key: 'bulk-upload',
-        label: 'Candidate Bulk Upload',
-        to: PRIVATE_NAVIGATION.institutionBulkUpload,
-        icon: FileCheck,
       },
     ],
   },

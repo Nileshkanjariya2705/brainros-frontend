@@ -38,7 +38,7 @@ export const useStudentDashboardQuery = () =>
       );
       return (res.data as any).data || res.data;
     },
-    staleTime: 60_000,
+    staleTime: 15_000,
   });
 
 /**

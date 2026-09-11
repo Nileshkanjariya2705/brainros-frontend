@@ -115,16 +115,9 @@ export interface InstituteBatchItem {
   status?: string;
 }
 
-// ── Query Keys ──
-export const institutionKeys = {
-  all: ['institution'] as const,
-  dashboard: (filters?: Record<string, any>) => [...institutionKeys.all, 'dashboard', filters] as const,
-  students: (filters?: Record<string, any>) => [...institutionKeys.all, 'students', filters] as const,
-  admissionYears: () => [...institutionKeys.all, 'admission-years'] as const,
-  batches: () => [...institutionKeys.all, 'batches'] as const,
-  rankExams: () => [...institutionKeys.all, 'rank-exams'] as const,
-  rankings: (filters?: Record<string, any>) => [...institutionKeys.all, 'rankings', filters] as const,
-};
+// ── Query Keys (Centralized) ──
+import { institutionKeys } from '@/services/queryKeys';
+export { institutionKeys };
 
 // ── Hooks ──
 
