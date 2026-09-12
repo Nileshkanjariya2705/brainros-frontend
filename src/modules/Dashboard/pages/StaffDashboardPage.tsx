@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Building2,
@@ -9,18 +9,26 @@ import {
   Receipt,
   FileText,
   Bell,
-  ShieldAlert,
-  Clock,
   ArrowRight,
-  ShieldCheck,
-  CheckCircle2,
+  UploadCloud,
+  KeyRound,
+  UserPlus,
+  Plus,
+  Languages,
+  CalendarClock,
+  History,
+  Sliders,
+  Award,
+  Trophy,
+  BookOpen,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/modules/Auth/auth-access/useRole';
 import { usePermission } from '@/modules/Auth/auth-access/usePermission';
 import { PERMISSIONS } from '@/modules/Auth/auth-access/permission.constants';
-import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 import Button from '@/components/ui/Button';
+import { useSuperAdminRevenueQuery } from '../services/superAdminDashboard.service';
+import { RevenueAnalyticsSection } from '../components/RevenueAnalyticsSection';
 
 export const StaffDashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,7 +36,44 @@ export const StaffDashboardPage: React.FC = () => {
   const { activeRole, activeRoleMeta, isAccountant } = useRole();
   const { can } = usePermission();
 
-  const userName = (user as any)?.name || user?.mobileNumber || 'Staff Member';
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const hasRevenuePermission = isAccountant || can(PERMISSIONS.REVENUE_VIEW);
+
+  const {
+    data: revenueData,
+    isLoading: isLoadingRevenue,
+    isFetching: isFetchingRevenue,
+    isError: isErrorRevenue,
+    error: revenueError,
+    refetch: refetchRevenue,
+  } = useSuperAdminRevenueQuery(hasRevenuePermission ? { year: selectedYear } : undefined);
+
+  const rawEmail = (user as any)?.email;
+  const emailPrefix = rawEmail ? rawEmail.split('@')[0] : null;
+  const formattedEmailName = emailPrefix
+    ? emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
+    : null;
+
+  const userName =
+    (user as any)?.name ||
+    (user as any)?.fullName ||
+    (user as any)?.student?.name ||
+    formattedEmailName ||
+    activeRoleMeta?.label ||
+    'Staff Member';
+
+  const rolePrefix =
+    activeRole === 'GENERAL_MANAGER'
+      ? '/general-manager'
+      : activeRole === 'MANAGER'
+      ? '/manager'
+      : activeRole === 'OPERATOR'
+      ? '/operator'
+      : activeRole === 'ACCOUNTANT'
+      ? '/accountant'
+      : activeRole === 'SUPER_ADMIN'
+      ? '/super-admin'
+      : '/admin';
 
   // Operational Action Cards with permission-based visibility
   const operationalModules = [
@@ -36,7 +81,7 @@ export const StaffDashboardPage: React.FC = () => {
       title: 'Bills & Invoices',
       description: 'Create institutional bills, review draft invoices, and submit for Super Admin approval',
       icon: Receipt,
-      to: PRIVATE_NAVIGATION.staffBilling,
+      to: `${rolePrefix}/billing`,
       color: 'bg-amber-500',
       badge: isAccountant ? 'Primary Module' : 'Financials',
       badgeColor: 'bg-amber-100 text-amber-800',
@@ -46,7 +91,7 @@ export const StaffDashboardPage: React.FC = () => {
       title: 'Schools & Centers',
       description: 'View registered schools, affiliated centers, and assigned institutional scopes',
       icon: Building2,
-      to: PRIVATE_NAVIGATION.superAdminSchools,
+      to: `${rolePrefix}/schools`,
       color: 'bg-blue-600',
       badge: 'B2B Centers',
       badgeColor: 'bg-blue-100 text-blue-800',
@@ -56,61 +101,191 @@ export const StaffDashboardPage: React.FC = () => {
       title: 'Candidate Directory',
       description: 'Search student registrations, inspect enrollments, and verify batch eligibility',
       icon: Users,
-      to: PRIVATE_NAVIGATION.superAdminStudents,
+      to: `${rolePrefix}/students`,
       color: 'bg-indigo-600',
       badge: 'Students',
       badgeColor: 'bg-indigo-100 text-indigo-800',
       visible: can(PERMISSIONS.STUDENT_VIEW),
     },
     {
+      title: 'Bulk Register Students',
+      description: 'Upload Excel/CSV manifests to enroll students into institutional cohorts',
+      icon: UserPlus,
+      to: `${rolePrefix}/students/bulk-register`,
+      color: 'bg-violet-600',
+      badge: 'Registration',
+      badgeColor: 'bg-violet-100 text-violet-800',
+      visible: can(PERMISSIONS.STUDENT_VIEW),
+    },
+    {
       title: 'Question Bank',
       description: 'Browse curriculum questions, create new questions, and submit for review',
       icon: Database,
-      to: PRIVATE_NAVIGATION.superAdminQuestionBank,
+      to: `${rolePrefix}/question-bank`,
       color: 'bg-teal-600',
       badge: 'Curriculum',
       badgeColor: 'bg-teal-100 text-teal-800',
       visible: can(PERMISSIONS.QUESTION_VIEW),
     },
     {
-      title: 'Translations Master',
-      description: 'Access regional language translation packages and multilingual question items',
-      icon: Globe,
-      to: PRIVATE_NAVIGATION.superAdminTranslations,
+      title: 'Add New Question',
+      description: 'Author single/multi-choice, numerical, or subjective questions with LaTeX support',
+      icon: Plus,
+      to: `${rolePrefix}/question-bank/create`,
       color: 'bg-emerald-600',
-      badge: 'Multilingual',
+      badge: 'Authoring',
       badgeColor: 'bg-emerald-100 text-emerald-800',
+      visible: can(PERMISSIONS.QUESTION_CREATE) || can(PERMISSIONS.QUESTION_VIEW),
+    },
+    {
+      title: 'Bulk Import Questions',
+      description: 'Import structured question items in bulk via Excel, CSV, or JSON templates',
+      icon: UploadCloud,
+      to: `${rolePrefix}/question-bank/import`,
+      color: 'bg-cyan-600',
+      badge: 'Bulk Upload',
+      badgeColor: 'bg-cyan-100 text-cyan-800',
+      visible: can(PERMISSIONS.QUESTION_CREATE) || can(PERMISSIONS.QUESTION_VIEW),
+    },
+    {
+      title: 'Exam Scheduling',
+      description: 'Configure exam timetables, shift timings, center allocations, and candidate rosters',
+      icon: CalendarClock,
+      to: `${rolePrefix}/exam-scheduling`,
+      color: 'bg-sky-600',
+      badge: 'Scheduling',
+      badgeColor: 'bg-sky-100 text-sky-800',
+      visible: can(PERMISSIONS.EXAM_VIEW),
+    },
+    {
+      title: 'Upload Question Paper',
+      description: 'Upload and validate question papers and regional language packages',
+      icon: UploadCloud,
+      to: `${rolePrefix}/exam-manager/upload`,
+      color: 'bg-blue-500',
+      badge: 'Uploads',
+      badgeColor: 'bg-blue-100 text-blue-800',
+      visible: can(PERMISSIONS.EXAM_VIEW),
+    },
+    {
+      title: 'Translation Management',
+      description: 'Manage regional language translations and multilingual question packages',
+      icon: Globe,
+      to: `${rolePrefix}/translations`,
+      color: 'bg-teal-500',
+      badge: 'Multilingual',
+      badgeColor: 'bg-teal-100 text-teal-800',
       visible: can(PERMISSIONS.TRANSLATION_VIEW),
     },
     {
-      title: 'Mock Tests & Exams',
+      title: 'Upload Answer Key',
+      description: 'Upload, edit, and publish official answer key templates for scheduled exams',
+      icon: KeyRound,
+      to: `${rolePrefix}/exam-manager/answer-key`,
+      color: 'bg-orange-600',
+      badge: 'Answer Keys',
+      badgeColor: 'bg-orange-100 text-orange-800',
+      visible: can(PERMISSIONS.EXAM_VIEW),
+    },
+    {
+      title: 'Import History',
+      description: 'Review paper upload logs, processing audits, and verification manifests',
+      icon: History,
+      to: `${rolePrefix}/exam-manager/history`,
+      color: 'bg-slate-600',
+      badge: 'Audit Logs',
+      badgeColor: 'bg-slate-100 text-slate-800',
+      visible: can(PERMISSIONS.EXAM_VIEW),
+    },
+    {
+      title: 'Blueprint Generator',
+      description: 'Create automated exam blueprints, subject weightages, and section rules',
+      icon: Sliders,
+      to: `${rolePrefix}/exam-blueprints`,
+      color: 'bg-fuchsia-600',
+      badge: 'Blueprints',
+      badgeColor: 'bg-fuchsia-100 text-fuchsia-800',
+      visible: can(PERMISSIONS.EXAM_VIEW),
+    },
+    {
+      title: 'Mock Test Manager',
       description: 'Track scheduled test series, subject blueprints, and official assessment sessions',
       icon: FileSpreadsheet,
-      to: PRIVATE_NAVIGATION.superAdminMockTests,
+      to: `${rolePrefix}/exams`,
       color: 'bg-purple-600',
       badge: 'Assessments',
       badgeColor: 'bg-purple-100 text-purple-800',
       visible: can(PERMISSIONS.EXAM_VIEW),
     },
     {
+      title: 'Result Publication Center',
+      description: 'Verify candidate answer sheets, generate scorecards, and publish final results',
+      icon: Award,
+      to: `${rolePrefix}/exam-results`,
+      color: 'bg-amber-600',
+      badge: 'Results',
+      badgeColor: 'bg-amber-100 text-amber-800',
+      visible: can(PERMISSIONS.EXAM_VIEW) || can(PERMISSIONS.REPORT_VIEW),
+    },
+    {
       title: 'Completed Exam Reports',
       description: 'Analyze exam turnout, candidate performance metrics, and evaluation summaries',
       icon: FileText,
+      to: `${rolePrefix}/completed-exams`,
       color: 'bg-rose-600',
-      to: PRIVATE_NAVIGATION.superAdminCompletedExams,
       badge: 'Analytics',
       badgeColor: 'bg-rose-100 text-rose-800',
       visible: can(PERMISSIONS.REPORT_VIEW),
+    },
+    {
+      title: 'Leaderboard',
+      description: 'Inspect top candidate rankings, institutional percentiles, and performance badges',
+      icon: Trophy,
+      to: `${rolePrefix}/leaderboard`,
+      color: 'bg-yellow-600',
+      badge: 'Rankings',
+      badgeColor: 'bg-yellow-100 text-yellow-800',
+      visible: can(PERMISSIONS.RANK_VIEW) || can(PERMISSIONS.EXAM_VIEW),
+    },
+    {
+      title: 'Chapter Master',
+      description: 'Manage subject chapters, curriculum topics, and syllabus mapping',
+      icon: BookOpen,
+      to: `${rolePrefix}/chapters`,
+      color: 'bg-indigo-500',
+      badge: 'Syllabus',
+      badgeColor: 'bg-indigo-100 text-indigo-800',
+      visible: can(PERMISSIONS.QUESTION_VIEW) || can(PERMISSIONS.EXAM_VIEW),
+    },
+    {
+      title: 'Language Master',
+      description: 'Configure active regional languages, fonts, and translation dictionaries',
+      icon: Languages,
+      to: `${rolePrefix}/languages`,
+      color: 'bg-green-600',
+      badge: 'Languages',
+      badgeColor: 'bg-green-100 text-green-800',
+      visible: can(PERMISSIONS.TRANSLATION_VIEW) || can(PERMISSIONS.QUESTION_VIEW),
+    },
+    {
+      title: 'Question Bank Translations',
+      description: 'Import regional language packages for existing question items',
+      icon: Globe,
+      to: `${rolePrefix}/languages/import`,
+      color: 'bg-cyan-500',
+      badge: 'Translations',
+      badgeColor: 'bg-cyan-100 text-cyan-800',
+      visible: can(PERMISSIONS.TRANSLATION_VIEW),
     },
     {
       title: 'Notification Center',
       description: 'View platform broadcast messages, system alerts, and approval notifications',
       icon: Bell,
       color: 'bg-sky-600',
-      to: PRIVATE_NAVIGATION.superAdminNotifications,
+      to: `${rolePrefix}/notifications`,
       badge: 'Updates',
       badgeColor: 'bg-sky-100 text-sky-800',
-      visible: can(PERMISSIONS.NOTIFICATION_VIEW),
+      visible: can(PERMISSIONS.NOTIFICATION_VIEW) && activeRole !== 'GENERAL_MANAGER',
     },
   ].filter((m) => m.visible);
 
@@ -141,7 +316,7 @@ export const StaffDashboardPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
             {can(PERMISSIONS.BILL_VIEW) && (
               <Button
-                onClick={() => navigate(PRIVATE_NAVIGATION.staffBilling)}
+                onClick={() => navigate(`${rolePrefix}/billing`)}
                 className="bg-white text-slate-900 hover:bg-slate-100 font-semibold shadow-md flex items-center justify-center gap-2"
               >
                 <Receipt size={16} className="text-indigo-600" />
@@ -152,58 +327,21 @@ export const StaffDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Governance & Zero-Delete Policy Banner ── */}
-      <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 text-amber-900">
-        <div className="h-10 w-10 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
-          <ShieldAlert size={22} />
-        </div>
-        <div className="flex-1 text-xs sm:text-sm">
-          <p className="font-bold text-amber-950">
-            Platform Governance Policy: Zero-Delete & Super Admin Approval Workflow
-          </p>
-          <p className="text-amber-800/90 mt-0.5">
-            Staff roles have zero delete privileges across all platform entities (Students, Schools,
-            Exams, Questions, Translations, Invoices). Sensitive data modifications automatically submit an{' '}
-            <span className="font-semibold underline">ApprovalRequest</span> to Super Admin for validation before applying.
-          </p>
-        </div>
-      </div>
+      {/* ── Accountant Revenue Module ── */}
+      {hasRevenuePermission && (
+        <RevenueAnalyticsSection
+          data={revenueData}
+          isLoading={isLoadingRevenue}
+          isFetching={isFetchingRevenue}
+          isError={isErrorRevenue}
+          error={revenueError}
+          refetch={refetchRevenue}
+          selectedYear={selectedYear}
+          onYearChange={(yr) => setSelectedYear(yr)}
+        />
+      )}
 
-      {/* ── Role Information Card ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
-          <div className="h-12 w-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
-            <ShieldCheck size={24} />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Assigned Role</p>
-            <p className="text-base font-bold text-slate-800">{activeRoleMeta?.label || activeRole}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{activeRoleMeta?.description}</p>
-          </div>
-        </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
-          <div className="h-12 w-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-            <CheckCircle2 size={24} />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Audit & Security</p>
-            <p className="text-base font-bold text-slate-800">100% Traceable</p>
-            <p className="text-xs text-slate-500 mt-0.5">All staff actions recorded in Security Audit Logs</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center gap-4">
-          <div className="h-12 w-12 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600 shrink-0">
-            <Clock size={24} />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Exam Time Governance</p>
-            <p className="text-base font-bold text-slate-800">Super Admin Controlled</p>
-            <p className="text-xs text-slate-500 mt-0.5">Official exam timings protected against local overrides</p>
-          </div>
-        </div>
-      </div>
 
       {/* ── Operational Modules Grid ── */}
       <div>

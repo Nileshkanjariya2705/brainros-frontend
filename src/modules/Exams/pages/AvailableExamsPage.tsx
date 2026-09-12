@@ -351,14 +351,20 @@ export const AvailableExamsPage = () => {
                   {/* Subject Pills */}
                   {exam.subjects && exam.subjects.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-1">
-                      {exam.subjects.slice(0, 3).map((sub, idx) => (
-                        <span
-                          key={idx}
-                          className="rounded-md bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:text-slate-300"
-                        >
-                          {sub}
-                        </span>
-                      ))}
+                      {exam.subjects.slice(0, 3).map((sub: any, idx: number) => {
+                        const subName =
+                          typeof sub === 'object' && sub !== null
+                            ? sub.name || sub.title || String(sub.id || '')
+                            : String(sub || '');
+                        return (
+                          <span
+                            key={idx}
+                            className="rounded-md bg-slate-100 dark:bg-slate-700/60 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:text-slate-300"
+                          >
+                            {subName}
+                          </span>
+                        );
+                      })}
                       {exam.subjects.length > 3 && (
                         <span className="rounded-md bg-slate-100 dark:bg-slate-700/60 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
                           +{exam.subjects.length - 3} more

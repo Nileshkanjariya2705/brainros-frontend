@@ -13,10 +13,7 @@ import {
   Database,
   Sliders,
   CalendarClock,
-  Globe2,
-  Compass,
   Trophy,
-  Sparkles,
   ShieldAlert,
   ShieldCheck,
   Building2,
@@ -164,23 +161,17 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         to: PRIVATE_NAVIGATION.adminStudents,
         icon: Users,
       },
+       {
+        key: 'schools-management',
+        label: 'Schools / Colleges',
+        to: PRIVATE_NAVIGATION.adminSchools,
+        icon: Building2,
+      },
       {
         key: 'bulk-register-students',
         label: 'Bulk Register Students',
         to: PRIVATE_NAVIGATION.adminBulkStudents,
         icon: UserPlus,
-      },
-    ],
-  },
-  {
-    categoryKey: 'B2B_SCHOOLS',
-    categoryLabel: 'Schools & Institutions',
-    items: [
-      {
-        key: 'schools-management',
-        label: 'Schools / Colleges',
-        to: PRIVATE_NAVIGATION.adminSchools,
-        icon: Building2,
       },
     ],
   },
@@ -195,12 +186,7 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         icon: Database,
         feature: FEATURES.QUESTION_BANK,
       },
-      {
-        key: 'chapter-master',
-        label: 'Chapter Master',
-        to: PRIVATE_NAVIGATION.adminChapters,
-        icon: BookOpen,
-      },
+     
       {
         key: 'create-question',
         label: 'Add New Question',
@@ -216,17 +202,47 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         feature: FEATURES.BULK_IMPORT_QUESTION,
       },
       {
-        key: 'regional-languages',
-        label: 'Regional Languages',
-        to: PRIVATE_NAVIGATION.adminLanguages,
-        icon: Globe2,
-      },
-      {
         key: 'import-translations',
         label: 'Bulk Import Translations',
         to: PRIVATE_NAVIGATION.adminImportTranslations,
         icon: Languages,
         feature: FEATURES.BULK_IMPORT_TRANSLATION,
+      },
+    ],
+  },
+  {
+    categoryKey: 'EXAM_MANAGEMENT',
+    categoryLabel: 'Exam Manager (Question Papers)',
+    items: [
+      {
+        key: 'exam-scheduling',
+        label: 'Exam Scheduling',
+        to: PRIVATE_NAVIGATION.adminExamScheduling,
+        icon: CalendarClock,
+      },
+      {
+        key: 'upload-question-paper',
+        label: 'Upload Question Paper',
+        to: PRIVATE_NAVIGATION.adminUploadPaper,
+        icon: UploadCloud,
+      },
+      {
+        key: 'translation-management',
+        label: 'Translation Management',
+        to: PRIVATE_NAVIGATION.adminTranslations,
+        icon: Globe,
+      },
+      {
+        key: 'upload-answer-key',
+        label: 'Upload Answer Key',
+        to: PRIVATE_NAVIGATION.adminAnswerKey,
+        icon: UploadCloud,
+      },
+      {
+        key: 'exam-import-history',
+        label: 'Import History',
+        to: PRIVATE_NAVIGATION.adminExamImportHistory,
+        icon: History,
       },
     ],
   },
@@ -247,12 +263,6 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         icon: FileSpreadsheet,
       },
       {
-        key: 'exam-scheduling',
-        label: 'Exam Scheduling',
-        to: PRIVATE_NAVIGATION.adminExamScheduling,
-        icon: CalendarClock,
-      },
-      {
         key: 'exam-results-publication',
         label: 'Result Publication Center',
         to: PRIVATE_NAVIGATION.adminExamResults,
@@ -266,63 +276,45 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
       },
     ],
   },
-  {
-    categoryKey: 'EXAM_MANAGEMENT',
-    categoryLabel: 'Exam Manager (Question Papers)',
-    items: [
-      {
-        key: 'exam-manager-list',
-        label: 'Exam Manager',
-        to: PRIVATE_NAVIGATION.adminExamManager,
-        icon: BookOpen,
-      },
-      {
-        key: 'upload-question-paper',
-        label: 'Upload Question Paper',
-        to: PRIVATE_NAVIGATION.adminUploadPaper,
-        icon: UploadCloud,
-      },
-      {
-        key: 'exam-import-history',
-        label: 'Import History',
-        to: PRIVATE_NAVIGATION.adminExamImportHistory,
-        icon: History,
-      },
-    ],
-  },
+  
   {
     categoryKey: 'ANALYTICS',
     categoryLabel: 'Analytics & Intelligence',
     items: [
+      /*
       {
         key: 'strategy-rules',
         label: 'Strategy Rules',
         to: PRIVATE_NAVIGATION.adminStrategyRules,
         icon: Compass,
       },
-      {
-        key: 'leaderboard',
-        label: 'Leaderboard',
-        to: PRIVATE_NAVIGATION.adminLeaderboard,
-        icon: Trophy,
-      },
+      */
+     
+      /*
       {
         key: 'historical-datasets',
         label: 'Historical Datasets',
         to: PRIVATE_NAVIGATION.adminHistoricalDatasets,
         icon: Sparkles,
       },
+      */
     ],
   },
   {
     categoryKey: 'LOCALIZATION',
     categoryLabel: 'Regional Languages & Translations',
     items: [
-      {
-        key: 'translation-management',
-        label: 'Translation Management',
-        to: PRIVATE_NAVIGATION.adminTranslations,
-        icon: Globe,
+       {
+        key: 'leaderboard',
+        label: 'Leaderboard',
+        to: PRIVATE_NAVIGATION.adminLeaderboard,
+        icon: Trophy,
+      },
+       {
+        key: 'chapter-master',
+        label: 'Chapter Master',
+        to: PRIVATE_NAVIGATION.adminChapters,
+        icon: BookOpen,
       },
       {
         key: 'languages',
@@ -330,6 +322,7 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         to: PRIVATE_NAVIGATION.adminLanguages,
         icon: Languages,
       },
+      
       {
         key: 'import-translations',
         label: 'Question Bank Translations',
@@ -526,24 +519,28 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
     categoryKey: 'ANALYTICS',
     categoryLabel: 'Analytics & Intelligence',
     items: [
+      /*
       {
         key: 'strategy-rules',
         label: 'Strategy Rules',
         to: PRIVATE_NAVIGATION.superAdminStrategyRules,
         icon: Compass,
       },
+      */
       {
         key: 'leaderboard',
         label: 'Leaderboard',
         to: PRIVATE_NAVIGATION.superAdminLeaderboard,
         icon: Trophy,
       },
+      /*
       {
         key: 'historical-datasets',
         label: 'Historical Datasets',
         to: PRIVATE_NAVIGATION.superAdminHistoricalDatasets,
         icon: Sparkles,
       },
+      */
     ],
   },
   {
@@ -590,7 +587,374 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
   },
 ];
 
-// ─── STAFF Menu Groups (OPERATOR, MANAGER, GENERAL_MANAGER, ACCOUNTANT) ────
+// ─── GENERAL MANAGER Menu Groups ───────────────────────────────────────────
+export const GENERAL_MANAGER_MENU_GROUPS: MenuGroupConfig[] = [
+  {
+    categoryKey: 'OVERVIEW',
+    categoryLabel: 'Overview',
+    items: [
+      {
+        key: 'gm-dashboard',
+        label: 'Dashboard',
+        to: PRIVATE_NAVIGATION.generalManagerDashboard,
+        icon: LayoutDashboard,
+        end: true,
+      },
+      {
+        key: 'gm-profile',
+        label: 'My Profile',
+        to: PRIVATE_NAVIGATION.generalManagerProfile,
+        icon: User,
+      },
+    ],
+  },
+  {
+    categoryKey: 'GOVERNANCE_OPERATIONS',
+    categoryLabel: 'Operations & Approvals',
+    items: [
+      {
+        key: 'gm-approvals',
+        label: 'Approval Queue',
+        to: PRIVATE_NAVIGATION.generalManagerApprovalQueue,
+        icon: ShieldCheck,
+        permission: PERMISSIONS.APPROVAL_VIEW,
+      },
+    ],
+  },
+  {
+    categoryKey: 'CONTENT_STUDIO',
+    categoryLabel: 'Question & Content Studio',
+    items: [
+      {
+        key: 'gm-exam-scheduling',
+        label: 'Exam Scheduling',
+        to: PRIVATE_NAVIGATION.generalManagerExamScheduling,
+        icon: CalendarClock,
+        permission: PERMISSIONS.EXAM_VIEW,
+      },
+      {
+        key: 'gm-upload-paper',
+        label: 'Upload Question Paper',
+        to: PRIVATE_NAVIGATION.generalManagerUploadPaper,
+        icon: UploadCloud,
+        permission: PERMISSIONS.EXAM_VIEW,
+      },
+      {
+        key: 'gm-answer-key',
+        label: 'Upload Answer Key',
+        to: PRIVATE_NAVIGATION.generalManagerAnswerKey,
+        icon: KeyRound,
+        permission: PERMISSIONS.EXAM_VIEW,
+      },
+     
+      {
+        key: 'gm-translations',
+        label: 'Translations',
+        to: PRIVATE_NAVIGATION.generalManagerTranslations,
+        icon: Globe,
+        permission: PERMISSIONS.TRANSLATION_VIEW,
+      },
+      {
+        key: 'gm-blueprints',
+        label: 'Blueprint Generator',
+        to: PRIVATE_NAVIGATION.generalManagerExamBlueprints,
+        icon: Sliders,
+        permission: PERMISSIONS.EXAM_VIEW,
+      },
+      {
+        key: 'gm-exams',
+        label: 'Mock Tests & Exams',
+        to: PRIVATE_NAVIGATION.generalManagerExams,
+        icon: FileSpreadsheet,
+        permission: PERMISSIONS.EXAM_VIEW,
+      },
+      
+      {
+        key: 'gm-reports',
+        label: 'Exam Reports',
+        to: PRIVATE_NAVIGATION.generalManagerCompletedExams,
+        icon: FileText,
+        permission: PERMISSIONS.REPORT_VIEW,
+      },
+    ],
+  },
+  {
+    categoryKey: 'DIRECTORY',
+    categoryLabel: 'Directory & Centers',
+    items: [
+      {
+        key: 'gm-students',
+        label: 'Student Directory',
+        to: PRIVATE_NAVIGATION.generalManagerStudents,
+        icon: Users,
+        permission: PERMISSIONS.STUDENT_VIEW,
+      },
+      {
+        key: 'gm-schools',
+        label: 'Schools & Centers',
+        to: PRIVATE_NAVIGATION.generalManagerSchools,
+        icon: Building2,
+        permission: PERMISSIONS.INSTITUTION_VIEW,
+      },
+      {
+        key: 'gm-billing',
+        label: 'Bills & Invoices',
+        to: PRIVATE_NAVIGATION.generalManagerBilling,
+        icon: Receipt,
+        permission: PERMISSIONS.BILL_VIEW,
+      },
+    ],
+  },
+  {
+    categoryKey: 'ANALYTICS',
+    categoryLabel: 'Analytics & Intelligence',
+    items: [
+      {
+        key: 'gm-leaderboard',
+        label: 'Leaderboard',
+        to: PRIVATE_NAVIGATION.generalManagerLeaderboard,
+        icon: Trophy,
+        permission: PERMISSIONS.RANK_VIEW,
+      },
+    ],
+  },
+];
+
+// ─── MANAGER Menu Groups (Mapped to Admin) ──────────────────────────────────
+export const MANAGER_MENU_GROUPS: MenuGroupConfig[] = ADMIN_MENU_GROUPS;
+
+// ─── OPERATOR Menu Groups ───────────────────────────────────────────────────
+export const OPERATOR_MENU_GROUPS: MenuGroupConfig[] = [
+  {
+    categoryKey: 'OVERVIEW',
+    categoryLabel: 'Overview',
+    items: [
+      {
+        key: 'operator-dashboard',
+        label: 'Dashboard',
+        to: PRIVATE_NAVIGATION.operatorDashboard,
+        icon: LayoutDashboard,
+        end: true,
+      },
+      {
+        key: 'operator-profile',
+        label: 'My Profile',
+        to: PRIVATE_NAVIGATION.operatorProfile,
+        icon: User,
+      },
+    ],
+  },
+  {
+    categoryKey: 'GOVERNANCE_OPERATIONS',
+    categoryLabel: 'Operations & Approvals',
+    items: [
+      {
+        key: 'operator-approvals',
+        label: 'Approval Queue',
+        to: PRIVATE_NAVIGATION.operatorApprovalQueue,
+        icon: ShieldCheck,
+        permission: PERMISSIONS.APPROVAL_VIEW,
+      },
+    ],
+  },
+  {
+    categoryKey: 'CONTENT_STUDIO',
+    categoryLabel: 'Question & Content Studio',
+    items: [
+      {
+        key: 'operator-exam-scheduling',
+        label: 'Exam Scheduling',
+        to: PRIVATE_NAVIGATION.operatorExamScheduling,
+        icon: CalendarClock,
+        permission: PERMISSIONS.EXAM_VIEW,
+      },
+      {
+        key: 'operator-upload-paper',
+        label: 'Upload Question Paper',
+        to: PRIVATE_NAVIGATION.operatorUploadPaper,
+        icon: UploadCloud,
+        permission: PERMISSIONS.EXAM_VIEW,
+      },
+      {
+        key: 'operator-answer-key',
+        label: 'Upload Answer Key',
+        to: PRIVATE_NAVIGATION.operatorAnswerKey,
+        icon: KeyRound,
+        permission: PERMISSIONS.EXAM_VIEW,
+      },
+      {
+        key: 'operator-translations',
+        label: 'Translations',
+        to: PRIVATE_NAVIGATION.operatorTranslations,
+        icon: Globe,
+        permission: PERMISSIONS.TRANSLATION_VIEW,
+      },
+      {
+        key: 'operator-blueprints',
+        label: 'Blueprint Generator',
+        to: PRIVATE_NAVIGATION.operatorExamBlueprints,
+        icon: Sliders,
+        permission: PERMISSIONS.EXAM_VIEW,
+      },
+      {
+        key: 'operator-exams',
+        label: 'Mock Tests & Exams',
+        to: PRIVATE_NAVIGATION.operatorExams,
+        icon: FileSpreadsheet,
+        permission: PERMISSIONS.EXAM_VIEW,
+      },
+      {
+        key: 'operator-reports',
+        label: 'Exam Reports',
+        to: PRIVATE_NAVIGATION.operatorCompletedExams,
+        icon: FileText,
+        permission: PERMISSIONS.REPORT_VIEW,
+      },
+    ],
+  },
+  {
+    categoryKey: 'DIRECTORY',
+    categoryLabel: 'Directory & Centers',
+    items: [
+      {
+        key: 'operator-students',
+        label: 'Student Directory',
+        to: PRIVATE_NAVIGATION.operatorStudents,
+        icon: Users,
+        permission: PERMISSIONS.STUDENT_VIEW,
+      },
+      {
+        key: 'operator-schools',
+        label: 'Schools & Centers',
+        to: PRIVATE_NAVIGATION.operatorSchools,
+        icon: Building2,
+        permission: PERMISSIONS.INSTITUTION_VIEW,
+      },
+      {
+        key: 'operator-billing',
+        label: 'Bills & Invoices',
+        to: PRIVATE_NAVIGATION.operatorBilling,
+        icon: Receipt,
+        permission: PERMISSIONS.BILL_VIEW,
+      },
+    ],
+  },
+  {
+    categoryKey: 'ANALYTICS',
+    categoryLabel: 'Analytics & Intelligence',
+    items: [
+      {
+        key: 'operator-leaderboard',
+        label: 'Leaderboard',
+        to: PRIVATE_NAVIGATION.operatorLeaderboard,
+        icon: Trophy,
+        permission: PERMISSIONS.RANK_VIEW,
+      },
+    ],
+  },
+];
+
+// ─── ACCOUNTANT Menu Groups ────────────────────────────────────────────────
+export const ACCOUNTANT_MENU_GROUPS: MenuGroupConfig[] = [
+  {
+    categoryKey: 'OVERVIEW',
+    categoryLabel: 'Overview',
+    items: [
+      {
+        key: 'accountant-dashboard',
+        label: 'Dashboard',
+        to: PRIVATE_NAVIGATION.accountantDashboard,
+        icon: LayoutDashboard,
+        end: true,
+      },
+      {
+        key: 'accountant-profile',
+        label: 'My Profile',
+        to: PRIVATE_NAVIGATION.accountantProfile,
+        icon: User,
+      },
+    ],
+  },
+  {
+    categoryKey: 'FINANCE',
+    categoryLabel: 'Financial Operations',
+    items: [
+      {
+        key: 'accountant-billing',
+        label: 'Bills & Invoices',
+        to: PRIVATE_NAVIGATION.accountantBilling,
+        icon: Receipt,
+        permission: PERMISSIONS.BILL_VIEW,
+      },
+      {
+        key: 'accountant-reports',
+        label: 'Financial Reports',
+        to: PRIVATE_NAVIGATION.accountantReports,
+        icon: FileText,
+        permission: PERMISSIONS.REPORT_VIEW,
+      },
+      {
+        key: 'accountant-notifications',
+        label: 'Notification Center',
+        to: PRIVATE_NAVIGATION.accountantNotifications,
+        icon: Bell,
+        permission: PERMISSIONS.NOTIFICATION_VIEW,
+      },
+    ],
+  },
+];
+
+// ─── SALES AGENT Menu Groups ───────────────────────────────────────────────
+export const SALES_AGENT_MENU_GROUPS: MenuGroupConfig[] = [
+  {
+    categoryKey: 'OVERVIEW',
+    categoryLabel: 'Overview',
+    items: [
+      {
+        key: 'sales-dashboard',
+        label: 'Dashboard',
+        to: PRIVATE_NAVIGATION.salesAgentDashboard,
+        icon: LayoutDashboard,
+        end: true,
+      },
+      {
+        key: 'sales-profile',
+        label: 'My Profile',
+        to: PRIVATE_NAVIGATION.salesAgentProfile,
+        icon: User,
+      },
+    ],
+  },
+  {
+    categoryKey: 'INSTITUTION_SALES',
+    categoryLabel: 'Institutional Sales',
+    items: [
+      {
+        key: 'sales-schools',
+        label: 'Schools & Colleges',
+        to: PRIVATE_NAVIGATION.salesAgentSchools,
+        icon: Building2,
+        permission: PERMISSIONS.INSTITUTION_VIEW,
+      },
+      {
+        key: 'sales-reports',
+        label: 'Sales Reports',
+        to: PRIVATE_NAVIGATION.salesAgentReports,
+        icon: BarChart3,
+        permission: PERMISSIONS.REPORT_VIEW,
+      },
+      {
+        key: 'sales-notifications',
+        label: 'Notification Center',
+        to: PRIVATE_NAVIGATION.salesAgentNotifications,
+        icon: Bell,
+        permission: PERMISSIONS.NOTIFICATION_VIEW,
+      },
+    ],
+  },
+];
+
+// ─── STAFF Menu Groups ─────────────────────────────────────────────────────
 export const STAFF_MENU_GROUPS: MenuGroupConfig[] = [
   {
     categoryKey: 'OVERVIEW',
@@ -679,42 +1043,42 @@ export const STAFF_MENU_GROUPS: MenuGroupConfig[] = [
       {
         key: 'staff-students',
         label: 'Student Directory',
-        to: PRIVATE_NAVIGATION.superAdminStudents,
+        to: PRIVATE_NAVIGATION.staffStudents,
         icon: Users,
         permission: PERMISSIONS.STUDENT_VIEW,
       },
       {
         key: 'staff-questions',
         label: 'Question Bank',
-        to: PRIVATE_NAVIGATION.superAdminQuestionBank,
+        to: PRIVATE_NAVIGATION.staffQuestionBank,
         icon: Database,
         permission: PERMISSIONS.QUESTION_VIEW,
       },
       {
         key: 'staff-translations',
         label: 'Translations',
-        to: PRIVATE_NAVIGATION.superAdminTranslations,
+        to: PRIVATE_NAVIGATION.staffTranslations,
         icon: Globe,
         permission: PERMISSIONS.TRANSLATION_VIEW,
       },
       {
         key: 'staff-exams',
         label: 'Mock Tests & Exams',
-        to: PRIVATE_NAVIGATION.superAdminMockTests,
+        to: PRIVATE_NAVIGATION.staffExams,
         icon: FileSpreadsheet,
         permission: PERMISSIONS.EXAM_VIEW,
       },
       {
         key: 'staff-reports',
         label: 'Exam Reports',
-        to: PRIVATE_NAVIGATION.superAdminCompletedExams,
+        to: PRIVATE_NAVIGATION.staffReports,
         icon: FileText,
         permission: PERMISSIONS.REPORT_VIEW,
       },
       {
         key: 'staff-notifications',
         label: 'Notification Center',
-        to: PRIVATE_NAVIGATION.superAdminNotifications,
+        to: PRIVATE_NAVIGATION.staffNotifications,
         icon: Bell,
         permission: PERMISSIONS.NOTIFICATION_VIEW,
       },
@@ -782,18 +1146,31 @@ export const INSTITUTION_MENU_GROUPS: MenuGroupConfig[] = [
         to: PRIVATE_NAVIGATION.institutionBatches,
         icon: Users,
       },
+      {
+        key: 'students',
+        label: 'Student Directory',
+        to: PRIVATE_NAVIGATION.institutionStudents,
+        icon: UserCheck,
+      },
+      {
+        key: 'rankList',
+        label: 'Institute Rank List',
+        to: PRIVATE_NAVIGATION.institutionRankList,
+        icon: Trophy,
+      },
     ],
   },
   {
     categoryKey: 'ANALYTICS_REPORTS',
     categoryLabel: 'Analytics & Reporting',
     items: [
-      {
-        key: 'reports',
-        label: 'Institutional Reports',
-        to: PRIVATE_NAVIGATION.institutionReports,
-        icon: BarChart3,
-      },
+      
+      // {
+      //   key: 'reports',
+      //   label: 'Institutional Reports',
+      //   to: PRIVATE_NAVIGATION.institutionReports,
+      //   icon: BarChart3,
+      // },
     ],
   },
 ];

@@ -29,6 +29,20 @@ export const queryClient = new QueryClient({
 });
 
 /**
+ * Standard Cache Stale Times (ms) across domains:
+ * - MASTER_DATA (Languages, Classes, Targets, States, Districts): 10 minutes
+ * - DASHBOARDS (Overview summaries): 2 minutes
+ * - ACTIVE_LISTS (Students, Questions, Exams, Invoices): 60 seconds
+ * - REALTIME (Live Exam attempt status, WebSockets): 0 seconds (always fresh)
+ */
+export const CACHE_STALE_TIMES = {
+  MASTER_DATA: 10 * 60_000,
+  DASHBOARDS: 2 * 60_000,
+  ACTIVE_LISTS: 60_000,
+  REALTIME: 0,
+} as const;
+
+/**
  * Clears all user-scoped cached server state upon logout or account switch.
  * Ensures a candidate's or parent's private data never leaks to subsequent sessions.
  */

@@ -573,8 +573,16 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
                 <Button
                   variant="primary"
                   onClick={() => {
-                    const prefix = window.location.pathname.startsWith('/super-admin')
-                      ? '/super-admin'
+                    const firstSeg = window.location.pathname.split('/')[1];
+                    const prefix = [
+                      'super-admin',
+                      'admin',
+                      'general-manager',
+                      'manager',
+                      'operator',
+                      'staff',
+                    ].includes(firstSeg)
+                      ? `/${firstSeg}`
                       : '/admin';
                     navigate(
                       `${prefix}/exam-manager/upload?activeExamId=${scheduledSuccessData.examId}`,

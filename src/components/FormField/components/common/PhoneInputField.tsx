@@ -143,6 +143,7 @@ export default function PhoneInputField<T extends FieldValues>({
           </div>
           <input
             id={fieldId}
+            name={name as string}
             type="tel"
             inputMode="numeric"
             maxLength={10}

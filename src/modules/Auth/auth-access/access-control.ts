@@ -106,16 +106,19 @@ export const getDefaultLandingRoute = (userContext: UserAuthContext | null | und
       return PRIVATE_NAVIGATION.superAdminDashboard;
     case ROLES.ADMIN:
       return PRIVATE_NAVIGATION.adminDashboard;
-    case ROLES.OPERATOR:
-    case ROLES.MANAGER:
     case ROLES.GENERAL_MANAGER:
+      return PRIVATE_NAVIGATION.generalManagerDashboard;
+    case ROLES.MANAGER:
+      return PRIVATE_NAVIGATION.adminDashboard;
+    case ROLES.OPERATOR:
+      return PRIVATE_NAVIGATION.operatorDashboard;
     case ROLES.ACCOUNTANT:
-      return PRIVATE_NAVIGATION.staffDashboard;
+      return PRIVATE_NAVIGATION.accountantDashboard;
+    case ROLES.SALES_AGENT:
+      return PRIVATE_NAVIGATION.salesAgentDashboard;
     case ROLES.PARENT:
       return PRIVATE_NAVIGATION.parentDashboardHome;
     case ROLES.INSTITUTION_ADMIN:
-      return PRIVATE_NAVIGATION.institutionDashboard;
-    case ROLES.SALES_AGENT:
       return PRIVATE_NAVIGATION.institutionDashboard;
     case ROLES.STUDENT:
     default:

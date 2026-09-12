@@ -181,6 +181,156 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
     roles: [ROLES.SUPER_ADMIN],
   },
 
+  // General Manager Routes
+  [PRIVATE_NAVIGATION.generalManagerDashboard]: {
+    path: PRIVATE_NAVIGATION.generalManagerDashboard,
+    roles: [ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.generalManagerStudents]: {
+    path: PRIVATE_NAVIGATION.generalManagerStudents,
+    permissions: [PERMISSIONS.STUDENT_VIEW],
+    roles: [ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.generalManagerSchools]: {
+    path: PRIVATE_NAVIGATION.generalManagerSchools,
+    permissions: [PERMISSIONS.INSTITUTION_VIEW],
+    roles: [ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.generalManagerQuestionBank]: {
+    path: PRIVATE_NAVIGATION.generalManagerQuestionBank,
+    permissions: [PERMISSIONS.QUESTION_VIEW],
+    roles: [ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.generalManagerTranslations]: {
+    path: PRIVATE_NAVIGATION.generalManagerTranslations,
+    permissions: [PERMISSIONS.TRANSLATION_VIEW],
+    roles: [ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.generalManagerExams]: {
+    path: PRIVATE_NAVIGATION.generalManagerExams,
+    permissions: [PERMISSIONS.EXAM_VIEW],
+    roles: [ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.generalManagerReports]: {
+    path: PRIVATE_NAVIGATION.generalManagerReports,
+    permissions: [PERMISSIONS.REPORT_VIEW],
+    roles: [ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.generalManagerApprovalQueue]: {
+    path: PRIVATE_NAVIGATION.generalManagerApprovalQueue,
+    permissions: [PERMISSIONS.APPROVAL_VIEW],
+    roles: [ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.generalManagerBilling]: {
+    path: PRIVATE_NAVIGATION.generalManagerBilling,
+    permissions: [PERMISSIONS.BILL_VIEW],
+    roles: [ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.generalManagerNotifications]: {
+    path: PRIVATE_NAVIGATION.generalManagerNotifications,
+    permissions: [PERMISSIONS.NOTIFICATION_VIEW],
+    roles: [ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.generalManagerProfile]: {
+    path: PRIVATE_NAVIGATION.generalManagerProfile,
+    allowAnyRole: true,
+  },
+
+  // Manager Routes
+  [PRIVATE_NAVIGATION.managerDashboard]: {
+    path: PRIVATE_NAVIGATION.managerDashboard,
+    roles: [ROLES.MANAGER, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.managerStudents]: {
+    path: PRIVATE_NAVIGATION.managerStudents,
+    permissions: [PERMISSIONS.STUDENT_VIEW],
+    roles: [ROLES.MANAGER, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.managerQuestionBank]: {
+    path: PRIVATE_NAVIGATION.managerQuestionBank,
+    permissions: [PERMISSIONS.QUESTION_VIEW],
+    roles: [ROLES.MANAGER, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.managerExams]: {
+    path: PRIVATE_NAVIGATION.managerExams,
+    permissions: [PERMISSIONS.EXAM_VIEW],
+    roles: [ROLES.MANAGER, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.managerProfile]: {
+    path: PRIVATE_NAVIGATION.managerProfile,
+    allowAnyRole: true,
+  },
+
+  // Operator Routes
+  [PRIVATE_NAVIGATION.operatorDashboard]: {
+    path: PRIVATE_NAVIGATION.operatorDashboard,
+    roles: [ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.operatorStudents]: {
+    path: PRIVATE_NAVIGATION.operatorStudents,
+    permissions: [PERMISSIONS.STUDENT_VIEW],
+    roles: [ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.operatorBulkStudents]: {
+    path: PRIVATE_NAVIGATION.operatorBulkStudents,
+    permissions: [PERMISSIONS.STUDENT_VIEW, PERMISSIONS.BULK_UPLOAD],
+    roles: [ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.operatorSchools]: {
+    path: PRIVATE_NAVIGATION.operatorSchools,
+    permissions: [PERMISSIONS.INSTITUTION_VIEW, PERMISSIONS.BULK_UPLOAD],
+    roles: [ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.operatorScheduledExams]: {
+    path: PRIVATE_NAVIGATION.operatorScheduledExams,
+    permissions: [PERMISSIONS.BULK_UPLOAD, PERMISSIONS.EXAM_VIEW],
+    roles: [ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.operatorUploadPaper]: {
+    path: PRIVATE_NAVIGATION.operatorUploadPaper,
+    permissions: [PERMISSIONS.EXAM_CREATE, PERMISSIONS.BULK_UPLOAD],
+    roles: [ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.operatorAnswerKey]: {
+    path: PRIVATE_NAVIGATION.operatorAnswerKey,
+    permissions: [PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW],
+    roles: [ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.operatorExamImportHistory]: {
+    path: PRIVATE_NAVIGATION.operatorExamImportHistory,
+    permissions: [PERMISSIONS.EXAM_VIEW],
+    roles: [ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.operatorReports]: {
+    path: PRIVATE_NAVIGATION.operatorReports,
+    permissions: [PERMISSIONS.REPORT_VIEW],
+    roles: [ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.operatorNotifications]: {
+    path: PRIVATE_NAVIGATION.operatorNotifications,
+    permissions: [PERMISSIONS.NOTIFICATION_VIEW],
+    roles: [ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.operatorProfile]: {
+    path: PRIVATE_NAVIGATION.operatorProfile,
+    allowAnyRole: true,
+  },
+
+  // Accountant Routes
+  [PRIVATE_NAVIGATION.accountantDashboard]: {
+    path: PRIVATE_NAVIGATION.accountantDashboard,
+    roles: [ROLES.ACCOUNTANT, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.accountantBilling]: {
+    path: PRIVATE_NAVIGATION.accountantBilling,
+    permissions: [PERMISSIONS.BILL_VIEW],
+    roles: [ROLES.ACCOUNTANT, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
+  },
+  [PRIVATE_NAVIGATION.accountantProfile]: {
+    path: PRIVATE_NAVIGATION.accountantProfile,
+    allowAnyRole: true,
+  },
+
   // Parent Role Routes
   [PRIVATE_NAVIGATION.parentDashboardHome]: {
     path: PRIVATE_NAVIGATION.parentDashboardHome,
@@ -274,6 +424,16 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
   // Institution & B2B
   [PRIVATE_NAVIGATION.institutionDashboard]: {
     path: PRIVATE_NAVIGATION.institutionDashboard,
+    permissions: [PERMISSIONS.INSTITUTION_VIEW],
+    roles: [ROLES.INSTITUTION_ADMIN, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.SALES_AGENT],
+  },
+  [PRIVATE_NAVIGATION.institutionStudents]: {
+    path: PRIVATE_NAVIGATION.institutionStudents,
+    permissions: [PERMISSIONS.INSTITUTION_VIEW],
+    roles: [ROLES.INSTITUTION_ADMIN, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.SALES_AGENT],
+  },
+  [PRIVATE_NAVIGATION.institutionRankList]: {
+    path: PRIVATE_NAVIGATION.institutionRankList,
     permissions: [PERMISSIONS.INSTITUTION_VIEW],
     roles: [ROLES.INSTITUTION_ADMIN, ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.SALES_AGENT],
   },

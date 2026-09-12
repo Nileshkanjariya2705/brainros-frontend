@@ -29,7 +29,6 @@ import {
   useSuperAdminLanguagePreferencesQuery,
   useSuperAdminRevenueQuery,
   useSuperAdminConversionRateQuery,
-  useSuperAdminSalesAgentPerformanceQuery,
   useSuperAdminFiltersMetadataQuery,
   AnalyticsFilterParams,
 } from '../services/superAdminDashboard.service';
@@ -42,7 +41,6 @@ import { InstitutionAnalyticsTable } from '../components/InstitutionAnalyticsTab
 import { TargetAndLanguageCards } from '../components/TargetAndLanguageCards';
 import { RevenueAnalyticsSection } from '../components/RevenueAnalyticsSection';
 import { ConversionRateCard } from '../components/ConversionRateCard';
-import { SalesAgentPerformanceTable } from '../components/SalesAgentPerformanceTable';
 
 export const SuperAdminDashboardPage = () => {
   const [filters, setFilters] = useState<AnalyticsFilterParams>({
@@ -52,8 +50,8 @@ export const SuperAdminDashboardPage = () => {
   const [selectedDrilldownState, setSelectedDrilldownState] = useState<string>('');
   const [institutionPage, setInstitutionPage] = useState(1);
   const [institutionSearch, setInstitutionSearch] = useState('');
-  const [salesAgentPage, setSalesAgentPage] = useState(1);
-  const [salesAgentSearch, setSalesAgentSearch] = useState('');
+  const [_salesAgentPage, setSalesAgentPage] = useState(1);
+  const [_salesAgentSearch, setSalesAgentSearch] = useState('');
 
   // 1. Metadata Query for Dropdowns
   const { data: metadata, isLoading: isLoadingMeta } = useSuperAdminFiltersMetadataQuery();
@@ -75,12 +73,14 @@ export const SuperAdminDashboardPage = () => {
   const {
     data: stateRegistrations,
     isLoading: isLoadingStates,
+    isError: isErrorStates,
     refetch: refetchStates,
   } = useSuperAdminStateRegistrationsQuery(filters);
 
   const {
     data: districtRegistrations,
     isLoading: isLoadingDistricts,
+    isError: isErrorDistricts,
     refetch: refetchDistricts,
   } = useSuperAdminDistrictRegistrationsQuery({
     ...filters,
@@ -90,6 +90,7 @@ export const SuperAdminDashboardPage = () => {
   const {
     data: institutionRegistrations,
     isLoading: isLoadingInstitutions,
+    isError: isErrorInstitutions,
     refetch: refetchInstitutions,
   } = useSuperAdminInstitutionRegistrationsQuery({
     ...filters,
@@ -121,16 +122,6 @@ export const SuperAdminDashboardPage = () => {
     refetch: refetchConversion,
   } = useSuperAdminConversionRateQuery(filters);
 
-  const {
-    data: salesAgentPerformance,
-    isLoading: isLoadingSales,
-    refetch: refetchSales,
-  } = useSuperAdminSalesAgentPerformanceQuery({
-    ...filters,
-    page: salesAgentPage,
-    search: salesAgentSearch || undefined,
-  });
-
   const handleFilterChange = (newFilters: Partial<AnalyticsFilterParams>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
     setInstitutionPage(1);
@@ -156,7 +147,6 @@ export const SuperAdminDashboardPage = () => {
     refetchLanguages();
     refetchRevenue();
     refetchConversion();
-    refetchSales();
   };
 
   return (
@@ -440,12 +430,18 @@ export const SuperAdminDashboardPage = () => {
         onSelectState={(s) => setSelectedDrilldownState(s)}
         isLoadingStates={isLoadingStates}
         isLoadingDistricts={isLoadingDistricts}
+        isErrorStates={isErrorStates}
+        isErrorDistricts={isErrorDistricts}
+        onRetryStates={refetchStates}
+        onRetryDistricts={refetchDistricts}
       />
 
-      {/* ── 5. INSTITUTION-WISE REGISTRATIONS ────────────────────────────── */}
+      {/* ── 5. INSTITUTION-WISE REGISTRATIONS (FULL-WIDTH BAR CHART) ────────────────────────────── */}
       <InstitutionAnalyticsTable
         data={institutionRegistrations}
         isLoading={isLoadingInstitutions}
+        isError={isErrorInstitutions}
+        onRetry={refetchInstitutions}
         onSearchChange={(q) => {
           setInstitutionSearch(q);
           setInstitutionPage(1);
@@ -469,7 +465,7 @@ export const SuperAdminDashboardPage = () => {
       <ConversionRateCard data={conversionRate} isLoading={isLoadingConversion} />
 
       {/* ── 9. SALES AGENT PERFORMANCE ANALYTICS ────────────────────────────── */}
-      <SalesAgentPerformanceTable
+      {/* <SalesAgentPerformanceTable
         data={salesAgentPerformance}
         isLoading={isLoadingSales}
         onSearchChange={(q) => {
@@ -478,7 +474,7 @@ export const SuperAdminDashboardPage = () => {
         }}
         page={salesAgentPage}
         onPageChange={(p) => setSalesAgentPage(p)}
-      />
+      /> */}
 
       {/* ── 10. QUICK OPERATIONS SHORTCUTS ────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">

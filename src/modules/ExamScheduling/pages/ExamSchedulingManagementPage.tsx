@@ -45,8 +45,16 @@ const ExamSchedulingManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const routePrefix = location.pathname.startsWith('/super-admin')
-    ? '/super-admin'
+  const firstSegment = location.pathname.split('/')[1];
+  const routePrefix = [
+    'super-admin',
+    'admin',
+    'general-manager',
+    'manager',
+    'operator',
+    'staff',
+  ].includes(firstSegment)
+    ? `/${firstSegment}`
     : '/admin';
 
   const [exams, setExams] = useState<any[]>([]);
@@ -376,8 +384,16 @@ const ExamSchedulingManagementPage: React.FC = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const routePrefix = window.location.pathname.startsWith('/super-admin')
-                          ? '/super-admin'
+                        const firstSeg = window.location.pathname.split('/')[1];
+                        const routePrefix = [
+                          'super-admin',
+                          'admin',
+                          'general-manager',
+                          'manager',
+                          'operator',
+                          'staff',
+                        ].includes(firstSeg)
+                          ? `/${firstSeg}`
                           : '/admin';
                         navigate(`${routePrefix}/exam-manager/upload?activeExamId=${exam.id}`);
                       }}
@@ -558,8 +574,16 @@ const ExamSchedulingManagementPage: React.FC = () => {
                     <Button
                       size="sm"
                       onClick={() => {
-                        const routePrefix = window.location.pathname.startsWith('/super-admin')
-                          ? '/super-admin'
+                        const firstSeg = window.location.pathname.split('/')[1];
+                        const routePrefix = [
+                          'super-admin',
+                          'admin',
+                          'general-manager',
+                          'manager',
+                          'operator',
+                          'staff',
+                        ].includes(firstSeg)
+                          ? `/${firstSeg}`
                           : '/admin';
                         navigate(`${routePrefix}/exam-manager/upload?activeExamId=${exam.id}`);
                       }}

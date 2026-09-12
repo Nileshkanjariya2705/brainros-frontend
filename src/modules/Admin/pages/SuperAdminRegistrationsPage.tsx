@@ -670,7 +670,9 @@ export const SuperAdminRegistrationsPage: React.FC = () => {
           </button>
 
           {/* Dynamic Exam Target Options from DB */}
-          {filterOptions?.examTargets?.map((target) => {
+          {filterOptions?.examTargets
+            ?.filter((target) => ['JEE', 'NEET', 'CET'].includes(target.name?.toUpperCase().trim()))
+            ?.map((target) => {
             const isSelected =
               selectedExamTarget === target.id ||
               selectedExamTarget.toUpperCase() === target.name.toUpperCase();

@@ -137,7 +137,17 @@ export const useSuperAdminRegistrationFiltersQuery = (stateId?: string) => {
         '/super-admin/registrations/filter-options',
         { params: stateId ? { stateId } : undefined },
       );
-      return (res.data as any)?.data || res.data;
+      const data: RegistrationFilterOptions = (res.data as any)?.data || res.data;
+      const ALLOWED_EXAMS = ['JEE', 'NEET', 'CET'];
+      if (data && Array.isArray(data.examTargets)) {
+        return {
+          ...data,
+          examTargets: data.examTargets.filter((t) =>
+            ALLOWED_EXAMS.includes(t.name?.toUpperCase().trim()),
+          ),
+        };
+      }
+      return data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes cache for master data
   });

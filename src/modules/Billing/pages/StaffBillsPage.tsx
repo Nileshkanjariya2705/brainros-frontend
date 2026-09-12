@@ -77,6 +77,11 @@ const STATUS_CONFIG: Record<
     badgeColor: 'bg-rose-50 text-rose-700 border-rose-200',
     icon: XCircle,
   },
+  NOT_GENERATED: {
+    label: 'Not Generated',
+    badgeColor: 'bg-slate-100 text-slate-600 border-slate-200',
+    icon: Clock,
+  },
 };
 
 export const StaffBillsPage: React.FC = () => {
@@ -173,6 +178,7 @@ export const StaffBillsPage: React.FC = () => {
     onSuccess: (res) => {
       toast.success(res.message || 'Bill created successfully!');
       queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
+      queryClient.invalidateQueries({ queryKey: ['super-admin', 'revenue'] });
       setIsCreateModalOpen(false);
       setCreateForm({
         institutionId: '',
@@ -195,6 +201,7 @@ export const StaffBillsPage: React.FC = () => {
     onSuccess: (res) => {
       toast.success(res.message || 'Bill submitted to Super Admin for approval!');
       queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
+      queryClient.invalidateQueries({ queryKey: ['super-admin', 'revenue'] });
     },
     onError: (err: any) => {
       const msg = err.response?.data?.message || 'Failed to submit bill.';
@@ -206,7 +213,7 @@ export const StaffBillsPage: React.FC = () => {
   const handleDownloadPdf = async (bill: BillItem) => {
     try {
       toast.info('Preparing invoice PDF...');
-      await BillingApi.downloadBillPdf(bill.id, bill.billNumber);
+      await BillingApi.downloadBillPdf(bill.id, bill.billNumber || 'Invoice');
       toast.success('Invoice PDF downloaded!');
     } catch {
       toast.error('Failed to download invoice PDF.');
@@ -492,11 +499,13 @@ export const StaffBillsPage: React.FC = () => {
                       </td>
 
                       <td className="py-4 px-4 text-xs text-slate-600">
-                        {new Date(bill.billDate).toLocaleDateString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
+                        {bill.billDate
+                          ? new Date(bill.billDate).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })
+                          : 'Unbilled'}
                       </td>
 
                       <td className="py-4 px-4">
@@ -565,7 +574,7 @@ export const StaffBillsPage: React.FC = () => {
 
                           <button
                             type="button"
-                            onClick={() => openCreateBillForSchool(bill.institutionId)}
+                            onClick={() => openCreateBillForSchool(bill.institutionId || '')}
                             className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
                             title={`Generate invoice for ${bill.institution?.name}`}
                           >
@@ -801,7 +810,7 @@ export const StaffBillsPage: React.FC = () => {
               <div className="flex justify-between py-1 border-b border-slate-200/60">
                 <span className="text-slate-500">Bill Date:</span>
                 <span className="font-medium text-slate-800">
-                  {new Date(viewingBill.billDate).toLocaleDateString('en-IN')}
+                  {viewingBill.billDate ? new Date(viewingBill.billDate).toLocaleDateString('en-IN') : 'Unbilled'}
                 </span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200/60">
@@ -829,7 +838,7 @@ export const StaffBillsPage: React.FC = () => {
               <div className="flex justify-between py-1 border-b border-slate-200/60">
                 <span className="text-slate-500">Created By:</span>
                 <span className="font-medium text-slate-800">
-                  {viewingBill.createdBy.name || 'Staff User'} ({viewingBill.createdBy.mobileNumber})
+                  {viewingBill.createdBy?.name || 'Staff User'} {viewingBill.createdBy?.mobileNumber ? `(${viewingBill.createdBy.mobileNumber})` : ''}
                 </span>
               </div>
               {viewingBill.approvedBy && (

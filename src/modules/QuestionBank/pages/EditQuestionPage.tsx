@@ -33,7 +33,17 @@ const EditQuestionPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const routePrefix = location.pathname.startsWith('/super-admin') ? '/super-admin' : '/admin';
+  const firstSegment = location.pathname.split('/')[1];
+  const routePrefix = [
+    'super-admin',
+    'admin',
+    'general-manager',
+    'manager',
+    'operator',
+    'staff',
+  ].includes(firstSegment)
+    ? `/${firstSegment}`
+    : '/admin';
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

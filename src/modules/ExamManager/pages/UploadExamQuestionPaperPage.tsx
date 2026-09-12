@@ -29,8 +29,16 @@ export const UploadExamQuestionPaperPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const routePrefix = location.pathname.startsWith('/super-admin')
-    ? '/super-admin'
+  const firstSegment = location.pathname.split('/')[1];
+  const routePrefix = [
+    'super-admin',
+    'admin',
+    'general-manager',
+    'manager',
+    'operator',
+    'staff',
+  ].includes(firstSegment)
+    ? `/${firstSegment}`
     : '/admin';
 
   // ─── Exam Details State ───────────────────────────────────────────────────
@@ -429,11 +437,12 @@ export const UploadExamQuestionPaperPage: React.FC = () => {
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 z-10 text-[11px] uppercase tracking-wider font-bold text-slate-600">
                     <tr>
-                      <th className="p-3 pl-4">Row</th>
+                      <th className="p-3 pl-4">Q.No</th>
                       <th className="p-3">Question Statement</th>
-                      <th className="p-3">Subject / Chapter</th>
-                      <th className="p-3">Type</th>
-                      <th className="p-3">Options</th>
+                      <th className="p-3">Option A</th>
+                      <th className="p-3">Option B</th>
+                      <th className="p-3">Option C</th>
+                      <th className="p-3">Option D</th>
                       <th className="p-3 pr-4 text-center">Status</th>
                     </tr>
                   </thead>
@@ -456,22 +465,17 @@ export const UploadExamQuestionPaperPage: React.FC = () => {
                             </div>
                           )}
                         </td>
-                        <td className="p-3">
-                          <div className="font-bold text-slate-800">{row.subject}</div>
-                          {row.chapter && (
-                            <div className="text-[10px] text-slate-400">{row.chapter}</div>
-                          )}
+                        <td className="p-3 font-medium text-slate-700 max-w-[120px] truncate">
+                          {row.options.A || '-'}
                         </td>
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700">
-                            {row.questionType}
-                          </span>
+                        <td className="p-3 font-medium text-slate-700 max-w-[120px] truncate">
+                          {row.options.B || '-'}
                         </td>
-                        <td className="p-3">
-                          <div className="space-y-0.5 text-[11px] text-slate-600 max-w-xs truncate">
-                            {row.options.A && <div>A: {row.options.A}</div>}
-                            {row.options.B && <div>B: {row.options.B}</div>}
-                          </div>
+                        <td className="p-3 font-medium text-slate-700 max-w-[120px] truncate">
+                          {row.options.C || '-'}
+                        </td>
+                        <td className="p-3 font-medium text-slate-700 max-w-[120px] truncate">
+                          {row.options.D || '-'}
                         </td>
                         <td className="p-3 pr-4 text-center">
                           {row.isValid ? (

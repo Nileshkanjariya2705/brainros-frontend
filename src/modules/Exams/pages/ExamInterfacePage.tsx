@@ -248,6 +248,8 @@ const ExamInterfacePage = () => {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error' | 'syncing'>(
     'idle',
   );
+  const [isNavigatingNext, setIsNavigatingNext] = useState(false);
+  const [isSavingAndSubmitting, setIsSavingAndSubmitting] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true,
@@ -810,24 +812,63 @@ const ExamInterfacePage = () => {
 
   // ─── Toolbar Actions ──────────────────────────────────────────
   const handleSaveAndNext = async () => {
+    if (isNavigatingNext || isSavingAndSubmitting || isSubmitting) return;
+
     if (debounceSaveTimerRef.current) {
       clearTimeout(debounceSaveTimerRef.current);
     }
     const currentQ = questions[currentIdx];
     if (!currentQ) return;
 
-    const numVal =
-      numericalAnswer !== '' && !isNaN(Number(numericalAnswer)) ? Number(numericalAnswer) : null;
-    await persistAnswer({
-      examQuestionId: currentQ.examQuestionId,
-      selectedOptionId,
-      selectedOptions: selectedOptions.length > 0 ? selectedOptions : null,
-      numericalAnswer: numVal,
-      isMarkedForReview,
-    });
+    setIsNavigatingNext(true);
+    try {
+      const numVal =
+        numericalAnswer !== '' && !isNaN(Number(numericalAnswer)) ? Number(numericalAnswer) : null;
+      await persistAnswer({
+        examQuestionId: currentQ.examQuestionId,
+        selectedOptionId,
+        selectedOptions: selectedOptions.length > 0 ? selectedOptions : null,
+        numericalAnswer: numVal,
+        isMarkedForReview,
+      });
 
-    if (currentIdx < questions.length - 1) {
-      setCurrentIdx((prev) => prev + 1);
+      if (currentIdx < questions.length - 1) {
+        setCurrentIdx((prev) => prev + 1);
+      }
+    } catch (err: any) {
+      toast.error('Failed to save answer. Please try again.');
+    } finally {
+      setIsNavigatingNext(false);
+    }
+  };
+
+  const handleSaveAndSubmit = async () => {
+    if (isSavingAndSubmitting || isSubmitting || isNavigatingNext) return;
+
+    if (debounceSaveTimerRef.current) {
+      clearTimeout(debounceSaveTimerRef.current);
+    }
+    const currentQ = questions[currentIdx];
+    if (!currentQ) return;
+
+    setIsSavingAndSubmitting(true);
+    try {
+      const numVal =
+        numericalAnswer !== '' && !isNaN(Number(numericalAnswer)) ? Number(numericalAnswer) : null;
+      await persistAnswer({
+        examQuestionId: currentQ.examQuestionId,
+        selectedOptionId,
+        selectedOptions: selectedOptions.length > 0 ? selectedOptions : null,
+        numericalAnswer: numVal,
+        isMarkedForReview,
+      });
+
+      // Open existing submit confirmation dialog with up-to-date answer counts
+      setShowSubmitModal(true);
+    } catch (err: any) {
+      toast.error('Failed to save latest answer before submitting. Please retry.');
+    } finally {
+      setIsSavingAndSubmitting(false);
     }
   };
 
@@ -933,6 +974,7 @@ const ExamInterfacePage = () => {
   );
 
   const currentQuestion = questions[currentIdx];
+  const isLastQuestion = questions.length > 0 && currentIdx === questions.length - 1;
   const fontSizeClass = fontSize === 'sm' ? 'text-sm' : fontSize === 'lg' ? 'text-lg' : 'text-base';
 
   // Multilingual active translation derivation
@@ -1464,14 +1506,14 @@ const ExamInterfacePage = () => {
                   </button>
                 </div>
 
-                {/* Navigation (Desktop / Tablet lg+): Previous / Next / Save & Next */}
+                {/* Navigation (Desktop / Tablet lg+): Previous / Next / (Save & Next OR Save & Submit) */}
                 <div className="hidden lg:flex items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={handlePrevious}
-                    disabled={currentIdx === 0}
+                    disabled={currentIdx === 0 || isNavigatingNext || isSavingAndSubmitting || isSubmitting}
                     className="flex items-center gap-1 font-bold text-xs"
                   >
                     <ChevronLeft size={15} />
@@ -1484,6 +1526,7 @@ const ExamInterfacePage = () => {
                       variant="outline"
                       size="sm"
                       onClick={handleNext}
+                      disabled={isNavigatingNext || isSavingAndSubmitting || isSubmitting}
                       className="flex items-center gap-1 font-bold text-xs"
                     >
                       <span>Next</span>
@@ -1491,16 +1534,33 @@ const ExamInterfacePage = () => {
                     </Button>
                   )}
 
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    onClick={handleSaveAndNext}
-                    className="flex items-center gap-1.5 shadow-md shadow-indigo-200 font-extrabold text-xs"
-                  >
-                    <span>Save & Next</span>
-                    <ChevronRight size={15} />
-                  </Button>
+                  {!isLastQuestion ? (
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={handleSaveAndNext}
+                      isLoading={isNavigatingNext}
+                      disabled={isNavigatingNext || isSavingAndSubmitting || isSubmitting}
+                      className="flex items-center gap-1.5 shadow-md shadow-indigo-200 font-extrabold text-xs"
+                    >
+                      <span>{isNavigatingNext ? 'Loading…' : 'Save & Next'}</span>
+                      {!isNavigatingNext && <ChevronRight size={15} />}
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="success"
+                      size="sm"
+                      onClick={handleSaveAndSubmit}
+                      isLoading={isSavingAndSubmitting || isSubmitting}
+                      disabled={isSavingAndSubmitting || isSubmitting || isNavigatingNext}
+                      className="flex items-center gap-1.5 shadow-md shadow-emerald-200 bg-emerald-600 hover:bg-emerald-700 font-extrabold text-xs"
+                    >
+                      <Send size={13} />
+                      <span>{isSavingAndSubmitting || isSubmitting ? 'Submitting…' : 'Save & Submit'}</span>
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1514,7 +1574,7 @@ const ExamInterfacePage = () => {
             variant="outline"
             size="sm"
             onClick={handlePrevious}
-            disabled={currentIdx === 0}
+            disabled={currentIdx === 0 || isNavigatingNext || isSavingAndSubmitting || isSubmitting}
             className="flex items-center gap-1 font-bold text-xs px-2.5 py-1.5"
           >
             <ChevronLeft size={15} />
@@ -1530,16 +1590,33 @@ const ExamInterfacePage = () => {
             <span>Q {currentIdx + 1}/{questions.length}</span>
           </button>
 
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={handleSaveAndNext}
-            className="flex items-center gap-1.5 shadow-md shadow-indigo-200 font-extrabold text-xs px-3 py-1.5"
-          >
-            <span>Save & Next</span>
-            <ChevronRight size={15} />
-          </Button>
+          {!isLastQuestion ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={handleSaveAndNext}
+              isLoading={isNavigatingNext}
+              disabled={isNavigatingNext || isSavingAndSubmitting || isSubmitting}
+              className="flex items-center gap-1.5 shadow-md shadow-indigo-200 font-extrabold text-xs px-3 py-1.5"
+            >
+              <span>{isNavigatingNext ? 'Loading…' : 'Save & Next'}</span>
+              {!isNavigatingNext && <ChevronRight size={15} />}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="success"
+              size="sm"
+              onClick={handleSaveAndSubmit}
+              isLoading={isSavingAndSubmitting || isSubmitting}
+              disabled={isSavingAndSubmitting || isSubmitting || isNavigatingNext}
+              className="flex items-center gap-1.5 shadow-md shadow-emerald-200 bg-emerald-600 hover:bg-emerald-700 font-extrabold text-xs px-3 py-1.5"
+            >
+              <Send size={13} />
+              <span>{isSavingAndSubmitting || isSubmitting ? 'Submitting…' : 'Save & Submit'}</span>
+            </Button>
+          )}
         </div>
 
         {/* ── Question Palette Sidebar (Desktop) ─ */}

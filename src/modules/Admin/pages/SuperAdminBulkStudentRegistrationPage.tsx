@@ -38,8 +38,16 @@ import { WorkflowStepIndicator, type WorkflowStep } from '@/components/ui/Workfl
 export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
   const location = useLocation();
 
-  const routePrefix = location.pathname.startsWith('/super-admin')
-    ? '/super-admin'
+  const firstSegment = location.pathname.split('/')[1];
+  const routePrefix = [
+    'super-admin',
+    'admin',
+    'general-manager',
+    'manager',
+    'operator',
+    'staff',
+  ].includes(firstSegment)
+    ? `/${firstSegment}`
     : '/admin';
 
   const workflowSteps: WorkflowStep[] = [
@@ -289,8 +297,6 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
       class: row.data.class || '',
       examTarget: row.data.examTarget || '',
       preferredLanguage: row.data.preferredLanguage || '',
-      schoolCollege: row.data.schoolCollege || row.data.institutionName || '',
-      institutionId: row.data.institutionId || '',
     });
   };
 
@@ -693,6 +699,32 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
           {/* ── STEP 2: PREVIEW & STATS ── */}
           {currentStep === 'PREVIEW' && previewData && (
             <div className="space-y-6">
+              {/* Selected School Banner - Source of Truth */}
+              <div className="bg-slate-900 text-white p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm border border-slate-800">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-xl bg-indigo-600 flex items-center justify-center text-white flex-shrink-0 shadow-md">
+                    <Building2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-[11px] uppercase tracking-wider font-semibold text-indigo-300">
+                      Authoritative Target School / College (Source of Truth)
+                    </span>
+                    <h4 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                      {previewData.selectedSchool?.name || schools.find((s) => s.id === selectedSchoolId)?.name || previewData.upload?.institutionName || 'Selected School'}
+                      {(previewData.selectedSchool?.code || schools.find((s) => s.id === selectedSchoolId)?.code) && (
+                        <span className="text-xs bg-slate-800 text-indigo-200 border border-slate-700 px-2 py-0.5 rounded font-mono">
+                          {previewData.selectedSchool?.code || schools.find((s) => s.id === selectedSchoolId)?.code}
+                        </span>
+                      )}
+                    </h4>
+                  </div>
+                </div>
+                <div className="text-xs px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-semibold self-start sm:self-auto flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span>School Relationship Fixed & Bound</span>
+                </div>
+              </div>
+
               {/* Summary Metric Cards */}
               <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 <div className="p-3.5 min-[360px]:p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
@@ -788,7 +820,6 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                         <th className="px-4 py-3.5 w-14 text-center">Row</th>
                         <th className="px-4 py-3.5">Full Name</th>
                         <th className="px-4 py-3.5">Mobile</th>
-                        <th className="px-4 py-3.5">School / Center</th>
                         <th className="px-4 py-3.5">Class & Targets</th>
                         <th className="px-4 py-3.5">Status</th>
                         <th className="px-4 py-3.5">Validation Notes</th>
@@ -798,14 +829,14 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     <tbody className="divide-y divide-slate-100 font-medium">
                       {isLoadingPreview ? (
                         <tr>
-                          <td colSpan={8} className="py-12 text-center text-slate-500">
+                          <td colSpan={7} className="py-12 text-center text-slate-500">
                             <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
                             Loading preview rows...
                           </td>
                         </tr>
                       ) : previewData.rows.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="py-12 text-center text-slate-500">
+                          <td colSpan={7} className="py-12 text-center text-slate-500">
                             No rows match the selected filter.
                           </td>
                         </tr>
@@ -828,16 +859,6 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                             </td>
                             <td className="px-4 py-3 font-mono text-slate-700">
                               {row.data.mobile || row.data.phone || '—'}
-                            </td>
-                            <td className="px-4 py-3 text-slate-700">
-                              <div className="flex items-center gap-1.5">
-                                <Building2 className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
-                                <span className="truncate max-w-[150px]" title={row.data.institutionName || row.data.schoolCollege || 'Not specified'}>
-                                  {row.data.institutionName || row.data.schoolCollege || (
-                                    <span className="text-slate-400 italic">None</span>
-                                  )}
-                                </span>
-                              </div>
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex flex-wrap items-center gap-1">
@@ -1312,38 +1333,16 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  School / College / Institution *
-                </label>
-                <div className="space-y-2">
-                  <select
-                    value={editFormData.institutionId || ''}
-                    onChange={(e) => {
-                      const instId = e.target.value;
-                      const matched = schools.find((s) => s.id === instId);
-                      setEditFormData({
-                        ...editFormData,
-                        institutionId: instId,
-                        schoolCollege: matched ? matched.name : editFormData.schoolCollege,
-                      });
-                    }}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="">Select a registered B2B School (or type custom below)</option>
-                    {schools.map((school) => (
-                      <option key={school.id} value={school.id}>
-                        {school.name} ({school.code})
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    value={editFormData.schoolCollege || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, schoolCollege: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500"
-                    placeholder="School / College name"
-                  />
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <span className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                  Target School / College (Fixed for Upload)
+                </span>
+                <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                  <Building2 className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                  <span>
+                    {previewData?.selectedSchool?.name || schools.find((s) => s.id === selectedSchoolId)?.name || editingRow.data.schoolCollege || 'Selected School'}
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-normal italic ml-auto">(Locked context)</span>
                 </div>
               </div>
 

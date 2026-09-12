@@ -276,11 +276,13 @@ export const DashboardFilterBar: React.FC<DashboardFilterBarProps> = ({
             className="w-full text-xs font-medium rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-800 focus:bg-white focus:border-indigo-500 focus:outline-none transition"
           >
             <option value="">All Targets</option>
-            {metadata?.examTargets.map((et) => (
-              <option key={et.id} value={et.id}>
-                {et.name}
-              </option>
-            ))}
+            {metadata?.examTargets
+              ?.filter((et) => ['JEE', 'NEET', 'CET'].includes(et.name?.toUpperCase().trim()))
+              ?.map((et) => (
+                <option key={et.id} value={et.id}>
+                  {et.name}
+                </option>
+              ))}
           </select>
         </div>
 

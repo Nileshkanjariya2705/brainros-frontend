@@ -10,6 +10,10 @@ import StudentLayout from '@/components/layouts/StudentLayout';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
 import StaffLayout from '@/components/layouts/StaffLayout';
+import GeneralManagerLayout from '@/components/layouts/GeneralManagerLayout';
+import OperatorLayout from '@/components/layouts/OperatorLayout';
+import AccountantLayout from '@/components/layouts/AccountantLayout';
+import SalesAgentLayout from '@/components/layouts/SalesAgentLayout';
 import ParentLayout from '@/components/layouts/ParentLayout';
 import InstitutionLayout from '@/components/layouts/InstitutionLayout';
 import PageLoader from '@/components/feedback/PageLoader';
@@ -138,6 +142,12 @@ const PerformanceTrendsPage = lazyRoute(
 const ParentDashboardPage = lazyRoute(() => import('@/modules/Analysis/pages/ParentDashboardPage'));
 const InstitutionDashboardPage = lazyRoute(
   () => import('@/modules/Institution/pages/InstitutionDashboardPage'),
+);
+const InstitutionStudentsPage = lazyRoute(
+  () => import('@/modules/Institution/pages/InstitutionStudentsPage'),
+);
+const InstitutionRankListPage = lazyRoute(
+  () => import('@/modules/Institution/pages/InstitutionRankListPage'),
 );
 const BatchManagementPage = lazyRoute(
   () => import('@/modules/Institution/pages/BatchManagementPage'),
@@ -316,7 +326,7 @@ const adminRoutes: RouteObject[] = [
   {
     path: '/admin',
     element: (
-      <ProtectedRoute roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN]}>
+      <ProtectedRoute roles={[ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.GENERAL_MANAGER, ROLES.MANAGER]}>
         <AdminLayout />
       </ProtectedRoute>
     ),
@@ -747,7 +757,161 @@ const superAdminRoutes: RouteObject[] = [
 ];
 
 // ══════════════════════════════════════════════════════════════════════════
-// 5. STAFF ROLE DASHBOARD & ROUTES (/staff/*)
+// 5. GENERAL MANAGER ROLE DASHBOARD & ROUTES (/general-manager/*)
+// ══════════════════════════════════════════════════════════════════════════
+const generalManagerRoutes: RouteObject[] = [
+  {
+    path: '/general-manager',
+    element: (
+      <ProtectedRoute roles={[ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN]}>
+        <GeneralManagerLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: '', element: <Navigate to="dashboard" replace /> },
+      { path: 'dashboard', element: <StaffDashboardPage /> },
+      { path: 'students', element: <AdminStudentsPage /> },
+      { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
+      { path: 'schools', element: <AdminSchoolsPage /> },
+      { path: 'question-bank', element: <QuestionBankPage /> },
+      { path: 'chapters', element: <ChapterManagementPage /> },
+      { path: 'question-bank/create', element: <CreateQuestionPage /> },
+      { path: 'question-bank/import', element: <ImportQuestionsPage /> },
+      { path: 'question-bank/:id/edit', element: <EditQuestionPage /> },
+      { path: 'languages', element: <LanguageManagementPage /> },
+      { path: 'translations', element: <AdminTranslationManagementPage /> },
+      { path: 'languages/import', element: <ImportTranslationsPage /> },
+      { path: 'exam-blueprints', element: <ExamBlueprintManagementPage /> },
+      { path: 'exams', element: <ExamManagementPage /> },
+      { path: 'exam-scheduling', element: <ExamSchedulingManagementPage /> },
+      { path: 'exam-manager/upload', element: <UploadQuestionPaperPage /> },
+      { path: 'exams/:examId/question-paper/upload', element: <UploadExamQuestionPaperPage /> },
+      { path: 'exams/:examId/question-paper/view', element: <ViewQuestionPaperPage /> },
+      { path: 'exam-manager/answer-key', element: <AnswerKeyManagementPage /> },
+      { path: 'exam-manager/answer-key/:scheduleId', element: <AnswerKeyManagementPage /> },
+      { path: 'exam-manager/answer-key/:scheduleId/view', element: <ViewAnswerKeyPage /> },
+      { path: 'exams/:scheduleId/answer-key/view', element: <ViewAnswerKeyPage /> },
+      { path: 'answer-key', element: <AnswerKeyManagementPage /> },
+      { path: 'exam-manager/history', element: <ImportHistoryPage /> },
+      { path: 'completed-exams', element: <CompletedExamReportsPage /> },
+      { path: 'reports', element: <CompletedExamReportsPage /> },
+      { path: 'approvals', element: <AdminApprovalQueuePage /> },
+      { path: 'billing', element: <SuperAdminBillingPage /> },
+      { path: 'strategy-rules', element: <StrategyRuleManagementPage /> },
+      { path: 'leaderboard', element: <AdminLeaderboardPage /> },
+      { path: 'historical-datasets', element: <HistoricalDatasetsPage /> },
+      { path: 'audit-logs', element: <AdminAuditLogsPage /> },
+      { path: 'notifications', element: <AdminNotificationsPage /> },
+      { path: 'profile', element: <StudentProfilePage /> },
+    ],
+  },
+];
+
+// ══════════════════════════════════════════════════════════════════════════
+// 6. MANAGER ROLE DASHBOARD & ROUTES (/manager/* -> redirects to /admin/dashboard)
+// ══════════════════════════════════════════════════════════════════════════
+const managerRoutes: RouteObject[] = [
+  {
+    path: '/manager/*',
+    element: <Navigate to="/admin/dashboard" replace />,
+  },
+];
+
+// ══════════════════════════════════════════════════════════════════════════
+// 7. OPERATOR ROLE DASHBOARD & ROUTES (/operator/*)
+// ══════════════════════════════════════════════════════════════════════════
+const operatorRoutes: RouteObject[] = [
+  {
+    path: '/operator',
+    element: (
+      <ProtectedRoute roles={[ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN]}>
+        <OperatorLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: '', element: <Navigate to="dashboard" replace /> },
+      { path: 'dashboard', element: <StaffDashboardPage /> },
+      { path: 'students', element: <AdminStudentsPage /> },
+      { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
+      { path: 'schools', element: <AdminSchoolsPage /> },
+      { path: 'question-bank', element: <QuestionBankPage /> },
+      { path: 'chapters', element: <ChapterManagementPage /> },
+      { path: 'question-bank/create', element: <CreateQuestionPage /> },
+      { path: 'question-bank/import', element: <ImportQuestionsPage /> },
+      { path: 'question-bank/:id/edit', element: <EditQuestionPage /> },
+      { path: 'languages', element: <LanguageManagementPage /> },
+      { path: 'translations', element: <AdminTranslationManagementPage /> },
+      { path: 'languages/import', element: <ImportTranslationsPage /> },
+      { path: 'exam-blueprints', element: <ExamBlueprintManagementPage /> },
+      { path: 'exams', element: <ExamManagementPage /> },
+      { path: 'exam-scheduling', element: <ExamSchedulingManagementPage /> },
+      { path: 'exams/pending-paper', element: <OperatorScheduledExamsPage /> },
+      { path: 'exam-manager/upload', element: <UploadQuestionPaperPage /> },
+      { path: 'exams/:examId/question-paper/upload', element: <UploadExamQuestionPaperPage /> },
+      { path: 'exams/:examId/question-paper/view', element: <ViewQuestionPaperPage /> },
+      { path: 'exam-manager/answer-key', element: <AnswerKeyManagementPage /> },
+      { path: 'exam-manager/answer-key/:scheduleId', element: <AnswerKeyManagementPage /> },
+      { path: 'exam-manager/answer-key/:scheduleId/view', element: <ViewAnswerKeyPage /> },
+      { path: 'exams/:scheduleId/answer-key/view', element: <ViewAnswerKeyPage /> },
+      { path: 'answer-key', element: <AnswerKeyManagementPage /> },
+      { path: 'exam-manager/history', element: <ImportHistoryPage /> },
+      { path: 'completed-exams', element: <CompletedExamReportsPage /> },
+      { path: 'reports', element: <CompletedExamReportsPage /> },
+      { path: 'approvals', element: <AdminApprovalQueuePage /> },
+      { path: 'billing', element: <SuperAdminBillingPage /> },
+      { path: 'leaderboard', element: <AdminLeaderboardPage /> },
+      { path: 'notifications', element: <AdminNotificationsPage /> },
+      { path: 'profile', element: <StudentProfilePage /> },
+    ],
+  },
+];
+
+// ══════════════════════════════════════════════════════════════════════════
+// 8. ACCOUNTANT ROLE DASHBOARD & ROUTES (/accountant/*)
+// ══════════════════════════════════════════════════════════════════════════
+const accountantRoutes: RouteObject[] = [
+  {
+    path: '/accountant',
+    element: (
+      <ProtectedRoute roles={[ROLES.ACCOUNTANT, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN]}>
+        <AccountantLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: '', element: <Navigate to="dashboard" replace /> },
+      { path: 'dashboard', element: <StaffDashboardPage /> },
+      { path: 'billing', element: <SuperAdminBillingPage /> },
+      { path: 'reports', element: <CompletedExamReportsPage /> },
+      { path: 'notifications', element: <AdminNotificationsPage /> },
+      { path: 'profile', element: <StudentProfilePage /> },
+    ],
+  },
+];
+
+// ══════════════════════════════════════════════════════════════════════════
+// 9. SALES AGENT ROLE DASHBOARD & ROUTES (/sales-agent/*)
+// ══════════════════════════════════════════════════════════════════════════
+const salesAgentRoutes: RouteObject[] = [
+  {
+    path: '/sales-agent',
+    element: (
+      <ProtectedRoute roles={[ROLES.SALES_AGENT, ROLES.SUPER_ADMIN]}>
+        <SalesAgentLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: '', element: <Navigate to="dashboard" replace /> },
+      { path: 'dashboard', element: <InstitutionDashboardPage /> },
+      { path: 'schools', element: <AdminSchoolsPage /> },
+      { path: 'reports', element: <ReportsPage /> },
+      { path: 'notifications', element: <AdminNotificationsPage /> },
+      { path: 'profile', element: <StudentProfilePage /> },
+    ],
+  },
+];
+
+// ══════════════════════════════════════════════════════════════════════════
+// 10. STAFF ROLE DASHBOARD & ROUTES (/staff/*)
 // ══════════════════════════════════════════════════════════════════════════
 const staffRoutes: RouteObject[] = [
   {
@@ -776,6 +940,7 @@ const staffRoutes: RouteObject[] = [
       { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
       { path: 'answer-key', element: <AnswerKeyManagementPage /> },
       { path: 'question-bank', element: <QuestionBankPage /> },
+      { path: 'translations', element: <AdminTranslationManagementPage /> },
       { path: 'exams', element: <ExamManagementPage /> },
       { path: 'reports', element: <CompletedExamReportsPage /> },
       { path: 'notifications', element: <AdminNotificationsPage /> },
@@ -785,7 +950,7 @@ const staffRoutes: RouteObject[] = [
 ];
 
 // ══════════════════════════════════════════════════════════════════════════
-// 6. PARENT ROLE DASHBOARD & ROUTES (/parent/*)
+// 11. PARENT ROLE DASHBOARD & ROUTES (/parent/*)
 // ══════════════════════════════════════════════════════════════════════════
 const parentRoutes: RouteObject[] = [
   {
@@ -811,7 +976,7 @@ const parentRoutes: RouteObject[] = [
 ];
 
 // ══════════════════════════════════════════════════════════════════════════
-// 6. INSTITUTION & B2B PORTAL DASHBOARD & ROUTES (/institution/*)
+// 12. INSTITUTION & B2B PORTAL DASHBOARD & ROUTES (/institution/*)
 // ══════════════════════════════════════════════════════════════════════════
 const institutionRoutes: RouteObject[] = [
   {
@@ -826,6 +991,8 @@ const institutionRoutes: RouteObject[] = [
     children: [
       { path: '', element: <Navigate to="dashboard" replace /> },
       { path: 'dashboard', element: <InstitutionDashboardPage /> },
+      { path: 'students', element: <InstitutionStudentsPage /> },
+      { path: 'rank-list', element: <InstitutionRankListPage /> },
       { path: 'batches', element: <BatchManagementPage /> },
       { path: 'bulk-upload', element: <Navigate to="/institution/batches" replace /> },
       { path: 'reports', element: <ReportsPage /> },
@@ -835,7 +1002,7 @@ const institutionRoutes: RouteObject[] = [
 ];
 
 // ══════════════════════════════════════════════════════════════════════════
-// 7. LEGACY / SHARED ROUTES (Backward Compatibility + Direct Links)
+// 13. LEGACY / SHARED ROUTES (Backward Compatibility + Direct Links)
 // ══════════════════════════════════════════════════════════════════════════
 const legacyAndSharedRoutes: RouteObject[] = [
   // Legacy /dashboard -> routes to role-specific dashboard
@@ -913,7 +1080,7 @@ const legacyAndSharedRoutes: RouteObject[] = [
 ];
 
 // ══════════════════════════════════════════════════════════════════════════
-// 8. FULL-SCREEN DISTRACTION-FREE EXAM PORTAL
+// 14. FULL-SCREEN DISTRACTION-FREE EXAM PORTAL
 // ══════════════════════════════════════════════════════════════════════════
 const protectedFullScreenRoutes: RouteObject[] = [
   {
@@ -930,7 +1097,7 @@ const protectedFullScreenRoutes: RouteObject[] = [
 ];
 
 // ══════════════════════════════════════════════════════════════════════════
-// 9. MASTER ROUTER
+// 15. MASTER ROUTER
 // ══════════════════════════════════════════════════════════════════════════
 const router = createBrowserRouter([
   {
@@ -950,6 +1117,11 @@ const router = createBrowserRouter([
       ...studentRoutes,
       ...adminRoutes,
       ...superAdminRoutes,
+      ...generalManagerRoutes,
+      ...managerRoutes,
+      ...operatorRoutes,
+      ...accountantRoutes,
+      ...salesAgentRoutes,
       ...staffRoutes,
       ...parentRoutes,
       ...institutionRoutes,

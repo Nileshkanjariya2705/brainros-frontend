@@ -24,8 +24,16 @@ export const ViewAnswerKeyPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const routePrefix = location.pathname.startsWith('/super-admin')
-    ? '/super-admin'
+  const firstSegment = location.pathname.split('/')[1];
+  const routePrefix = [
+    'super-admin',
+    'admin',
+    'general-manager',
+    'manager',
+    'operator',
+    'staff',
+  ].includes(firstSegment)
+    ? `/${firstSegment}`
     : '/admin';
 
   const { getQuestions, isLoading, error } = useAnswerKeyAPI();

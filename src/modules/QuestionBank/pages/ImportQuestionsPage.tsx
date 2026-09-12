@@ -44,8 +44,16 @@ import Button from '@/components/ui/Button';
 export const ImportQuestionsPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const routePrefix = location.pathname.startsWith('/super-admin')
-    ? '/super-admin'
+  const firstSegment = location.pathname.split('/')[1];
+  const routePrefix = [
+    'super-admin',
+    'admin',
+    'general-manager',
+    'manager',
+    'operator',
+    'staff',
+  ].includes(firstSegment)
+    ? `/${firstSegment}`
     : '/admin';
 
   // ─── Step State: 1: Upload, 2: Preview & Validation, 3: Confirmation, 4: Result ──

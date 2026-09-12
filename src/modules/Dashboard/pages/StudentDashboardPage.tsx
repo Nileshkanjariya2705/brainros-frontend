@@ -591,7 +591,9 @@ export const StudentDashboardPage: React.FC = () => {
             </span>
           </div>
           <span className="text-[11px] font-semibold text-emerald-600 mt-1 block">
-            {perf ? `${perf.correctCount} Correct / ${perf.incorrectCount} Wrong` : 'Pending'}
+            {perf && (perf.correctCount !== undefined || (perf as any).correctAnswers !== undefined)
+              ? `${perf.correctCount ?? (perf as any).correctAnswers ?? 0} Correct / ${perf.incorrectCount ?? (perf as any).wrongAnswers ?? 0} Wrong`
+              : 'Pending diagnostic'}
           </span>
         </div>
 

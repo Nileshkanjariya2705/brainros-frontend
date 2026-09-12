@@ -38,8 +38,17 @@ export const handleNotificationClick = async ({
     return;
   }
 
-  const isSuperAdmin = window.location.pathname.startsWith('/super-admin');
-  const adminPrefix = isSuperAdmin ? '/super-admin' : '/admin';
+  const firstSeg = window.location.pathname.split('/')[1];
+  const adminPrefix = [
+    'super-admin',
+    'admin',
+    'general-manager',
+    'manager',
+    'operator',
+    'staff',
+  ].includes(firstSeg)
+    ? `/${firstSeg}`
+    : '/admin';
 
   // 2. Resolve target route dynamically from structured metadata
   const entityType = data?.entityType?.toUpperCase();

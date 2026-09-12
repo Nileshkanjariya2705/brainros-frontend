@@ -9,14 +9,15 @@ export type BillStatus =
   | 'GENERATED'
   | 'SENT'
   | 'PAID'
-  | 'OVERDUE';
+  | 'OVERDUE'
+  | 'NOT_GENERATED';
 
 export type EmailDeliveryStatus = 'IDLE' | 'QUEUED' | 'PROCESSING' | 'SENT' | 'FAILED';
 
 export interface BillItem {
   id: string;
-  billNumber: string;
-  institutionId: string;
+  billNumber?: string | null;
+  institutionId?: string;
   institution: {
     id: string;
     name: string;
@@ -26,7 +27,7 @@ export interface BillItem {
     address?: string | null;
     city?: string | null;
   };
-  billDate: string;
+  billDate?: string | null;
   billingMonth?: number | null;
   billingYear?: number | null;
   billingPeriod?: string | null;
@@ -37,18 +38,19 @@ export interface BillItem {
   tax: number;
   totalAmount: number;
   status: BillStatus;
+  isUnbilled?: boolean;
   rejectionReason?: string | null;
   emailStatus: EmailDeliveryStatus;
   emailFailedReason?: string | null;
-  createdById: string;
-  createdBy: {
+  createdById?: string | null;
+  createdBy?: {
     id: string;
     name: string | null;
     mobileNumber: string;
     email: string | null;
     role?: string;
     roles?: string[];
-  };
+  } | null;
   approvedById?: string | null;
   approvedBy?: {
     id: string;
@@ -58,7 +60,7 @@ export interface BillItem {
   approvedAt?: string | null;
   sentAt?: string | null;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
 
 export interface CreateBillPayload {
@@ -101,6 +103,7 @@ export const BillingApi = {
     search?: string;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
+    includeUnbilled?: boolean;
   }) => {
     const res = await Axios.get('/billing/bills', { params });
     return res.data;

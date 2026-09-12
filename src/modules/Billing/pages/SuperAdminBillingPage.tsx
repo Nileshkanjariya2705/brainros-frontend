@@ -31,6 +31,7 @@ import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
 import { toast } from '@/utils/toast';
 import { useJobProgress } from '@/hooks/useJobProgress';
+import { useRole } from '@/modules/Auth/auth-access/useRole';
 
 /* ── WebSocket Live Job Progress Modal for Bill Email Dispatch ───────────── */
 interface BillEmailProgressModalProps {
@@ -161,6 +162,7 @@ const BulkInvoiceProgressModal: React.FC<BulkInvoiceProgressModalProps> = ({ job
 
 export const SuperAdminBillingPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const { isSuperAdmin, isAccountant, activeRoleMeta } = useRole();
 
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
@@ -181,6 +183,9 @@ export const SuperAdminBillingPage: React.FC = () => {
   const [search, setSearch] = useState<string>('');
   const [page, setPage] = useState<number>(1);
   const [pageSize] = useState<number>(15);
+
+  // Single school row generation loading state
+  const [generatingSchoolId, setGeneratingSchoolId] = useState<string | null>(null);
 
   // Main View Mode (Invoices vs Schools Directory)
   const [mainTab, setMainTab] = useState<'INVOICES' | 'SCHOOLS'>('INVOICES');
@@ -240,14 +245,32 @@ export const SuperAdminBillingPage: React.FC = () => {
 
   const openGenerateInvoiceForSchool = (schoolId: string) => {
     setGenSchoolId(schoolId);
-    setGenMonth(lastMonth);
-    setGenYear(lastMonthYear);
+    setGenMonth(selectedMonth ? Number(selectedMonth) : lastMonth);
+    setGenYear(selectedYear ? Number(selectedYear) : lastMonthYear);
     setIsGenerateModalOpen(true);
+  };
+
+  const handleGenerateSingleSchoolInvoice = (schoolId: string) => {
+    const month = selectedMonth ? Number(selectedMonth) : lastMonth;
+    const year = selectedYear ? Number(selectedYear) : lastMonthYear;
+    setGeneratingSchoolId(schoolId);
+    generateMutation.mutate(
+      { institutionId: schoolId, billingMonth: month, billingYear: year },
+      {
+        onSettled: () => setGeneratingSchoolId(null),
+      },
+    );
+  };
+
+  const handleGenerateAllInvoices = () => {
+    const month = selectedMonth ? Number(selectedMonth) : lastMonth;
+    const year = selectedYear ? Number(selectedYear) : lastMonthYear;
+    generateMutation.mutate({ generateAll: true, billingMonth: month, billingYear: year });
   };
 
   const currentPricing = filterOptions.currentPrice ?? 300;
 
-  // 2. Fetch Invoices List (Server-side filtering, sorting createdAt DESC)
+  // 2. Fetch Invoices List (Server-side filtering, sorting createdAt DESC, includes unbilled school overview)
   const queryParams = useMemo(() => ({
     page,
     limit: pageSize,
@@ -256,6 +279,7 @@ export const SuperAdminBillingPage: React.FC = () => {
     institutionId: selectedSchool || undefined,
     status: selectedStatus === 'ALL' ? undefined : selectedStatus,
     search: search.trim() || undefined,
+    includeUnbilled: true,
     sortBy: 'createdAt',
     sortOrder: 'desc' as const,
   }), [page, pageSize, selectedMonth, selectedYear, selectedSchool, selectedStatus, search]);
@@ -311,6 +335,7 @@ export const SuperAdminBillingPage: React.FC = () => {
       toast.success(res.message || 'Invoice generation initiated successfully!');
       queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['billing-filter-options'] });
+      queryClient.invalidateQueries({ queryKey: ['super-admin', 'revenue'] });
       setIsGenerateModalOpen(false);
 
       if (res.data?.jobId) {
@@ -361,7 +386,7 @@ export const SuperAdminBillingPage: React.FC = () => {
   const handleDownloadPdf = async (bill: BillItem) => {
     try {
       toast.info('Compiling official invoice PDF...');
-      await BillingApi.downloadBillPdf(bill.id, bill.billNumber);
+      await BillingApi.downloadBillPdf(bill.id, bill.billNumber || 'Invoice');
       toast.success('Invoice PDF downloaded!');
     } catch {
       toast.error('Failed to download invoice PDF.');
@@ -417,7 +442,7 @@ export const SuperAdminBillingPage: React.FC = () => {
                 Institutional Invoices
               </h1>
               <span className="px-2.5 py-0.5 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full">
-                Super Admin
+                {isSuperAdmin ? 'Super Admin' : isAccountant ? 'Accountant' : (activeRoleMeta?.label || 'Staff')}
               </span>
             </div>
             <p className="text-sm text-slate-500 mt-0.5">
@@ -438,46 +463,34 @@ export const SuperAdminBillingPage: React.FC = () => {
                 <span className="text-xs font-normal text-slate-500 font-sans">/ student / month</span>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setNewPricingRate(currentPricing);
-                setIsPricingModalOpen(true);
-              }}
-              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition border border-transparent hover:border-slate-200"
-              title="Configure Billing Rate"
-            >
-              <Settings size={16} />
-            </button>
+            {isSuperAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  setNewPricingRate(currentPricing);
+                  setIsPricingModalOpen(true);
+                }}
+                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition border border-transparent hover:border-slate-200"
+                title="Configure Billing Rate"
+              >
+                <Settings size={16} />
+              </button>
+            )}
           </div>
 
           <Button
             size="sm"
-            onClick={() => {
-              setGenSchoolId('ALL');
-              setGenMonth(lastMonth);
-              setGenYear(lastMonthYear);
-              setIsGenerateModalOpen(true);
-            }}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-xs font-semibold"
-            title={`Generate invoices for all schools for last month (${lastMonthName} ${lastMonthYear})`}
+            onClick={handleGenerateAllInvoices}
+            disabled={generateMutation.isPending}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 shadow-md font-bold px-4 py-2 text-sm"
+            title="Generate invoices for all eligible schools for selected month"
           >
-            <Zap size={15} />
-            Generate Last Month Invoices
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => {
-              setGenSchoolId('ALL');
-              setGenMonth(currentMonth);
-              setGenYear(currentYear);
-              setIsGenerateModalOpen(true);
-            }}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 shadow-xs"
-          >
-            <PlusCircle size={16} />
-            Generate Invoices
+            {generateMutation.isPending && !generatingSchoolId ? (
+              <RefreshCw size={15} className="animate-spin" />
+            ) : (
+              <Zap size={15} />
+            )}
+            Generate All Invoices
           </Button>
 
           <Button
@@ -913,14 +926,16 @@ export const SuperAdminBillingPage: React.FC = () => {
                       {/* Invoice Number */}
                       <td className="py-4 px-4 sm:px-6">
                         <div className="font-bold text-slate-900 font-mono">
-                          {bill.billNumber}
+                          {bill.billNumber || '—'}
                         </div>
                         <div className="text-[11px] text-slate-400">
-                          {new Date(bill.createdAt).toLocaleDateString('en-IN', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
+                          {bill.createdAt
+                            ? new Date(bill.createdAt).toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })
+                            : 'Unbilled'}
                         </div>
                       </td>
 
@@ -965,7 +980,9 @@ export const SuperAdminBillingPage: React.FC = () => {
                       <td className="py-4 px-4">
                         <span
                           className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                            bill.status === 'GENERATED'
+                            bill.status === 'NOT_GENERATED'
+                              ? 'bg-slate-100 text-slate-600 border border-slate-200'
+                              : bill.status === 'GENERATED'
                               ? 'bg-blue-50 text-blue-700 border border-blue-200'
                               : bill.status === 'SENT'
                               ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
@@ -982,7 +999,9 @@ export const SuperAdminBillingPage: React.FC = () => {
                         >
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${
-                              bill.status === 'GENERATED'
+                              bill.status === 'NOT_GENERATED'
+                                ? 'bg-slate-400'
+                                : bill.status === 'GENERATED'
                                 ? 'bg-blue-500'
                                 : bill.status === 'SENT'
                                 ? 'bg-indigo-500'
@@ -997,13 +1016,15 @@ export const SuperAdminBillingPage: React.FC = () => {
                                 : 'bg-amber-500'
                             }`}
                           />
-                          {bill.status}
+                          {bill.status === 'NOT_GENERATED' ? 'Not Generated' : bill.status}
                         </span>
                       </td>
 
                       {/* Email Status */}
                       <td className="py-4 px-4">
-                        {bill.emailStatus === 'SENT' ? (
+                        {bill.status === 'NOT_GENERATED' ? (
+                          <span className="text-xs text-slate-400">—</span>
+                        ) : bill.emailStatus === 'SENT' ? (
                           <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
                             <CheckCircle2 size={12} />
                             Sent
@@ -1040,75 +1061,94 @@ export const SuperAdminBillingPage: React.FC = () => {
                       {/* Actions */}
                       <td className="py-4 px-4 sm:px-6 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* View Modal Action */}
-                          <button
-                            type="button"
-                            onClick={() => setViewingInvoice(bill)}
-                            className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                            title="View Invoice"
-                          >
-                            <Eye size={16} />
-                          </button>
-
-                          {/* Download PDF Action */}
-                          <button
-                            type="button"
-                            onClick={() => handleDownloadPdf(bill)}
-                            className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
-                            title="Download PDF"
-                          >
-                            <Download size={16} />
-                          </button>
-
-                          {/* Quick Generate Invoice for this School */}
-                          <button
-                            type="button"
-                            onClick={() => openGenerateInvoiceForSchool(bill.institutionId)}
-                            className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
-                            title={`Generate new invoice for ${bill.institution?.name}`}
-                          >
-                            <Zap size={16} />
-                          </button>
-
-                          {/* Send Email Action */}
-                          {isGeneratedOrApproved && (
+                          {bill.status === 'NOT_GENERATED' ? (
                             <Button
                               size="sm"
-                              variant="outline"
-                              onClick={() => setSendingInvoice(bill)}
-                              disabled={bill.emailStatus === 'PROCESSING' || bill.emailStatus === 'QUEUED'}
-                              className="text-xs py-1 px-2.5 flex items-center gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50 font-semibold"
-                              title="Send Invoice to School via Email"
+                              onClick={() => handleGenerateSingleSchoolInvoice(bill.institution.id)}
+                              disabled={generatingSchoolId === bill.institution.id || generateMutation.isPending}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 text-xs shadow-xs ml-auto"
+                              title={`Generate Invoice for ${bill.institution?.name}`}
                             >
-                              <Mail size={12} />
-                              {bill.emailStatus === 'SENT' ? 'Resend' : 'Send'}
+                              {generatingSchoolId === bill.institution.id ? (
+                                <RefreshCw size={13} className="animate-spin" />
+                              ) : (
+                                <Zap size={13} />
+                              )}
+                              Generate Invoice
                             </Button>
-                          )}
-
-                          {/* Legacy Approve/Reject Actions */}
-                          {isPending && (
+                          ) : (
                             <>
-                              <Button
-                                size="sm"
-                                onClick={() => approveMutation.mutate(bill.id)}
-                                disabled={approveMutation.isPending}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-1 px-2.5 flex items-center gap-1 font-semibold"
-                                title="Approve Bill"
+                              {/* View Modal Action */}
+                              <button
+                                type="button"
+                                onClick={() => setViewingInvoice(bill)}
+                                className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                title="View Invoice"
                               >
-                                <Check size={12} />
-                                Approve
-                              </Button>
+                                <Eye size={16} />
+                              </button>
 
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setRejectingBill(bill)}
-                                className="border-rose-300 text-rose-700 hover:bg-rose-50 text-xs py-1 px-2.5 flex items-center gap-1"
-                                title="Reject Bill"
+                              {/* Download PDF Action */}
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadPdf(bill)}
+                                className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+                                title="Download PDF"
                               >
-                                <X size={12} />
-                                Reject
-                              </Button>
+                                <Download size={16} />
+                              </button>
+
+                              {/* Quick Generate Invoice for this School */}
+                              <button
+                                type="button"
+                                onClick={() => openGenerateInvoiceForSchool(bill.institution.id)}
+                                className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
+                                title={`Generate new invoice for ${bill.institution?.name}`}
+                              >
+                                <Zap size={16} />
+                              </button>
+
+                              {/* Send Email Action */}
+                              {isGeneratedOrApproved && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setSendingInvoice(bill)}
+                                  disabled={bill.emailStatus === 'PROCESSING' || bill.emailStatus === 'QUEUED'}
+                                  className="text-xs py-1 px-2.5 flex items-center gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50 font-semibold"
+                                  title="Send Invoice to School via Email"
+                                >
+                                  <Mail size={12} />
+                                  {bill.emailStatus === 'SENT' ? 'Resend' : 'Send'}
+                                </Button>
+                              )}
+
+                              {/* Legacy Approve/Reject Actions */}
+                              {isPending && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => approveMutation.mutate(bill.id)}
+                                    disabled={approveMutation.isPending}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs py-1 px-2.5 flex items-center gap-1 font-semibold"
+                                    title="Approve Bill"
+                                  >
+                                    <Check size={12} />
+                                    Approve
+                                  </Button>
+
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setRejectingBill(bill)}
+                                    className="border-rose-300 text-rose-700 hover:bg-rose-50 text-xs py-1 px-2.5 flex items-center gap-1"
+                                    title="Reject Bill"
+                                  >
+                                    <X size={12} />
+                                    Reject
+                                  </Button>
+                                </>
+                              )}
                             </>
                           )}
                         </div>
@@ -1485,11 +1525,13 @@ export const SuperAdminBillingPage: React.FC = () => {
                 </div>
                 <div className="text-slate-600">
                   Invoice Date:{' '}
-                  {new Date(viewingInvoice.billDate).toLocaleDateString('en-IN', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
+                  {viewingInvoice.billDate
+                    ? new Date(viewingInvoice.billDate).toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                    : 'Unbilled'}
                 </div>
                 <div className="text-slate-600">
                   Status: <strong className="text-slate-900">{viewingInvoice.status}</strong>

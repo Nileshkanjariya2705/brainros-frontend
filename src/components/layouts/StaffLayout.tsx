@@ -10,8 +10,8 @@ const StaffLayout = () => {
     theme: ROLE_THEMES.STAFF,
     menuGroups: STAFF_MENU_GROUPS,
     dashboardPath: PRIVATE_NAVIGATION.staffDashboard,
-    notificationsPath: PRIVATE_NAVIGATION.superAdminNotifications,
-    profilePath: PRIVATE_NAVIGATION.superAdminProfile,
+    notificationsPath: PRIVATE_NAVIGATION.staffNotifications,
+    profilePath: PRIVATE_NAVIGATION.staffProfile,
   };
 
   return <RoleLayoutShell config={config} />;

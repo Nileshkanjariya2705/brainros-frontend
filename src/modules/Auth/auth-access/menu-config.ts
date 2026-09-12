@@ -8,9 +8,7 @@ import {
   Sliders,
   CalendarClock,
   Globe2,
-  Compass,
   Trophy,
-  Sparkles,
   ShieldAlert,
   ShieldCheck,
   Building2,
@@ -170,6 +168,7 @@ export const MENU_GROUPS: MenuGroupConfig[] = [
         icon: TrendingUp,
         permissions: [PERMISSIONS.ANALYSIS_VIEW, PERMISSIONS.TRENDS_VIEW],
       },
+      /*
       {
         key: 'strategy-rules',
         label: 'Strategy Rules',
@@ -178,6 +177,7 @@ export const MENU_GROUPS: MenuGroupConfig[] = [
         permissions: [PERMISSIONS.STRATEGY_VIEW],
         roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
       },
+      */
       {
         key: 'leaderboard',
         label: 'Leaderboard',
@@ -185,6 +185,7 @@ export const MENU_GROUPS: MenuGroupConfig[] = [
         icon: Trophy,
         permissions: [PERMISSIONS.RANK_VIEW],
       },
+      /*
       {
         key: 'historical-datasets',
         label: 'Historical Datasets',
@@ -193,6 +194,7 @@ export const MENU_GROUPS: MenuGroupConfig[] = [
         permissions: [PERMISSIONS.ANALYSIS_VIEW],
         roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
       },
+      */
     ],
   },
 

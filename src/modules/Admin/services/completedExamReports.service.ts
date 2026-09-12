@@ -57,6 +57,9 @@ export interface AttendeeItem {
   studentCode: string;
   email: string;
   phone?: string;
+  institutionId?: string | null;
+  institutionName?: string | null;
+  institutionEmail?: string | null;
   attemptStatus: string;
   startedAt?: string;
   submittedAt?: string;
@@ -222,6 +225,19 @@ export const completedExamReportsService = {
   ): Promise<QueueEmailResult> {
     const response = await Axios.post(
       `/admin/completed-exams/${examId}/attempts/${attemptId}/send-report`,
+    );
+    return response.data?.data || response.data;
+  },
+
+  /**
+   * Queue PDF report generation and email delivery to student's Institute via BullMQ
+   */
+  async sendReportToInstitute(
+    examId: string,
+    attemptId: string,
+  ): Promise<QueueEmailResult> {
+    const response = await Axios.post(
+      `/admin/completed-exams/${examId}/attempts/${attemptId}/send-report-to-institute`,
     );
     return response.data?.data || response.data;
   },

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
+  Building2,
   Mail,
   Send,
   Search,
@@ -58,10 +59,12 @@ export const CompletedExamReportsPage: React.FC = () => {
 
   // Email Confirmation & Pre-Send Inspection State
   const [emailConfirmTarget, setEmailConfirmTarget] = useState<AttendeeItem | null>(null);
+  const [instituteConfirmTarget, setInstituteConfirmTarget] = useState<AttendeeItem | null>(null);
   const [emailPreviewAnalysis, setEmailPreviewAnalysis] = useState<StudentAttemptAnalysisResponse | null>(null);
   const [loadingEmailPreview, setLoadingEmailPreview] = useState<boolean>(false);
   const [emailPreviewTab, setEmailPreviewTab] = useState<'overview' | 'subjects_chapters' | 'pacing_strategy' | 'recommendations' | 'questions'>('overview');
   const [sendingEmailAttemptId, setSendingEmailAttemptId] = useState<string | null>(null);
+  const [sendingInstituteEmailAttemptId, setSendingInstituteEmailAttemptId] = useState<string | null>(null);
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
 
@@ -225,6 +228,27 @@ export const CompletedExamReportsPage: React.FC = () => {
       setActionErrorMessage(err?.response?.data?.message || 'Failed to queue report email.');
     } finally {
       setSendingEmailAttemptId(null);
+      setTimeout(() => setActionSuccessMessage(null), 6000);
+    }
+  };
+
+  // ── Trigger Institute Email Dispatch ──
+  const handleSendInstituteEmail = async (attempt: AttendeeItem) => {
+    try {
+      setSendingInstituteEmailAttemptId(attempt.attemptId);
+      setActionErrorMessage(null);
+      const res = await completedExamReportsService.sendReportToInstitute(selectedExamId, attempt.attemptId);
+
+      setActionSuccessMessage(
+        res.message || `Student analysis report has been queued for sending to the institute.`
+      );
+      setInstituteConfirmTarget(null);
+      fetchExamDetails();
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.message || 'Unable to queue the report email. Please try again.';
+      setActionErrorMessage(errorMsg);
+    } finally {
+      setSendingInstituteEmailAttemptId(null);
       setTimeout(() => setActionSuccessMessage(null), 6000);
     }
   };
@@ -682,7 +706,34 @@ export const CompletedExamReportsPage: React.FC = () => {
                           ) : (
                             <>
                               <Send className="w-3.5 h-3.5" />
-                              Email
+                              Send
+                            </>
+                          )}
+                        </button>
+
+                        {/* Send to Institute */}
+                        <button
+                          onClick={() => setInstituteConfirmTarget(item)}
+                          disabled={
+                            sendingInstituteEmailAttemptId === item.attemptId ||
+                            item.score === null ||
+                            item.score === undefined
+                          }
+                          className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={
+                            item.score === null || item.score === undefined
+                              ? 'Attempt has not been evaluated yet'
+                              : item.institutionName
+                              ? `Send Report to Institute (${item.institutionName})`
+                              : 'Send Report to Student\'s Institute'
+                          }
+                        >
+                          {sendingInstituteEmailAttemptId === item.attemptId ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
+                          ) : (
+                            <>
+                              <Building2 className="w-3.5 h-3.5 text-indigo-400" />
+                              Send to Institute
                             </>
                           )}
                         </button>
@@ -1257,6 +1308,78 @@ export const CompletedExamReportsPage: React.FC = () => {
       })()}
 
       {/* ═══════════════════════════════════════════════════════════════
+          SEND TO INSTITUTE CONFIRMATION MODAL
+      ═══════════════════════════════════════════════════════════════ */}
+      {instituteConfirmTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-indigo-900 font-bold text-base">
+                <Building2 className="w-5 h-5 text-indigo-600" />
+                <span>Send Report to Institute</span>
+              </div>
+              <button
+                onClick={() => setInstituteConfirmTarget(null)}
+                className="text-slate-400 hover:text-slate-600 rounded-lg p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-sm text-slate-600 space-y-3">
+              <p>
+                Send this student's analysis report to{' '}
+                <strong>
+                  {instituteConfirmTarget.institutionName || 'their registered institute'}
+                </strong>
+                ?
+              </p>
+
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs">
+                <div>
+                  Student: <strong>{instituteConfirmTarget.studentName}</strong> ({instituteConfirmTarget.studentCode})
+                </div>
+                {instituteConfirmTarget.institutionName && (
+                  <div>
+                    Institute: <strong>{instituteConfirmTarget.institutionName}</strong>
+                  </div>
+                )}
+                {instituteConfirmTarget.institutionEmail && (
+                  <div className="text-slate-500">Email: {instituteConfirmTarget.institutionEmail}</div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setInstituteConfirmTarget(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleSendInstituteEmail(instituteConfirmTarget)}
+                disabled={sendingInstituteEmailAttemptId === instituteConfirmTarget.attemptId}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-md flex items-center gap-2 transition disabled:opacity-50"
+              >
+                {sendingInstituteEmailAttemptId === instituteConfirmTarget.attemptId ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Send
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
           STUDENT ANALYSIS MODAL / DRAWER
       ═══════════════════════════════════════════════════════════════ */}
       {selectedAttemptId && (
@@ -1281,18 +1404,30 @@ export const CompletedExamReportsPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-3">
-                {/* Send Email Button */}
+                {/* Send Email Buttons */}
                 {analysisData && (
-                  <button
-                    onClick={() => {
-                      const found = attendees.find((a) => a.attemptId === selectedAttemptId);
-                      if (found) setEmailConfirmTarget(found);
-                    }}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-md shadow-indigo-200 flex items-center gap-2 transition-all"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    Send Report by Email
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        const found = attendees.find((a) => a.attemptId === selectedAttemptId);
+                        if (found) setEmailConfirmTarget(found);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-md shadow-indigo-200 flex items-center gap-2 transition-all"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      Send Report by Email
+                    </button>
+                    <button
+                      onClick={() => {
+                        const found = attendees.find((a) => a.attemptId === selectedAttemptId);
+                        if (found) setInstituteConfirmTarget(found);
+                      }}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold shadow-md flex items-center gap-2 transition-all"
+                    >
+                      <Building2 className="w-3.5 h-3.5 text-indigo-400" />
+                      Send to Institute
+                    </button>
+                  </>
                 )}
 
                 <button

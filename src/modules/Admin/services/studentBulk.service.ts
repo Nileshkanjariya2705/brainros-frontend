@@ -53,7 +53,14 @@ export interface BulkStudentPreviewResponse {
     createdAt: string;
     processedAt?: string;
     activatedAt?: string;
+    institutionId?: string;
+    institutionName?: string;
   };
+  selectedSchool?: {
+    id: string;
+    name: string;
+    code: string;
+  } | null;
   pagination: {
     page: number;
     limit: number;
@@ -112,11 +119,12 @@ export const studentBulkService = {
   /**
    * Upload CSV or Excel file for staging and initial validation
    */
-  async uploadStudents(file: File, institutionId?: string): Promise<BulkStudentUploadSummary> {
+  async uploadStudents(file: File, schoolId?: string): Promise<BulkStudentUploadSummary> {
     const formData = new FormData();
     formData.append('file', file);
-    if (institutionId) {
-      formData.append('institutionId', institutionId);
+    if (schoolId) {
+      formData.append('schoolId', schoolId);
+      formData.append('institutionId', schoolId);
     }
 
     const response = await Axios.post('/admin/students/bulk-upload', formData, {
@@ -127,8 +135,8 @@ export const studentBulkService = {
     return response.data?.data || response.data;
   },
 
-  async uploadFile(file: File, institutionId?: string): Promise<BulkStudentUploadSummary> {
-    return this.uploadStudents(file, institutionId);
+  async uploadFile(file: File, schoolId?: string): Promise<BulkStudentUploadSummary> {
+    return this.uploadStudents(file, schoolId);
   },
 
   /**

@@ -3,6 +3,7 @@ import { Axios } from '@/base-axios';
 
 export interface AnalyticsFilterParams {
   dateRange?: string;
+  year?: number;
   from?: string;
   to?: string;
   stateId?: string;
@@ -93,7 +94,20 @@ export interface LanguagePreferenceItem {
   percentage: number;
 }
 
+export interface MonthlyRevenueItem {
+  month: number;
+  monthName: string;
+  amount: number;
+}
+
 export interface RevenueData {
+  year?: number;
+  totalRevenue?: number;
+  revenueTillToday?: number;
+  currentMonthRevenue?: number;
+  currentMonthName?: string;
+  monthlyRevenue?: MonthlyRevenueItem[];
+  availableYears?: number[];
   summary: {
     totalRevenue: number;
     currency: string;
@@ -204,7 +218,7 @@ export const useSuperAdminStateRegistrationsQuery = (filters: AnalyticsFilterPar
       const res = await Axios.get('/super-admin/dashboard/state-registrations', {
         params: filters,
       });
-      return (res.data as any).data || res.data;
+      return res.data;
     },
   });
 
@@ -215,7 +229,7 @@ export const useSuperAdminDistrictRegistrationsQuery = (filters: AnalyticsFilter
       const res = await Axios.get('/super-admin/dashboard/district-registrations', {
         params: filters,
       });
-      return (res.data as any).data || res.data;
+      return res.data;
     },
   });
 
@@ -226,7 +240,7 @@ export const useSuperAdminInstitutionRegistrationsQuery = (filters: AnalyticsFil
       const res = await Axios.get('/super-admin/dashboard/institution-registrations', {
         params: filters,
       });
-      return (res.data as any).data || res.data;
+      return res.data;
     },
   });
 
