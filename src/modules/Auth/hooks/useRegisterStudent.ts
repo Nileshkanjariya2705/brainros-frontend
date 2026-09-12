@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAppDispatch } from '@/redux/store';
-import { setCredentials } from '@/redux/slices/authSlice';
-import { useRegisterStudentAPI, useVerifyRegistrationOtpAPI, useResendOtpAPI } from '../services';
-import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
+import {
+  useRegisterStudentAPI,
+  useVerifyRegistrationOtpAPI,
+  useResendOtpAPI,
+  useCreateRegistrationPaymentOrderAPI,
+  useVerifyRegistrationPaymentAPI,
+} from '../services';
 import type { RegisterStudentDto } from '../types/auth.types';
 
 export interface PendingRegistrationState {
@@ -13,30 +15,50 @@ export interface PendingRegistrationState {
   resendAvailableIn: number;
 }
 
+export interface PendingPaymentState {
+  registrationId: string;
+  feeAmount: number;
+  currency: string;
+  razorpayApiKey: string;
+}
+
+export interface RegistrationSuccessState {
+  requiresApproval: boolean;
+  status: string;
+  student: {
+    id: string;
+    studentId: string;
+    studentCode: string;
+    name: string;
+    status: string;
+  };
+}
+
 export const useRegisterStudent = () => {
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-
   const { registerStudentAPI, isLoading: isInitiating } = useRegisterStudentAPI();
-
-  const { verifyRegistrationOtpAPI, isLoading: isVerifying } = useVerifyRegistrationOtpAPI();
-
+  const { verifyRegistrationOtpAPI, isLoading: isVerifyingOtp } = useVerifyRegistrationOtpAPI();
   const { resendOtpAPI, isLoading: isResending } = useResendOtpAPI();
+  const { createRegistrationPaymentOrderAPI, isLoading: isCreatingOrder } =
+    useCreateRegistrationPaymentOrderAPI();
+  const { verifyRegistrationPaymentAPI, isLoading: isVerifyingPayment } =
+    useVerifyRegistrationPaymentAPI();
 
   const [pendingRegistration, setPendingRegistration] = useState<PendingRegistrationState | null>(
     null,
   );
+  const [pendingPayment, setPendingPayment] = useState<PendingPaymentState | null>(null);
+  const [registrationSuccess, setRegistrationSuccess] =
+    useState<RegistrationSuccessState | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * 1. Submit Registration Form -> triggers OTP
+   * Step 1: Submit Registration Form -> triggers OTP
    */
   const initiateRegistration = async (data: RegisterStudentDto) => {
     setError(null);
     const { data: resData, error: apiError } = await registerStudentAPI(data);
 
     if (!apiError && resData) {
-      // Backend returns { requiresOtp: true, registrationId, mobileMasked, expiresIn, resendAvailableIn }
       const resPayload = (resData as any).data || resData;
       if (resPayload.requiresOtp && resPayload.registrationId) {
         setPendingRegistration({
@@ -47,20 +69,6 @@ export const useRegisterStudent = () => {
         });
         return true;
       }
-
-      // Legacy direct response support
-      if (resPayload.accessToken) {
-        dispatch(
-          setCredentials({
-            accessToken: resPayload.accessToken,
-            refreshToken: resPayload.refreshToken,
-            user: resPayload.user,
-            student: resPayload.student,
-          }),
-        );
-        navigate(PRIVATE_NAVIGATION.dashboard, { replace: true });
-        return true;
-      }
     } else {
       setError(apiError ?? 'Registration failed. Please verify your details and try again.');
       return false;
@@ -69,7 +77,7 @@ export const useRegisterStudent = () => {
   };
 
   /**
-   * 2. Verify Registration OTP -> activates User and assigns Student ID
+   * Step 2: Verify Registration OTP -> moves to Razorpay Payment step
    */
   const verifyRegistrationOtp = async (otp: string) => {
     if (!pendingRegistration) {
@@ -85,15 +93,16 @@ export const useRegisterStudent = () => {
 
     if (!apiError && data) {
       const resPayload = (data as any).data || data;
-      dispatch(
-        setCredentials({
-          accessToken: resPayload.accessToken,
-          refreshToken: resPayload.refreshToken,
-          user: resPayload.user,
-          student: resPayload.student,
-        }),
-      );
-      navigate(PRIVATE_NAVIGATION.dashboard, { replace: true });
+      if (resPayload.requiresPayment) {
+        setPendingPayment({
+          registrationId: pendingRegistration.registrationId,
+          feeAmount: resPayload.feeAmount || 300,
+          currency: resPayload.currency || 'INR',
+          razorpayApiKey: resPayload.razorpayApiKey || '',
+        });
+        setPendingRegistration(null);
+        return true;
+      }
       return true;
     } else {
       setError(apiError ?? 'Invalid verification code. Please check and try again.');
@@ -102,7 +111,66 @@ export const useRegisterStudent = () => {
   };
 
   /**
-   * 3. Resend Registration OTP
+   * Step 3: Create Razorpay Order
+   */
+  const createPaymentOrder = async () => {
+    if (!pendingPayment) {
+      setError('Payment session not found. Please register again.');
+      return null;
+    }
+
+    setError(null);
+    const { data, error: apiError } = await createRegistrationPaymentOrderAPI({
+      registrationId: pendingPayment.registrationId,
+    });
+
+    if (!apiError && data) {
+      return (data as any).data || data;
+    } else {
+      setError(apiError ?? 'Failed to initialize payment gateway. Please try again.');
+      return null;
+    }
+  };
+
+  /**
+   * Step 4: Verify Payment Signature & Finalize Registration
+   */
+  const verifyPayment = async (payload: {
+    razorpay_payment_id: string;
+    razorpay_order_id: string;
+    razorpay_signature: string;
+  }) => {
+    if (!pendingPayment) {
+      setError('Payment session invalid.');
+      return false;
+    }
+
+    setError(null);
+    const { data, error: apiError } = await verifyRegistrationPaymentAPI({
+      registrationId: pendingPayment.registrationId,
+      ...payload,
+    });
+
+    if (!apiError && data) {
+      const resPayload = (data as any).data || data;
+      setRegistrationSuccess({
+        requiresApproval: resPayload.requiresApproval,
+        status: resPayload.status,
+        student: resPayload.student,
+      });
+      setPendingPayment(null);
+      return true;
+    } else {
+      setError(
+        apiError ??
+          'Payment verification failed. If your account was debited, please contact support.',
+      );
+      return false;
+    }
+  };
+
+  /**
+   * Resend Registration OTP
    */
   const resendOtp = async () => {
     if (!pendingRegistration) return false;
@@ -122,20 +190,29 @@ export const useRegisterStudent = () => {
 
   const reset = () => {
     setPendingRegistration(null);
+    setPendingPayment(null);
+    setRegistrationSuccess(null);
     setError(null);
   };
 
   return {
     initiateRegistration,
     verifyRegistrationOtp,
+    createPaymentOrder,
+    verifyPayment,
     resendOtp,
     reset,
     pendingRegistration,
+    pendingPayment,
+    registrationSuccess,
     error,
     setError,
-    isLoading: isInitiating || isVerifying || isResending,
+    isLoading:
+      isInitiating || isVerifyingOtp || isResending || isCreatingOrder || isVerifyingPayment,
     isInitiating,
-    isVerifying,
+    isVerifyingOtp,
     isResending,
+    isCreatingOrder,
+    isVerifyingPayment,
   };
 };

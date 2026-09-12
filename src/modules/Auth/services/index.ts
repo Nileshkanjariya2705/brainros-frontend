@@ -260,6 +260,91 @@ export const useVerifyRegistrationOtpAPI = () => {
 };
 
 /**
+ * 14b. Create Registration Payment Order API
+ */
+export const useCreateRegistrationPaymentOrderAPI = () => {
+  const [callApi, { isLoading, isError, isSuccess }] = useAxiosPost();
+  const createRegistrationPaymentOrderAPI = useCallback(
+    async (data: { registrationId: string }, config: AxiosRequestConfig = {}) => {
+      return callApi<{
+        message: string;
+        data: {
+          registrationId: string;
+          razorpayOrderId: string;
+          amount: number;
+          currency: string;
+          key: string;
+          name: string;
+          email: string;
+          mobile: string;
+        };
+      }>(`${AUTH_API_BASE_PATH}/register/payment/order`, data, config);
+    },
+    [callApi],
+  );
+  return { createRegistrationPaymentOrderAPI, isLoading, isError, isSuccess };
+};
+
+/**
+ * 14c. Verify Registration Payment API
+ */
+export const useVerifyRegistrationPaymentAPI = () => {
+  const [callApi, { isLoading, isError, isSuccess }] = useAxiosPost();
+  const verifyRegistrationPaymentAPI = useCallback(
+    async (
+      data: {
+        registrationId: string;
+        razorpay_payment_id: string;
+        razorpay_order_id: string;
+        razorpay_signature: string;
+      },
+      config: AxiosRequestConfig = {},
+    ) => {
+      return callApi<{
+        message: string;
+        data: {
+          requiresApproval: boolean;
+          status: string;
+          registrationId: string;
+          student: {
+            id: string;
+            studentId: string;
+            studentCode: string;
+            name: string;
+            status: string;
+          };
+        };
+      }>(`${AUTH_API_BASE_PATH}/register/payment/verify`, data, config);
+    },
+    [callApi],
+  );
+  return { verifyRegistrationPaymentAPI, isLoading, isError, isSuccess };
+};
+
+/**
+ * 14d. Get Registration Payment Status API
+ */
+export const useGetRegistrationPaymentStatusAPI = () => {
+  const [callApi, { isLoading, isError, isSuccess }] = useAxiosGet();
+  const getRegistrationPaymentStatusAPI = useCallback(
+    async (registrationId: string, config: AxiosRequestConfig = {}) => {
+      return callApi<{
+        data: {
+          registrationId: string;
+          status: string;
+          razorpayOrderId?: string;
+          razorpayPaymentId?: string;
+          feeAmount?: number;
+          currency?: string;
+        };
+      }>(`${AUTH_API_BASE_PATH}/register/payment/status/${registrationId}`, config);
+    },
+    [callApi],
+  );
+  return { getRegistrationPaymentStatusAPI, isLoading, isError, isSuccess };
+};
+
+/**
  * 15. Passwordless Login Request OTP API
  */
 export const useRequestPasswordlessLoginOtpAPI = () => {

@@ -14,6 +14,8 @@ import {
   ShieldCheck,
   RefreshCw,
   ArrowLeft,
+  CreditCard,
+  CheckCircle2,
 } from 'lucide-react';
 
 // ** Components **
@@ -52,15 +54,68 @@ const RegisterPage = () => {
   const {
     initiateRegistration,
     verifyRegistrationOtp,
+    createPaymentOrder,
+    verifyPayment,
     resendOtp,
     reset: resetRegistration,
     pendingRegistration,
+    pendingPayment,
+    registrationSuccess,
     error: registerError,
     setError: setRegisterError,
     isInitiating,
-    isVerifying,
+    isVerifyingOtp,
     isResending,
+    isCreatingOrder,
+    isVerifyingPayment,
   } = useRegisterStudent();
+
+  const handlePayNow = async () => {
+    setRegisterError(null);
+    const orderData = await createPaymentOrder();
+    if (!orderData) return;
+
+    const options = {
+      key: orderData.key || 'rzp_test_mock',
+      amount: orderData.amount,
+      currency: orderData.currency || 'INR',
+      name: 'Brainros Platform',
+      description: 'Public Student Registration Fee',
+      order_id: orderData.razorpayOrderId,
+      prefill: {
+        name: orderData.name,
+        email: orderData.email || '',
+        contact: orderData.mobile,
+      },
+      theme: {
+        color: '#4f46e5',
+      },
+      handler: async function (response: any) {
+        await verifyPayment({
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_signature: response.razorpay_signature,
+        });
+      },
+      modal: {
+        ondismiss: function () {
+          setRegisterError('Payment window closed. Please click Pay Now to complete registration.');
+        },
+      },
+    };
+
+    if (typeof (window as any).Razorpay !== 'undefined') {
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (resp: any) {
+        setRegisterError(
+          `Payment failed: ${resp.error?.description || 'Transaction cancelled'}. Please try again.`,
+        );
+      });
+      rzp.open();
+    } else {
+      setRegisterError('Razorpay Checkout SDK failed to load. Please refresh the page and try again.');
+    }
+  };
 
   const { getRegisterOptionsAPI, isLoading: isLoadingOptions } = useGetRegisterOptionsAPI();
 
@@ -334,9 +389,127 @@ const RegisterPage = () => {
         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
 
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* OTP VERIFICATION STEP                                          */}
+        {/* SUCCESS VIEW (REGISTRATION SUBMITTED & PENDING APPROVAL)       */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {pendingRegistration ? (
+        {registrationSuccess ? (
+          <div className="space-y-6 text-center animate-in fade-in zoom-in-95 py-4">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-100 text-emerald-600 shadow-md mx-auto">
+              <CheckCircle2 className="h-8 w-8" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
+                PENDING APPROVAL
+              </span>
+              <h2 className="text-2xl font-black text-slate-900">Registration Submitted Successfully!</h2>
+              <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+                Your registration fee payment was verified successfully. Your student account has been created and submitted to Academic Administration for approval.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200 text-xs text-slate-700 max-w-md mx-auto space-y-2 text-left">
+              <div className="flex justify-between border-b border-slate-200 pb-1.5">
+                <span className="text-slate-500">Student Name:</span>
+                <span className="font-bold text-slate-900">{registrationSuccess.student.name}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1.5">
+                <span className="text-slate-500">Generated Student ID:</span>
+                <span className="font-mono font-bold text-indigo-600">{registrationSuccess.student.studentId}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1.5">
+                <span className="text-slate-500">Student Code:</span>
+                <span className="font-mono font-bold text-slate-800">{registrationSuccess.student.studentCode}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Approval Status:</span>
+                <span className="font-bold text-amber-600">Pending Review by GM / Super Admin</span>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <Link to="/login">
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full max-w-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold"
+                >
+                  Proceed to Login
+                </Button>
+              </Link>
+            </div>
+          </div>
+        ) : pendingPayment ? (
+          /* ═══════════════════════════════════════════════════════════════ */
+          /* STEP 3: RAZORPAY PAYMENT STEP                                   */
+          /* ═══════════════════════════════════════════════════════════════ */
+          <div className="space-y-6 animate-in fade-in zoom-in-95">
+            <div className="text-center space-y-2">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600 shadow-sm mx-auto">
+                <CreditCard className="h-6 w-6" />
+              </div>
+              <h2 className="text-xl font-black text-slate-900">Registration Fee Payment</h2>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                OTP verified successfully. Complete the online registration fee payment via Razorpay to finalize your application.
+              </p>
+            </div>
+
+            {registerError && (
+              <div className="rounded-xl bg-red-50 p-3.5 border border-red-200 flex items-start space-x-3">
+                <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                <p className="text-xs font-semibold text-red-700">{registerError}</p>
+              </div>
+            )}
+
+            <div className="rounded-2xl bg-slate-50 p-5 border border-slate-200 space-y-3 text-xs">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <span className="font-bold text-slate-700">Public Registration Fee</span>
+                <span className="text-lg font-black text-indigo-600">
+                  ₹{pendingPayment.feeAmount} {pendingPayment.currency}
+                </span>
+              </div>
+              <div className="space-y-1.5 text-slate-600">
+                <div className="flex justify-between">
+                  <span>Mobile OTP Status:</span>
+                  <span className="font-bold text-emerald-600">Verified ✓</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Gateway:</span>
+                  <span className="font-semibold text-slate-800">Razorpay Secure Checkout</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Payment Status:</span>
+                  <span className="font-semibold text-amber-600">Pending Payment</span>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              onClick={handlePayNow}
+              isLoading={isCreatingOrder || isVerifyingPayment}
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold shadow-lg shadow-indigo-500/25"
+            >
+              <CreditCard className="h-4 w-4 mr-2" />
+              <span>Pay ₹{pendingPayment.feeAmount} via Razorpay</span>
+            </Button>
+
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={resetRegistration}
+                className="inline-flex items-center text-xs text-slate-500 hover:text-slate-800 font-semibold"
+              >
+                <ArrowLeft className="h-3.5 w-3.5 mr-1" />
+                <span>Cancel & Start Over</span>
+              </button>
+            </div>
+          </div>
+        ) : pendingRegistration ? (
+          /* ═══════════════════════════════════════════════════════════════ */
+          /* STEP 2: OTP VERIFICATION STEP                                   */
+          /* ═══════════════════════════════════════════════════════════════ */
           <div className="space-y-6 animate-in fade-in zoom-in-95">
             <div className="text-center space-y-2">
               <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-sm mx-auto">
@@ -348,7 +521,7 @@ const RegisterPage = () => {
                 <strong className="text-slate-800 font-mono">
                   {pendingRegistration.mobileMasked}
                 </strong>
-                . Enter it below to activate your account and generate your official Student ID.
+                . Enter it below to proceed to registration fee payment.
               </p>
             </div>
 
@@ -371,10 +544,10 @@ const RegisterPage = () => {
                 type="submit"
                 variant="primary"
                 size="lg"
-                isLoading={isVerifying}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-slate-900 font-bold shadow-lg shadow-indigo-500/25"
+                isLoading={isVerifyingOtp}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold shadow-lg shadow-indigo-500/25"
               >
-                <span>Verify & Complete Registration</span>
+                <span>Verify OTP & Proceed to Payment</span>
               </Button>
 
               <div className="flex items-center justify-between pt-2 text-xs border-t border-slate-100">
