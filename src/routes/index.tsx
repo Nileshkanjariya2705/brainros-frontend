@@ -21,7 +21,6 @@ import RouteErrorBoundary from '@/components/feedback/RouteErrorBoundary';
 
 // ** Access Control & Constants **
 import { PERMISSIONS, ROLES } from '@/modules/Auth/auth-access';
-import { FEATURES } from '@/constants/feature-flag.constant';
 import {
   PUBLIC_NAVIGATION,
   PRIVATE_NAVIGATION,
@@ -63,54 +62,26 @@ const DashboardDispatcher = lazyRoute(() => import('@/modules/Dashboard/pages/Da
 
 // Core Shared / Role Pages
 const AvailableExamsPage = lazyRoute(() => import('@/modules/Exams/pages/AvailableExamsPage'));
-const StudentMockTestsPage = lazyRoute(() => import('@/modules/Exams/pages/StudentMockTestsPage'));
 const ExamInterfacePage = lazyRoute(() => import('@/modules/Exams/pages/ExamInterfacePage'));
 const ExamResultPage = lazyRoute(() => import('@/modules/Exams/pages/ExamResultPage'));
 const HistoryPage = lazyRoute(() => import('@/modules/Exams/pages/HistoryPage'));
-const MockHistoryPage = lazyRoute(() => import('@/modules/Exams/pages/MockHistoryPage'));
-const QuestionBankPage = lazyRoute(() => import('@/modules/QuestionBank/pages/QuestionBankPage'));
 const ChapterManagementPage = lazyRoute(
   () => import('@/modules/Admin/pages/ChapterManagementPage'),
-);
-const CreateQuestionPage = lazyRoute(
-  () => import('@/modules/QuestionBank/pages/CreateQuestionPage'),
-);
-const EditQuestionPage = lazyRoute(() => import('@/modules/QuestionBank/pages/EditQuestionPage'));
-const ImportQuestionsPage = lazyRoute(
-  () => import('@/modules/QuestionBank/pages/ImportQuestionsPage'),
 );
 const LanguageManagementPage = lazyRoute(
   () => import('@/modules/RegionalLanguage/pages/LanguageManagementPage'),
 );
-const AdminTranslationManagementPage = lazyRoute(
-  () => import('@/modules/RegionalLanguage/pages/AdminTranslationManagementPage'),
-);
-const ImportTranslationsPage = lazyRoute(
-  () => import('@/modules/RegionalLanguage/pages/ImportTranslationsPage'),
-);
 const AiQuestionPaperTranslationPage = lazyRoute(
   () => import('@/modules/AiTranslation/pages/AiQuestionPaperTranslationPage'),
 );
-const ExamBlueprintManagementPage = lazyRoute(
-  () => import('@/modules/ExamGenerator/pages/ExamBlueprintManagementPage'),
-);
-const AutoGenerateExamPage = lazyRoute(
-  () => import('@/modules/ExamGenerator/pages/AutoGenerateExamPage'),
-);
 const ExamSchedulingManagementPage = lazyRoute(
   () => import('@/modules/ExamScheduling/pages/ExamSchedulingManagementPage'),
-);
-const ExamManagementPage = lazyRoute(
-  () => import('@/modules/ExamScheduling/pages/ExamManagementPage'),
 );
 const ExamManagerDashboardPage = lazyRoute(
   () => import('@/modules/ExamManager/pages/ExamManagerDashboardPage'),
 );
 const DedicatedExamManagementDashboardPage = lazyRoute(
   () => import('@/modules/ExamManager/pages/ExamManagementDashboardPage'),
-);
-const TranslationManagerPage = lazyRoute(
-  () => import('@/modules/RegionalLanguage/pages/TranslationManagerPage'),
 );
 const UploadQuestionPaperPage = lazyRoute(
   () => import('@/modules/ExamManager/pages/UploadQuestionPaperPage'),
@@ -126,12 +97,6 @@ const ScheduleExamPage = lazyRoute(
 );
 const ViewQuestionPaperPage = lazyRoute(
   () => import('@/modules/ExamManager/pages/ViewQuestionPaperPage'),
-);
-const ViewAnswerKeyPage = lazyRoute(
-  () => import('@/modules/ExamManager/pages/ViewAnswerKeyPage'),
-);
-const AnswerKeyManagementPage = lazyRoute(
-  () => import('@/modules/ExamManager/pages/AnswerKeyManagementPage'),
 );
 const ImportHistoryPage = lazyRoute(
   () => import('@/modules/ExamManager/pages/ImportHistoryPage'),
@@ -239,14 +204,6 @@ const studentRoutes: RouteObject[] = [
         ),
       },
       {
-        path: 'mock-tests',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW, PERMISSIONS.EXAM_ATTEMPT]}>
-            <StudentMockTestsPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
         path: 'exams/:examId',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
@@ -271,22 +228,6 @@ const studentRoutes: RouteObject[] = [
         ),
       },
       {
-        path: 'mock-history',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.ATTEMPT_VIEW, PERMISSIONS.RESULT_VIEW]}>
-            <MockHistoryPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'mock-tests/history',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.ATTEMPT_VIEW, PERMISSIONS.RESULT_VIEW]}>
-            <MockHistoryPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
         path: 'exam-calendar',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
@@ -304,14 +245,6 @@ const studentRoutes: RouteObject[] = [
       },
       {
         path: 'comparison',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.ANALYSIS_VIEW, PERMISSIONS.TRENDS_VIEW]}>
-            <StudentComparisonPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'mock-comparison',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.ANALYSIS_VIEW, PERMISSIONS.TRENDS_VIEW]}>
             <StudentComparisonPage />
@@ -345,58 +278,6 @@ const adminRoutes: RouteObject[] = [
     children: [
       { path: 'dashboard', element: <AdminDashboardPage /> },
       {
-        path: 'question-bank',
-        element: (
-          <ProtectedRoute
-            feature={FEATURES.QUESTION_BANK}
-            permissions={[PERMISSIONS.QUESTION_VIEW]}
-          >
-            <QuestionBankPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'chapters',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.QUESTION_VIEW]}>
-            <ChapterManagementPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'question-bank/create',
-        element: (
-          <ProtectedRoute
-            feature={FEATURES.ADD_QUESTION}
-            permissions={[PERMISSIONS.QUESTION_CREATE]}
-          >
-            <CreateQuestionPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'question-bank/import',
-        element: (
-          <ProtectedRoute
-            feature={FEATURES.BULK_IMPORT_QUESTION}
-            permissions={[PERMISSIONS.QUESTION_CREATE]}
-          >
-            <ImportQuestionsPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'question-bank/:id/edit',
-        element: (
-          <ProtectedRoute
-            feature={FEATURES.QUESTION_BANK}
-            permissions={[PERMISSIONS.QUESTION_UPDATE]}
-          >
-            <EditQuestionPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
         path: 'languages',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.TRANSLATION_VIEW]}>
@@ -405,65 +286,10 @@ const adminRoutes: RouteObject[] = [
         ),
       },
       {
-        path: 'translations',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.TRANSLATION_VIEW]}>
-            <AdminTranslationManagementPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'languages/translations',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.TRANSLATION_VIEW]}>
-            <AdminTranslationManagementPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'languages/import',
-        element: (
-          <ProtectedRoute
-            feature={FEATURES.BULK_IMPORT_TRANSLATION}
-            permissions={[PERMISSIONS.TRANSLATION_CREATE]}
-          >
-            <ImportTranslationsPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'exam-blueprints',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
-            <ExamBlueprintManagementPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'exams/generate',
-        element: <Navigate to="/admin/dashboard" replace />,
-      },
-      {
         path: 'exam-scheduling',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_SCHEDULE, PERMISSIONS.EXAM_VIEW]}>
             <ExamSchedulingManagementPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'mock-tests',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
-            <ExamManagementPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'exams',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
-            <ExamManagementPage />
           </ProtectedRoute>
         ),
       },
@@ -508,18 +334,26 @@ const adminRoutes: RouteObject[] = [
         ),
       },
       {
-        path: 'translation-manager/:examId',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.TRANSLATION_VIEW, PERMISSIONS.EXAM_VIEW]}>
-            <TranslationManagerPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
         path: 'exam-manager/upload',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE]}>
             <UploadQuestionPaperPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'ai-translation',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE]}>
+            <AiQuestionPaperTranslationPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'ai-question-paper-translation',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE]}>
+            <AiQuestionPaperTranslationPage />
           </ProtectedRoute>
         ),
       },
@@ -536,38 +370,6 @@ const adminRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
             <ViewQuestionPaperPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'exams/:scheduleId/answer-key/view',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
-            <ViewAnswerKeyPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'exam-manager/answer-key/:scheduleId/view',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
-            <ViewAnswerKeyPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'exam-manager/answer-key',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
-            <AnswerKeyManagementPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'exam-manager/answer-key/:scheduleId',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW]}>
-            <AnswerKeyManagementPage />
           </ProtectedRoute>
         ),
       },
@@ -695,54 +497,9 @@ const superAdminChildren: RouteObject[] = [
   { path: '', element: <Navigate to="dashboard" replace /> },
   { path: 'dashboard', element: <SuperAdminDashboardPage /> },
   { path: 'registrations', element: <SuperAdminRegistrationsPage /> },
-  {
-    path: 'question-bank',
-    element: (
-      <ProtectedRoute feature={FEATURES.QUESTION_BANK}>
-        <QuestionBankPage />
-      </ProtectedRoute>
-    ),
-  },
-  { path: 'chapters', element: <ChapterManagementPage /> },
-  { path: 'chapter-master', element: <ChapterManagementPage /> },
-  { path: 'chapter_master', element: <ChapterManagementPage /> },
-  {
-    path: 'question-bank/create',
-    element: (
-      <ProtectedRoute feature={FEATURES.ADD_QUESTION}>
-        <CreateQuestionPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: 'question-bank/import',
-    element: (
-      <ProtectedRoute feature={FEATURES.BULK_IMPORT_QUESTION}>
-        <ImportQuestionsPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: 'question-bank/:id/edit',
-    element: (
-      <ProtectedRoute feature={FEATURES.QUESTION_BANK}>
-        <EditQuestionPage />
-      </ProtectedRoute>
-    ),
-  },
   { path: 'languages', element: <LanguageManagementPage /> },
   { path: 'language-master', element: <LanguageManagementPage /> },
   { path: 'language_master', element: <LanguageManagementPage /> },
-  { path: 'translations', element: <AdminTranslationManagementPage /> },
-  { path: 'languages/translations', element: <AdminTranslationManagementPage /> },
-  {
-    path: 'languages/import',
-    element: (
-      <ProtectedRoute feature={FEATURES.BULK_IMPORT_TRANSLATION}>
-        <ImportTranslationsPage />
-      </ProtectedRoute>
-    ),
-  },
   {
     path: 'ai-question-paper-translation',
     element: (
@@ -767,10 +524,6 @@ const superAdminChildren: RouteObject[] = [
       </ProtectedRoute>
     ),
   },
-  { path: 'exam-blueprints', element: <ExamBlueprintManagementPage /> },
-  { path: 'exams/generate', element: <AutoGenerateExamPage /> },
-  { path: 'mock-tests', element: <ExamManagementPage /> },
-  { path: 'exams', element: <ExamManagementPage /> },
   { path: 'exams/results', element: <SuperAdminExamResultsPage /> },
   { path: 'exams/result-processing', element: <SuperAdminExamProcessingMonitorPage /> },
   { path: 'completed-exams', element: <CompletedExamReportsPage /> },
@@ -782,14 +535,6 @@ const superAdminChildren: RouteObject[] = [
   { path: 'exams/:examId/question-paper/add', element: <ManualQuestionEntryPage /> },
   { path: 'exams/:examId/question-paper/view', element: <ViewQuestionPaperPage /> },
   { path: 'exams/schedule', element: <ScheduleExamPage /> },
-  { path: 'exams/:scheduleId/answer-key/view', element: <ViewAnswerKeyPage /> },
-  { path: 'exam-manager/answer-key/:scheduleId/view', element: <ViewAnswerKeyPage /> },
-  { path: 'exam-manager/answer-key', element: <AnswerKeyManagementPage /> },
-  { path: 'exam-manager/answer-key/:scheduleId', element: <AnswerKeyManagementPage /> },
-  { path: 'upload-answer-key', element: <AnswerKeyManagementPage /> },
-  { path: 'upload_answer_key', element: <AnswerKeyManagementPage /> },
-  { path: 'answer-key', element: <AnswerKeyManagementPage /> },
-  { path: 'answer_key', element: <AnswerKeyManagementPage /> },
   { path: 'exam-manager/history', element: <ImportHistoryPage /> },
   { path: 'exam-scheduling', element: <ExamSchedulingManagementPage /> },
   { path: 'strategy-rules', element: <StrategyRuleManagementPage /> },
@@ -803,6 +548,7 @@ const superAdminChildren: RouteObject[] = [
   { path: 'notifications', element: <AdminNotificationsPage /> },
   { path: 'notifications-page', element: <AdminNotificationsPage /> },
   { path: 'students', element: <AdminStudentsPage /> },
+  { path: 'registrations', element: <PublicRegistrationsPage /> },
   { path: 'public-registrations', element: <PublicRegistrationsPage /> },
   { path: 'public_registrations', element: <PublicRegistrationsPage /> },
   { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
@@ -858,27 +604,15 @@ const generalManagerRoutes: RouteObject[] = [
       { path: 'students', element: <AdminStudentsPage /> },
       { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
       { path: 'schools', element: <AdminSchoolsPage /> },
-      { path: 'question-bank', element: <QuestionBankPage /> },
-      { path: 'chapters', element: <ChapterManagementPage /> },
-      { path: 'question-bank/create', element: <CreateQuestionPage /> },
-      { path: 'question-bank/import', element: <ImportQuestionsPage /> },
-      { path: 'question-bank/:id/edit', element: <EditQuestionPage /> },
       { path: 'languages', element: <LanguageManagementPage /> },
-      { path: 'translations', element: <AdminTranslationManagementPage /> },
-      { path: 'languages/import', element: <ImportTranslationsPage /> },
-      { path: 'exam-blueprints', element: <ExamBlueprintManagementPage /> },
-      { path: 'exams', element: <ExamManagementPage /> },
       { path: 'exam-scheduling', element: <ExamSchedulingManagementPage /> },
       { path: 'exams/schedule', element: <ScheduleExamPage /> },
       { path: 'exam-manager/upload', element: <UploadQuestionPaperPage /> },
+      { path: 'ai-translation', element: <AiQuestionPaperTranslationPage /> },
+      { path: 'ai-question-paper-translation', element: <AiQuestionPaperTranslationPage /> },
       { path: 'exams/:examId/question-paper/upload', element: <UploadExamQuestionPaperPage /> },
       { path: 'exams/:examId/question-paper/add', element: <ManualQuestionEntryPage /> },
       { path: 'exams/:examId/question-paper/view', element: <ViewQuestionPaperPage /> },
-      { path: 'exam-manager/answer-key', element: <AnswerKeyManagementPage /> },
-      { path: 'exam-manager/answer-key/:scheduleId', element: <AnswerKeyManagementPage /> },
-      { path: 'exam-manager/answer-key/:scheduleId/view', element: <ViewAnswerKeyPage /> },
-      { path: 'exams/:scheduleId/answer-key/view', element: <ViewAnswerKeyPage /> },
-      { path: 'answer-key', element: <AnswerKeyManagementPage /> },
       { path: 'exam-manager/history', element: <ImportHistoryPage /> },
       { path: 'completed-exams', element: <CompletedExamReportsPage /> },
       { path: 'reports', element: <CompletedExamReportsPage /> },
@@ -921,28 +655,17 @@ const operatorRoutes: RouteObject[] = [
       { path: 'students', element: <AdminStudentsPage /> },
       { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
       { path: 'schools', element: <AdminSchoolsPage /> },
-      { path: 'question-bank', element: <QuestionBankPage /> },
       { path: 'chapters', element: <ChapterManagementPage /> },
-      { path: 'question-bank/create', element: <CreateQuestionPage /> },
-      { path: 'question-bank/import', element: <ImportQuestionsPage /> },
-      { path: 'question-bank/:id/edit', element: <EditQuestionPage /> },
       { path: 'languages', element: <LanguageManagementPage /> },
-      { path: 'translations', element: <AdminTranslationManagementPage /> },
-      { path: 'languages/import', element: <ImportTranslationsPage /> },
-      { path: 'exam-blueprints', element: <ExamBlueprintManagementPage /> },
-      { path: 'exams', element: <ExamManagementPage /> },
       { path: 'exam-scheduling', element: <ExamSchedulingManagementPage /> },
       { path: 'exams/schedule', element: <ScheduleExamPage /> },
       { path: 'exams/pending-paper', element: <OperatorScheduledExamsPage /> },
       { path: 'exam-manager/upload', element: <UploadQuestionPaperPage /> },
+      { path: 'ai-translation', element: <AiQuestionPaperTranslationPage /> },
+      { path: 'ai-question-paper-translation', element: <AiQuestionPaperTranslationPage /> },
       { path: 'exams/:examId/question-paper/upload', element: <UploadExamQuestionPaperPage /> },
       { path: 'exams/:examId/question-paper/add', element: <ManualQuestionEntryPage /> },
       { path: 'exams/:examId/question-paper/view', element: <ViewQuestionPaperPage /> },
-      { path: 'exam-manager/answer-key', element: <AnswerKeyManagementPage /> },
-      { path: 'exam-manager/answer-key/:scheduleId', element: <AnswerKeyManagementPage /> },
-      { path: 'exam-manager/answer-key/:scheduleId/view', element: <ViewAnswerKeyPage /> },
-      { path: 'exams/:scheduleId/answer-key/view', element: <ViewAnswerKeyPage /> },
-      { path: 'answer-key', element: <AnswerKeyManagementPage /> },
       { path: 'exam-manager/history', element: <ImportHistoryPage /> },
       { path: 'completed-exams', element: <CompletedExamReportsPage /> },
       { path: 'reports', element: <CompletedExamReportsPage /> },
@@ -1027,10 +750,6 @@ const staffRoutes: RouteObject[] = [
       { path: 'schools', element: <AdminSchoolsPage /> },
       { path: 'students', element: <AdminStudentsPage /> },
       { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
-      { path: 'answer-key', element: <AnswerKeyManagementPage /> },
-      { path: 'question-bank', element: <QuestionBankPage /> },
-      { path: 'translations', element: <AdminTranslationManagementPage /> },
-      { path: 'exams', element: <ExamManagementPage /> },
       { path: 'reports', element: <CompletedExamReportsPage /> },
       { path: 'notifications', element: <AdminNotificationsPage /> },
       { path: 'profile', element: <StudentProfilePage /> },
@@ -1125,7 +844,6 @@ const legacyAndSharedRoutes: RouteObject[] = [
   },
   { path: '/exams', element: <Navigate to={PRIVATE_NAVIGATION.studentExams} replace /> },
   { path: '/history', element: <Navigate to={PRIVATE_NAVIGATION.studentHistory} replace /> },
-  { path: '/mock-history', element: <Navigate to={PRIVATE_NAVIGATION.studentMockHistory} replace /> },
   {
     path: '/performance-trends',
     element: <Navigate to={PRIVATE_NAVIGATION.studentTrends} replace />,
@@ -1135,32 +853,8 @@ const legacyAndSharedRoutes: RouteObject[] = [
     element: <Navigate to={PRIVATE_NAVIGATION.studentComparison} replace />,
   },
   {
-    path: '/mock-comparison',
-    element: <Navigate to={PRIVATE_NAVIGATION.studentComparison} replace />,
-  },
-  {
     path: '/parent-dashboard',
     element: <Navigate to={PRIVATE_NAVIGATION.parentWardProgress} replace />,
-  },
-  {
-    path: '/question-bank',
-    element: <Navigate to={PRIVATE_NAVIGATION.adminQuestionBank} replace />,
-  },
-  {
-    path: '/question-bank/create',
-    element: <Navigate to={PRIVATE_NAVIGATION.adminCreateQuestion} replace />,
-  },
-  {
-    path: '/question-bank/import',
-    element: <Navigate to={PRIVATE_NAVIGATION.adminImportQuestions} replace />,
-  },
-  {
-    path: '/languages/import',
-    element: <Navigate to={PRIVATE_NAVIGATION.adminImportTranslations} replace />,
-  },
-  {
-    path: '/exam-blueprints',
-    element: <Navigate to={PRIVATE_NAVIGATION.adminExamBlueprints} replace />,
   },
   {
     path: '/exam-scheduling',

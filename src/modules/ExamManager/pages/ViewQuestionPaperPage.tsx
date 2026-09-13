@@ -109,11 +109,11 @@ export const ViewQuestionPaperPage: React.FC = () => {
             <Button
               variant="primary"
               onClick={() =>
-                navigate(`${routePrefix}/exams/${examId}/question-paper/upload`)
+                navigate(`${routePrefix}/exams/${examId}/question-paper/add`)
               }
               className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs"
             >
-              <UploadCloud size={14} /> Replace Question Paper
+              <UploadCloud size={14} /> Edit / Replace Questions
             </Button>
             <Button
               variant="outline"

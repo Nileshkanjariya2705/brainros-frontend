@@ -54,12 +54,9 @@ export const handleNotificationClick = async ({
   const entityType = data?.entityType?.toUpperCase();
   const entityId = data?.entityId;
 
-  if (type === 'EXAM_ENDED' || entityType === 'ANSWER_KEY') {
-    const targetScheduleId = data?.scheduleId || entityId;
-    if (targetScheduleId) {
-      navigate(`${adminPrefix}/exam-manager/answer-key/${targetScheduleId}`);
-      return;
-    }
+  if (type === 'EXAM_ENDED') {
+    navigate(`${adminPrefix}/exam-results`);
+    return;
   }
 
   if (entityType === 'EXAM_RESULT' && (data?.examId || entityId)) {

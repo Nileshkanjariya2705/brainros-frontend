@@ -64,27 +64,6 @@ export interface ExamImportFilterParams {
   search?: string;
 }
 
-export interface BlueprintSubjectRule {
-  subject: string;
-  questionCount: number;
-  marks?: number;
-}
-
-export interface BlueprintItem {
-  id: string;
-  name: string;
-  code: string;
-  description?: string;
-  totalQuestions: number;
-  durationMinutes: number;
-  status: 'ACTIVE' | 'INACTIVE';
-  subjectDistribution: BlueprintSubjectRule[];
-  examTargetId?: string;
-  version?: number;
-  examTarget?: { id?: string; name?: string };
-  rules?: any[];
-}
-
 export interface TranslationValidationSummary {
   languageId: string;
   languageCode: string;
@@ -100,18 +79,6 @@ export interface TranslationValidationSummary {
 
 export interface ComprehensiveExamValidationResult {
   isValid: boolean;
-  blueprint: {
-    id: string;
-    name: string;
-    totalQuestions: number;
-    isMatched: boolean;
-    subjectChecks: Array<{
-      subject: string;
-      expectedCount: number;
-      actualCount: number;
-      isMatched: boolean;
-    }>;
-  };
   questionsSummary: {
     totalRows: number;
     validRows: number;
@@ -142,7 +109,6 @@ export interface ComprehensiveExamValidationResult {
 
 export interface CreateExamFromUploadPayload {
   title: string;
-  blueprintId: string;
   description?: string;
   durationMinutes?: number;
   defaultMarksPerQuestion?: number;
@@ -176,8 +142,8 @@ export interface ExamItem {
   defaultNegativeMarks?: number;
   status: string;
   examTarget?: { id: string; name: string };
-  blueprint?: { id: string; name: string; totalQuestions?: number; durationMinutes?: number } | null;
   subjectsSummary?: string;
+  subject?: { id?: string; name: string } | null;
   sections?: Array<{
     id: string;
     name: string;

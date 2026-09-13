@@ -8,11 +8,12 @@ import {
   Award,
   BookOpen,
   RefreshCw,
-  Database,
-  Sliders,
+  CalendarClock,
   UserCheck,
   Target,
   Clock,
+  Database,
+  Globe,
 } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 
@@ -480,38 +481,36 @@ export const SuperAdminDashboardPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
         <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Database className="h-5 w-5 text-indigo-600" />
-            <span>Question Bank & Content</span>
+            <Globe className="h-5 w-5 text-indigo-600" />
+            <span>Public Registrations</span>
           </h3>
           <p className="text-xs text-slate-500">
-            Author single-choice, multiple-choice, numerical questions and translate across 9
-            regional languages.
+            View, audit, and manage students registered via the public portal, including account activation and filters.
           </p>
           <div>
             <Link
-              to={PRIVATE_NAVIGATION.superAdminQuestionBank}
+              to={PRIVATE_NAVIGATION.superAdminPublicRegistrations}
               className="text-xs font-bold text-indigo-600 hover:underline"
             >
-              Open Question Bank &rarr;
+              View Public Students &rarr;
             </Link>
           </div>
         </div>
 
         <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Sliders className="h-5 w-5 text-purple-600" />
-            <span>Exam Generator Studio</span>
+            <CalendarClock className="h-5 w-5 text-indigo-600" />
+            <span>Official Exam Scheduling</span>
           </h3>
           <p className="text-xs text-slate-500">
-            Configure dynamic blueprint rules, difficulty stratifications, and section timing
-            constraints.
+            Configure official examination schedules, shift timings, target standards, and upload question papers.
           </p>
           <div>
             <Link
-              to={PRIVATE_NAVIGATION.superAdminExamBlueprints}
-              className="text-xs font-bold text-purple-600 hover:underline"
+              to={PRIVATE_NAVIGATION.superAdminExamScheduling}
+              className="text-xs font-bold text-indigo-600 hover:underline"
             >
-              Manage Blueprints &rarr;
+              Manage Scheduled Exams &rarr;
             </Link>
           </div>
         </div>

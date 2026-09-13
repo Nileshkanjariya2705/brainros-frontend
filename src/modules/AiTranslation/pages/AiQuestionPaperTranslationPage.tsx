@@ -47,48 +47,6 @@ export const AiQuestionPaperTranslationPage: React.FC = () => {
     staleTime: 10000,
   });
 
-  // Auto-select exam when redirected from notifications via query parameter
-  useEffect(() => {
-    const targetScheduleId = searchParams.get('scheduleId');
-    const targetExamId = searchParams.get('examId');
-    if ((targetScheduleId || targetExamId) && scheduledExams.length > 0 && !selectedExam) {
-      const match = scheduledExams.find(
-        (e) =>
-          (targetScheduleId && e.scheduleId === targetScheduleId) ||
-          (targetExamId && e.examId === targetExamId),
-      );
-      if (match) {
-        setSelectedExam(match);
-        if (match.translationJob?.id) {
-          setActiveJobId(match.translationJob.id);
-          setActiveTab('translations');
-        } else {
-          setActiveTab('upload');
-        }
-      }
-    }
-  }, [searchParams, scheduledExams, selectedExam]);
-
-  // Keep selected exam reference updated when scheduledExams changes
-  useEffect(() => {
-    if (selectedExam) {
-      const updated = scheduledExams.find((e) => e.scheduleId === selectedExam.scheduleId);
-      if (updated) {
-        setSelectedExam(updated);
-        if (updated.translationJob?.id) {
-          setActiveJobId(updated.translationJob.id);
-        }
-      }
-    }
-  }, [scheduledExams]);
-
-  // Automatically select active translation job if present on the selected exam
-  useEffect(() => {
-    if (selectedExam?.translationJob?.id) {
-      setActiveJobId(selectedExam.translationJob.id);
-    }
-  }, [selectedExam]);
-
   // 2. Real-time translation progress tracking
   const {
     jobDetails,
@@ -114,6 +72,86 @@ export const AiQuestionPaperTranslationPage: React.FC = () => {
       });
     },
   });
+
+  // Direct Job / Exam activation from URL query parameters (supports redirect after save & notifications)
+  useEffect(() => {
+    const targetJobId = searchParams.get('jobId') || searchParams.get('translationJobId');
+    const targetScheduleId = searchParams.get('scheduleId');
+    const targetExamId = searchParams.get('examId');
+
+    if (targetJobId && targetJobId !== activeJobId) {
+      setActiveJobId(targetJobId);
+      setActiveTab('translations');
+    }
+
+    if ((targetScheduleId || targetExamId) && scheduledExams.length > 0 && !selectedExam) {
+      const match = scheduledExams.find(
+        (e) =>
+          (targetScheduleId && e.scheduleId === targetScheduleId) ||
+          (targetExamId && e.examId === targetExamId),
+      );
+      if (match) {
+        setSelectedExam(match);
+        if (match.translationJob?.id && !targetJobId) {
+          setActiveJobId(match.translationJob.id);
+          setActiveTab('translations');
+        }
+      }
+    }
+  }, [searchParams, scheduledExams, selectedExam, activeJobId]);
+
+  // Keep selected exam reference updated when scheduledExams changes
+  useEffect(() => {
+    if (selectedExam) {
+      const updated = scheduledExams.find(
+        (e) => e.scheduleId === selectedExam.scheduleId || e.examId === selectedExam.examId,
+      );
+      if (updated) {
+        setSelectedExam(updated);
+        if (updated.translationJob?.id && !activeJobId) {
+          setActiveJobId(updated.translationJob.id);
+        }
+      }
+    }
+  }, [scheduledExams]);
+
+  // Automatically link selectedExam from jobDetails if user landed directly with ?jobId=...
+  useEffect(() => {
+    if (jobDetails && !selectedExam) {
+      const match = scheduledExams.find((e) => e.examId === jobDetails.examId);
+      if (match) {
+        setSelectedExam(match);
+      } else {
+        // Synthesize minimal selectedExam from jobDetails so UI can render workspace seamlessly
+        setSelectedExam({
+          scheduleId: jobDetails.examId,
+          examId: jobDetails.examId,
+          examTitle: jobDetails.examTitle || 'Examination Question Paper',
+          examCode: jobDetails.examCode || 'EXAM',
+          startTime: new Date().toISOString(),
+          endTime: new Date().toISOString(),
+          durationMinutes: 0,
+          totalQuestionsConfigured: jobDetails.totalQuestions,
+          currentQuestionsCount: jobDetails.totalQuestions,
+          targetLanguages: (jobDetails.languageStatuses || []).map((ls) => ({
+            id: ls.languageId,
+            name: ls.languageName,
+            code: ls.languageCode,
+          })),
+          latestVersionId: jobDetails.examVersionId,
+          translationJob: {
+            id: jobDetails.id,
+            status: jobDetails.status,
+            overallProgress: jobDetails.overallProgress,
+            createdAt: jobDetails.createdAt,
+            completedAt: jobDetails.completedAt || null,
+            languageStatuses: jobDetails.languageStatuses,
+          },
+        });
+      }
+      setActiveTab('translations');
+    }
+  }, [jobDetails, scheduledExams, selectedExam]);
 
   // 3. Handlers
   const handleSelectExam = (exam: ScheduledExam, mode: 'upload' | 'view' = 'upload') => {

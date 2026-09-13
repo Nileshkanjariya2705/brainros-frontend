@@ -145,6 +145,14 @@ export interface QueueEmailResult {
   recipientEmail: string;
 }
 
+export interface BulkQueueEmailResult {
+  success: boolean;
+  message: string;
+  jobId: string;
+  queue: string;
+  totalAttendees: number;
+}
+
 export const completedExamReportsService = {
   /**
    * Fetch all completed live exams (latest first, excluding mock tests)
@@ -230,6 +238,18 @@ export const completedExamReportsService = {
   },
 
   /**
+   * Queue PDF report generation and email delivery for ALL evaluated student attendees
+   */
+  async sendAllReportEmails(
+    examId: string,
+  ): Promise<BulkQueueEmailResult> {
+    const response = await Axios.post(
+      `/admin/completed-exams/${examId}/send-all-reports`,
+    );
+    return response.data?.data || response.data;
+  },
+
+  /**
    * Queue PDF report generation and email delivery to student's Institute via BullMQ
    */
   async sendReportToInstitute(
@@ -261,3 +281,4 @@ export const completedExamReportsService = {
     return response.data?.data || response.data;
   },
 };
+

@@ -84,15 +84,14 @@ export const TranslationProgressPanel: React.FC<TranslationProgressPanelProps> =
               AI Translation Pipeline
             </h2>
             <span
-              className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                isComplete
+              className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${isComplete
                   ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                   : isFailed
-                  ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                  : isPartial
-                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                  : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 animate-pulse'
-              }`}
+                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                    : isPartial
+                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                      : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 animate-pulse'
+                }`}
             >
               {status}
             </span>
@@ -233,13 +232,12 @@ export const TranslationProgressPanel: React.FC<TranslationProgressPanelProps> =
 
                 <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-300 ${
-                      isLangDone
+                    className={`h-full rounded-full transition-all duration-300 ${isLangDone
                         ? 'bg-emerald-500'
                         : isLangFail
-                        ? 'bg-rose-500'
-                        : 'bg-indigo-600'
-                    }`}
+                          ? 'bg-rose-500'
+                          : 'bg-indigo-600'
+                      }`}
                     style={{ width: `${langPct}%` }}
                   />
                 </div>

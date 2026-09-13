@@ -14,6 +14,8 @@ import {
   ChevronRight,
   Copy,
   ListOrdered,
+  FileSpreadsheet,
+  Plus,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { Axios } from '@/base-axios';
@@ -338,15 +340,28 @@ export const ManualQuestionEntryPage: React.FC = () => {
         payload,
       );
 
-      setIsSubmitting(false);
-      toast.success(res?.data?.message || 'Question paper saved successfully!');
+      const translationJobId =
+        res?.data?.data?.translationJobId ||
+        res?.data?.data?.jobId ||
+        res?.data?.translationJobId;
 
-      // Targeted cache invalidation
+      setIsSubmitting(false);
+
+      // Targeted cache invalidation (do not invalidate entire app)
       queryClient.invalidateQueries({ queryKey: questionPaperKeys.all });
       queryClient.invalidateQueries({ queryKey: examKeys.all });
       queryClient.invalidateQueries({ queryKey: adminKeys.scheduledExams() });
+      queryClient.invalidateQueries({ queryKey: ['ai-translation-scheduled-exams'] });
 
-      navigate(`${routePrefix}/exams/${examId}/question-paper/view`);
+      if (translationJobId) {
+        toast.success(
+          res?.data?.message || 'Question paper saved! Redirecting to AI Translation...',
+        );
+        navigate(`${routePrefix}/ai-translation?jobId=${translationJobId}&examId=${examId}`);
+      } else {
+        toast.success(res?.data?.message || 'Question paper saved successfully!');
+        navigate(`${routePrefix}/exams/${examId}/question-paper/view`);
+      }
     } catch (err: any) {
       setIsSubmitting(false);
       const msg =
@@ -414,6 +429,25 @@ export const ManualQuestionEntryPage: React.FC = () => {
             <span>Save Question Paper</span>
           </Button>
         </div>
+      </div>
+
+      {/* ── Question Entry Method Tabs (Manual Entry vs CSV / Excel) ── */}
+      <div className="flex items-center gap-2 p-1.5 bg-slate-200/70 rounded-2xl w-fit">
+        <button
+          type="button"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-white text-indigo-700 shadow-xs transition"
+        >
+          <Plus size={15} />
+          <span>1. Add Questions Manually</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate(`${routePrefix}/exams/${examId}/question-paper/upload`)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-white/60 transition"
+        >
+          <FileSpreadsheet size={15} />
+          <span>2. Upload CSV / Excel</span>
+        </button>
       </div>
 
       {/* ── Progress & Status Bar ── */}

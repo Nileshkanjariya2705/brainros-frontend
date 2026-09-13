@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   RefreshCw,
   Eye,
+  Plus,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { toast } from '@/utils/toast';
@@ -591,11 +592,11 @@ export const UploadQuestionPaperPage: React.FC = () => {
                               <Button
                                 size="sm"
                                 onClick={() =>
-                                  navigate(`${routePrefix}/exams/${exam.id}/question-paper/upload`)
+                                  navigate(`${routePrefix}/exams/${exam.id}/question-paper/add`)
                                 }
                                 className="inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs"
                               >
-                                <UploadCloud size={12} /> Replace Question Paper
+                                <Plus size={12} /> Replace Question Paper
                               </Button>
                             </div>
                           ) : isFailed ? (
@@ -611,22 +612,22 @@ export const UploadQuestionPaperPage: React.FC = () => {
                               <Button
                                 size="sm"
                                 onClick={() =>
-                                  navigate(`${routePrefix}/exams/${exam.id}/question-paper/upload`)
+                                  navigate(`${routePrefix}/exams/${exam.id}/question-paper/add`)
                                 }
                                 className="inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs"
                               >
-                                <UploadCloud size={12} /> Add Question Paper
+                                <Plus size={12} /> Add Question Paper
                               </Button>
                             </div>
                           ) : (
                             <Button
                               size="sm"
                               onClick={() =>
-                                navigate(`${routePrefix}/exams/${exam.id}/question-paper/upload`)
+                                navigate(`${routePrefix}/exams/${exam.id}/question-paper/add`)
                               }
                               className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-xs"
                             >
-                              <UploadCloud size={13} />
+                              <Plus size={13} />
                               <span>Add Question Paper</span>
                             </Button>
                           )}

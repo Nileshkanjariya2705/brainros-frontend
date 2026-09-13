@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Receipt,
@@ -11,7 +11,6 @@ import {
   X,
   Mail,
   AlertTriangle,
-  Activity,
   Check,
   PlusCircle,
   Settings,
@@ -22,6 +21,8 @@ import {
   Sparkles,
   Info,
   Zap,
+  Edit3,
+  ChevronDown,
 } from 'lucide-react';
 import {
   BillingApi,
@@ -33,146 +34,181 @@ import { toast } from '@/utils/toast';
 import { useJobProgress } from '@/hooks/useJobProgress';
 import { useRole } from '@/modules/Auth/auth-access/useRole';
 
-/* ── WebSocket Live Progress Modal for Bulk Invoice Generation ───────────── */
-interface BulkInvoiceProgressModalProps {
-  jobId: string;
-  onClose: () => void;
+/* ── Generate All Invoices Button with Integrated Inline Progress ───────────── */
+interface GenerateAllInvoicesButtonProps {
+  activeJobId: string | null;
+  onJobComplete: () => void;
+  onGenerate: () => void;
+  isPending: boolean;
 }
 
-const BulkInvoiceProgressModal: React.FC<BulkInvoiceProgressModalProps> = ({ jobId, onClose }) => {
-  const { percentage, stage, message, status, isCompleted, isFailed } = useJobProgress({
+const GenerateAllInvoicesButton: React.FC<GenerateAllInvoicesButtonProps> = ({
+  activeJobId,
+  onJobComplete,
+  onGenerate,
+  isPending,
+}) => {
+  const { percentage, stage, message, isCompleted, isFailed, current, total } = useJobProgress({
     queue: 'bulk-invoices',
-    jobId,
-    enabled: Boolean(jobId),
+    jobId: activeJobId || '',
+    enabled: Boolean(activeJobId),
     queryKeyToInvalidate: ['superadmin-invoices'],
   });
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 text-center">
-        <div className="h-14 w-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mx-auto mb-4">
-          <Activity size={28} className={!isCompleted && !isFailed ? 'animate-pulse' : ''} />
-        </div>
+  useEffect(() => {
+    if (activeJobId && (isCompleted || isFailed)) {
+      const timer = setTimeout(() => {
+        onJobComplete();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeJobId, isCompleted, isFailed, onJobComplete]);
 
-        <h3 className="text-lg font-bold text-slate-900">Generating Invoices</h3>
-        <p className="text-xs text-slate-500 mt-1">
-          BullMQ Worker + Database Student Count & School-Specific Pricing Calculation
-        </p>
+  const isGenerating = Boolean(activeJobId) && !isCompleted && !isFailed;
 
-        <div className="mt-5 space-y-2">
-          <div className="flex justify-between text-xs font-semibold text-slate-600">
-            <span>{stage || status}</span>
-            <span>{percentage}%</span>
+  if (isGenerating) {
+    return (
+      <div className="relative overflow-hidden rounded-xl bg-indigo-700 text-white font-bold text-xs px-3.5 py-2 shadow-md flex items-center min-w-[220px] select-none">
+        {/* Animated Fill Bar */}
+        <div
+          className="absolute inset-0 bg-indigo-500 transition-all duration-300 ease-out"
+          style={{ width: `${Math.max(percentage, 8)}%`, opacity: 0.75 }}
+        />
+        <div className="relative z-10 flex items-center justify-between w-full gap-2">
+          <div className="flex items-center gap-1.5 font-semibold">
+            <RefreshCw size={13} className="animate-spin text-white" />
+            <span className="truncate max-w-[130px]">{stage || message || 'Generating Invoices...'}</span>
           </div>
-          <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              className={`h-full transition-all duration-300 ${
-                isFailed
-                  ? 'bg-rose-500'
-                  : isCompleted
-                  ? 'bg-emerald-500'
-                  : 'bg-indigo-600'
-              }`}
-              style={{ width: `${Math.max(percentage, 5)}%` }}
-            />
-          </div>
-          <p className="text-xs text-slate-500 italic mt-1">{message || 'Processing schools...'}</p>
-        </div>
-
-        <div className="mt-6 flex justify-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            disabled={!isCompleted && !isFailed}
-          >
-            {isCompleted ? 'Done' : isFailed ? 'Dismiss' : 'Processing...'}
-          </Button>
+          <span className="font-mono font-bold bg-indigo-900/60 px-1.5 py-0.5 rounded text-[11px]">
+            {percentage}% {total > 0 ? `(${current}/${total})` : ''}
+          </span>
         </div>
       </div>
-    </div>
+    );
+  }
+
+  if (activeJobId && isCompleted) {
+    return (
+      <div className="rounded-xl bg-emerald-600 text-white font-bold text-xs px-3.5 py-2 shadow-md flex items-center gap-1.5 animate-in fade-in select-none">
+        <CheckCircle2 size={14} />
+        <span>Invoices Generated! {total > 0 ? `(${total})` : ''}</span>
+      </div>
+    );
+  }
+
+  if (activeJobId && isFailed) {
+    return (
+      <div className="rounded-xl bg-rose-600 text-white font-bold text-xs px-3.5 py-2 shadow-md flex items-center gap-1.5 animate-in fade-in select-none">
+        <AlertTriangle size={14} />
+        <span>Generation Failed</span>
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      size="sm"
+      onClick={onGenerate}
+      disabled={isPending}
+      className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 shadow-md font-bold px-4 py-2 text-sm"
+      title="Generate invoices for all eligible schools for selected month"
+    >
+      {isPending ? (
+        <RefreshCw size={15} className="animate-spin" />
+      ) : (
+        <Zap size={15} />
+      )}
+      Generate All Invoices
+    </Button>
   );
 };
 
-/* ── WebSocket Live Progress Modal for Bulk Send All Invoices ───────────── */
-interface BulkSendProgressModalProps {
-  jobId: string;
-  onClose: () => void;
+/* ── Send All Invoices Button with Integrated Inline Progress ───────────── */
+interface SendAllInvoicesButtonProps {
+  activeJobId: string | null;
+  onJobComplete: () => void;
+  onOpenModal: () => void;
+  isPending: boolean;
 }
 
-const BulkSendProgressModal: React.FC<BulkSendProgressModalProps> = ({ jobId, onClose }) => {
-  const { percentage, stage, message, status, isCompleted, isFailed, current, total, resultSummary } = useJobProgress({
+const SendAllInvoicesButton: React.FC<SendAllInvoicesButtonProps> = ({
+  activeJobId,
+  onJobComplete,
+  onOpenModal,
+  isPending,
+}) => {
+  const { percentage, isCompleted, isFailed, current, total } = useJobProgress({
     queue: 'bulk-bill-email',
-    jobId,
-    enabled: Boolean(jobId),
+    jobId: activeJobId || '',
+    enabled: Boolean(activeJobId),
     queryKeyToInvalidate: ['superadmin-invoices'],
   });
 
-  const metadata = resultSummary || {};
-  const sentCount = metadata.sent ?? current;
-  const failedCount = metadata.failed ?? 0;
-  const pendingCount = metadata.pending ?? Math.max(0, total - current);
+  useEffect(() => {
+    if (activeJobId && (isCompleted || isFailed)) {
+      const timer = setTimeout(() => {
+        onJobComplete();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeJobId, isCompleted, isFailed, onJobComplete]);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 text-center">
-        <div className="h-14 w-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mx-auto mb-4">
-          <Mail size={28} className={!isCompleted && !isFailed ? 'animate-pulse' : ''} />
-        </div>
+  const isSending = Boolean(activeJobId) && !isCompleted && !isFailed;
 
-        <h3 className="text-lg font-bold text-slate-900">Sending Invoices</h3>
-        <p className="text-xs text-slate-500 mt-1">
-          BullMQ Queue + Resend Email Delivery Engine
-        </p>
-
-        <div className="mt-5 space-y-3">
-          <div className="flex justify-between text-xs font-semibold text-slate-600">
-            <span>{stage || status}</span>
-            <span>{percentage}%</span>
+  if (isSending) {
+    return (
+      <div className="relative overflow-hidden rounded-xl bg-blue-700 text-white font-bold text-xs px-3.5 py-2 shadow-md flex items-center min-w-[210px] select-none">
+        {/* Animated Fill Bar */}
+        <div
+          className="absolute inset-0 bg-blue-500 transition-all duration-300 ease-out"
+          style={{ width: `${Math.max(percentage, 8)}%`, opacity: 0.75 }}
+        />
+        <div className="relative z-10 flex items-center justify-between w-full gap-2">
+          <div className="flex items-center gap-1.5 font-semibold">
+            <RefreshCw size={13} className="animate-spin text-white" />
+            <span>Sending Invoices...</span>
           </div>
-          <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              className={`h-full transition-all duration-300 ${
-                isFailed
-                  ? 'bg-rose-500'
-                  : isCompleted
-                  ? 'bg-emerald-500'
-                  : 'bg-blue-600'
-              }`}
-              style={{ width: `${percentage}%` }}
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70 text-center">
-            <div>
-              <div className="text-[10px] text-slate-400 uppercase font-bold">Sent</div>
-              <div className="text-sm font-bold text-emerald-600">{sentCount}</div>
-            </div>
-            <div>
-              <div className="text-[10px] text-slate-400 uppercase font-bold">Failed</div>
-              <div className="text-sm font-bold text-rose-600">{failedCount}</div>
-            </div>
-            <div>
-              <div className="text-[10px] text-slate-400 uppercase font-bold">Remaining</div>
-              <div className="text-sm font-bold text-slate-600">{pendingCount}</div>
-            </div>
-          </div>
-
-          <p className="text-xs text-slate-500 italic mt-1">{message || 'Processing email batch...'}</p>
-        </div>
-
-        <div className="mt-6 flex justify-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            disabled={!isCompleted && !isFailed}
-          >
-            {isCompleted ? 'Done' : isFailed ? 'Dismiss' : 'Processing...'}
-          </Button>
+          <span className="font-mono font-bold bg-blue-900/60 px-1.5 py-0.5 rounded text-[11px]">
+            {percentage}% {total > 0 ? `(${current}/${total})` : ''}
+          </span>
         </div>
       </div>
-    </div>
+    );
+  }
+
+  if (activeJobId && isCompleted) {
+    return (
+      <div className="rounded-xl bg-emerald-600 text-white font-bold text-xs px-3.5 py-2 shadow-md flex items-center gap-1.5 animate-in fade-in select-none">
+        <CheckCircle2 size={14} />
+        <span>All Invoices Sent! {total > 0 ? `(${total})` : ''}</span>
+      </div>
+    );
+  }
+
+  if (activeJobId && isFailed) {
+    return (
+      <div className="rounded-xl bg-rose-600 text-white font-bold text-xs px-3.5 py-2 shadow-md flex items-center gap-1.5 animate-in fade-in select-none">
+        <AlertTriangle size={14} />
+        <span>Send Incomplete</span>
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      size="sm"
+      onClick={onOpenModal}
+      disabled={isPending}
+      className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-md font-bold px-4 py-2 text-sm"
+      title="Send all generated invoices for selected billing period"
+    >
+      {isPending ? (
+        <RefreshCw size={15} className="animate-spin" />
+      ) : (
+        <Send size={15} />
+      )}
+      Send All Invoices
+    </Button>
   );
 };
 
@@ -325,28 +361,117 @@ export const SuperAdminBillingPage: React.FC = () => {
     },
   });
 
+  // Inline Price Editing State
+  const [editingSchoolId, setEditingSchoolId] = useState<string | null>(null);
+  const [editingPriceValue, setEditingPriceValue] = useState<string>('');
+
+  // Inline Price Mutation with Targeted Cache Update
+  const inlinePriceMutation = useMutation({
+    mutationFn: ({ schoolId, price }: { schoolId: string; price: number }) =>
+      BillingApi.updateSchoolPricing(schoolId, {
+        pricePerStudent: price,
+        billingMonth: selectedMonth ? Number(selectedMonth) : undefined,
+        billingYear: selectedYear ? Number(selectedYear) : undefined,
+      }),
+    onSuccess: (res, variables) => {
+      toast.success(res.message || 'School pricing updated successfully!');
+      setEditingSchoolId(null);
+      setEditingPriceValue('');
+
+      // Targeted cache update using setQueryData on superadmin-invoices
+      queryClient.setQueryData(['superadmin-invoices', queryParams], (oldData: any) => {
+        if (!oldData || !oldData.data) return oldData;
+        return {
+          ...oldData,
+          data: oldData.data.map((item: BillItem) => {
+            if (item.institution?.id === variables.schoolId) {
+              const studentCount = item.studentCount || 0;
+              const subtotal = Math.round(studentCount * variables.price * 100) / 100;
+              const tax = Math.round(subtotal * 0.18 * 100) / 100;
+              return {
+                ...item,
+                pricePerStudent: variables.price,
+                amount: subtotal,
+                tax: tax,
+                totalAmount: Math.round((subtotal + tax) * 100) / 100,
+              };
+            }
+            return item;
+          }),
+        };
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['billing-filter-options'] });
+      queryClient.invalidateQueries({ queryKey: ['school-pricings'] });
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || 'Unable to update price. Please try again.';
+      toast.error(msg);
+    },
+  });
+
+  const startInlineEdit = (schoolId: string, currentPrice: number) => {
+    setEditingSchoolId(schoolId);
+    setEditingPriceValue(String(currentPrice));
+  };
+
+  const cancelInlineEdit = () => {
+    setEditingSchoolId(null);
+    setEditingPriceValue('');
+  };
+
+  const saveInlineEdit = (schoolId: string) => {
+    const num = Number(editingPriceValue);
+    if (!editingPriceValue || isNaN(num) || num <= 0) {
+      toast.error('Please enter a valid price greater than zero.');
+      return;
+    }
+    if (num > 1000000) {
+      toast.error('Price cannot exceed ₹10,00,000.');
+      return;
+    }
+    inlinePriceMutation.mutate({ schoolId, price: num });
+  };
+
+  // 3.5. Update Invoice Payment Status (Paid / Unpaid)
+  const [updatingStatusBillId, setUpdatingStatusBillId] = useState<string | null>(null);
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ billId, status }: { billId: string; status: string }) =>
+      BillingApi.updateBillStatus(billId, status),
+    onSuccess: (res, variables) => {
+      toast.success(res.message || `Status updated to ${variables.status === 'PAID' ? 'Paid' : 'Unpaid'}`);
+      setUpdatingStatusBillId(null);
+      // Optimistic cache update
+      queryClient.setQueryData(['superadmin-invoices', queryParams], (oldData: any) => {
+        if (!oldData || !oldData.data) return oldData;
+        return {
+          ...oldData,
+          data: oldData.data.map((b: BillItem) =>
+            b.id === variables.billId
+              ? { ...b, status: variables.status === 'UNPAID' ? 'GENERATED' : variables.status }
+              : b,
+          ),
+        };
+      });
+      queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Failed to update payment status.');
+      setUpdatingStatusBillId(null);
+    },
+  });
+
   // 4. Generate Invoice Form State
   const [genSchoolId, setGenSchoolId] = useState<string>('ALL');
   const [genMonth, setGenMonth] = useState<number>(currentMonth);
   const [genYear, setGenYear] = useState<number>(currentYear);
-  const [customPricePerStudent, setCustomPricePerStudent] = useState<number | ''>('');
 
   // Live Preview Query for Single School Generation
   const { data: previewData, isFetching: isPreviewFetching } = useQuery({
-    queryKey: [
-      'invoice-preview',
-      genSchoolId,
-      genMonth,
-      genYear,
-      customPricePerStudent !== '' ? customPricePerStudent : undefined,
-    ],
-    queryFn: () =>
-      BillingApi.getInvoicePreview(
-        genSchoolId,
-        genMonth,
-        genYear,
-        typeof customPricePerStudent === 'number' ? customPricePerStudent : undefined,
-      ),
+    queryKey: ['invoice-preview', genSchoolId, genMonth, genYear],
+    queryFn: () => BillingApi.getInvoicePreview(genSchoolId, genMonth, genYear),
     enabled: isGenerateModalOpen && genSchoolId !== 'ALL' && Boolean(genSchoolId),
   });
 
@@ -359,7 +484,6 @@ export const SuperAdminBillingPage: React.FC = () => {
       billingMonth: number;
       billingYear: number;
       generateAll?: boolean;
-      pricePerStudent?: number;
     }) => BillingApi.generateInvoice(payload),
     onSuccess: (res) => {
       toast.success(res.message || 'Invoice generation initiated successfully!');
@@ -367,14 +491,13 @@ export const SuperAdminBillingPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['billing-filter-options'] });
       queryClient.invalidateQueries({ queryKey: ['super-admin', 'revenue'] });
       setIsGenerateModalOpen(false);
-      setCustomPricePerStudent('');
 
       if (res.data?.jobId) {
         setActiveBulkJobId(res.data.jobId);
       }
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message || 'Failed to generate invoice.';
+      const msg = err.response?.data?.message || 'Unable to generate invoice for this school.';
       toast.error(msg);
     },
   });
@@ -539,63 +662,28 @@ export const SuperAdminBillingPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Configurable Price Card */}
-          <div className="flex items-center gap-3 bg-slate-50 hover:bg-slate-100/80 px-4 py-2 rounded-xl border border-slate-200 transition">
-            <div>
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                Default Billing Rate
-              </div>
-              <div className="text-base font-bold text-slate-900 font-mono flex items-center gap-1">
-                <span>₹{currentPricing}</span>
-                <span className="text-xs font-normal text-slate-500 font-sans">/ student / month</span>
-              </div>
-            </div>
-            {isSuperAdmin && (
-              <button
-                type="button"
-                onClick={() => {
-                  setNewPricingRate(currentPricing);
-                  setIsPricingModalOpen(true);
-                }}
-                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition border border-transparent hover:border-slate-200"
-                title="Configure Default Billing Rate"
-              >
-                <Settings size={16} />
-              </button>
-            )}
-          </div>
+          {/* Generate All Invoices Button with Inline Progress */}
+          <GenerateAllInvoicesButton
+            activeJobId={activeBulkJobId}
+            onJobComplete={() => {
+              setActiveBulkJobId(null);
+              queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+              queryClient.invalidateQueries({ queryKey: ['billing-filter-options'] });
+            }}
+            onGenerate={handleGenerateAllInvoices}
+            isPending={generateMutation.isPending && !generatingSchoolId}
+          />
 
-          {/* Generate All Invoices Button */}
-          <Button
-            size="sm"
-            onClick={handleGenerateAllInvoices}
-            disabled={generateMutation.isPending}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 shadow-md font-bold px-4 py-2 text-sm"
-            title="Generate invoices for all eligible schools for selected month"
-          >
-            {generateMutation.isPending && !generatingSchoolId ? (
-              <RefreshCw size={15} className="animate-spin" />
-            ) : (
-              <Zap size={15} />
-            )}
-            Generate All Invoices
-          </Button>
-
-          {/* Send All Invoices Button */}
-          <Button
-            size="sm"
-            onClick={() => setIsSendAllModalOpen(true)}
-            disabled={sendBulkMutation.isPending}
-            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-md font-bold px-4 py-2 text-sm"
-            title="Send all generated invoices for selected billing period"
-          >
-            {sendBulkMutation.isPending ? (
-              <RefreshCw size={15} className="animate-spin" />
-            ) : (
-              <Send size={15} />
-            )}
-            Send All Invoices
-          </Button>
+          {/* Send All Invoices Button with Inline Progress */}
+          <SendAllInvoicesButton
+            activeJobId={activeBulkSendJobId}
+            onJobComplete={() => {
+              setActiveBulkSendJobId(null);
+              queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+            }}
+            onOpenModal={() => setIsSendAllModalOpen(true)}
+            isPending={sendBulkMutation.isPending}
+          />
 
           <Button
             variant="outline"
@@ -718,9 +806,72 @@ export const SuperAdminBillingPage: React.FC = () => {
                         <td className="py-4 px-4 font-mono text-xs font-semibold text-slate-600">
                           {school.code || 'N/A'}
                         </td>
-                        <td className="py-4 px-4 text-right font-mono font-bold text-slate-900">
-                          ₹{rate.toLocaleString('en-IN')}{' '}
-                          <span className="text-[11px] font-normal text-slate-400 font-sans">/ student</span>
+                        <td className="py-4 px-4 text-right">
+                          {editingSchoolId === school.id ? (
+                            <div className="flex items-center justify-end gap-1 min-w-[140px]">
+                              <div className="relative w-20">
+                                <span className="absolute left-2 top-1.5 text-xs font-bold text-slate-400">₹</span>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={editingPriceValue}
+                                  autoFocus
+                                  disabled={inlinePriceMutation.isPending}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') saveInlineEdit(school.id);
+                                    if (e.key === 'Escape') cancelInlineEdit();
+                                    if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                                      e.preventDefault();
+                                    }
+                                  }}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    setEditingPriceValue(val);
+                                  }}
+                                  className="w-full pl-5 pr-1.5 py-1 text-xs font-bold font-mono border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 bg-white"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => saveInlineEdit(school.id)}
+                                disabled={inlinePriceMutation.isPending}
+                                className="p-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition text-xs font-bold disabled:opacity-50 flex items-center gap-1"
+                                title="Save Price"
+                              >
+                                {inlinePriceMutation.isPending ? (
+                                  <RefreshCw size={12} className="animate-spin" />
+                                ) : (
+                                  <Check size={12} />
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={cancelInlineEdit}
+                                disabled={inlinePriceMutation.isPending}
+                                className="p-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 transition text-xs font-bold"
+                                title="Cancel"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1.5 font-mono">
+                              <span className="font-bold text-slate-900">
+                                ₹{rate.toLocaleString('en-IN')}
+                              </span>
+                              <span className="text-[11px] font-normal text-slate-400 font-sans">/ student</span>
+                              {isSuperAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => startInlineEdit(school.id, rate)}
+                                  className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition"
+                                  title="Inline Edit School Price"
+                                >
+                                  <Edit3 size={13} />
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="py-4 px-4">
                           {isCustom ? (
@@ -1051,7 +1202,7 @@ export const SuperAdminBillingPage: React.FC = () => {
                   <th className="py-3.5 px-4">School</th>
                   <th className="py-3.5 px-4">Billing Period</th>
                   <th className="py-3.5 px-4 text-right">Students</th>
-                  <th className="py-3.5 px-4 text-right">Price / Student</th>
+                  <th className="py-3.5 px-4 text-right">Price / Student / Month</th>
                   <th className="py-3.5 px-4 text-right">Total Amount</th>
                   <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 px-4">Email Delivery</th>
@@ -1108,9 +1259,72 @@ export const SuperAdminBillingPage: React.FC = () => {
                         {bill.studentCount > 0 ? bill.studentCount.toLocaleString('en-IN') : '—'}
                       </td>
 
-                      {/* Price per student */}
-                      <td className="py-4 px-4 text-right font-medium text-slate-600 font-mono">
-                        ₹{bill.pricePerStudent > 0 ? bill.pricePerStudent.toLocaleString('en-IN') : '300'}
+                      {/* Price per student / month */}
+                      <td className="py-4 px-4 text-right">
+                        {editingSchoolId === bill.institution?.id ? (
+                          <div className="flex items-center justify-end gap-1 min-w-[140px]">
+                            <div className="relative w-20">
+                              <span className="absolute left-2 top-1.5 text-xs font-bold text-slate-400">₹</span>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={editingPriceValue}
+                                autoFocus
+                                disabled={inlinePriceMutation.isPending}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') saveInlineEdit(bill.institution.id);
+                                  if (e.key === 'Escape') cancelInlineEdit();
+                                  if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                                    e.preventDefault();
+                                  }
+                                }}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/\D/g, '');
+                                  setEditingPriceValue(val);
+                                }}
+                                className="w-full pl-5 pr-1.5 py-1 text-xs font-bold font-mono border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 bg-white"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => saveInlineEdit(bill.institution.id)}
+                              disabled={inlinePriceMutation.isPending}
+                              className="p-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition text-xs font-bold disabled:opacity-50 flex items-center gap-1"
+                              title="Save Price"
+                            >
+                              {inlinePriceMutation.isPending ? (
+                                <RefreshCw size={12} className="animate-spin" />
+                              ) : (
+                                <Check size={12} />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelInlineEdit}
+                              disabled={inlinePriceMutation.isPending}
+                              className="p-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 transition text-xs font-bold"
+                              title="Cancel"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1.5 font-mono">
+                            <span className="font-semibold text-slate-800">
+                              ₹{(bill.pricePerStudent > 0 ? bill.pricePerStudent : currentPricing).toLocaleString('en-IN')}
+                            </span>
+                            {isSuperAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => startInlineEdit(bill.institution.id, bill.pricePerStudent > 0 ? bill.pricePerStudent : currentPricing)}
+                                className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition"
+                                title="Edit School Price"
+                              >
+                                <Edit3 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
 
                       {/* Total Amount */}
@@ -1120,48 +1334,42 @@ export const SuperAdminBillingPage: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Invoice Status */}
+                      {/* Invoice Status Dropdown (Paid / Unpaid) */}
                       <td className="py-4 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                            bill.status === 'NOT_GENERATED'
-                              ? 'bg-slate-100 text-slate-600 border border-slate-200'
-                              : bill.status === 'GENERATED'
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                              : bill.status === 'SENT'
-                              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                              : bill.status === 'PAID'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : bill.status === 'OVERDUE'
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                              : bill.status === 'APPROVED'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : bill.status === 'REJECTED'
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              bill.status === 'NOT_GENERATED'
-                                ? 'bg-slate-400'
-                                : bill.status === 'GENERATED'
-                                ? 'bg-blue-500'
-                                : bill.status === 'SENT'
-                                ? 'bg-indigo-500'
-                                : bill.status === 'PAID'
-                                ? 'bg-emerald-500'
-                                : bill.status === 'OVERDUE'
-                                ? 'bg-rose-500'
-                                : bill.status === 'APPROVED'
-                                ? 'bg-emerald-500'
-                                : bill.status === 'REJECTED'
-                                ? 'bg-rose-500'
-                                : 'bg-amber-500'
-                            }`}
-                          />
-                          {bill.status === 'NOT_GENERATED' ? 'Not Generated' : bill.status}
-                        </span>
+                        {bill.status === 'NOT_GENERATED' || bill.isUnbilled ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                            <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                            Not Generated
+                          </span>
+                        ) : (
+                          <div className="relative inline-flex items-center">
+                            <select
+                              value={bill.status === 'PAID' ? 'PAID' : 'UNPAID'}
+                              disabled={updateStatusMutation.isPending && updatingStatusBillId === bill.id}
+                              onChange={(e) => {
+                                const newStatus = e.target.value;
+                                setUpdatingStatusBillId(bill.id);
+                                updateStatusMutation.mutate({ billId: bill.id, status: newStatus });
+                              }}
+                              className={`cursor-pointer appearance-none pl-3 pr-7 py-1 rounded-full text-xs font-bold border transition shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${
+                                bill.status === 'PAID'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                                  : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
+                              }`}
+                              title="Click to update status (Paid / Unpaid)"
+                            >
+                              <option value="PAID">Paid</option>
+                              <option value="UNPAID">Unpaid</option>
+                            </select>
+                            <div className="pointer-events-none absolute right-2 flex items-center">
+                              {updateStatusMutation.isPending && updatingStatusBillId === bill.id ? (
+                                <RefreshCw size={11} className="animate-spin text-slate-500" />
+                              ) : (
+                                <ChevronDown size={12} className={bill.status === 'PAID' ? 'text-emerald-600' : 'text-amber-600'} />
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </td>
 
                       {/* Email Status */}
@@ -1480,39 +1688,6 @@ export const SuperAdminBillingPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Editable Price per Student */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Price per Student (₹)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2 text-xs text-slate-400 font-bold">₹</span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={
-                      customPricePerStudent !== ''
-                        ? customPricePerStudent
-                        : (preview?.pricePerStudent ?? currentPricing)
-                    }
-                    onKeyDown={(e) => {
-                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
-                        e.preventDefault();
-                      }
-                    }}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '');
-                      setCustomPricePerStudent(val === '' ? '' : Number(val));
-                    }}
-                    placeholder={`Default: ₹${currentPricing}`}
-                    className="w-full pl-7 pr-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white font-mono font-semibold"
-                  />
-                </div>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Edit price per student for this invoice cycle. Default: ₹{currentPricing}
-                </p>
-              </div>
-
               {/* Single School Live Preview Card */}
               {genSchoolId !== 'ALL' && (
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-2">
@@ -1530,13 +1705,13 @@ export const SuperAdminBillingPage: React.FC = () => {
                         </span>
                       </div>
                       <div className="flex justify-between py-0.5 text-xs">
-                        <span className="text-slate-600">Rate per Student:</span>
-                        <span className="font-medium text-slate-800 font-mono">
-                          ₹{typeof customPricePerStudent === 'number' ? customPricePerStudent : preview.pricePerStudent}
+                        <span className="text-slate-600">Configured Rate per Student:</span>
+                        <span className="font-bold text-slate-900 font-mono">
+                          ₹{preview.pricePerStudent} <span className="text-[10px] text-slate-400 font-sans font-normal">/ month</span>
                         </span>
                       </div>
                       {(() => {
-                        const rate = typeof customPricePerStudent === 'number' ? customPricePerStudent : preview.pricePerStudent;
+                        const rate = preview.pricePerStudent;
                         const subtotal = preview.studentCount * rate;
                         const tax = Math.round(subtotal * 0.18 * 100) / 100;
                         const total = Math.round((subtotal + tax) * 100) / 100;
@@ -1593,7 +1768,7 @@ export const SuperAdminBillingPage: React.FC = () => {
                     Bulk Asynchronous Generation
                   </div>
                   <p className="text-slate-600">
-                    Invoices will be generated across all active schools at rate of ₹{typeof customPricePerStudent === 'number' ? customPricePerStudent : currentPricing}/student. Schools with existing invoices for this month or with 0 students will be safely skipped.
+                    Invoices will be generated across all active schools using each school's dynamic configured rate. Schools with existing invoices for this month or with 0 students will be safely skipped.
                   </p>
                 </div>
               )}
@@ -1615,7 +1790,6 @@ export const SuperAdminBillingPage: React.FC = () => {
                     billingMonth: genMonth,
                     billingYear: genYear,
                     generateAll: genSchoolId === 'ALL',
-                    pricePerStudent: typeof customPricePerStudent === 'number' ? customPricePerStudent : undefined,
                   })
                 }
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
@@ -2117,13 +2291,14 @@ export const SuperAdminBillingPage: React.FC = () => {
               <Button
                 size="sm"
                 disabled={sendBulkMutation.isPending}
-                onClick={() =>
+                onClick={() => {
+                  setIsSendAllModalOpen(false);
                   sendBulkMutation.mutate({
                     billingMonth: selectedMonth ? Number(selectedMonth) : lastMonth,
                     billingYear: selectedYear ? Number(selectedYear) : lastMonthYear,
                     forceRetryFailed: forceRetrySendAll,
-                  })
-                }
+                  });
+                }}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center gap-1.5 shadow-md"
               >
                 {sendBulkMutation.isPending ? (
@@ -2131,34 +2306,16 @@ export const SuperAdminBillingPage: React.FC = () => {
                 ) : (
                   <Send size={14} />
                 )}
-                {sendBulkMutation.isPending ? 'Queuing Dispatch...' : 'Confirm & Send All Invoices'}
+                Confirm & Send All Invoices
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── 11. LIVE WEBSOCKET PROGRESS MODALS ── */}
-      {activeBulkJobId && (
-        <BulkInvoiceProgressModal
-          jobId={activeBulkJobId}
-          onClose={() => {
-            setActiveBulkJobId(null);
-            queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
-            queryClient.invalidateQueries({ queryKey: ['billing-filter-options'] });
-          }}
-        />
-      )}
 
-      {activeBulkSendJobId && (
-        <BulkSendProgressModal
-          jobId={activeBulkSendJobId}
-          onClose={() => {
-            setActiveBulkSendJobId(null);
-            queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
-          }}
-        />
-      )}
+
+
     </div>
   );
 };

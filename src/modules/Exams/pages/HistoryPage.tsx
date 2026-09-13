@@ -110,34 +110,13 @@ const HistoryPage = () => {
       {/* Navigation Tabs Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Exam History</h1>
-            <div className="flex rounded-xl bg-slate-100 p-1 text-xs font-bold">
-              <span className="rounded-lg bg-white px-3 py-1 text-indigo-700 shadow-2xs">
-                Exams
-              </span>
-              <Link
-                to={PRIVATE_NAVIGATION.studentMockHistory}
-                className="rounded-lg px-3 py-1 text-slate-600 hover:text-slate-900 transition-colors"
-              >
-                Mock Tests
-              </Link>
-            </div>
-          </div>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Exam History</h1>
           <p className="mt-1 text-sm text-slate-500">
             Review your past test attempts, overall scores, and in-depth performance analytics.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Link
-            to={PRIVATE_NAVIGATION.studentMockHistory}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/70 px-3.5 py-2.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-all"
-          >
-            <Award size={15} />
-            Mock Test History
-          </Link>
-
           <Link
             to={PRIVATE_NAVIGATION.availableExams}
             className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-indigo-700 transition-all"
@@ -259,12 +238,6 @@ const HistoryPage = () => {
               className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-indigo-700 transition-all"
             >
               View Available Exams
-            </Link>
-            <Link
-              to={PRIVATE_NAVIGATION.studentMockTests}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"
-            >
-              Browse Mock Tests
             </Link>
           </div>
         </div>

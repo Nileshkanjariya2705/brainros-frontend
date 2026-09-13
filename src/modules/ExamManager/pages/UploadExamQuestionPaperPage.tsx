@@ -255,22 +255,22 @@ export const UploadExamQuestionPaperPage: React.FC = () => {
           </div>
         )}
 
-        {/* ── Question Entry Method Tabs (CSV / Excel vs Manual Question Entry) ── */}
+        {/* ── Question Entry Method Tabs (Manual Question Entry vs CSV / Excel) ── */}
         <div className="flex items-center gap-2 p-1.5 bg-slate-200/70 rounded-2xl w-fit">
-          <button
-            type="button"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-white text-indigo-700 shadow-xs transition"
-          >
-            <FileSpreadsheet size={15} />
-            <span>Upload CSV / Excel</span>
-          </button>
           <button
             type="button"
             onClick={() => navigate(`${routePrefix}/exams/${examId}/question-paper/add`)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-white/60 transition"
           >
             <Plus size={15} />
-            <span>Add Questions Manually</span>
+            <span>1. Add Questions Manually</span>
+          </button>
+          <button
+            type="button"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-white text-indigo-700 shadow-xs transition"
+          >
+            <FileSpreadsheet size={15} />
+            <span>2. Upload CSV / Excel</span>
           </button>
         </div>
 

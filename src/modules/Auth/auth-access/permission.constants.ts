@@ -9,7 +9,7 @@ export const MODULES = {
   STUDENTS: 'students',
   PARENTS: 'parents',
 
-  QUESTION_BANK: 'question-bank',
+  QUESTION_BANK: 'question-bank', // Retained for legacy permission references — module removed
   QUESTIONS: 'questions',
   TRANSLATIONS: 'translations',
 

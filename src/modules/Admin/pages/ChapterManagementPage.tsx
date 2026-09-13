@@ -21,8 +21,8 @@ import {
   useUpdateChapterAPI,
   useDeleteChapterAPI,
   useReorderChaptersAPI,
-} from '@/modules/QuestionBank/services/questionBank.service';
-import type { ChapterItem, CreateChapterPayload, UpdateChapterPayload } from '@/modules/QuestionBank/types/questionBank.types';
+} from '@/modules/Academic/services/academic.service';
+import type { ChapterItem, CreateChapterPayload, UpdateChapterPayload } from '@/modules/Academic/types/academic.types';
 import Button from '@/components/ui/Button';
 import { formatSubjectDisplayName, isAllowedSubject } from '@/constants/subjects.constant';
 

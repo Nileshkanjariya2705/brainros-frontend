@@ -9,7 +9,6 @@ import {
   XCircle,
   RefreshCw,
   Download,
-  Languages,
   Calendar,
   Sparkles,
   AlertCircle,
@@ -25,7 +24,6 @@ import {
   useRetryQuestionPaperUploadAPI,
 } from '../services/examManager.service';
 import type { ExamItem, QuestionPaperPreviewResult } from '../types/examManager.types';
-import ExamTranslationManager from '@/modules/RegionalLanguage/components/ExamTranslationManager';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
 import { io, Socket } from 'socket.io-client';
 import { API_URL } from '@config';
@@ -47,7 +45,6 @@ export const OperatorScheduledExamsPage: React.FC = () => {
 
   // ─── Modals State ─────────────────────────────────────────────────────────
   const [uploadTargetExam, setUploadTargetExam] = useState<ExamItem | null>(null);
-  const [translationTargetExam, setTranslationTargetExam] = useState<ExamItem | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [previewData, setPreviewData] = useState<QuestionPaperPreviewResult | null>(null);
@@ -228,22 +225,6 @@ export const OperatorScheduledExamsPage: React.FC = () => {
     return (exam.target || (exam as any).targetExam || '').toUpperCase().includes(selectedTarget.toUpperCase());
   });
 
-  // Drilldown translation view
-  if (translationTargetExam) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <ExamTranslationManager
-          examId={translationTargetExam.id}
-          examTitle={translationTargetExam.title}
-          onBack={() => {
-            setTranslationTargetExam(null);
-            loadExams();
-          }}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header Banner */}
@@ -375,7 +356,7 @@ export const OperatorScheduledExamsPage: React.FC = () => {
 
                         <td className="py-4 px-4">
                           <div className="text-xs font-medium text-slate-700">
-                            {(exam as any).subject?.name || (exam as any).subjectName || (exam.blueprint ? exam.blueprint.name : 'All Subjects')}
+                            {(exam as any).subject?.name || (exam as any).subjectName || 'All Subjects'}
                           </div>
                           {(exam as any).chapter && (
                             <div className="text-xs text-slate-500">
@@ -403,7 +384,7 @@ export const OperatorScheduledExamsPage: React.FC = () => {
 
                         <td className="py-4 px-4">
                           <div className="text-xs font-semibold text-slate-800">
-                            {exam.totalQuestions || 0} / {exam.blueprint?.totalQuestions || exam.totalMarks ? Math.round((exam.totalMarks || 100) / 4) : '--'}
+                            {exam.totalQuestions || 0} Questions
                           </div>
                           <div className="text-xs text-slate-500">Marks: {exam.totalMarks || 300}</div>
                         </td>
@@ -450,17 +431,6 @@ export const OperatorScheduledExamsPage: React.FC = () => {
                             >
                               <UploadCloud className="w-3.5 h-3.5 mr-1 text-blue-600" />
                               Upload Paper
-                            </Button>
-
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-xs text-indigo-700 hover:bg-indigo-50"
-                              onClick={() => setTranslationTargetExam(exam)}
-                              title="Manage regional language translations"
-                            >
-                              <Languages className="w-3.5 h-3.5 mr-1" />
-                              Translations
                             </Button>
                           </div>
                         </td>

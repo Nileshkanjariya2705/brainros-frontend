@@ -64,34 +64,9 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
     path: PRIVATE_NAVIGATION.adminDashboard,
     roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
-  [PRIVATE_NAVIGATION.adminQuestionBank]: {
-    path: PRIVATE_NAVIGATION.adminQuestionBank,
-    permissions: [PERMISSIONS.QUESTION_VIEW],
-    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
-  },
-  [PRIVATE_NAVIGATION.adminCreateQuestion]: {
-    path: PRIVATE_NAVIGATION.adminCreateQuestion,
-    permissions: [PERMISSIONS.QUESTION_CREATE],
-    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
-  },
-  [PRIVATE_NAVIGATION.adminEditQuestion]: {
-    path: PRIVATE_NAVIGATION.adminEditQuestion,
-    permissions: [PERMISSIONS.QUESTION_UPDATE],
-    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
-  },
   [PRIVATE_NAVIGATION.adminLanguages]: {
     path: PRIVATE_NAVIGATION.adminLanguages,
     permissions: [PERMISSIONS.TRANSLATION_VIEW],
-    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
-  },
-  [PRIVATE_NAVIGATION.adminExamBlueprints]: {
-    path: PRIVATE_NAVIGATION.adminExamBlueprints,
-    permissions: [PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW],
-    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
-  },
-  [PRIVATE_NAVIGATION.adminExams]: {
-    path: PRIVATE_NAVIGATION.adminExams,
-    permissions: [PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW],
     roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.adminExamScheduling]: {
@@ -148,6 +123,10 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
     path: PRIVATE_NAVIGATION.superAdminRegistrations,
     roles: [ROLES.SUPER_ADMIN],
   },
+  [PRIVATE_NAVIGATION.superAdminPublicRegistrations]: {
+    path: PRIVATE_NAVIGATION.superAdminPublicRegistrations,
+    roles: [ROLES.SUPER_ADMIN],
+  },
   [PRIVATE_NAVIGATION.superAdminControlCenter]: {
     path: PRIVATE_NAVIGATION.superAdminControlCenter,
     roles: [ROLES.SUPER_ADMIN],
@@ -176,10 +155,6 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
     path: PRIVATE_NAVIGATION.staffProfile,
     allowAnyRole: true,
   },
-  [PRIVATE_NAVIGATION.superAdminExams]: {
-    path: PRIVATE_NAVIGATION.superAdminExams,
-    roles: [ROLES.SUPER_ADMIN],
-  },
 
   // General Manager Routes
   [PRIVATE_NAVIGATION.generalManagerDashboard]: {
@@ -194,21 +169,6 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
   [PRIVATE_NAVIGATION.generalManagerSchools]: {
     path: PRIVATE_NAVIGATION.generalManagerSchools,
     permissions: [PERMISSIONS.INSTITUTION_VIEW],
-    roles: [ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
-  },
-  [PRIVATE_NAVIGATION.generalManagerQuestionBank]: {
-    path: PRIVATE_NAVIGATION.generalManagerQuestionBank,
-    permissions: [PERMISSIONS.QUESTION_VIEW],
-    roles: [ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
-  },
-  [PRIVATE_NAVIGATION.generalManagerTranslations]: {
-    path: PRIVATE_NAVIGATION.generalManagerTranslations,
-    permissions: [PERMISSIONS.TRANSLATION_VIEW],
-    roles: [ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
-  },
-  [PRIVATE_NAVIGATION.generalManagerExams]: {
-    path: PRIVATE_NAVIGATION.generalManagerExams,
-    permissions: [PERMISSIONS.EXAM_VIEW],
     roles: [ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.generalManagerReports]: {
@@ -246,16 +206,6 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
     permissions: [PERMISSIONS.STUDENT_VIEW],
     roles: [ROLES.MANAGER, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
   },
-  [PRIVATE_NAVIGATION.managerQuestionBank]: {
-    path: PRIVATE_NAVIGATION.managerQuestionBank,
-    permissions: [PERMISSIONS.QUESTION_VIEW],
-    roles: [ROLES.MANAGER, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
-  },
-  [PRIVATE_NAVIGATION.managerExams]: {
-    path: PRIVATE_NAVIGATION.managerExams,
-    permissions: [PERMISSIONS.EXAM_VIEW],
-    roles: [ROLES.MANAGER, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
-  },
   [PRIVATE_NAVIGATION.managerProfile]: {
     path: PRIVATE_NAVIGATION.managerProfile,
     allowAnyRole: true,
@@ -289,11 +239,6 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
   [PRIVATE_NAVIGATION.operatorUploadPaper]: {
     path: PRIVATE_NAVIGATION.operatorUploadPaper,
     permissions: [PERMISSIONS.EXAM_CREATE, PERMISSIONS.BULK_UPLOAD],
-    roles: [ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
-  },
-  [PRIVATE_NAVIGATION.operatorAnswerKey]: {
-    path: PRIVATE_NAVIGATION.operatorAnswerKey,
-    permissions: [PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW],
     roles: [ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
   },
   [PRIVATE_NAVIGATION.operatorExamImportHistory]: {
@@ -373,22 +318,6 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
     permissions: [PERMISSIONS.EXAM_VIEW],
   },
 
-  // Question & Translation Management
-  [PRIVATE_NAVIGATION.questionBank]: {
-    path: PRIVATE_NAVIGATION.questionBank,
-    permissions: [PERMISSIONS.QUESTION_VIEW],
-    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
-  },
-  [PRIVATE_NAVIGATION.createQuestion]: {
-    path: PRIVATE_NAVIGATION.createQuestion,
-    permissions: [PERMISSIONS.QUESTION_CREATE],
-    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
-  },
-  [PRIVATE_NAVIGATION.editQuestion]: {
-    path: PRIVATE_NAVIGATION.editQuestion,
-    permissions: [PERMISSIONS.QUESTION_UPDATE],
-    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
-  },
   [PRIVATE_NAVIGATION.languages]: {
     path: PRIVATE_NAVIGATION.languages,
     permissions: [PERMISSIONS.TRANSLATION_VIEW],
@@ -396,11 +325,6 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
   },
 
   // Exam Studio
-  [PRIVATE_NAVIGATION.examBlueprints]: {
-    path: PRIVATE_NAVIGATION.examBlueprints,
-    permissions: [PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW],
-    roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
-  },
   [PRIVATE_NAVIGATION.examScheduling]: {
     path: PRIVATE_NAVIGATION.examScheduling,
     permissions: [PERMISSIONS.EXAM_SCHEDULE, PERMISSIONS.EXAM_VIEW],

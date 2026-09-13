@@ -9,12 +9,6 @@ export const studentKeys = {
   all: ['student'] as const,
   dashboard: () => [...studentKeys.all, 'dashboard'] as const,
   exams: (filters: Record<string, any> = {}) => [...studentKeys.all, 'exams', filters] as const,
-  mockTests: (filters: Record<string, any> = {}) =>
-    [...studentKeys.all, 'mock-tests', filters] as const,
-  mockAttempts: (mockTestId: string) =>
-    [...studentKeys.all, 'mock-tests', mockTestId, 'attempts'] as const,
-  mockHistory: (params: Record<string, any> = {}) =>
-    ['mock-test-history', params] as const,
   examHistory: (params: Record<string, any> = {}) =>
     ['exam-history', params] as const,
   profile: () => [...studentKeys.all, 'profile'] as const,
@@ -71,11 +65,6 @@ export const adminKeys = {
     [...adminKeys.all, 'completed-exams', 'email-status', attemptId] as const,
   scheduledExams: (filters: Record<string, any> = {}) =>
     [...adminKeys.all, 'scheduled-exams', filters] as const,
-  blueprints: () => [...adminKeys.all, 'blueprints'] as const,
-  answerKeyStatus: (scheduleId: string) =>
-    [...adminKeys.all, 'answer-key', scheduleId, 'status'] as const,
-  answerKeyQuestions: (scheduleId: string) =>
-    [...adminKeys.all, 'answer-key', scheduleId, 'questions'] as const,
   approvals: (params: Record<string, any> = {}) =>
     [...adminKeys.all, 'approvals', params] as const,
   auditLogs: (params: Record<string, any> = {}) =>
@@ -200,5 +189,4 @@ export const scheduleKeys = {
   detail: (examId: string) => [...scheduleKeys.all, 'detail', examId] as const,
   subjects: () => [...scheduleKeys.all, 'subjects'] as const,
   chapters: (subjectId: string) => [...scheduleKeys.all, 'chapters', subjectId] as const,
-  blueprints: () => [...scheduleKeys.all, 'blueprints'] as const,
 };

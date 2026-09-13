@@ -16,7 +16,7 @@ import {
   AlertCircle,
   FileSpreadsheet,
 } from 'lucide-react';
-import { useGetAllExamsAPI } from '@/modules/ExamGenerator/services/examGenerator.service';
+import { useGetExamsListAPI } from '@/modules/ExamManager/services/examManager.service';
 import {
   useSubmitExamAPI,
   useApproveExamAPI,
@@ -39,9 +39,11 @@ const LIFECYCLE_STEPS = [
   'ACTIVE',
   'ENDED',
   'COMPLETED',
+  'CANCELLED',
+  'REJECTED',
 ];
 
-const ExamSchedulingManagementPage: React.FC = () => {
+export const ExamSchedulingManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -57,6 +59,7 @@ const ExamSchedulingManagementPage: React.FC = () => {
     ? `/${firstSegment}`
     : '/admin';
 
+  // State
   const [exams, setExams] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
@@ -64,16 +67,16 @@ const ExamSchedulingManagementPage: React.FC = () => {
     {
       id: 'schedule-exam',
       stepNumber: 1,
-      title: 'Schedule Exam',
-      subtitle: 'Create slots, dates & examination windows',
+      title: 'Schedule Official Exam',
+      subtitle: 'Date, shift, time & eligibility',
       status: 'current',
-      to: `${routePrefix}/exam-scheduling`,
+      to: `${routePrefix}/exams/schedule`,
     },
     {
       id: 'upload-paper',
       stepNumber: 2,
-      title: 'Upload Question Paper',
-      subtitle: 'Upload CSV/Excel paper with correct answers',
+      title: 'Question Paper Upload',
+      subtitle: 'Upload questions or manual entry',
       status: 'pending',
       to: `${routePrefix}/exam-manager/upload`,
     },
@@ -97,18 +100,18 @@ const ExamSchedulingManagementPage: React.FC = () => {
   const [activeSchedule, setActiveSchedule] = useState<ExamScheduleItem | null>(null);
 
   // APIs
-  const { getAllExamsAPI, isLoading: isLoadingExams } = useGetAllExamsAPI();
+  const { getExamsListAPI, isLoading: isLoadingExams } = useGetExamsListAPI();
   const { submitExamAPI } = useSubmitExamAPI();
   const { approveExamAPI } = useApproveExamAPI();
   const { activateExamAPI } = useActivateExamAPI();
   const { cancelExamAPI } = useCancelExamAPI();
 
   const loadExams = useCallback(async () => {
-    const { data } = await getAllExamsAPI();
-    if (data) {
-      setExams(Array.isArray(data) ? data : (data as any)?.data || []);
+    const res = await getExamsListAPI({ page: 1, limit: 100 });
+    if (res?.data) {
+      setExams(res.data.items || []);
     }
-  }, [getAllExamsAPI]);
+  }, [getExamsListAPI]);
 
   useEffect(() => {
     loadExams();

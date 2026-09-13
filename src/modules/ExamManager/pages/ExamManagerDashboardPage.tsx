@@ -6,25 +6,17 @@ import {
   History,
   BookOpen,
   Search,
-  Globe,
   Layers,
   Clock,
   Send,
   Sparkles,
   ChevronLeft,
   ChevronRight,
-  Languages,
-  Key,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { useGetExamsListAPI } from '../services/examManager.service';
 import { useSubmitExamAPI } from '@/modules/ExamScheduling/services/examScheduling.service';
-import { useAxiosGet } from '@/hooks/useAxios';
-import type { ExamItem, BlueprintItem } from '../types/examManager.types';
-import { BlueprintSelectionModal } from '../components/BlueprintSelectionModal';
-import { UploadQuestionPaperWizardModal } from '../components/UploadQuestionPaperWizardModal';
-import { MockTestDetailsModal } from '@/modules/ExamScheduling/components/MockTestDetailsModal';
-import ExamTranslationManager from '@/modules/RegionalLanguage/components/ExamTranslationManager';
+import type { ExamItem } from '../types/examManager.types';
 import { toast } from '@/utils/toast';
 
 export const ExamManagerDashboardPage: React.FC = () => {
@@ -54,27 +46,10 @@ export const ExamManagerDashboardPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
-  const [availableLanguages, setAvailableLanguages] = useState<any[]>([]);
-
-  // Modals & Drilldowns
-  const [isBlueprintModalOpen, setIsBlueprintModalOpen] = useState(false);
-  const [selectedBlueprint, setSelectedBlueprint] = useState<BlueprintItem | null>(null);
-  const [isUploadWizardOpen, setIsUploadWizardOpen] = useState(false);
-  const [selectedExamForDetails, setSelectedExamForDetails] = useState<any | null>(null);
-  const [drilldownTranslationExam, setDrilldownTranslationExam] = useState<any | null>(null);
 
   // APIs
   const { getExamsListAPI, isLoading } = useGetExamsListAPI();
   const { submitExamAPI } = useSubmitExamAPI();
-  const [getReq] = useAxiosGet();
-
-  // Load languages master data
-  useEffect(() => {
-    getReq<any>('/auth/options').then(({ data }) => {
-      const opts = data?.languages ? data : (data as any)?.data || {};
-      if (opts.languages) setAvailableLanguages(opts.languages);
-    });
-  }, [getReq]);
 
   // Load exams with server-side filters & pagination
   const loadExams = useCallback(async () => {
@@ -103,13 +78,7 @@ export const ExamManagerDashboardPage: React.FC = () => {
   }, [loadExams]);
 
   const handleOpenUpload = () => {
-    setIsBlueprintModalOpen(true);
-  };
-
-  const handleSelectBlueprint = (blueprint: BlueprintItem) => {
-    setSelectedBlueprint(blueprint);
-    setIsBlueprintModalOpen(false);
-    setIsUploadWizardOpen(true);
+    navigate(`${routePrefix}/exam-manager/upload`);
   };
 
   const handleSubmitForApproval = async (examId: string, title: string) => {
@@ -146,19 +115,6 @@ export const ExamManagerDashboardPage: React.FC = () => {
         return 'bg-slate-50 text-slate-600 border-slate-200';
     }
   };
-
-  // If drilling down into dedicated translation view
-  if (drilldownTranslationExam) {
-    return (
-      <div className="max-w-7xl mx-auto pb-16">
-        <ExamTranslationManager
-          examId={drilldownTranslationExam.id}
-          examTitle={drilldownTranslationExam.title}
-          onBack={() => setDrilldownTranslationExam(null)}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-16 animate-in fade-in duration-200">
@@ -366,19 +322,6 @@ export const ExamManagerDashboardPage: React.FC = () => {
                       >
                         {exam.status}
                       </span>
-
-                      {exam.schedule && (
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 ${
-                            exam.schedule.hasAnswerKey
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}
-                        >
-                          <Key size={10} />
-                          {exam.schedule.hasAnswerKey ? 'Answer Key Ready' : 'Key Pending'}
-                        </span>
-                      )}
                     </div>
 
                     <h3 className="text-base font-black text-slate-900 leading-snug">
@@ -398,32 +341,6 @@ export const ExamManagerDashboardPage: React.FC = () => {
                         Created: <b>{formattedDate}</b>
                       </span>
                     </div>
-
-                    {/* Translation Coverage Badges */}
-                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                      <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1 mr-1">
-                        <Globe size={12} className="text-indigo-500" /> Translations:
-                      </span>
-                      {exam.translationCoverage &&
-                      Object.keys(exam.translationCoverage).length > 0 ? (
-                        Object.entries(exam.translationCoverage).map(([code, pct]) => (
-                          <span
-                            key={code}
-                            className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${
-                              pct >= 100
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : pct > 0
-                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                  : 'bg-slate-50 text-slate-500 border-slate-200'
-                            }`}
-                          >
-                            {code} {pct}%
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-[10px] text-slate-400 italic">English only (100%)</span>
-                      )}
-                    </div>
                   </div>
 
                   {/* Right Action Toolbar */}
@@ -431,40 +348,12 @@ export const ExamManagerDashboardPage: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setSelectedExamForDetails(exam)}
+                      onClick={() => navigate(`${routePrefix}/exams/${exam.id}/manage`)}
                       className="flex items-center gap-1.5 text-xs font-bold border-slate-200 hover:bg-slate-50 text-slate-700"
                     >
                       <BookOpen size={13} />
                       <span>Manage</span>
                     </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDrilldownTranslationExam(exam)}
-                      className="flex items-center gap-1.5 text-xs font-bold border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100"
-                    >
-                      <Languages size={13} />
-                      <span>Translations</span>
-                    </Button>
-
-                    {exam.schedule && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          navigate(`${routePrefix}/exam-manager/answer-key/${exam.schedule!.id}`)
-                        }
-                        className={`flex items-center gap-1.5 text-xs font-bold ${
-                          exam.schedule.hasAnswerKey
-                            ? 'border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100'
-                            : 'border-amber-200 text-amber-700 bg-amber-50/50 hover:bg-amber-100'
-                        }`}
-                      >
-                        <Key size={13} />
-                        <span>Answer Key</span>
-                      </Button>
-                    )}
 
                     {exam.status === 'DRAFT' && (
                       <Button
@@ -519,33 +408,6 @@ export const ExamManagerDashboardPage: React.FC = () => {
           )}
         </div>
       )}
-
-      {/* ── 1. Blueprint Selection Modal ──────────────────────────── */}
-      <BlueprintSelectionModal
-        isOpen={isBlueprintModalOpen}
-        onClose={() => setIsBlueprintModalOpen(false)}
-        onSelectBlueprint={handleSelectBlueprint}
-      />
-
-      {/* ── 2. Upload Question Paper & Multi-Translation Wizard ───── */}
-      <UploadQuestionPaperWizardModal
-        isOpen={isUploadWizardOpen}
-        onClose={() => setIsUploadWizardOpen(false)}
-        blueprint={selectedBlueprint}
-        onSuccess={() => {
-          setIsUploadWizardOpen(false);
-          loadExams();
-        }}
-        availableLanguages={availableLanguages}
-      />
-
-      {/* ── 3. Exam Details Modal with Embedded Translation Tab ───── */}
-      <MockTestDetailsModal
-        isOpen={Boolean(selectedExamForDetails)}
-        onClose={() => setSelectedExamForDetails(null)}
-        exam={selectedExamForDetails}
-        onUpdate={loadExams}
-      />
     </div>
   );
 };

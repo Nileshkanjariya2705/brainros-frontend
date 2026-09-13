@@ -12,17 +12,10 @@ import type {
 import type {
   StudentExamItem,
   StudentPaginationMeta,
-  StudentMockTestItem,
-  MockTestAttemptsResponse,
 } from './index';
 
 export interface StudentExamsResult {
   data: StudentExamItem[];
-  meta: StudentPaginationMeta;
-}
-
-export interface StudentMockTestsResult {
-  data: StudentMockTestItem[];
   meta: StudentPaginationMeta;
 }
 
@@ -51,51 +44,6 @@ export const useStudentExamsQuery = (params: Record<string, any> = {}) =>
       return { data, meta };
     },
     staleTime: 60_000,
-  });
-
-/**
- * Server-side cached query for student mock tests.
- */
-export const useStudentMockTestsQuery = (params: Record<string, any> = {}) =>
-  useQuery<StudentMockTestsResult>({
-    queryKey: studentKeys.mockTests(params),
-    queryFn: async () => {
-      const res = await Axios.get<any>('/students/me/mock-tests', { params });
-      const raw = res.data;
-      const data = Array.isArray(raw)
-        ? raw
-        : Array.isArray(raw?.data)
-          ? raw.data
-          : Array.isArray(raw?.data?.data)
-            ? raw.data.data
-            : [];
-      const meta = raw?.meta || raw?.data?.meta || {
-        page: params.page || 1,
-        limit: params.limit || 12,
-        total: data.length,
-        totalPages: 1,
-      };
-      return { data, meta };
-    },
-    staleTime: 60_000,
-  });
-
-/**
- * Server-side cached query for attempt history of a specific mock test.
- */
-export const useMockTestAttemptsQuery = (mockTestId?: string, params: Record<string, any> = {}) =>
-  useQuery<MockTestAttemptsResponse>({
-    queryKey: studentKeys.mockAttempts(mockTestId || ''),
-    queryFn: async () => {
-      if (!mockTestId) throw new Error('mockTestId required');
-      const res = await Axios.get<MockTestAttemptsResponse>(
-        `/students/me/mock-tests/${mockTestId}/attempts`,
-        { params },
-      );
-      return (res.data as any).data || res.data;
-    },
-    enabled: Boolean(mockTestId),
-    staleTime: 30_000,
   });
 
 /**
@@ -214,7 +162,6 @@ export const useStartAttemptMutation = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: studentKeys.exams() });
-      qc.invalidateQueries({ queryKey: studentKeys.mockTests() });
     },
   });
 };
@@ -230,9 +177,7 @@ export const useSubmitAttemptMutation = () => {
       qc.invalidateQueries({ queryKey: attemptKeys.status(attemptId) });
       qc.invalidateQueries({ queryKey: resultKeys.status(attemptId) });
       qc.invalidateQueries({ queryKey: ['all-exams'] });
-      qc.invalidateQueries({ queryKey: ['mock-tests'] });
       qc.invalidateQueries({ queryKey: ['exam-history'] });
-      qc.invalidateQueries({ queryKey: ['mock-test-history'] });
     },
   });
 };
@@ -247,7 +192,6 @@ export const useLeaveAttemptMutation = () => {
     onSuccess: (_data, { attemptId }) => {
       qc.invalidateQueries({ queryKey: attemptKeys.status(attemptId) });
       qc.invalidateQueries({ queryKey: ['all-exams'] });
-      qc.invalidateQueries({ queryKey: ['mock-tests'] });
     },
   });
 };
@@ -262,35 +206,6 @@ export const useStudentExamHistoryQuery = (params: Record<string, any> = {}) =>
     queryKey: studentKeys.examHistory(params),
     queryFn: async () => {
       const res = await Axios.get<any>('/attempts/my-history', { params });
-      const raw = res.data;
-      const data = Array.isArray(raw)
-        ? raw
-        : Array.isArray(raw?.data)
-          ? raw.data
-          : Array.isArray(raw?.data?.data)
-            ? raw.data.data
-            : [];
-      const meta = raw?.meta || raw?.data?.meta || {
-        page: params.page || 1,
-        limit: params.limit || 20,
-        total: data.length,
-        totalPages: 1,
-      };
-      return { data, meta };
-    },
-    staleTime: 30_000,
-  });
-
-export interface MockHistoryResult {
-  data: any[];
-  meta: StudentPaginationMeta;
-}
-
-export const useStudentMockHistoryQuery = (params: Record<string, any> = {}) =>
-  useQuery<MockHistoryResult>({
-    queryKey: studentKeys.mockHistory(params),
-    queryFn: async () => {
-      const res = await Axios.get<any>('/students/me/mock-history', { params });
       const raw = res.data;
       const data = Array.isArray(raw)
         ? raw

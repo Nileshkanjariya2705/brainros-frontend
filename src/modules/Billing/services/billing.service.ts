@@ -212,9 +212,22 @@ export const BillingApi = {
 
   updateSchoolPricing: async (
     institutionId: string,
-    payload: { pricePerStudent: number; effectiveFrom?: string; effectiveTo?: string; isActive?: boolean },
+    payload: {
+      price?: number;
+      pricePerStudent?: number;
+      billingMonth?: number;
+      billingYear?: number;
+      effectiveFrom?: string;
+      effectiveTo?: string;
+      isActive?: boolean;
+    },
   ) => {
-    const res = await Axios.put(`/billing/schools/${institutionId}/pricing`, payload);
+    const res = await Axios.patch(`/billing/schools/${institutionId}/price`, payload);
+    return res.data;
+  },
+
+  updateBillStatus: async (id: string, status: 'PAID' | 'UNPAID' | string) => {
+    const res = await Axios.patch(`/billing/bills/${id}/status`, { status });
     return res.data;
   },
 

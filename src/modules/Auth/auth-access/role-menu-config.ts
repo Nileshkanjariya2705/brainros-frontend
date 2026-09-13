@@ -10,8 +10,6 @@ import {
   History,
   TrendingUp,
   CalendarDays,
-  Database,
-  Sliders,
   CalendarClock,
   Trophy,
   ShieldAlert,
@@ -22,7 +20,6 @@ import {
   Bell,
   BarChart3,
   User,
-  Plus,
   FileSpreadsheet,
   UploadCloud,
   Languages,
@@ -34,11 +31,8 @@ import {
   Activity,
   Receipt,
   UserCog,
-  KeyRound,
-  Sparkles,
 } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
-import { FEATURES } from '@/constants/feature-flag.constant';
 import { PERMISSIONS } from './permission.constants';
 import type { MenuGroupConfig } from './menu-config';
 
@@ -88,24 +82,6 @@ export const STUDENT_MENU_GROUPS: MenuGroupConfig[] = [
     ],
   },
   {
-    categoryKey: 'MOCK_TESTS',
-    categoryLabel: 'Mock Tests',
-    items: [
-      {
-        key: 'all-mock-tests',
-        label: 'All Mock Tests',
-        to: PRIVATE_NAVIGATION.studentMockTests,
-        icon: Award,
-      },
-      {
-        key: 'mock-history',
-        label: 'Mock Test History',
-        to: PRIVATE_NAVIGATION.studentMockHistory,
-        icon: History,
-      },
-    ],
-  },
-  {
     categoryKey: 'ANALYTICS',
     categoryLabel: 'Analytics & Intelligence',
     items: [
@@ -114,12 +90,6 @@ export const STUDENT_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Performance Trends',
         to: PRIVATE_NAVIGATION.studentTrends,
         icon: TrendingUp,
-      },
-      {
-        key: 'mock-comparison',
-        label: 'Mock Comparison',
-        to: PRIVATE_NAVIGATION.studentComparison,
-        icon: BarChart3,
       },
       {
         key: 'leaderboard',
@@ -168,7 +138,7 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         to: PRIVATE_NAVIGATION.superAdminPublicRegistrations,
         icon: Globe,
       },
-       {
+      {
         key: 'schools-management',
         label: 'Schools / Colleges',
         to: PRIVATE_NAVIGATION.adminSchools,
@@ -179,41 +149,6 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Bulk Register Students',
         to: PRIVATE_NAVIGATION.adminBulkStudents,
         icon: UserPlus,
-      },
-    ],
-  },
-  {
-    categoryKey: 'QUESTION_STUDIO',
-    categoryLabel: 'Question & Content Studio',
-    items: [
-      {
-        key: 'question-bank',
-        label: 'Question Bank',
-        to: PRIVATE_NAVIGATION.adminQuestionBank,
-        icon: Database,
-        feature: FEATURES.QUESTION_BANK,
-      },
-     
-      {
-        key: 'create-question',
-        label: 'Add New Question',
-        to: PRIVATE_NAVIGATION.adminCreateQuestion,
-        icon: Plus,
-        feature: FEATURES.ADD_QUESTION,
-      },
-      {
-        key: 'import-questions',
-        label: 'Bulk Import Questions',
-        to: PRIVATE_NAVIGATION.adminImportQuestions,
-        icon: UploadCloud,
-        feature: FEATURES.BULK_IMPORT_QUESTION,
-      },
-      {
-        key: 'import-translations',
-        label: 'Bulk Import Translations',
-        to: PRIVATE_NAVIGATION.adminImportTranslations,
-        icon: Languages,
-        feature: FEATURES.BULK_IMPORT_TRANSLATION,
       },
     ],
   },
@@ -234,18 +169,6 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         icon: UploadCloud,
       },
       {
-        key: 'translation-management',
-        label: 'Translation Management',
-        to: PRIVATE_NAVIGATION.adminTranslations,
-        icon: Globe,
-      },
-      {
-        key: 'upload-answer-key',
-        label: 'Upload Answer Key',
-        to: PRIVATE_NAVIGATION.adminAnswerKey,
-        icon: UploadCloud,
-      },
-      {
         key: 'exam-import-history',
         label: 'Import History',
         to: PRIVATE_NAVIGATION.adminExamImportHistory,
@@ -255,20 +178,8 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
   },
   {
     categoryKey: 'EXAM_STUDIO',
-    categoryLabel: 'Mock Test Studio',
+    categoryLabel: 'Exam Results & Reports',
     items: [
-      {
-        key: 'exam-blueprints',
-        label: 'Blueprint Generator',
-        to: PRIVATE_NAVIGATION.adminExamBlueprints,
-        icon: Sliders,
-      },
-      {
-        key: 'mock-tests',
-        label: 'Mock Test Manager',
-        to: PRIVATE_NAVIGATION.adminMockTests,
-        icon: FileSpreadsheet,
-      },
       {
         key: 'exam-results-publication',
         label: 'Result Publication Center',
@@ -283,7 +194,7 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
       },
     ],
   },
-  
+
   {
     categoryKey: 'ANALYTICS',
     categoryLabel: 'Analytics & Intelligence',
@@ -296,7 +207,7 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         icon: Compass,
       },
       */
-     
+
       /*
       {
         key: 'historical-datasets',
@@ -311,13 +222,13 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
     categoryKey: 'LOCALIZATION',
     categoryLabel: 'Regional Languages & Translations',
     items: [
-       {
+      {
         key: 'leaderboard',
         label: 'Leaderboard',
         to: PRIVATE_NAVIGATION.adminLeaderboard,
         icon: Trophy,
       },
-       {
+      {
         key: 'chapter-master',
         label: 'Chapter Master',
         to: PRIVATE_NAVIGATION.adminChapters,
@@ -328,14 +239,6 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Language Master',
         to: PRIVATE_NAVIGATION.adminLanguages,
         icon: Languages,
-      },
-      
-      {
-        key: 'import-translations',
-        label: 'Question Bank Translations',
-        to: PRIVATE_NAVIGATION.adminImportTranslations,
-        icon: UploadCloud,
-        feature: FEATURES.BULK_IMPORT_TRANSLATION,
       },
     ],
   },
@@ -366,18 +269,6 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         to: PRIVATE_NAVIGATION.superAdminUploadPaper,
         icon: UploadCloud,
       },
-      {
-        key: 'upload-answer-key',
-        label: 'Upload Answer Key',
-        to: PRIVATE_NAVIGATION.superAdminAnswerKey,
-        icon: KeyRound,
-      },
-      {
-        key: 'translation-management',
-        label: 'Translation Management',
-        to: PRIVATE_NAVIGATION.superAdminTranslations,
-        icon: Globe,
-      },
     ],
   },
   {
@@ -389,6 +280,12 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Registration',
         to: PRIVATE_NAVIGATION.superAdminRegistrations,
         icon: UserCheck,
+      },
+      {
+        key: 'public-registrations',
+        label: 'Public Registrations',
+        to: PRIVATE_NAVIGATION.superAdminPublicRegistrations,
+        icon: Globe,
       },
       {
         key: 'super-admin-schools',
@@ -446,67 +343,27 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
       },
     ],
   },
-  {
-    categoryKey: 'QUESTION_STUDIO',
-    categoryLabel: 'Question & Content Studio',
-    items: [
-      {
-        key: 'question-bank',
-        label: 'Question Bank',
-        to: PRIVATE_NAVIGATION.superAdminQuestionBank,
-        icon: Database,
-        feature: FEATURES.QUESTION_BANK,
-      },
-      {
-        key: 'create-question',
-        label: 'Add New Question',
-        to: PRIVATE_NAVIGATION.superAdminCreateQuestion,
-        icon: Plus,
-        feature: FEATURES.ADD_QUESTION,
-      },
-      {
-        key: 'import-questions',
-        label: 'Bulk Import Questions',
-        to: PRIVATE_NAVIGATION.superAdminImportQuestions,
-        icon: UploadCloud,
-        feature: FEATURES.BULK_IMPORT_QUESTION,
-      },
-      {
-        key: 'import-translations',
-        label: 'Bulk Import Translations',
-        to: PRIVATE_NAVIGATION.superAdminImportTranslations,
-        icon: Languages,
-        feature: FEATURES.BULK_IMPORT_TRANSLATION,
-      },
-      {
-        key: 'ai-question-paper-translation',
-        label: 'AI Question Paper Translation',
-        to: PRIVATE_NAVIGATION.superAdminAiQuestionPaperTranslation,
-        icon: Sparkles,
-      },
-    ],
-  },
+  // {
+  //   categoryKey: 'QUESTION_STUDIO',
+  //   categoryLabel: 'Content Studio',
+  //   items: [
+  //     {
+  //       key: 'ai-question-paper-translation',
+  //       label: 'AI Question Paper Translation',
+  //       to: PRIVATE_NAVIGATION.superAdminAiQuestionPaperTranslation,
+  //       icon: Sparkles,
+  //     },
+  //   ],
+  // },
   {
     categoryKey: 'EXAM_STUDIO',
-    categoryLabel: 'Mock Test Studio',
+    categoryLabel: 'Exam Operations & Results',
     items: [
       {
         key: 'schedule-exam',
         label: 'Schedule Exam',
         to: PRIVATE_NAVIGATION.superAdminExamScheduling,
         icon: CalendarClock,
-      },
-      {
-        key: 'exam-blueprints',
-        label: 'Blueprint Generator',
-        to: PRIVATE_NAVIGATION.superAdminExamBlueprints,
-        icon: Sliders,
-      },
-      {
-        key: 'mock-tests',
-        label: 'Mock Test Manager',
-        to: PRIVATE_NAVIGATION.superAdminMockTests,
-        icon: FileSpreadsheet,
       },
       {
         key: 'super-admin-exam-results',
@@ -653,36 +510,6 @@ export const GENERAL_MANAGER_MENU_GROUPS: MenuGroupConfig[] = [
         permission: PERMISSIONS.EXAM_VIEW,
       },
       {
-        key: 'gm-answer-key',
-        label: 'Upload Answer Key',
-        to: PRIVATE_NAVIGATION.generalManagerAnswerKey,
-        icon: KeyRound,
-        permission: PERMISSIONS.EXAM_VIEW,
-      },
-     
-      {
-        key: 'gm-translations',
-        label: 'Translations',
-        to: PRIVATE_NAVIGATION.generalManagerTranslations,
-        icon: Globe,
-        permission: PERMISSIONS.TRANSLATION_VIEW,
-      },
-      {
-        key: 'gm-blueprints',
-        label: 'Blueprint Generator',
-        to: PRIVATE_NAVIGATION.generalManagerExamBlueprints,
-        icon: Sliders,
-        permission: PERMISSIONS.EXAM_VIEW,
-      },
-      {
-        key: 'gm-exams',
-        label: 'Mock Tests & Exams',
-        to: PRIVATE_NAVIGATION.generalManagerExams,
-        icon: FileSpreadsheet,
-        permission: PERMISSIONS.EXAM_VIEW,
-      },
-      
-      {
         key: 'gm-reports',
         label: 'Exam Reports',
         to: PRIVATE_NAVIGATION.generalManagerCompletedExams,
@@ -786,34 +613,6 @@ export const OPERATOR_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Upload Question Paper',
         to: PRIVATE_NAVIGATION.operatorUploadPaper,
         icon: UploadCloud,
-        permission: PERMISSIONS.EXAM_VIEW,
-      },
-      {
-        key: 'operator-answer-key',
-        label: 'Upload Answer Key',
-        to: PRIVATE_NAVIGATION.operatorAnswerKey,
-        icon: KeyRound,
-        permission: PERMISSIONS.EXAM_VIEW,
-      },
-      {
-        key: 'operator-translations',
-        label: 'Translations',
-        to: PRIVATE_NAVIGATION.operatorTranslations,
-        icon: Globe,
-        permission: PERMISSIONS.TRANSLATION_VIEW,
-      },
-      {
-        key: 'operator-blueprints',
-        label: 'Blueprint Generator',
-        to: PRIVATE_NAVIGATION.operatorExamBlueprints,
-        icon: Sliders,
-        permission: PERMISSIONS.EXAM_VIEW,
-      },
-      {
-        key: 'operator-exams',
-        label: 'Mock Tests & Exams',
-        to: PRIVATE_NAVIGATION.operatorExams,
-        icon: FileSpreadsheet,
         permission: PERMISSIONS.EXAM_VIEW,
       },
       {
@@ -1026,13 +825,6 @@ export const STAFF_MENU_GROUPS: MenuGroupConfig[] = [
         icon: FileSpreadsheet,
         permission: PERMISSIONS.BULK_UPLOAD,
       },
-      {
-        key: 'staff-answer-key',
-        label: 'Answer Key Upload',
-        to: PRIVATE_NAVIGATION.staffAnswerKey,
-        icon: KeyRound,
-        permission: PERMISSIONS.BULK_UPLOAD,
-      },
     ],
   },
   {
@@ -1059,27 +851,6 @@ export const STAFF_MENU_GROUPS: MenuGroupConfig[] = [
         to: PRIVATE_NAVIGATION.staffStudents,
         icon: Users,
         permission: PERMISSIONS.STUDENT_VIEW,
-      },
-      {
-        key: 'staff-questions',
-        label: 'Question Bank',
-        to: PRIVATE_NAVIGATION.staffQuestionBank,
-        icon: Database,
-        permission: PERMISSIONS.QUESTION_VIEW,
-      },
-      {
-        key: 'staff-translations',
-        label: 'Translations',
-        to: PRIVATE_NAVIGATION.staffTranslations,
-        icon: Globe,
-        permission: PERMISSIONS.TRANSLATION_VIEW,
-      },
-      {
-        key: 'staff-exams',
-        label: 'Mock Tests & Exams',
-        to: PRIVATE_NAVIGATION.staffExams,
-        icon: FileSpreadsheet,
-        permission: PERMISSIONS.EXAM_VIEW,
       },
       {
         key: 'staff-reports',
@@ -1177,7 +948,7 @@ export const INSTITUTION_MENU_GROUPS: MenuGroupConfig[] = [
     categoryKey: 'ANALYTICS_REPORTS',
     categoryLabel: 'Analytics & Reporting',
     items: [
-      
+
       // {
       //   key: 'reports',
       //   label: 'Institutional Reports',

@@ -4,8 +4,6 @@ import {
   History,
   TrendingUp,
   CalendarDays,
-  Database,
-  Sliders,
   CalendarClock,
   Globe2,
   Trophy,
@@ -97,13 +95,6 @@ export const MENU_GROUPS: MenuGroupConfig[] = [
         permissions: [PERMISSIONS.ATTEMPT_VIEW, PERMISSIONS.RESULT_VIEW],
       },
       {
-        key: 'mock-history',
-        label: 'Mock Test History',
-        to: PRIVATE_NAVIGATION.studentMockHistory,
-        icon: History,
-        permissions: [PERMISSIONS.ATTEMPT_VIEW, PERMISSIONS.RESULT_VIEW],
-      },
-      {
         key: 'exam-calendar',
         label: 'Academic Calendar',
         to: PRIVATE_NAVIGATION.academicCalendar,
@@ -115,16 +106,9 @@ export const MENU_GROUPS: MenuGroupConfig[] = [
 
   {
     categoryKey: 'QUESTION_STUDIO',
-    categoryLabel: 'Question & Content Studio',
+    categoryLabel: 'Content Studio',
     roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
     items: [
-      {
-        key: 'question-bank',
-        label: 'Question Bank',
-        to: PRIVATE_NAVIGATION.questionBank,
-        icon: Database,
-        permissions: [PERMISSIONS.QUESTION_VIEW],
-      },
       {
         key: 'regional-languages',
         label: 'Regional Languages',
@@ -137,16 +121,9 @@ export const MENU_GROUPS: MenuGroupConfig[] = [
 
   {
     categoryKey: 'EXAM_STUDIO',
-    categoryLabel: 'Exam Blueprint & Scheduling',
+    categoryLabel: 'Exam Scheduling',
     roles: [ROLES.ADMIN, ROLES.SUPER_ADMIN],
     items: [
-      {
-        key: 'exam-blueprints',
-        label: 'Exam Generator',
-        to: PRIVATE_NAVIGATION.examBlueprints,
-        icon: Sliders,
-        permissions: [PERMISSIONS.EXAM_CREATE, PERMISSIONS.EXAM_VIEW],
-      },
       {
         key: 'exam-scheduling',
         label: 'Exam Scheduling',

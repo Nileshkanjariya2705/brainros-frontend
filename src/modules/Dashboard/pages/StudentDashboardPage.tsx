@@ -149,14 +149,8 @@ const UpcomingExamsSlider: React.FC<UpcomingExamsSliderProps> = ({ exams }) => {
         </p>
         <div className="mt-3 flex items-center justify-center gap-2">
           <button
-            onClick={() => navigate(PRIVATE_NAVIGATION.studentMockTests)}
-            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 transition-all shadow-sm"
-          >
-            Browse Mock Tests
-          </button>
-          <button
             onClick={() => navigate(PRIVATE_NAVIGATION.studentExams)}
-            className="text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 transition-all shadow-sm"
           >
             All Examinations
           </button>
@@ -491,18 +485,18 @@ export const StudentDashboardPage: React.FC = () => {
           {/* Quick Nav Shortcut Buttons */}
           <div className="flex items-center gap-2.5 flex-wrap self-start md:self-auto">
             <button
-              onClick={() => navigate(PRIVATE_NAVIGATION.studentMockTests)}
+              onClick={() => navigate(PRIVATE_NAVIGATION.studentExams)}
               className="inline-flex items-center gap-1.5 rounded-2xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-indigo-500 active:scale-95 transition-all"
             >
               <BookOpen size={15} />
-              <span>Take Mock</span>
+              <span>Take Exam</span>
             </button>
             <button
-              onClick={() => navigate(PRIVATE_NAVIGATION.studentComparison)}
+              onClick={() => navigate(PRIVATE_NAVIGATION.studentTrends)}
               className="inline-flex items-center gap-1.5 rounded-2xl bg-white/10 backdrop-blur-md px-4 py-2.5 text-xs font-bold text-white border border-white/15 hover:bg-white/20 active:scale-95 transition-all"
             >
               <BarChart3 size={15} />
-              <span>Mock Comparison</span>
+              <span>Performance Trends</span>
             </button>
           </div>
         </div>
@@ -1178,15 +1172,15 @@ export const StudentDashboardPage: React.FC = () => {
       <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Recent Completed Mocks</h3>
+            <h3 className="text-base font-bold text-slate-900">Recent Completed Exams</h3>
             <p className="text-xs text-slate-500">Detailed records of your evaluated sessions.</p>
           </div>
           <div className="flex items-center gap-3">
             <Link
-              to={PRIVATE_NAVIGATION.studentMockHistory}
+              to={PRIVATE_NAVIGATION.studentHistory}
               className="text-xs font-bold text-indigo-600 hover:text-indigo-800"
             >
-              View Mock Test History →
+              View Exam History →
             </Link>
           </div>
         </div>

@@ -200,8 +200,17 @@ export const useJobProgress = ({
 
     // 2. Setup Socket.IO connection
     const baseUrl = getSocketBaseUrl();
+    const token =
+      (typeof window !== 'undefined' &&
+        (localStorage.getItem('access_token') ||
+          localStorage.getItem('token') ||
+          sessionStorage.getItem('access_token') ||
+          sessionStorage.getItem('token'))) ||
+      '';
+
     const socket = io(`${baseUrl}/ws/jobs`, {
       withCredentials: true,
+      auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 10,
@@ -220,16 +229,32 @@ export const useJobProgress = ({
       setIsConnected(false);
     });
 
-    socket.on('job.event', (event: JobProgressEvent) => {
-      if (event?.job?.queue === queue && String(event?.job?.jobId) === String(jobId)) {
+    const handleIncomingEvent = (event: JobProgressEvent) => {
+      if (
+        event?.job?.queue === queue &&
+        (!jobId || String(event?.job?.jobId) === String(jobId))
+      ) {
         applyJobEvent(event);
       }
-    });
+    };
+
+    socket.on('job.event', handleIncomingEvent);
+    socket.on('job.progress', handleIncomingEvent);
+    socket.on('job.started', handleIncomingEvent);
+    socket.on('job.completed', handleIncomingEvent);
+    socket.on('job.failed', handleIncomingEvent);
+    socket.on('job.queued', handleIncomingEvent);
 
     // Cleanup on unmount or options change
     return () => {
       if (socket) {
         socket.emit('unsubscribe_job', { queue, jobId });
+        socket.off('job.event', handleIncomingEvent);
+        socket.off('job.progress', handleIncomingEvent);
+        socket.off('job.started', handleIncomingEvent);
+        socket.off('job.completed', handleIncomingEvent);
+        socket.off('job.failed', handleIncomingEvent);
+        socket.off('job.queued', handleIncomingEvent);
         socket.disconnect();
       }
       socketRef.current = null;

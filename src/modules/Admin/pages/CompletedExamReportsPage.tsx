@@ -26,6 +26,7 @@ import {
   AttendeeItem,
   StudentAttemptAnalysisResponse,
 } from '../services/completedExamReports.service';
+import { useJobProgress } from '@/hooks/useJobProgress';
 
 export const CompletedExamReportsPage: React.FC = () => {
   // ── State ──
@@ -67,6 +68,25 @@ export const CompletedExamReportsPage: React.FC = () => {
   const [sendingInstituteEmailAttemptId, setSendingInstituteEmailAttemptId] = useState<string | null>(null);
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
+
+  // Send-to-All & WebSocket Progress State
+  const [isSendAllModalOpen, setIsSendAllModalOpen] = useState<boolean>(false);
+  const [activeBulkJobId, setActiveBulkJobId] = useState<string | null>(null);
+  const [isDispatchingAll, setIsDispatchingAll] = useState<boolean>(false);
+
+  // ── WebSocket Live Progress ──
+  const bulkProgress = useJobProgress({
+    queue: 'bulk-exam-report-email',
+    jobId: activeBulkJobId,
+    enabled: Boolean(activeBulkJobId),
+    onComplete: () => {
+      fetchExamDetails();
+      setActionSuccessMessage('Bulk report email delivery completed successfully.');
+    },
+    onFailed: (event) => {
+      setActionErrorMessage(event.message || 'Bulk report email delivery encountered an issue.');
+    },
+  });
 
   // ── Load Completed Live Exams ──
   const fetchCompletedExams = useCallback(async () => {
@@ -278,6 +298,28 @@ export const CompletedExamReportsPage: React.FC = () => {
     }
   };
 
+  // ── Trigger Bulk Email Dispatch to All Evaluated Attendees ──
+  const handleSendAllReports = async () => {
+    if (!selectedExamId) return;
+    try {
+      setIsDispatchingAll(true);
+      setActionErrorMessage(null);
+      const res = await completedExamReportsService.sendAllReportEmails(selectedExamId);
+      setActiveBulkJobId(res.jobId);
+      setIsSendAllModalOpen(false);
+      setActionSuccessMessage(
+        res.message || `Bulk report email dispatch initiated for ${res.totalAttendees} candidates.`
+      );
+    } catch (err: any) {
+      setActionErrorMessage(
+        err?.response?.data?.message || 'Failed to initiate bulk email dispatch for all candidates.'
+      );
+    } finally {
+      setIsDispatchingAll(false);
+      setTimeout(() => setActionSuccessMessage(null), 6000);
+    }
+  };
+
   const selectedExam = exams.find((e) => e.id === selectedExamId);
 
   return (
@@ -356,6 +398,28 @@ export const CompletedExamReportsPage: React.FC = () => {
             title="Refresh Dashboard"
           >
             <RefreshCw className={`w-4 h-4 ${(loadingAttendees || loadingSummary) ? 'animate-spin text-indigo-600' : ''}`} />
+          </button>
+
+          {/* Send to All Button */}
+          <button
+            onClick={() => setIsSendAllModalOpen(true)}
+            disabled={
+              !selectedExam ||
+              !summary ||
+              summary.metrics.evaluated === 0 ||
+              loadingSummary ||
+              isDispatchingAll ||
+              bulkProgress.isProcessing
+            }
+            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-all shadow-md shadow-indigo-100 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            title={
+              !summary || summary.metrics.evaluated === 0
+                ? 'No evaluated candidates available for this exam yet.'
+                : 'Send official analysis report PDFs to all evaluated student attendees'
+            }
+          >
+            <Send className={`w-4 h-4 ${bulkProgress.isProcessing ? 'animate-pulse' : ''}`} />
+            <span>Send to All ({summary?.metrics?.evaluated ?? 0})</span>
           </button>
         </div>
       </div>
@@ -461,6 +525,111 @@ export const CompletedExamReportsPage: React.FC = () => {
                 : 'Official Release'}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          LIVE WEBSOCKET BULK REPORT PROGRESS BAR
+      ═══════════════════════════════════════════════════════════════ */}
+      {activeBulkJobId && (
+        <div className="bg-white border border-indigo-200 rounded-2xl p-5 shadow-xs space-y-3 animate-in fade-in slide-in-from-top-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                <Send className={`w-5 h-5 ${bulkProgress.isProcessing ? 'animate-pulse' : ''}`} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-slate-900">
+                    Bulk Email Dispatch: {selectedExam?.title}
+                  </h4>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                      bulkProgress.isCompleted
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : bulkProgress.isFailed
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                        : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        bulkProgress.isCompleted
+                          ? 'bg-emerald-500'
+                          : bulkProgress.isFailed
+                          ? 'bg-rose-500'
+                          : 'bg-indigo-500 animate-ping'
+                      }`}
+                    />
+                    {bulkProgress.status === 'COMPLETED'
+                      ? 'Completed'
+                      : bulkProgress.status === 'FAILED'
+                      ? 'Failed'
+                      : 'Live Dispatching (WebSocket)'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {bulkProgress.message ||
+                    (bulkProgress.isCompleted
+                      ? 'All candidate reports generated and dispatched.'
+                      : 'Preparing PDF reports and streaming real-time status...')}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between sm:justify-end gap-4">
+              <div className="text-right">
+                <div className="text-base font-bold text-slate-900 font-mono">
+                  {bulkProgress.current} / {bulkProgress.total || summary?.metrics?.evaluated || 0}
+                </div>
+                <div className="text-[11px] text-slate-500 font-mono font-medium">
+                  {bulkProgress.percentage}% Processed
+                </div>
+              </div>
+
+              {(bulkProgress.isCompleted || bulkProgress.isFailed) && (
+                <button
+                  onClick={() => setActiveBulkJobId(null)}
+                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                  title="Dismiss Progress Banner"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Progress Bar Track & Fill */}
+          <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ease-out ${
+                bulkProgress.isCompleted
+                  ? 'bg-emerald-500'
+                  : bulkProgress.isFailed
+                  ? 'bg-rose-500'
+                  : 'bg-gradient-to-r from-indigo-500 to-indigo-600'
+              }`}
+              style={{ width: `${bulkProgress.percentage}%` }}
+            />
+          </div>
+
+          {bulkProgress.isCompleted && (
+            <div className="flex items-center justify-between text-xs text-emerald-800 bg-emerald-50/90 px-3.5 py-2.5 rounded-xl border border-emerald-200">
+              <span className="flex items-center gap-1.5 font-medium">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>All report emails queued and dispatched successfully to student mailboxes.</span>
+              </span>
+              <button
+                onClick={() => {
+                  fetchExamDetails();
+                  setActiveBulkJobId(null);
+                }}
+                className="font-bold text-emerald-700 hover:text-emerald-900 underline ml-2 shrink-0"
+              >
+                Refresh & Dismiss
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -1812,6 +1981,106 @@ export const CompletedExamReportsPage: React.FC = () => {
                   )}
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          SEND TO ALL CONFIRMATION MODAL
+      ═══════════════════════════════════════════════════════════════ */}
+      {isSendAllModalOpen && selectedExam && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-xs">
+                  <Send className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-lg">
+                    Send Reports to All Students
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Batch PDF generation and automated email distribution
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSendAllModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content Summary Card */}
+            <div className="space-y-3.5">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 text-xs">
+                <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                  <span className="text-slate-500 font-medium">Selected Live Exam:</span>
+                  <span className="font-bold text-slate-900 truncate max-w-[240px]">
+                    {selectedExam.title}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                  <span className="text-slate-500 font-medium">Evaluated Candidates:</span>
+                  <span className="font-bold text-indigo-600 font-mono text-sm">
+                    {summary?.metrics?.evaluated ?? 0} Students
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-slate-500 font-medium">Delivery Channel:</span>
+                  <span className="font-semibold text-emerald-700 flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    Verified Student Emails (PDF)
+                  </span>
+                </div>
+              </div>
+
+              {/* Information Notice */}
+              <div className="p-3.5 bg-indigo-50/60 border border-indigo-200 text-xs text-indigo-900 rounded-2xl space-y-1.5">
+                <div className="font-bold flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                  What happens next?
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-indigo-800 text-[11px] pl-0.5">
+                  <li>3-page diagnostic PDF reports with complete analysis will be generated.</li>
+                  <li>Jobs are processed asynchronously through the background email queue.</li>
+                  <li>Real-time progress will stream live on this page via WebSocket.</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsSendAllModalOpen(false)}
+                disabled={isDispatchingAll}
+                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSendAllReports}
+                disabled={isDispatchingAll || !summary || summary.metrics.evaluated === 0}
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-200 flex items-center gap-2 transition-all disabled:opacity-50"
+              >
+                {isDispatchingAll ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Queueing All Reports...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Confirm & Send to All ({summary?.metrics?.evaluated ?? 0})
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

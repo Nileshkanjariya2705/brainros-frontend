@@ -4,7 +4,6 @@ import { Axios } from '@/base-axios';
 import type {
   ExamImportSession,
   ExamImportFilterParams,
-  BlueprintItem,
   ComprehensiveExamValidationResult,
   CreateExamFromUploadPayload,
   ExamManagerFilterParams,
@@ -15,29 +14,13 @@ import type {
 
 const EXAM_MANAGER_BASE_PATH = '/admin/exam-manager';
 
-// ─── 1. Get Predefined / Active Blueprints ───────────────────────
+// ─── 1. Get Predefined / Active Blueprints (Deprecated) ─────────
 export const useGetBlueprintsAPI = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const getBlueprintsAPI = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await Axios.get(`${EXAM_MANAGER_BASE_PATH}/blueprints`);
-      setIsLoading(false);
-      const data = response?.data?.data !== undefined ? response.data.data : response?.data;
-      return { data: data as BlueprintItem[], error: null };
-    } catch (err: any) {
-      setIsLoading(false);
-      const errorMsg =
-        err?.response?.data?.message || err?.message || 'Failed to fetch blueprints.';
-      setError(errorMsg);
-      return { data: null, error: errorMsg };
-    }
+    return { data: [] as any[], error: null };
   }, []);
 
-  return { getBlueprintsAPI, isLoading, error };
+  return { getBlueprintsAPI, isLoading: false, error: null };
 };
 
 // ─── 2. Validate Question Paper + Multiple Simultaneous Translations ─
@@ -48,7 +31,7 @@ export const useValidateExamUploadAPI = () => {
   const validateExamUploadAPI = useCallback(
     async (
       questionFile: File,
-      blueprintId: string,
+      blueprintId?: string,
       translationFiles: Array<{ file: File; languageId: string }> = [],
     ) => {
       setIsLoading(true);
@@ -57,7 +40,7 @@ export const useValidateExamUploadAPI = () => {
       try {
         const formData = new FormData();
         formData.append('questionFile', questionFile);
-        formData.append('blueprintId', blueprintId);
+        if (blueprintId) formData.append('blueprintId', blueprintId);
 
         translationFiles.forEach((tf) => {
           formData.append(`translation_${tf.languageId}`, tf.file);
@@ -105,7 +88,6 @@ export const useCreateExamFromUploadAPI = () => {
       try {
         const formData = new FormData();
         formData.append('title', payload.title);
-        formData.append('blueprintId', payload.blueprintId);
         if (payload.description) formData.append('description', payload.description);
         if (payload.durationMinutes)
           formData.append('durationMinutes', String(payload.durationMinutes));
