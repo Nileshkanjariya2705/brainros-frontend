@@ -1068,14 +1068,23 @@ export const ImportQuestionsPage: React.FC = () => {
                           <div className="space-y-1">
                             <label className="font-bold text-slate-700">Marks (+)</label>
                             <input
-                              type="number"
-                              value={editingRawData.marks ?? 4}
-                              onChange={(e) =>
+                              type="text"
+                              inputMode="decimal"
+                              value={editingRawData.marks === 0 ? '0' : editingRawData.marks ?? 4}
+                              onKeyDown={(e) => {
+                                if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                                  e.preventDefault();
+                                } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                                  e.preventDefault();
+                                }
+                              }}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/[^0-9.]/g, '');
                                 setEditingRawData((prev) => ({
                                   ...prev,
-                                  marks: Number(e.target.value),
-                                }))
-                              }
+                                  marks: val === '' ? 0 : parseFloat(val),
+                                }));
+                              }}
                               className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-3 font-bold text-emerald-700 focus:bg-white"
                             />
                           </div>
@@ -1083,14 +1092,23 @@ export const ImportQuestionsPage: React.FC = () => {
                           <div className="space-y-1">
                             <label className="font-bold text-slate-700">Negative (-)</label>
                             <input
-                              type="number"
-                              value={editingRawData.negative_marks ?? 1}
-                              onChange={(e) =>
+                              type="text"
+                              inputMode="decimal"
+                              value={editingRawData.negative_marks === 0 ? '0' : editingRawData.negative_marks ?? 1}
+                              onKeyDown={(e) => {
+                                if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                                  e.preventDefault();
+                                } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                                  e.preventDefault();
+                                }
+                              }}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/[^0-9.]/g, '');
                                 setEditingRawData((prev) => ({
                                   ...prev,
-                                  negative_marks: Number(e.target.value),
-                                }))
-                              }
+                                  negative_marks: val === '' ? 0 : parseFloat(val),
+                                }));
+                              }}
                               className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 p-3 font-bold text-rose-700 focus:bg-white"
                             />
                           </div>
@@ -1290,13 +1308,20 @@ export const ImportQuestionsPage: React.FC = () => {
                               Exact Numerical Target Value *
                             </label>
                             <input
-                              type="number"
-                              step="any"
+                              type="text"
+                              inputMode="decimal"
                               value={editingRawData.numerical_answer || ''}
+                              onKeyDown={(e) => {
+                                if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                                  e.preventDefault();
+                                } else if (!/[0-9.-]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                                  e.preventDefault();
+                                }
+                              }}
                               onChange={(e) =>
                                 setEditingRawData((prev) => ({
                                   ...prev,
-                                  numerical_answer: e.target.value,
+                                  numerical_answer: e.target.value.replace(/[^0-9.-]/g, ''),
                                 }))
                               }
                               placeholder="e.g. 7"
@@ -1309,13 +1334,20 @@ export const ImportQuestionsPage: React.FC = () => {
                               Acceptable Tolerance (±)
                             </label>
                             <input
-                              type="number"
-                              step="any"
+                              type="text"
+                              inputMode="decimal"
                               value={editingRawData.numerical_tolerance || '0'}
+                              onKeyDown={(e) => {
+                                if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                                  e.preventDefault();
+                                } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                                  e.preventDefault();
+                                }
+                              }}
                               onChange={(e) =>
                                 setEditingRawData((prev) => ({
                                   ...prev,
-                                  numerical_tolerance: e.target.value,
+                                  numerical_tolerance: e.target.value.replace(/[^0-9.]/g, ''),
                                 }))
                               }
                               placeholder="e.g. 0.05"
@@ -1908,10 +1940,18 @@ export const ImportQuestionsPage: React.FC = () => {
                         <Clock size={11} className="text-indigo-600" /> Duration (Mins)
                       </label>
                       <input
-                        type="number"
-                        min={1}
-                        value={examDurationInput}
-                        onChange={(e) => setExamDurationInput(Number(e.target.value))}
+                        type="text"
+                        inputMode="numeric"
+                        value={examDurationInput || ''}
+                        onKeyDown={(e) => {
+                          if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          setExamDurationInput(val ? Number(val) : 0);
+                        }}
                         className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 font-mono text-center"
                       />
                     </div>
@@ -1921,10 +1961,20 @@ export const ImportQuestionsPage: React.FC = () => {
                         <Award size={11} className="text-emerald-600" /> Marks / Q
                       </label>
                       <input
-                        type="number"
-                        min={0}
-                        value={examMarksInput}
-                        onChange={(e) => setExamMarksInput(Number(e.target.value))}
+                        type="text"
+                        inputMode="decimal"
+                        value={examMarksInput === 0 ? '0' : examMarksInput || ''}
+                        onKeyDown={(e) => {
+                          if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                            e.preventDefault();
+                          } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9.]/g, '');
+                          setExamMarksInput(val ? Number(val) : 0);
+                        }}
                         className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 font-mono text-center"
                       />
                     </div>
@@ -1934,10 +1984,20 @@ export const ImportQuestionsPage: React.FC = () => {
                         <Award size={11} className="text-rose-600" /> Negative
                       </label>
                       <input
-                        type="number"
-                        min={0}
-                        value={examNegativeInput}
-                        onChange={(e) => setExamNegativeInput(Number(e.target.value))}
+                        type="text"
+                        inputMode="decimal"
+                        value={examNegativeInput === 0 ? '0' : examNegativeInput || ''}
+                        onKeyDown={(e) => {
+                          if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                            e.preventDefault();
+                          } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9.]/g, '');
+                          setExamNegativeInput(val ? Number(val) : 0);
+                        }}
                         className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 font-mono text-center"
                       />
                     </div>

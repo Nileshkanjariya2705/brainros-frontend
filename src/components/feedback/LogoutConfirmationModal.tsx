@@ -12,6 +12,7 @@ import { useRole } from '@/modules/Auth/auth-access';
 import { Axios } from '@/base-axios';
 import { toast } from '@/utils/toast';
 import { clearUserSessionCache } from '@/queryClient';
+import { clearTabSession } from '@/utils/tabSession';
 
 interface LogoutConfirmationModalProps {
   isOpen: boolean;
@@ -42,7 +43,7 @@ export const LogoutConfirmationModal: React.FC<LogoutConfirmationModalProps> = (
       } else {
         // Default logout routine: call backend to invalidate session and clear cookies
         try {
-          await Axios.post('/auth/logout', {});
+          await Axios.post('/auth/logout', {}, { _skipAuthRefresh: true, _silent: true });
         } catch {
           // Continue local cleanup even if network fails
         }
@@ -52,6 +53,7 @@ export const LogoutConfirmationModal: React.FC<LogoutConfirmationModalProps> = (
           localStorage.removeItem('accessToken');
           sessionStorage.clear();
         } catch {}
+        clearTabSession();
         clearUserSessionCache();
         logout();
         toast.success('Logged out successfully.');

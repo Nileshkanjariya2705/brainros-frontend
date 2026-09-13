@@ -67,17 +67,17 @@ export const UploadQuestionPaperPage: React.FC = () => {
       id: 'upload-paper',
       stepNumber: 2,
       title: 'Upload Question Paper',
-      subtitle: 'Upload CSV/Excel bilingual paper',
+      subtitle: 'Upload CSV/Excel paper with correct answers',
       status: 'current',
       to: `${routePrefix}/exam-manager/upload`,
     },
     {
-      id: 'upload-key',
+      id: 'exam-results',
       stepNumber: 3,
-      title: 'Upload Answer Key',
-      subtitle: 'Set correct options and scoring scheme',
+      title: 'Automated Evaluation & Results',
+      subtitle: 'Automatic evaluation & Super Admin publication',
       status: 'pending',
-      to: `${routePrefix}/exam-manager/answer-key`,
+      to: `${routePrefix}/reports`,
     },
   ];
 

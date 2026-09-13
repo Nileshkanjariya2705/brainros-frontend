@@ -35,6 +35,7 @@ import {
   Receipt,
   UserCog,
   KeyRound,
+  Sparkles,
 } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 import { FEATURES } from '@/constants/feature-flag.constant';
@@ -160,6 +161,12 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'All Students',
         to: PRIVATE_NAVIGATION.adminStudents,
         icon: Users,
+      },
+      {
+        key: 'public-registrations',
+        label: 'Public Registrations',
+        to: PRIVATE_NAVIGATION.superAdminPublicRegistrations,
+        icon: Globe,
       },
        {
         key: 'schools-management',
@@ -470,6 +477,12 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         to: PRIVATE_NAVIGATION.superAdminImportTranslations,
         icon: Languages,
         feature: FEATURES.BULK_IMPORT_TRANSLATION,
+      },
+      {
+        key: 'ai-question-paper-translation',
+        label: 'AI Question Paper Translation',
+        to: PRIVATE_NAVIGATION.superAdminAiQuestionPaperTranslation,
+        icon: Sparkles,
       },
     ],
   },

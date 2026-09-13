@@ -690,14 +690,21 @@ export const StaffBillsPage: React.FC = () => {
                     Subtotal (₹) *
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     required
-                    min={1}
-                    step="0.01"
                     value={createForm.amount || ''}
-                    onChange={(e) =>
-                      setCreateForm({ ...createForm, amount: parseFloat(e.target.value) || 0 })
-                    }
+                    onKeyDown={(e) => {
+                      if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                        e.preventDefault();
+                      } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                      setCreateForm({ ...createForm, amount: parseFloat(val) || 0 });
+                    }}
                     placeholder="0.00"
                     className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-mono"
                   />
@@ -709,13 +716,20 @@ export const StaffBillsPage: React.FC = () => {
                   Tax Amount (₹)
                 </label>
                 <input
-                  type="number"
-                  min={0}
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={createForm.tax || ''}
-                  onChange={(e) =>
-                    setCreateForm({ ...createForm, tax: parseFloat(e.target.value) || 0 })
-                  }
+                  onKeyDown={(e) => {
+                    if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                      e.preventDefault();
+                    } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                    setCreateForm({ ...createForm, tax: parseFloat(val) || 0 });
+                  }}
                   placeholder="0.00"
                   className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 font-mono"
                 />

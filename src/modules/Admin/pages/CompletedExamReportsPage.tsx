@@ -164,8 +164,29 @@ export const CompletedExamReportsPage: React.FC = () => {
     };
   }, [emailConfirmTarget, selectedExamId, analysisData, selectedAttemptId]);
 
+  // ── Helper to verify if an attempt is fully evaluated ──
+  const isAttemptEvaluated = (item: AttendeeItem): boolean => {
+    if (item.score === null || item.score === undefined) return false;
+    const resStatus = (item.resultStatus || '').toUpperCase();
+    const attStatus = (item.attemptStatus || '').toUpperCase();
+    if (resStatus === 'EVALUATING' || resStatus === 'PROCESSING' || resStatus === 'PENDING') {
+      return false;
+    }
+    return (
+      resStatus === 'EVALUATED' ||
+      resStatus === 'PUBLISHED' ||
+      resStatus === 'READY_TO_PUBLISH' ||
+      attStatus === 'EVALUATED' ||
+      attStatus === 'COMPLETED'
+    );
+  };
+
   // ── Open Student Analysis ──
-  const handleOpenAnalysis = async (attemptId: string) => {
+  const handleOpenAnalysis = async (attemptId: string, item?: AttendeeItem) => {
+    if (item && !isAttemptEvaluated(item)) {
+      setActionErrorMessage('This exam attempt is still being evaluated. Report is only viewable once evaluation completes.');
+      return;
+    }
     setSelectedAttemptId(attemptId);
     setAnalysisData(null);
     setActiveAnalysisTab('overview');
@@ -198,6 +219,10 @@ export const CompletedExamReportsPage: React.FC = () => {
   // ── Trigger Email Dispatch ──
   const handleSendEmail = async (attempt: AttendeeItem) => {
     try {
+      if (!isAttemptEvaluated(attempt)) {
+        setActionErrorMessage('Cannot send report email for an un-evaluated attempt.');
+        return;
+      }
       setSendingEmailAttemptId(attempt.attemptId);
       setActionErrorMessage(null);
       const res = await completedExamReportsService.sendStudentReportEmail(selectedExamId, attempt.attemptId);
@@ -659,15 +684,21 @@ export const CompletedExamReportsPage: React.FC = () => {
                       <div className="flex items-center justify-end gap-2">
                         {/* View Analysis */}
                         <button
-                          onClick={() => handleOpenAnalysis(item.attemptId)}
-                          className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-semibold border border-slate-200 transition-all flex items-center gap-1.5 shadow-xs"
+                          onClick={() => handleOpenAnalysis(item.attemptId, item)}
+                          disabled={!isAttemptEvaluated(item)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-semibold border border-slate-200 transition-all flex items-center gap-1.5 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-50 disabled:hover:text-slate-700"
+                          title={
+                            !isAttemptEvaluated(item)
+                              ? 'Evaluation in progress. Report is only viewable once exam evaluation is completed.'
+                              : 'View Student Detailed Analysis & Report'
+                          }
                         >
-                          <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
+                          <BarChart3 className={`w-3.5 h-3.5 ${isAttemptEvaluated(item) ? 'text-indigo-600' : 'text-slate-400'}`} />
                           View
                         </button>
 
                         {/* Approve Report */}
-                        {item.reportStatus === 'READY_FOR_REVIEW' && (
+                        {item.reportStatus === 'READY_FOR_REVIEW' && isAttemptEvaluated(item) && (
                           <button
                             onClick={() => handleApproveReport(item)}
                             className="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-200 transition-all flex items-center gap-1.5 shadow-xs"
@@ -683,16 +714,15 @@ export const CompletedExamReportsPage: React.FC = () => {
                           onClick={() => setEmailConfirmTarget(item)}
                           disabled={
                             sendingEmailAttemptId === item.attemptId ||
-                            item.score === null ||
-                            item.score === undefined ||
+                            !isAttemptEvaluated(item) ||
                             !item.email
                           }
-                          className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
                           title={
-                            !item.email
+                            !isAttemptEvaluated(item)
+                              ? 'Attempt has not been evaluated yet. Please wait for evaluation to complete.'
+                              : !item.email
                               ? 'No registered student email'
-                              : item.score === null || item.score === undefined
-                              ? 'Attempt has not been evaluated yet'
                               : 'Send Report as PDF by Email'
                           }
                         >
@@ -716,13 +746,12 @@ export const CompletedExamReportsPage: React.FC = () => {
                           onClick={() => setInstituteConfirmTarget(item)}
                           disabled={
                             sendingInstituteEmailAttemptId === item.attemptId ||
-                            item.score === null ||
-                            item.score === undefined
+                            !isAttemptEvaluated(item)
                           }
-                          className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs disabled:opacity-40 disabled:cursor-not-allowed"
                           title={
-                            item.score === null || item.score === undefined
-                              ? 'Attempt has not been evaluated yet'
+                            !isAttemptEvaluated(item)
+                              ? 'Attempt has not been evaluated yet. Please wait for evaluation to complete.'
                               : item.institutionName
                               ? `Send Report to Institute (${item.institutionName})`
                               : 'Send Report to Student\'s Institute'

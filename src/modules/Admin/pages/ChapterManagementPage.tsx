@@ -40,6 +40,7 @@ export const ChapterManagementPage: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingChapter, setEditingChapter] = useState<ChapterItem | null>(null);
   const [deletingChapter, setDeletingChapter] = useState<ChapterItem | null>(null);
+  const [successPopupMsg, setSuccessPopupMsg] = useState<{ title: string; desc: string } | null>(null);
 
   // Chapter Form State
   const [formData, setFormData] = useState<{
@@ -279,6 +280,10 @@ export const ChapterManagementPage: React.FC = () => {
       type: 'success',
       text: `Chapter "${payload.name}" was created successfully.`,
     });
+    setSuccessPopupMsg({
+      title: 'Chapter Created Successfully!',
+      desc: `Chapter "${payload.name}" has been created and indexed under the curriculum.`,
+    });
     setIsAddModalOpen(false);
     loadData();
   };
@@ -322,6 +327,10 @@ export const ChapterManagementPage: React.FC = () => {
     setFeedbackMsg({
       type: 'success',
       text: `Chapter "${formData.name}" was updated successfully.`,
+    });
+    setSuccessPopupMsg({
+      title: 'Chapter Updated Successfully!',
+      desc: `Chapter "${formData.name}" details and settings have been saved.`,
     });
     setEditingChapter(null);
     loadData();
@@ -892,10 +901,18 @@ export const ChapterManagementPage: React.FC = () => {
                 <div className="space-y-1.5">
                   <label className="font-bold text-slate-700 block">Display Order</label>
                   <input
-                    type="number"
-                    min="1"
-                    value={formData.displayOrder}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, displayOrder: parseInt(e.target.value) || 1 }))}
+                    type="text"
+                    inputMode="numeric"
+                    value={formData.displayOrder || ''}
+                    onKeyDown={(e) => {
+                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setFormData((prev) => ({ ...prev, displayOrder: val ? parseInt(val) : 1 }));
+                    }}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
@@ -1043,10 +1060,18 @@ export const ChapterManagementPage: React.FC = () => {
                 <div className="space-y-1.5">
                   <label className="font-bold text-slate-700 block">Display Order</label>
                   <input
-                    type="number"
-                    min="1"
-                    value={formData.displayOrder}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, displayOrder: parseInt(e.target.value) || 1 }))}
+                    type="text"
+                    inputMode="numeric"
+                    value={formData.displayOrder || ''}
+                    onKeyDown={(e) => {
+                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setFormData((prev) => ({ ...prev, displayOrder: val ? parseInt(val) : 1 }));
+                    }}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
@@ -1183,6 +1208,26 @@ export const ChapterManagementPage: React.FC = () => {
         </div>
       )}
 
+      {/* ─── Success Popup Dialog ─────────────────────────────────── */}
+      {successPopupMsg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border border-slate-100 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-md shadow-emerald-100/50">
+              <CheckCircle2 size={32} />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-black text-slate-900">{successPopupMsg.title}</h3>
+              <p className="text-xs text-slate-500">{successPopupMsg.desc}</p>
+            </div>
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs"
+              onClick={() => setSuccessPopupMsg(null)}
+            >
+              OK, Continue
+            </Button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

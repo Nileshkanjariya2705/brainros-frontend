@@ -4,6 +4,7 @@ import { useAppDispatch } from '@/redux/store';
 import { setCredentials } from '@/redux/slices/authSlice';
 import { useLoginStudentIdAPI } from '../services';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
+import { createTabSession } from '@/utils/tabSession';
 import type { LoginStudentIdDto } from '../types/auth.types';
 
 export const useLoginStudentId = () => {
@@ -17,6 +18,7 @@ export const useLoginStudentId = () => {
     const { data, error: apiError } = await loginStudentIdAPI(credentials);
 
     if (!apiError && data) {
+      createTabSession();
       dispatch(setCredentials(data));
       navigate(PRIVATE_NAVIGATION.dashboard, { replace: true });
       return true;

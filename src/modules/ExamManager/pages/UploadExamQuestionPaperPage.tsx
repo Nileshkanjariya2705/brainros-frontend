@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   RefreshCw,
   Send,
+  Plus,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { toast } from '@/utils/toast';
@@ -253,6 +254,25 @@ export const UploadExamQuestionPaperPage: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* ── Question Entry Method Tabs (CSV / Excel vs Manual Question Entry) ── */}
+        <div className="flex items-center gap-2 p-1.5 bg-slate-200/70 rounded-2xl w-fit">
+          <button
+            type="button"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-white text-indigo-700 shadow-xs transition"
+          >
+            <FileSpreadsheet size={15} />
+            <span>Upload CSV / Excel</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(`${routePrefix}/exams/${examId}/question-paper/add`)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-white/60 transition"
+          >
+            <Plus size={15} />
+            <span>Add Questions Manually</span>
+          </button>
+        </div>
 
         {/* ── Error Banner ── */}
         {uploadError && (

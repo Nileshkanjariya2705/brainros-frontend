@@ -468,15 +468,6 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
                 {APP_NAME}
               </span>
             </div>
-
-            {/* Desktop Active Role Badge / Title */}
-            <div className="hidden lg:flex items-center gap-2">
-              <span
-                className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border shadow-2xs ${activeRoleMeta.badgeColor}`}
-              >
-                {activeRoleMeta.label}
-              </span>
-            </div>
           </div>
 
           {/* Right Side Controls */}

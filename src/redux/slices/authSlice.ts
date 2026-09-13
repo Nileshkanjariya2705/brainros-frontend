@@ -8,6 +8,7 @@ import { getHighestPriorityRole, computeEffectivePermissions } from '@/modules/A
 import type { RootStateType } from '@/redux/store';
 import type { AuthState, LoginResponse, User } from '@/modules/Auth/types/auth.types';
 import { clearUserSessionCache } from '@/queryClient';
+import { clearTabSession } from '@/utils/tabSession';
 
 const initialState: AuthState = {
   user: null,
@@ -104,6 +105,7 @@ const slice = createSlice({
       state.permissions = [];
       state.activeRole = null;
       clearUserSessionCache();
+      clearTabSession();
     },
   },
 });

@@ -73,17 +73,17 @@ const ExamSchedulingManagementPage: React.FC = () => {
       id: 'upload-paper',
       stepNumber: 2,
       title: 'Upload Question Paper',
-      subtitle: 'Upload CSV/Excel bilingual paper',
+      subtitle: 'Upload CSV/Excel paper with correct answers',
       status: 'pending',
       to: `${routePrefix}/exam-manager/upload`,
     },
     {
-      id: 'upload-key',
+      id: 'exam-results',
       stepNumber: 3,
-      title: 'Upload Answer Key',
-      subtitle: 'Set correct options and scoring scheme',
+      title: 'Automated Evaluation & Results',
+      subtitle: 'Automatic evaluation & Super Admin publication',
       status: 'pending',
-      to: `${routePrefix}/exam-manager/answer-key`,
+      to: `${routePrefix}/reports`,
     },
   ];
 
@@ -224,10 +224,7 @@ const ExamSchedulingManagementPage: React.FC = () => {
         </div>
 
         <Button
-          onClick={() => {
-            setActiveExam(null);
-            setIsScheduleOpen(true);
-          }}
+          onClick={() => navigate(`${routePrefix}/exams/schedule`)}
           className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200 shrink-0"
         >
           <CalendarClock size={16} />

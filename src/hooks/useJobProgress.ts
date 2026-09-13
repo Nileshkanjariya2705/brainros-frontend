@@ -89,6 +89,15 @@ export const useJobProgress = ({
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<string | undefined>();
 
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
+  const onFailedRef = useRef(onFailed);
+  onFailedRef.current = onFailed;
+
+  const queryKeyToInvalidateRef = useRef(queryKeyToInvalidate);
+  queryKeyToInvalidateRef.current = queryKeyToInvalidate;
+
   const socketRef = useRef<Socket | null>(null);
   const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasInvalidatedRef = useRef<boolean>(false);
@@ -141,19 +150,19 @@ export const useJobProgress = ({
       // If job completed, trigger query invalidation once
       if (eventStatus === 'COMPLETED' && !hasInvalidatedRef.current) {
         hasInvalidatedRef.current = true;
-        if (queryKeyToInvalidate && queryKeyToInvalidate.length > 0) {
-          queryClient.invalidateQueries({ queryKey: queryKeyToInvalidate });
+        if (queryKeyToInvalidateRef.current && queryKeyToInvalidateRef.current.length > 0) {
+          queryClient.invalidateQueries({ queryKey: queryKeyToInvalidateRef.current });
         }
-        if (onComplete) {
-          onComplete(event);
+        if (onCompleteRef.current) {
+          onCompleteRef.current(event);
         }
       }
 
-      if (eventStatus === 'FAILED' && onFailed) {
-        onFailed(event);
+      if (eventStatus === 'FAILED' && onFailedRef.current) {
+        onFailedRef.current(event);
       }
     },
-    [queryClient, queryKeyToInvalidate, onComplete, onFailed],
+    [queryClient],
   );
 
   // Authoritative HTTP state fetch

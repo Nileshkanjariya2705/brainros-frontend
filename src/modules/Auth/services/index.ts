@@ -128,6 +128,24 @@ export const useRegisterStudentAPI = () => {
 };
 
 /**
+ * 6.1 Check Mobile/Email Availability
+ */
+export const useCheckAvailabilityAPI = () => {
+  const [callApi, { isLoading, isError, isSuccess }] = useAxiosPost();
+  const checkAvailabilityAPI = useCallback(
+    async (data: { phone?: string; email?: string }, config: AxiosRequestConfig = {}) => {
+      return callApi<{ available: boolean; field?: string; message: string }>(
+        `${AUTH_API_BASE_PATH}/check-availability`,
+        data,
+        config,
+      );
+    },
+    [callApi],
+  );
+  return { checkAvailabilityAPI, isLoading, isError, isSuccess };
+};
+
+/**
  * 7. Metadata / Options API (Classes, Exam Targets, Languages, States & Districts)
  */
 export const useGetRegisterOptionsAPI = () => {

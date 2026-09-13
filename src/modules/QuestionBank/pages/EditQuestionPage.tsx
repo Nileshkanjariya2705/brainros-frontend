@@ -478,13 +478,20 @@ const EditQuestionPage: React.FC = () => {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 block">Correct Marks (+)</label>
               <input
-                type="number"
-                min="0"
-                step="0.5"
-                value={formData.marks ?? 4}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, marks: parseFloat(e.target.value) || 0 }))
-                }
+                type="text"
+                inputMode="decimal"
+                value={formData.marks === 0 ? '0' : formData.marks ?? 4}
+                onKeyDown={(e) => {
+                  if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                    e.preventDefault();
+                  } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.]/g, '');
+                  setFormData((prev) => ({ ...prev, marks: val === '' ? 0 : parseFloat(val) }));
+                }}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
               />
             </div>
@@ -493,16 +500,23 @@ const EditQuestionPage: React.FC = () => {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 block">Negative Marks (-)</label>
               <input
-                type="number"
-                min="0"
-                step="0.25"
-                value={formData.negativeMarks ?? 1}
-                onChange={(e) =>
+                type="text"
+                inputMode="decimal"
+                value={formData.negativeMarks === 0 ? '0' : formData.negativeMarks ?? 1}
+                onKeyDown={(e) => {
+                  if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                    e.preventDefault();
+                  } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.]/g, '');
                   setFormData((prev) => ({
                     ...prev,
-                    negativeMarks: parseFloat(e.target.value) || 0,
-                  }))
-                }
+                    negativeMarks: val === '' ? 0 : parseFloat(val),
+                  }));
+                }}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
               />
             </div>

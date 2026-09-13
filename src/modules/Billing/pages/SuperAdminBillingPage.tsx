@@ -33,72 +33,6 @@ import { toast } from '@/utils/toast';
 import { useJobProgress } from '@/hooks/useJobProgress';
 import { useRole } from '@/modules/Auth/auth-access/useRole';
 
-/* ── WebSocket Live Job Progress Modal for Bill Email Dispatch ───────────── */
-interface BillEmailProgressModalProps {
-  jobId: string;
-  billNumber: string;
-  onClose: () => void;
-}
-
-const BillEmailProgressModal: React.FC<BillEmailProgressModalProps> = ({
-  jobId,
-  billNumber,
-  onClose,
-}) => {
-  const { percentage, stage, message, status, isCompleted, isFailed } = useJobProgress({
-    queue: 'bill-email',
-    jobId,
-    enabled: Boolean(jobId),
-    queryKeyToInvalidate: ['superadmin-invoices'],
-  });
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 text-center">
-        <div className="h-14 w-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mx-auto mb-4">
-          <Activity size={28} className={!isCompleted && !isFailed ? 'animate-pulse' : ''} />
-        </div>
-
-        <h3 className="text-lg font-bold text-slate-900">Dispatching Invoice {billNumber}</h3>
-        <p className="text-xs text-slate-500 mt-1">
-          BullMQ Email Queue + Resend Delivery Worker
-        </p>
-
-        <div className="mt-5 space-y-2">
-          <div className="flex justify-between text-xs font-semibold text-slate-600">
-            <span>{stage || status}</span>
-            <span>{percentage}%</span>
-          </div>
-          <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              className={`h-full transition-all duration-300 ${
-                isFailed
-                  ? 'bg-rose-500'
-                  : isCompleted
-                  ? 'bg-emerald-500'
-                  : 'bg-indigo-600'
-              }`}
-              style={{ width: `${Math.max(percentage, 5)}%` }}
-            />
-          </div>
-          <p className="text-xs text-slate-500 italic mt-1">{message || 'Processing invoice...'}</p>
-        </div>
-
-        <div className="mt-6 flex justify-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            disabled={!isCompleted && !isFailed}
-          >
-            {isCompleted ? 'Done' : isFailed ? 'Dismiss' : 'Processing...'}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 /* ── WebSocket Live Progress Modal for Bulk Invoice Generation ───────────── */
 interface BulkInvoiceProgressModalProps {
   jobId: string;
@@ -122,7 +56,7 @@ const BulkInvoiceProgressModal: React.FC<BulkInvoiceProgressModalProps> = ({ job
 
         <h3 className="text-lg font-bold text-slate-900">Generating Invoices</h3>
         <p className="text-xs text-slate-500 mt-1">
-          BullMQ Worker + Database Student Count Calculation
+          BullMQ Worker + Database Student Count & School-Specific Pricing Calculation
         </p>
 
         <div className="mt-5 space-y-2">
@@ -143,6 +77,88 @@ const BulkInvoiceProgressModal: React.FC<BulkInvoiceProgressModalProps> = ({ job
             />
           </div>
           <p className="text-xs text-slate-500 italic mt-1">{message || 'Processing schools...'}</p>
+        </div>
+
+        <div className="mt-6 flex justify-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClose}
+            disabled={!isCompleted && !isFailed}
+          >
+            {isCompleted ? 'Done' : isFailed ? 'Dismiss' : 'Processing...'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── WebSocket Live Progress Modal for Bulk Send All Invoices ───────────── */
+interface BulkSendProgressModalProps {
+  jobId: string;
+  onClose: () => void;
+}
+
+const BulkSendProgressModal: React.FC<BulkSendProgressModalProps> = ({ jobId, onClose }) => {
+  const { percentage, stage, message, status, isCompleted, isFailed, current, total, resultSummary } = useJobProgress({
+    queue: 'bulk-bill-email',
+    jobId,
+    enabled: Boolean(jobId),
+    queryKeyToInvalidate: ['superadmin-invoices'],
+  });
+
+  const metadata = resultSummary || {};
+  const sentCount = metadata.sent ?? current;
+  const failedCount = metadata.failed ?? 0;
+  const pendingCount = metadata.pending ?? Math.max(0, total - current);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 text-center">
+        <div className="h-14 w-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mx-auto mb-4">
+          <Mail size={28} className={!isCompleted && !isFailed ? 'animate-pulse' : ''} />
+        </div>
+
+        <h3 className="text-lg font-bold text-slate-900">Sending Invoices</h3>
+        <p className="text-xs text-slate-500 mt-1">
+          BullMQ Queue + Resend Email Delivery Engine
+        </p>
+
+        <div className="mt-5 space-y-3">
+          <div className="flex justify-between text-xs font-semibold text-slate-600">
+            <span>{stage || status}</span>
+            <span>{percentage}%</span>
+          </div>
+          <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full transition-all duration-300 ${
+                isFailed
+                  ? 'bg-rose-500'
+                  : isCompleted
+                  ? 'bg-emerald-500'
+                  : 'bg-blue-600'
+              }`}
+              style={{ width: `${percentage}%` }}
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70 text-center">
+            <div>
+              <div className="text-[10px] text-slate-400 uppercase font-bold">Sent</div>
+              <div className="text-sm font-bold text-emerald-600">{sentCount}</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-slate-400 uppercase font-bold">Failed</div>
+              <div className="text-sm font-bold text-rose-600">{failedCount}</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-slate-400 uppercase font-bold">Remaining</div>
+              <div className="text-sm font-bold text-slate-600">{pendingCount}</div>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-500 italic mt-1">{message || 'Processing email batch...'}</p>
         </div>
 
         <div className="mt-6 flex justify-center">
@@ -195,9 +211,6 @@ export const SuperAdminBillingPage: React.FC = () => {
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [viewingInvoice, setViewingInvoice] = useState<BillItem | null>(null);
-  const [sendingInvoice, setSendingInvoice] = useState<BillItem | null>(null);
-  const [activeEmailJobId, setActiveEmailJobId] = useState<string | null>(null);
-  const [activeEmailBillNumber, setActiveEmailBillNumber] = useState<string>('');
   const [activeBulkJobId, setActiveBulkJobId] = useState<string | null>(null);
 
   // Legacy approval review state
@@ -316,12 +329,24 @@ export const SuperAdminBillingPage: React.FC = () => {
   const [genSchoolId, setGenSchoolId] = useState<string>('ALL');
   const [genMonth, setGenMonth] = useState<number>(currentMonth);
   const [genYear, setGenYear] = useState<number>(currentYear);
+  const [customPricePerStudent, setCustomPricePerStudent] = useState<number | ''>('');
 
   // Live Preview Query for Single School Generation
   const { data: previewData, isFetching: isPreviewFetching } = useQuery({
-    queryKey: ['invoice-preview', genSchoolId, genMonth, genYear],
+    queryKey: [
+      'invoice-preview',
+      genSchoolId,
+      genMonth,
+      genYear,
+      customPricePerStudent !== '' ? customPricePerStudent : undefined,
+    ],
     queryFn: () =>
-      BillingApi.getInvoicePreview(genSchoolId, genMonth, genYear),
+      BillingApi.getInvoicePreview(
+        genSchoolId,
+        genMonth,
+        genYear,
+        typeof customPricePerStudent === 'number' ? customPricePerStudent : undefined,
+      ),
     enabled: isGenerateModalOpen && genSchoolId !== 'ALL' && Boolean(genSchoolId),
   });
 
@@ -329,14 +354,20 @@ export const SuperAdminBillingPage: React.FC = () => {
 
   // Generate Invoice Mutation
   const generateMutation = useMutation({
-    mutationFn: (payload: { institutionId?: string; billingMonth: number; billingYear: number; generateAll?: boolean }) =>
-      BillingApi.generateInvoice(payload),
+    mutationFn: (payload: {
+      institutionId?: string;
+      billingMonth: number;
+      billingYear: number;
+      generateAll?: boolean;
+      pricePerStudent?: number;
+    }) => BillingApi.generateInvoice(payload),
     onSuccess: (res) => {
       toast.success(res.message || 'Invoice generation initiated successfully!');
       queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['billing-filter-options'] });
       queryClient.invalidateQueries({ queryKey: ['super-admin', 'revenue'] });
       setIsGenerateModalOpen(false);
+      setCustomPricePerStudent('');
 
       if (res.data?.jobId) {
         setActiveBulkJobId(res.data.jobId);
@@ -354,11 +385,6 @@ export const SuperAdminBillingPage: React.FC = () => {
     onSuccess: (res) => {
       toast.success(res.message || 'Invoice email queued for delivery!');
       queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
-      if (res.data?.jobId) {
-        setActiveEmailJobId(res.data.jobId);
-        setActiveEmailBillNumber(sendingInvoice?.billNumber || '');
-      }
-      setSendingInvoice(null);
     },
     onError: (err: any) => {
       const msg = err.response?.data?.message || 'Failed to dispatch invoice email.';
@@ -366,15 +392,76 @@ export const SuperAdminBillingPage: React.FC = () => {
     },
   });
 
-  // 6. Retry Failed Email Mutation
+  // 6. Bulk Send All Invoices Mutation & State
+  const [activeBulkSendJobId, setActiveBulkSendJobId] = useState<string | null>(null);
+  const [isSendAllModalOpen, setIsSendAllModalOpen] = useState(false);
+  const [forceRetrySendAll, setForceRetrySendAll] = useState(false);
+
+  const sendBulkMutation = useMutation({
+    mutationFn: (payload: { billingMonth: number; billingYear: number; forceRetryFailed?: boolean }) =>
+      BillingApi.sendBulkInvoices(payload),
+    onSuccess: (res) => {
+      toast.success(res.message || 'Bulk invoice email dispatch initiated!');
+      queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+      setIsSendAllModalOpen(false);
+      if (res.data?.jobId) {
+        setActiveBulkSendJobId(res.data.jobId);
+      }
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || 'Failed to dispatch bulk invoice emails.';
+      toast.error(msg);
+    },
+  });
+
+  // 7. School-Specific Pricing Management & Query
+  const [isSchoolPricingModalOpen, setIsSchoolPricingModalOpen] = useState(false);
+  const [selectedSchoolForPricing, setSelectedSchoolForPricing] = useState<any | null>(null);
+  const [schoolPriceInput, setSchoolPriceInput] = useState<number>(300);
+  const [schoolEffectiveFromInput, setSchoolEffectiveFromInput] = useState<string>('');
+
+  const { data: schoolPricingsData, refetch: refetchSchoolPricings } = useQuery({
+    queryKey: ['school-pricings'],
+    queryFn: BillingApi.getSchoolPricings,
+    enabled: mainTab === 'SCHOOLS',
+  });
+
+  const schoolPricingsList = schoolPricingsData?.data || [];
+
+  const updateSchoolPricingMutation = useMutation({
+    mutationFn: (payload: { institutionId: string; pricePerStudent: number; effectiveFrom?: string }) =>
+      BillingApi.updateSchoolPricing(payload.institutionId, {
+        pricePerStudent: payload.pricePerStudent,
+        effectiveFrom: payload.effectiveFrom || undefined,
+      }),
+    onSuccess: (res) => {
+      toast.success(res.message || 'School pricing updated successfully!');
+      queryClient.invalidateQueries({ queryKey: ['school-pricings'] });
+      queryClient.invalidateQueries({ queryKey: ['billing-filter-options'] });
+      queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+      setIsSchoolPricingModalOpen(false);
+      setSelectedSchoolForPricing(null);
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || 'Failed to update school pricing.';
+      toast.error(msg);
+    },
+  });
+
+  const openConfigureSchoolPricing = (school: any) => {
+    setSelectedSchoolForPricing(school);
+    const existingPrice = school.pricePerStudent ?? currentPricing;
+    setSchoolPriceInput(existingPrice);
+    setSchoolEffectiveFromInput(new Date().toISOString().split('T')[0]);
+    setIsSchoolPricingModalOpen(true);
+  };
+
+  // 8. Retry Failed Email Mutation
   const retryEmailMutation = useMutation({
     mutationFn: (id: string) => BillingApi.retryBillEmail(id),
     onSuccess: (res) => {
       toast.success(res.message || 'Email delivery retry initiated!');
       queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
-      if (res.data?.jobId) {
-        setActiveEmailJobId(res.data.jobId);
-      }
     },
     onError: (err: any) => {
       const msg = err.response?.data?.message || 'Failed to retry email delivery.';
@@ -456,7 +543,7 @@ export const SuperAdminBillingPage: React.FC = () => {
           <div className="flex items-center gap-3 bg-slate-50 hover:bg-slate-100/80 px-4 py-2 rounded-xl border border-slate-200 transition">
             <div>
               <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                Current Billing Rate
+                Default Billing Rate
               </div>
               <div className="text-base font-bold text-slate-900 font-mono flex items-center gap-1">
                 <span>₹{currentPricing}</span>
@@ -471,13 +558,14 @@ export const SuperAdminBillingPage: React.FC = () => {
                   setIsPricingModalOpen(true);
                 }}
                 className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition border border-transparent hover:border-slate-200"
-                title="Configure Billing Rate"
+                title="Configure Default Billing Rate"
               >
                 <Settings size={16} />
               </button>
             )}
           </div>
 
+          {/* Generate All Invoices Button */}
           <Button
             size="sm"
             onClick={handleGenerateAllInvoices}
@@ -493,16 +581,33 @@ export const SuperAdminBillingPage: React.FC = () => {
             Generate All Invoices
           </Button>
 
+          {/* Send All Invoices Button */}
+          <Button
+            size="sm"
+            onClick={() => setIsSendAllModalOpen(true)}
+            disabled={sendBulkMutation.isPending}
+            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-md font-bold px-4 py-2 text-sm"
+            title="Send all generated invoices for selected billing period"
+          >
+            {sendBulkMutation.isPending ? (
+              <RefreshCw size={15} className="animate-spin" />
+            ) : (
+              <Send size={15} />
+            )}
+            Send All Invoices
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
               refetchInvoices();
               refetchFilterOptions();
+              refetchSchoolPricings();
             }}
             disabled={isInvoicesFetching}
             className="flex items-center gap-1.5"
-            title="Refresh Invoices"
+            title="Refresh Invoices & Options"
           >
             <RefreshCw size={15} className={isInvoicesFetching ? 'animate-spin' : ''} />
             Refresh
@@ -535,27 +640,27 @@ export const SuperAdminBillingPage: React.FC = () => {
             }`}
           >
             <Building2 size={16} />
-            Schools & Colleges Directory ({filterOptions.schools.length})
+            School Pricing & Directory ({filterOptions.schools.length})
           </button>
         </div>
         <div className="text-xs text-slate-500 font-medium px-2">
           {mainTab === 'INVOICES'
             ? 'Manage invoices, statuses, PDF downloads & email dispatches'
-            : 'Generate invoice individually for any specific school in 1-click'}
+            : 'Configure school-specific pricing (₹/student/month) and generate school invoices'}
         </div>
       </div>
 
       {mainTab === 'SCHOOLS' ? (
-        /* ── Schools & Colleges Directory View ── */
+        /* ── Schools & Colleges Directory View with School-Wise Pricing ── */
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
             <div>
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <Building2 size={18} className="text-indigo-600" />
-                Schools & Colleges Directory
+                School Pricing & Directory Management
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                List of all registered institutions. Click <strong>Generate Invoice</strong> on any row to create an invoice for that specific school.
+                Every school has its own configurable billing price per student per month. Historical invoices remain strictly immutable.
               </p>
             </div>
             <div className="relative w-full sm:w-72">
@@ -576,51 +681,90 @@ export const SuperAdminBillingPage: React.FC = () => {
                 <tr className="border-b border-slate-200 bg-slate-50/75 text-xs font-semibold uppercase tracking-wider text-slate-500">
                   <th className="py-3.5 px-4 sm:px-6">School / College Name</th>
                   <th className="py-3.5 px-4">School Code</th>
-                  <th className="py-3.5 px-4">City / Location</th>
+                  <th className="py-3.5 px-4 text-right">Configured Rate</th>
+                  <th className="py-3.5 px-4">Pricing Status</th>
                   <th className="py-3.5 px-4">Contact Email</th>
-                  <th className="py-3.5 px-4 sm:px-6 text-right">Action</th>
+                  <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
                 {filteredSchoolsList.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-slate-400">
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
                       No schools found matching search criteria.
                     </td>
                   </tr>
                 ) : (
-                  filteredSchoolsList.map((school: any) => (
-                    <tr key={school.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-4 px-4 sm:px-6 font-bold text-slate-900">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-9 w-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-                            <Building2 size={16} />
+                  filteredSchoolsList.map((school: any) => {
+                    const pricingDetail = schoolPricingsList.find((p) => p.institutionId === school.id);
+                    const rate = pricingDetail ? pricingDetail.pricePerStudent : (school.pricePerStudent ?? currentPricing);
+                    const isCustom = pricingDetail ? pricingDetail.isCustom : Boolean(school.isCustomPrice);
+
+                    return (
+                      <tr key={school.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-4 px-4 sm:px-6 font-bold text-slate-900">
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-9 w-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                              <Building2 size={16} />
+                            </div>
+                            <div>
+                              <span>{school.name}</span>
+                              <div className="text-[11px] text-slate-400 font-normal">
+                                {school.city || 'Location not specified'}
+                              </div>
+                            </div>
                           </div>
-                          <span>{school.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 font-mono text-xs font-semibold text-slate-600">
-                        {school.code || 'N/A'}
-                      </td>
-                      <td className="py-4 px-4 text-slate-600 text-xs">
-                        {school.city || '—'}
-                      </td>
-                      <td className="py-4 px-4 text-slate-600 text-xs font-mono">
-                        {school.email || '—'}
-                      </td>
-                      <td className="py-4 px-4 sm:px-6 text-right">
-                        <Button
-                          size="sm"
-                          onClick={() => openGenerateInvoiceForSchool(school.id)}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1.5 shadow-xs text-xs ml-auto"
-                          title={`Generate Invoice for ${school.name}`}
-                        >
-                          <Zap size={14} />
-                          Generate Invoice
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="py-4 px-4 font-mono text-xs font-semibold text-slate-600">
+                          {school.code || 'N/A'}
+                        </td>
+                        <td className="py-4 px-4 text-right font-mono font-bold text-slate-900">
+                          ₹{rate.toLocaleString('en-IN')}{' '}
+                          <span className="text-[11px] font-normal text-slate-400 font-sans">/ student</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          {isCustom ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <CheckCircle2 size={12} />
+                              Custom Rate
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                              Default (₹{currentPricing})
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-4 px-4 text-slate-600 text-xs font-mono">
+                          {school.email || '—'}
+                        </td>
+                        <td className="py-4 px-4 sm:px-6 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {isSuperAdmin && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openConfigureSchoolPricing({ ...school, pricePerStudent: rate, isCustom })}
+                                className="text-xs font-semibold flex items-center gap-1 text-slate-700 hover:text-indigo-600 hover:border-indigo-300"
+                                title="Configure price for this school"
+                              >
+                                <Settings size={13} />
+                                Edit Price
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              onClick={() => openGenerateInvoiceForSchool(school.id)}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1.5 shadow-xs text-xs"
+                              title={`Generate Invoice for ${school.name}`}
+                            >
+                              <Zap size={14} />
+                              Generate Invoice
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -1108,19 +1252,51 @@ export const SuperAdminBillingPage: React.FC = () => {
                                 <Zap size={16} />
                               </button>
 
-                              {/* Send Email Action */}
+                              {/* Send Email Action with Inline Progress */}
                               {isGeneratedOrApproved && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setSendingInvoice(bill)}
-                                  disabled={bill.emailStatus === 'PROCESSING' || bill.emailStatus === 'QUEUED'}
-                                  className="text-xs py-1 px-2.5 flex items-center gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50 font-semibold"
-                                  title="Send Invoice to School via Email"
-                                >
-                                  <Mail size={12} />
-                                  {bill.emailStatus === 'SENT' ? 'Resend' : 'Send'}
-                                </Button>
+                                sendEmailMutation.isPending && (sendEmailMutation.variables as string) === bill.id ? (
+                                  <div className="w-24 space-y-1 py-1" title="Queuing and sending invoice email...">
+                                    <div className="flex items-center justify-between text-[10px] font-bold text-indigo-600">
+                                      <span>Sending...</span>
+                                      <span className="animate-pulse">50%</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-indigo-100 rounded-full overflow-hidden">
+                                      <div className="h-full bg-indigo-600 rounded-full animate-pulse w-3/5 transition-all duration-300" />
+                                    </div>
+                                  </div>
+                                ) : bill.emailStatus === 'PROCESSING' || bill.emailStatus === 'QUEUED' ? (
+                                  <div className="w-24 space-y-1 py-1" title="Background PDF compilation and email delivery...">
+                                    <div className="flex items-center justify-between text-[10px] font-bold text-amber-600">
+                                      <span>{bill.emailStatus === 'QUEUED' ? 'Queued' : 'Sending...'}</span>
+                                      <span>{bill.emailStatus === 'QUEUED' ? '30%' : '80%'}</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-amber-100 rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full bg-amber-500 rounded-full animate-pulse transition-all duration-300"
+                                        style={{ width: bill.emailStatus === 'QUEUED' ? '30%' : '80%' }}
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      if (!bill.institution.email) {
+                                        toast.error(
+                                          `School email is not configured for ${bill.institution.name}.`,
+                                        );
+                                        return;
+                                      }
+                                      sendEmailMutation.mutate(bill.id);
+                                    }}
+                                    className="text-xs py-1 px-2.5 flex items-center gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50 font-semibold"
+                                    title="Send Invoice to School via Email"
+                                  >
+                                    <Mail size={12} />
+                                    {bill.emailStatus === 'SENT' ? 'Resend' : 'Send'}
+                                  </Button>
+                                )
                               )}
 
                               {/* Legacy Approve/Reject Actions */}
@@ -1304,6 +1480,39 @@ export const SuperAdminBillingPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Editable Price per Student */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Price per Student (₹)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-xs text-slate-400 font-bold">₹</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={
+                      customPricePerStudent !== ''
+                        ? customPricePerStudent
+                        : (preview?.pricePerStudent ?? currentPricing)
+                    }
+                    onKeyDown={(e) => {
+                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setCustomPricePerStudent(val === '' ? '' : Number(val));
+                    }}
+                    placeholder={`Default: ₹${currentPricing}`}
+                    className="w-full pl-7 pr-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white font-mono font-semibold"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Edit price per student for this invoice cycle. Default: ₹{currentPricing}
+                </p>
+              </div>
+
               {/* Single School Live Preview Card */}
               {genSchoolId !== 'ALL' && (
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-2">
@@ -1322,14 +1531,34 @@ export const SuperAdminBillingPage: React.FC = () => {
                       </div>
                       <div className="flex justify-between py-0.5 text-xs">
                         <span className="text-slate-600">Rate per Student:</span>
-                        <span className="font-medium text-slate-800 font-mono">₹{preview.pricePerStudent}</span>
-                      </div>
-                      <div className="flex justify-between py-1 border-t border-slate-200 text-sm font-bold">
-                        <span className="text-slate-800">Total Invoice Amount:</span>
-                        <span className="text-indigo-700 font-mono">
-                          ₹{preview.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        <span className="font-medium text-slate-800 font-mono">
+                          ₹{typeof customPricePerStudent === 'number' ? customPricePerStudent : preview.pricePerStudent}
                         </span>
                       </div>
+                      {(() => {
+                        const rate = typeof customPricePerStudent === 'number' ? customPricePerStudent : preview.pricePerStudent;
+                        const subtotal = preview.studentCount * rate;
+                        const tax = Math.round(subtotal * 0.18 * 100) / 100;
+                        const total = Math.round((subtotal + tax) * 100) / 100;
+                        return (
+                          <>
+                            <div className="flex justify-between py-0.5 text-xs text-slate-600">
+                              <span>Subtotal:</span>
+                              <span className="font-mono">₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between py-0.5 text-xs text-slate-600">
+                              <span>GST (18%):</span>
+                              <span className="font-mono font-medium text-emerald-700">₹{tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between py-1 border-t border-slate-200 text-sm font-bold">
+                              <span className="text-slate-800">Total Invoice Amount:</span>
+                              <span className="text-indigo-700 font-mono">
+                                ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          </>
+                        );
+                      })()}
 
                       {preview.alreadyGenerated && (
                         <div className="mt-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-1.5">
@@ -1364,7 +1593,7 @@ export const SuperAdminBillingPage: React.FC = () => {
                     Bulk Asynchronous Generation
                   </div>
                   <p className="text-slate-600">
-                    Invoices will be generated across all active schools. Schools with existing invoices for this month or with 0 students will be safely skipped. Progress will be displayed live via WebSocket.
+                    Invoices will be generated across all active schools at rate of ₹{typeof customPricePerStudent === 'number' ? customPricePerStudent : currentPricing}/student. Schools with existing invoices for this month or with 0 students will be safely skipped.
                   </p>
                 </div>
               )}
@@ -1386,6 +1615,7 @@ export const SuperAdminBillingPage: React.FC = () => {
                     billingMonth: genMonth,
                     billingYear: genYear,
                     generateAll: genSchoolId === 'ALL',
+                    pricePerStudent: typeof customPricePerStudent === 'number' ? customPricePerStudent : undefined,
                   })
                 }
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
@@ -1428,11 +1658,18 @@ export const SuperAdminBillingPage: React.FC = () => {
                 <div className="relative">
                   <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold">₹</span>
                   <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={newPricingRate}
-                    onChange={(e) => setNewPricingRate(Number(e.target.value))}
+                    type="text"
+                    inputMode="numeric"
+                    value={newPricingRate || ''}
+                    onKeyDown={(e) => {
+                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setNewPricingRate(val ? Number(val) : 0);
+                    }}
                     className="w-full pl-8 pr-4 py-2 text-base font-bold font-mono border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
@@ -1577,26 +1814,36 @@ export const SuperAdminBillingPage: React.FC = () => {
               </table>
 
               {/* Subtotal & Total Block */}
-              <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col items-end gap-1 text-xs">
-                <div className="flex justify-between w-48 text-slate-600">
-                  <span>Subtotal:</span>
-                  <span className="font-mono">
-                    ₹{viewingInvoice.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <div className="flex justify-between w-48 text-slate-600">
-                  <span>Tax (0%):</span>
-                  <span className="font-mono">
-                    ₹{viewingInvoice.tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <div className="flex justify-between w-56 text-sm font-bold text-slate-900 pt-1 border-t border-slate-200">
-                  <span>Total Amount Due:</span>
-                  <span className="text-indigo-700 font-mono">
-                    ₹{viewingInvoice.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
+              {(() => {
+                const subtotal = viewingInvoice.amount || 0;
+                const tax = viewingInvoice.tax > 0 ? viewingInvoice.tax : Math.round(subtotal * 0.18 * 100) / 100;
+                const grandTotal = viewingInvoice.tax > 0 && viewingInvoice.totalAmount > subtotal
+                  ? viewingInvoice.totalAmount
+                  : Math.round((subtotal + tax) * 100) / 100;
+
+                return (
+                  <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col items-end gap-1.5 text-xs">
+                    <div className="flex justify-between w-56 text-slate-600">
+                      <span>Subtotal:</span>
+                      <span className="font-mono">
+                        ₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between w-56 text-slate-600">
+                      <span>Tax (18% GST):</span>
+                      <span className="font-mono font-medium text-emerald-700">
+                        ₹{tax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between w-56 text-sm font-bold text-slate-900 pt-1 border-t border-slate-200">
+                      <span>Total Amount Due:</span>
+                      <span className="text-indigo-700 font-mono">
+                        ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Modal Actions */}
@@ -1614,86 +1861,24 @@ export const SuperAdminBillingPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
+                  disabled={sendEmailMutation.isPending}
                   onClick={() => {
-                    setSendingInvoice(viewingInvoice);
+                    if (!viewingInvoice.institution.email) {
+                      toast.error(`School email is not configured for ${viewingInvoice.institution.name}.`);
+                      return;
+                    }
+                    sendEmailMutation.mutate(viewingInvoice.id);
                     setViewingInvoice(null);
                   }}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5"
                 >
                   <Send size={13} />
-                  Send Invoice Email
+                  {sendEmailMutation.isPending ? 'Queuing...' : 'Send Invoice Email'}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setViewingInvoice(null)}>
                   Close
                 </Button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── 7. SEND INVOICE EMAIL CONFIRMATION MODAL ── */}
-      {sendingInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative animate-in fade-in zoom-in duration-200">
-            <button
-              onClick={() => setSendingInvoice(null)}
-              className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 p-1"
-            >
-              <X size={20} />
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-11 w-11 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-                <Mail size={22} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Send Invoice by Email</h3>
-                <p className="text-xs text-slate-500 font-mono">
-                  {sendingInvoice.billNumber} • ₹{sendingInvoice.totalAmount.toFixed(2)}
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs space-y-2 mb-4">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Recipient School:</span>
-                <span className="font-semibold text-slate-800">{sendingInvoice.institution.name}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500">Registered Email:</span>
-                <span className="font-semibold text-indigo-600 font-mono">
-                  {sendingInvoice.institution.email || 'None on record'}
-                </span>
-              </div>
-            </div>
-
-            {!sendingInvoice.institution.email ? (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-start gap-2 mb-4">
-                <AlertTriangle size={16} className="shrink-0 mt-0.5" />
-                <span>
-                  School email is not configured. Please update the school's profile with a valid email before sending.
-                </span>
-              </div>
-            ) : (
-              <p className="text-xs text-slate-600 mb-4">
-                The invoice PDF will be compiled asynchronously and sent to the school's official registered address via BullMQ + Resend.
-              </p>
-            )}
-
-            <div className="flex items-center justify-end gap-2.5">
-              <Button variant="outline" size="sm" onClick={() => setSendingInvoice(null)}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                disabled={!sendingInvoice.institution.email || sendEmailMutation.isPending}
-                onClick={() => sendEmailMutation.mutate(sendingInvoice.id)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5"
-              >
-                <Send size={14} />
-                {sendEmailMutation.isPending ? 'Queuing...' : 'Queue & Dispatch Email'}
-              </Button>
             </div>
           </div>
         </div>
@@ -1753,23 +1938,223 @@ export const SuperAdminBillingPage: React.FC = () => {
         </div>
       )}
 
-      {/* ── 9. LIVE WEBSOCKET PROGRESS MODALS ── */}
-      {activeEmailJobId && (
-        <BillEmailProgressModal
-          jobId={activeEmailJobId}
-          billNumber={activeEmailBillNumber}
-          onClose={() => {
-            setActiveEmailJobId(null);
-            queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
-          }}
-        />
+      {/* ── 9. CONFIGURE SCHOOL-SPECIFIC PRICING MODAL ── */}
+      {isSchoolPricingModalOpen && selectedSchoolForPricing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={() => {
+                setIsSchoolPricingModalOpen(false);
+                setSelectedSchoolForPricing(null);
+              }}
+              className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 p-1"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-11 w-11 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                <Building2 size={22} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Configure School Pricing</h3>
+                <p className="text-xs text-slate-500 font-mono">
+                  {selectedSchoolForPricing.name} ({selectedSchoolForPricing.code || 'No Code'})
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Custom Price per Student / Month (₹ INR)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold">₹</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={schoolPriceInput || ''}
+                    onKeyDown={(e) => {
+                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setSchoolPriceInput(val ? Number(val) : 0);
+                    }}
+                    className="w-full pl-8 pr-4 py-2 text-base font-bold font-mono border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Effective From Date
+                </label>
+                <input
+                  type="date"
+                  value={schoolEffectiveFromInput}
+                  onChange={(e) => setSchoolEffectiveFromInput(e.target.value)}
+                  className="w-full px-3.5 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="bg-amber-50 p-3 rounded-xl border border-amber-200/80 text-xs text-amber-900 space-y-1">
+                <div className="font-semibold flex items-center gap-1 text-amber-800">
+                  <Info size={13} />
+                  Historical Invoice Immutability Rule
+                </div>
+                <p className="text-slate-600">
+                  Changing this rate applies <strong>strictly to new invoices</strong> generated on or after this date. Past generated invoices permanently preserve their stored pricing snapshot.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsSchoolPricingModalOpen(false);
+                  setSelectedSchoolForPricing(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                disabled={!schoolPriceInput || schoolPriceInput <= 0 || updateSchoolPricingMutation.isPending}
+                onClick={() =>
+                  updateSchoolPricingMutation.mutate({
+                    institutionId: selectedSchoolForPricing.id,
+                    pricePerStudent: schoolPriceInput,
+                    effectiveFrom: schoolEffectiveFromInput,
+                  })
+                }
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+              >
+                {updateSchoolPricingMutation.isPending ? 'Saving...' : 'Save School Pricing'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
+      {/* ── 10. CONFIRM BULK SEND ALL INVOICES MODAL ── */}
+      {isSendAllModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 relative animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={() => setIsSendAllModalOpen(false)}
+              className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 p-1"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-12 w-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                <Send size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Send All Invoices</h3>
+                <p className="text-xs text-slate-500">
+                  Dispatch official PDF billing notifications for the selected billing period
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4 text-sm">
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2 text-xs">
+                <div className="flex justify-between items-center text-slate-700">
+                  <span className="font-medium">Target Billing Period:</span>
+                  <span className="font-bold font-mono text-indigo-700 text-sm">
+                    {filterOptions.months.find((m) => m.month === (selectedMonth ? Number(selectedMonth) : lastMonth))?.name || 'Selected Month'}{' '}
+                    {selectedYear || lastMonthYear}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-700">
+                  <span className="font-medium">Selected Scope:</span>
+                  <span className="font-semibold text-slate-900">
+                    {selectedSchool
+                      ? filterOptions.schools.find((s: any) => s.id === selectedSchool)?.name || 'Single School'
+                      : 'All Eligible Schools'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-blue-50/70 p-3 rounded-xl border border-blue-200/80 text-xs text-blue-900 space-y-1">
+                <div className="font-semibold flex items-center gap-1.5 text-blue-800">
+                  <Mail size={13} />
+                  Automated Idempotent Delivery System
+                </div>
+                <ul className="list-disc list-inside space-y-0.5 text-slate-600 pl-1">
+                  <li>Invoices are queued through BullMQ background workers and dispatched via Resend.</li>
+                  <li>Each school's invoice is sent to its authorized registered billing email.</li>
+                  <li>Invoices already successfully sent are skipped to prevent duplicate delivery.</li>
+                  <li>Missing email addresses are flagged without halting the rest of the batch.</li>
+                </ul>
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={forceRetrySendAll}
+                  onChange={(e) => setForceRetrySendAll(e.target.checked)}
+                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                />
+                <span className="text-xs font-semibold text-slate-700">
+                  Force re-send to schools that failed or already received this period's invoice
+                </span>
+              </label>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2.5">
+              <Button variant="outline" size="sm" onClick={() => setIsSendAllModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                disabled={sendBulkMutation.isPending}
+                onClick={() =>
+                  sendBulkMutation.mutate({
+                    billingMonth: selectedMonth ? Number(selectedMonth) : lastMonth,
+                    billingYear: selectedYear ? Number(selectedYear) : lastMonthYear,
+                    forceRetryFailed: forceRetrySendAll,
+                  })
+                }
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center gap-1.5 shadow-md"
+              >
+                {sendBulkMutation.isPending ? (
+                  <RefreshCw size={14} className="animate-spin" />
+                ) : (
+                  <Send size={14} />
+                )}
+                {sendBulkMutation.isPending ? 'Queuing Dispatch...' : 'Confirm & Send All Invoices'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 11. LIVE WEBSOCKET PROGRESS MODALS ── */}
       {activeBulkJobId && (
         <BulkInvoiceProgressModal
           jobId={activeBulkJobId}
           onClose={() => {
             setActiveBulkJobId(null);
+            queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+            queryClient.invalidateQueries({ queryKey: ['billing-filter-options'] });
+          }}
+        />
+      )}
+
+      {activeBulkSendJobId && (
+        <BulkSendProgressModal
+          jobId={activeBulkSendJobId}
+          onClose={() => {
+            setActiveBulkSendJobId(null);
             queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
           }}
         />

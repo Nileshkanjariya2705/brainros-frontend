@@ -385,10 +385,19 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 block">Target Questions *</label>
               <input
-                type="number"
-                value={totalQuestions}
+                type="text"
+                inputMode="numeric"
+                value={totalQuestions || ''}
                 disabled={!!examType}
-                onChange={(e) => setTotalQuestions(Number(e.target.value))}
+                onKeyDown={(e) => {
+                  if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '');
+                  setTotalQuestions(val ? Number(val) : 0);
+                }}
                 className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500 disabled:bg-slate-100 disabled:opacity-75"
               />
             </div>
@@ -495,13 +504,23 @@ export const BlueprintBuilderModal: React.FC<BlueprintBuilderModalProps> = ({
                 </label>
                 <div className="flex gap-2">
                   <input
-                    type="number"
-                    value={modeType === 'COUNT' ? ruleCount : rulePercentage}
-                    onChange={(e) =>
-                      modeType === 'COUNT'
-                        ? setRuleCount(Number(e.target.value))
-                        : setRulePercentage(Number(e.target.value))
-                    }
+                    type="text"
+                    inputMode="numeric"
+                    value={modeType === 'COUNT' ? (ruleCount || '') : (rulePercentage || '')}
+                    onKeyDown={(e) => {
+                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      const num = val ? Number(val) : 0;
+                      if (modeType === 'COUNT') {
+                        setRuleCount(num);
+                      } else {
+                        setRulePercentage(num);
+                      }
+                    }}
                     className="w-full rounded-xl border border-slate-200 bg-white p-2 text-xs font-bold text-slate-900"
                   />
                   <Button

@@ -138,13 +138,31 @@ export const useSuperAdminRegistrationFiltersQuery = (stateId?: string) => {
         { params: stateId ? { stateId } : undefined },
       );
       const data: RegistrationFilterOptions = (res.data as any)?.data || res.data;
-      const ALLOWED_EXAMS = ['JEE', 'NEET', 'CET'];
+      const TARGET_ORDER = [
+        'JEE',
+        'CET',
+        'NEET',
+        'NEET and JEE',
+        'NEET and State CET',
+        'JEE and State CET',
+        'JEE, NEET and State CET',
+      ];
       if (data && Array.isArray(data.examTargets)) {
         return {
           ...data,
-          examTargets: data.examTargets.filter((t) =>
-            ALLOWED_EXAMS.includes(t.name?.toUpperCase().trim()),
-          ),
+          examTargets: data.examTargets
+            .filter((t) =>
+              TARGET_ORDER.some((name) => name.toLowerCase() === t.name?.trim().toLowerCase())
+            )
+            .sort((a, b) => {
+              const indexA = TARGET_ORDER.findIndex(
+                (name) => name.toLowerCase() === a.name?.trim().toLowerCase()
+              );
+              const indexB = TARGET_ORDER.findIndex(
+                (name) => name.toLowerCase() === b.name?.trim().toLowerCase()
+              );
+              return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
+            }),
         };
       }
       return data;

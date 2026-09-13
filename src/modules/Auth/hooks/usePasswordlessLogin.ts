@@ -8,6 +8,7 @@ import {
   useResendOtpAPI,
 } from '../services';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
+import { createTabSession } from '@/utils/tabSession';
 
 export interface PendingLoginState {
   loginRequestId: string;
@@ -72,6 +73,7 @@ export const usePasswordlessLogin = () => {
     });
 
     if (!apiError && data) {
+      createTabSession();
       dispatch(
         setCredentials({
           accessToken: data.accessToken,

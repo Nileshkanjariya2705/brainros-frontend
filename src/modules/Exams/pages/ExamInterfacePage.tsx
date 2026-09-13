@@ -1356,11 +1356,17 @@ const ExamInterfacePage = () => {
                         Enter your numerical response:
                       </label>
                       <input
-                        type="number"
-                        step="any"
+                        type="text"
                         inputMode="decimal"
                         value={numericalAnswer}
-                        onChange={(e) => handleNumericalChange(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                            e.preventDefault();
+                          } else if (!/[0-9.-]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => handleNumericalChange(e.target.value.replace(/[^0-9.-]/g, ''))}
                         placeholder="e.g. 25.5"
                         className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 sm:px-4 sm:py-3 text-base sm:text-lg font-bold text-slate-900 placeholder-slate-400 shadow-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                       />

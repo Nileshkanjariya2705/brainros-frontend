@@ -807,10 +807,18 @@ export const AutoGenerateExamPage: React.FC = () => {
                   <Clock size={13} className="text-indigo-600" /> Duration (Mins) *
                 </label>
                 <input
-                  type="number"
-                  min={1}
-                  value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  value={durationMinutes || ''}
+                  onKeyDown={(e) => {
+                    if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setDurationMinutes(val ? Number(val) : 0);
+                  }}
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-indigo-500 transition-all font-mono"
                 />
               </div>
@@ -822,22 +830,40 @@ export const AutoGenerateExamPage: React.FC = () => {
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <input
-                    type="number"
-                    min={0}
+                    type="text"
+                    inputMode="decimal"
                     placeholder="+4"
-                    value={defaultMarks}
-                    onChange={(e) => setDefaultMarks(Number(e.target.value))}
+                    value={defaultMarks === 0 ? '0' : defaultMarks || ''}
+                    onKeyDown={(e) => {
+                      if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                        e.preventDefault();
+                      } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                      setDefaultMarks(val ? Number(val) : 0);
+                    }}
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-indigo-500 font-mono text-center"
                     title="Default marks per question"
                   />
                   <input
-                    type="number"
-                    min={0}
+                    type="text"
+                    inputMode="decimal"
                     placeholder="-1"
-                    value={defaultNegativeMarks}
-                    onChange={(e) =>
-                      setDefaultNegativeMarks(Number(e.target.value))
-                    }
+                    value={defaultNegativeMarks === 0 ? '0' : defaultNegativeMarks || ''}
+                    onKeyDown={(e) => {
+                      if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                        e.preventDefault();
+                      } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                      setDefaultNegativeMarks(val ? Number(val) : 0);
+                    }}
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-indigo-500 font-mono text-center"
                     title="Default negative marks"
                   />
@@ -1003,17 +1029,20 @@ export const AutoGenerateExamPage: React.FC = () => {
                         Questions Count *
                       </label>
                       <input
-                        type="number"
-                        min={1}
-                        value={section.totalQuestions}
-                        onChange={(e) =>
+                        type="text"
+                        inputMode="numeric"
+                        value={section.totalQuestions || ''}
+                        onKeyDown={(e) => {
+                          if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
                           handleUpdateSection(idx, {
-                            totalQuestions: Math.max(
-                              1,
-                              Number(e.target.value),
-                            ),
-                          })
-                        }
+                            totalQuestions: val ? Number(val) : 0,
+                          });
+                        }}
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500 font-mono"
                       />
                     </div>
@@ -1024,14 +1053,22 @@ export const AutoGenerateExamPage: React.FC = () => {
                         Marks Per Q
                       </label>
                       <input
-                        type="number"
-                        min={0}
+                        type="text"
+                        inputMode="decimal"
                         value={section.marksPerQuestion ?? defaultMarks}
-                        onChange={(e) =>
+                        onKeyDown={(e) => {
+                          if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                            e.preventDefault();
+                          } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9.]/g, '');
                           handleUpdateSection(idx, {
-                            marksPerQuestion: Number(e.target.value),
-                          })
-                        }
+                            marksPerQuestion: val ? Number(val) : 0,
+                          });
+                        }}
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500 font-mono"
                       />
                     </div>
@@ -1042,14 +1079,22 @@ export const AutoGenerateExamPage: React.FC = () => {
                         Negative Marks
                       </label>
                       <input
-                        type="number"
-                        min={0}
+                        type="text"
+                        inputMode="decimal"
                         value={section.negativeMarks ?? defaultNegativeMarks}
-                        onChange={(e) =>
+                        onKeyDown={(e) => {
+                          if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                            e.preventDefault();
+                          } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9.]/g, '');
                           handleUpdateSection(idx, {
-                            negativeMarks: Number(e.target.value),
-                          })
-                        }
+                            negativeMarks: val ? Number(val) : 0,
+                          });
+                        }}
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500 font-mono"
                       />
                     </div>
@@ -1100,20 +1145,25 @@ export const AutoGenerateExamPage: React.FC = () => {
                         </span>
                         <div className="flex items-center gap-2">
                           <input
-                            type="number"
-                            min={0}
-                            max={100}
+                            type="text"
+                            inputMode="numeric"
                             value={
                               section.difficultyDistribution?.easyPercentage ?? 30
                             }
-                            onChange={(e) =>
+                            onKeyDown={(e) => {
+                              if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '');
                               handleUpdateSection(idx, {
                                 difficultyDistribution: {
                                   ...section.difficultyDistribution,
-                                  easyPercentage: Number(e.target.value),
+                                  easyPercentage: val ? Number(val) : 0,
                                 },
-                              })
-                            }
+                              });
+                            }}
                             className="w-full rounded-md border border-emerald-300 bg-white px-2 py-1 text-xs font-bold text-emerald-900 font-mono text-center"
                           />
                           <span className="text-xs font-bold text-emerald-700">
@@ -1129,21 +1179,26 @@ export const AutoGenerateExamPage: React.FC = () => {
                         </span>
                         <div className="flex items-center gap-2">
                           <input
-                            type="number"
-                            min={0}
-                            max={100}
+                            type="text"
+                            inputMode="numeric"
                             value={
                               section.difficultyDistribution
                                 ?.mediumPercentage ?? 50
                             }
-                            onChange={(e) =>
+                            onKeyDown={(e) => {
+                              if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '');
                               handleUpdateSection(idx, {
                                 difficultyDistribution: {
                                   ...section.difficultyDistribution,
-                                  mediumPercentage: Number(e.target.value),
+                                  mediumPercentage: val ? Number(val) : 0,
                                 },
-                              })
-                            }
+                              });
+                            }}
                             className="w-full rounded-md border border-amber-300 bg-white px-2 py-1 text-xs font-bold text-amber-900 font-mono text-center"
                           />
                           <span className="text-xs font-bold text-amber-700">
@@ -1159,20 +1214,25 @@ export const AutoGenerateExamPage: React.FC = () => {
                         </span>
                         <div className="flex items-center gap-2">
                           <input
-                            type="number"
-                            min={0}
-                            max={100}
+                            type="text"
+                            inputMode="numeric"
                             value={
                               section.difficultyDistribution?.hardPercentage ?? 20
                             }
-                            onChange={(e) =>
+                            onKeyDown={(e) => {
+                              if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '');
                               handleUpdateSection(idx, {
                                 difficultyDistribution: {
                                   ...section.difficultyDistribution,
-                                  hardPercentage: Number(e.target.value),
+                                  hardPercentage: val ? Number(val) : 0,
                                 },
-                              })
-                            }
+                              });
+                            }}
                             className="w-full rounded-md border border-rose-300 bg-white px-2 py-1 text-xs font-bold text-rose-900 font-mono text-center"
                           />
                           <span className="text-xs font-bold text-rose-700">
@@ -1188,21 +1248,26 @@ export const AutoGenerateExamPage: React.FC = () => {
                         </span>
                         <div className="flex items-center gap-2">
                           <input
-                            type="number"
-                            min={0}
-                            max={100}
+                            type="text"
+                            inputMode="numeric"
                             value={
                               section.difficultyDistribution
                                 ?.veryHardPercentage ?? 0
                             }
-                            onChange={(e) =>
+                            onKeyDown={(e) => {
+                              if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '');
                               handleUpdateSection(idx, {
                                 difficultyDistribution: {
                                   ...section.difficultyDistribution,
-                                  veryHardPercentage: Number(e.target.value),
+                                  veryHardPercentage: val ? Number(val) : 0,
                                 },
-                              })
-                            }
+                              });
+                            }}
                             className="w-full rounded-md border border-purple-300 bg-white px-2 py-1 text-xs font-bold text-purple-900 font-mono text-center"
                           />
                           <span className="text-xs font-bold text-purple-700">

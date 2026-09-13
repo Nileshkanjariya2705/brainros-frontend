@@ -52,6 +52,13 @@ export const adminKeys = {
   all: ['admin'] as const,
   students: (filters: Record<string, any> = {}) => [...adminKeys.all, 'students', filters] as const,
   studentFilterOptions: () => [...adminKeys.all, 'students', 'filter-options'] as const,
+  publicRegistrations: (filters: Record<string, any> = {}) =>
+    ['public-registrations', filters] as const,
+  publicRegistrationStats: () => ['public-registrations', 'stats'] as const,
+  publicRegistrationFilterOptions: (stateId?: string) =>
+    ['public-registrations', 'filter-options', stateId || 'all'] as const,
+  publicStudentDetail: (studentId: string) =>
+    ['public-registrations', 'student', studentId] as const,
   studentParents: (studentId: string) =>
     [...adminKeys.all, 'students', studentId, 'parents'] as const,
   completedExams: (filters: Record<string, any> = {}) =>
@@ -142,6 +149,8 @@ export const billingKeys = {
   filterOptions: () => [...billingKeys.all, 'filter-options'] as const,
   taxConfig: () => [...billingKeys.all, 'tax-configuration'] as const,
   schools: () => [...billingKeys.all, 'schools'] as const,
+  schoolPricings: () => [...billingKeys.all, 'schools', 'pricing'] as const,
+  schoolPricing: (schoolId: string) => [...billingKeys.all, 'schools', 'pricing', schoolId] as const,
 };
 
 export const academicCalendarKeys = {
@@ -175,3 +184,21 @@ export const superAdminRegistrationKeys = {
     [...superAdminRegistrationKeys.all, 'filters', stateId || 'all'] as const,
 };
 
+export const questionPaperKeys = {
+  all: ['question-paper'] as const,
+  detail: (examId: string, versionId?: string) =>
+    [...questionPaperKeys.all, 'detail', examId, versionId || 'latest'] as const,
+  uploadStatus: (jobId: string) =>
+    [...questionPaperKeys.all, 'upload-status', jobId] as const,
+  scheduleDetail: (examId: string) =>
+    [...questionPaperKeys.all, 'schedule-detail', examId] as const,
+};
+
+export const scheduleKeys = {
+  all: ['exam-schedule'] as const,
+  candidates: () => [...scheduleKeys.all, 'candidates'] as const,
+  detail: (examId: string) => [...scheduleKeys.all, 'detail', examId] as const,
+  subjects: () => [...scheduleKeys.all, 'subjects'] as const,
+  chapters: (subjectId: string) => [...scheduleKeys.all, 'chapters', subjectId] as const,
+  blueprints: () => [...scheduleKeys.all, 'blueprints'] as const,
+};

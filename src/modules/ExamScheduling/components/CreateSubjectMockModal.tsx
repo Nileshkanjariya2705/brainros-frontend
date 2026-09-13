@@ -343,11 +343,18 @@ export const CreateSubjectMockModal: React.FC<CreateSubjectMockModalProps> = ({
                 <div className="space-y-1.5">
                   <label className="font-extrabold text-slate-700">Duration (Minutes)</label>
                   <input
-                    type="number"
-                    min={10}
-                    max={240}
-                    value={durationMinutes}
-                    onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                    type="text"
+                    inputMode="numeric"
+                    value={durationMinutes || ''}
+                    onKeyDown={(e) => {
+                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setDurationMinutes(val ? Number(val) : 0);
+                    }}
                     className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-xs font-semibold focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
                   />
                 </div>
@@ -355,10 +362,20 @@ export const CreateSubjectMockModal: React.FC<CreateSubjectMockModalProps> = ({
                 <div className="space-y-1.5">
                   <label className="font-extrabold text-slate-700">Positive Marks (+)</label>
                   <input
-                    type="number"
-                    step="0.5"
-                    value={defaultMarks}
-                    onChange={(e) => setDefaultMarks(Number(e.target.value))}
+                    type="text"
+                    inputMode="decimal"
+                    value={defaultMarks === 0 ? '0' : defaultMarks || ''}
+                    onKeyDown={(e) => {
+                      if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                        e.preventDefault();
+                      } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                      setDefaultMarks(val ? Number(val) : 0);
+                    }}
                     className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-xs font-semibold focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
                   />
                 </div>
@@ -366,10 +383,20 @@ export const CreateSubjectMockModal: React.FC<CreateSubjectMockModalProps> = ({
                 <div className="space-y-1.5">
                   <label className="font-extrabold text-slate-700">Negative Marks (-)</label>
                   <input
-                    type="number"
-                    step="0.25"
-                    value={defaultNegativeMarks}
-                    onChange={(e) => setDefaultNegativeMarks(Number(e.target.value))}
+                    type="text"
+                    inputMode="decimal"
+                    value={defaultNegativeMarks === 0 ? '0' : defaultNegativeMarks || ''}
+                    onKeyDown={(e) => {
+                      if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                        e.preventDefault();
+                      } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                      setDefaultNegativeMarks(val ? Number(val) : 0);
+                    }}
                     className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-xs font-semibold focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
                   />
                 </div>

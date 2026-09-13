@@ -859,11 +859,18 @@ export const SubjectMockGenerator: React.FC<SubjectMockGeneratorProps> = ({
                   </span>
                 </label>
                 <input
-                  type="number"
-                  min={1}
-                  max={uploadResult.validRows}
-                  value={totalQuestions}
-                  onChange={(e) => setTotalQuestions(Number(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  value={totalQuestions || ''}
+                  onKeyDown={(e) => {
+                    if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setTotalQuestions(val ? Number(val) : 0);
+                  }}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-xs focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                   required
                 />
@@ -874,11 +881,18 @@ export const SubjectMockGenerator: React.FC<SubjectMockGeneratorProps> = ({
                   Duration (in Minutes)
                 </label>
                 <input
-                  type="number"
-                  min={5}
-                  max={360}
-                  value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                  type="text"
+                  inputMode="numeric"
+                  value={durationMinutes || ''}
+                  onKeyDown={(e) => {
+                    if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setDurationMinutes(val ? Number(val) : 0);
+                  }}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-xs focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                 />
               </div>
@@ -888,9 +902,20 @@ export const SubjectMockGenerator: React.FC<SubjectMockGeneratorProps> = ({
                   Marks per Question (+)
                 </label>
                 <input
-                  type="number"
-                  value={defaultMarks}
-                  onChange={(e) => setDefaultMarks(Number(e.target.value))}
+                  type="text"
+                  inputMode="decimal"
+                  value={defaultMarks === 0 ? '0' : defaultMarks || ''}
+                  onKeyDown={(e) => {
+                    if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                      e.preventDefault();
+                    } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                    setDefaultMarks(val ? Number(val) : 0);
+                  }}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-xs focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                 />
               </div>
@@ -900,9 +925,20 @@ export const SubjectMockGenerator: React.FC<SubjectMockGeneratorProps> = ({
                   Negative Marks per Wrong Answer (-)
                 </label>
                 <input
-                  type="number"
-                  value={defaultNegativeMarks}
-                  onChange={(e) => setDefaultNegativeMarks(Number(e.target.value))}
+                  type="text"
+                  inputMode="decimal"
+                  value={defaultNegativeMarks === 0 ? '0' : defaultNegativeMarks || ''}
+                  onKeyDown={(e) => {
+                    if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                      e.preventDefault();
+                    } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.]/g, '');
+                    setDefaultNegativeMarks(val ? Number(val) : 0);
+                  }}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-xs focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                 />
               </div>

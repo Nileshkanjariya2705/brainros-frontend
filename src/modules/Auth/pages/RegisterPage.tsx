@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Link, Navigate } from 'react-router-dom';
@@ -26,8 +26,10 @@ import PageLoader from '@/components/feedback/PageLoader';
 
 // ** Hooks & Services **
 import { useRegisterStudent } from '../hooks/useRegisterStudent';
+import { loadRazorpayScript } from '@/utils/payment';
 import {
   useGetRegisterOptionsAPI,
+  useCheckAvailabilityAPI,
   fetchAllStatesAPI,
   fetchDistrictsByStateSlugAPI,
   getStateSlug,
@@ -104,7 +106,8 @@ const RegisterPage = () => {
       },
     };
 
-    if (typeof (window as any).Razorpay !== 'undefined') {
+    const isLoaded = await loadRazorpayScript();
+    if (isLoaded && typeof (window as any).Razorpay !== 'undefined') {
       const rzp = new (window as any).Razorpay(options);
       rzp.on('payment.failed', function (resp: any) {
         setRegisterError(
@@ -113,7 +116,7 @@ const RegisterPage = () => {
       });
       rzp.open();
     } else {
-      setRegisterError('Razorpay Checkout SDK failed to load. Please refresh the page and try again.');
+      setRegisterError('Razorpay Checkout SDK failed to load. Please check your internet connection and try again.');
     }
   };
 
@@ -139,6 +142,7 @@ const RegisterPage = () => {
     trigger,
     watch,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<RegisterFormValues>({
     resolver: yupResolver(registerSchema),
@@ -286,15 +290,52 @@ const RegisterPage = () => {
     setValue('districtId', '', { shouldValidate: false });
   };
 
+  const { checkAvailabilityAPI, isLoading: isCheckingAvailability } = useCheckAvailabilityAPI();
+
   // Step Navigation Validation Handler
   const handleNextStep = async () => {
     setRegisterError(null);
     const fieldsToValidate = STEP_FIELDS[step];
     const isStepValid = await trigger(fieldsToValidate as unknown as (keyof RegisterFormValues)[]);
 
-    if (isStepValid) {
-      setStep((prev) => (prev < 3 ? ((prev + 1) as 1 | 2 | 3) : prev));
+    if (!isStepValid) return;
+
+    // Check Mobile and Email duplication on Step 1 before advancing to Step 2!
+    if (step === 1) {
+      const phone = watchedValues.phone;
+      const email = watchedValues.email;
+      const { data, error } = await checkAvailabilityAPI({
+        phone,
+        email: email || undefined,
+      });
+
+      if (error) {
+        const msg =
+          typeof error === 'string'
+            ? error
+            : (error as any)?.message || 'Failed to verify mobile availability.';
+        setRegisterError(msg);
+        return;
+      }
+
+      if (data && data.available === false) {
+        if (data.field === 'phone') {
+          setError('phone', {
+            type: 'manual',
+            message: data.message || 'Mobile number already exists.',
+          });
+        } else if (data.field === 'email') {
+          setError('email', {
+            type: 'manual',
+            message: data.message || 'Email already exists.',
+          });
+        }
+        setRegisterError(data.message);
+        return;
+      }
     }
+
+    setStep((prev) => (prev < 3 ? ((prev + 1) as 1 | 2 | 3) : prev));
   };
 
   const handlePrevStep = () => {
@@ -345,7 +386,33 @@ const RegisterPage = () => {
     )
     .map((c) => ({ label: c.name, value: c.id }));
   const languageOptions = (languages || []).map((l) => ({ label: l.name, value: l.id }));
-  const examTargetOptions = (examTargets || []).map((e) => ({ label: e.name, value: e.id }));
+  const TARGET_ORDER = [
+    'JEE',
+    'CET',
+    'NEET',
+    'NEET and JEE',
+    'NEET and State CET',
+    'JEE and State CET',
+    'JEE, NEET and State CET',
+  ];
+
+  const examTargetOptions = useMemo(() => {
+    if (!examTargets || examTargets.length === 0) return [];
+
+    // Sort according to user-specified TARGET_ORDER
+    const sorted = [...examTargets].sort((a, b) => {
+      const nameA = (a.name || '').trim().toLowerCase();
+      const nameB = (b.name || '').trim().toLowerCase();
+      const idxA = TARGET_ORDER.findIndex((t) => t.toLowerCase() === nameA);
+      const idxB = TARGET_ORDER.findIndex((t) => t.toLowerCase() === nameB);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    return sorted.map((e) => ({ label: e.name, value: e.id }));
+  }, [examTargets]);
 
   const stateOptions = statesList.map((s) => {
     const formatted = formatLocationName(s.name);
@@ -862,6 +929,7 @@ const RegisterPage = () => {
                       type="button"
                       variant="primary"
                       size="md"
+                      isLoading={step === 1 && isCheckingAvailability}
                       onClick={handleNextStep}
                       className="inline-flex items-center space-x-1.5"
                     >

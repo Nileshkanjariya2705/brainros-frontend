@@ -41,6 +41,7 @@ const LanguageManagementPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLang, setEditingLang] = useState<SupportedLanguage | null>(null);
+  const [successPopupMsg, setSuccessPopupMsg] = useState<{ title: string; desc: string } | null>(null);
 
   // Form State
   const [formCode, setFormCode] = useState('');
@@ -109,6 +110,11 @@ const LanguageManagementPage: React.FC = () => {
         setErrorMsg(typeof error === 'string' ? error : 'Failed to update language');
         return;
       }
+
+      setSuccessPopupMsg({
+        title: 'Language Updated Successfully!',
+        desc: `Configuration and settings for "${formName.trim()}" have been saved.`,
+      });
     } else {
       const { error } = await createLanguageAPI({
         code: formCode.trim().toLowerCase(),
@@ -123,6 +129,11 @@ const LanguageManagementPage: React.FC = () => {
         setErrorMsg(typeof error === 'string' ? error : 'Failed to create language');
         return;
       }
+
+      setSuccessPopupMsg({
+        title: 'Language Created Successfully!',
+        desc: `Language "${formName.trim()}" (${formCode.trim().toUpperCase()}) is now active in language master.`,
+      });
     }
 
     setIsModalOpen(false);
@@ -352,9 +363,18 @@ const LanguageManagementPage: React.FC = () => {
                 <div className="space-y-1.5">
                   <label className="font-bold text-slate-700 block">Display Order</label>
                   <input
-                    type="number"
-                    value={formOrder}
-                    onChange={(e) => setFormOrder(Number(e.target.value))}
+                    type="text"
+                    inputMode="numeric"
+                    value={formOrder === 0 ? '0' : formOrder || ''}
+                    onKeyDown={(e) => {
+                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setFormOrder(val ? Number(val) : 0);
+                    }}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-2.5 font-semibold text-xs text-slate-900 focus:outline-none"
                   />
                 </div>
@@ -423,6 +443,28 @@ const LanguageManagementPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ─── Success Popup Dialog ─────────────────────────────────── */}
+      {successPopupMsg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border border-slate-100 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-md shadow-emerald-100/50">
+              <CheckCircle2 size={32} />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-black text-slate-900">{successPopupMsg.title}</h3>
+              <p className="text-xs text-slate-500">{successPopupMsg.desc}</p>
+            </div>
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs"
+              onClick={() => setSuccessPopupMsg(null)}
+            >
+              OK, Continue
+            </Button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

@@ -509,13 +509,19 @@ export const HistoricalDatasetsPage: React.FC = () => {
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Total Marks</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     required
-                    min={1}
-                    value={createForm.totalMarks}
-                    onChange={(e) =>
-                      setCreateForm({ ...createForm, totalMarks: Number(e.target.value) })
-                    }
+                    value={createForm.totalMarks || ''}
+                    onKeyDown={(e) => {
+                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setCreateForm({ ...createForm, totalMarks: val ? Number(val) : 0 });
+                    }}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -523,13 +529,19 @@ export const HistoricalDatasetsPage: React.FC = () => {
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Total Candidates</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     required
-                    min={1}
-                    value={createForm.totalCandidates}
-                    onChange={(e) =>
-                      setCreateForm({ ...createForm, totalCandidates: Number(e.target.value) })
-                    }
+                    value={createForm.totalCandidates || ''}
+                    onKeyDown={(e) => {
+                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setCreateForm({ ...createForm, totalCandidates: val ? Number(val) : 0 });
+                    }}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>

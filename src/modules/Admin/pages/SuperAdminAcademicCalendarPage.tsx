@@ -10,6 +10,7 @@
  * - Light/white theme
  */
 import React, { useState, useMemo, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarDays,
@@ -385,12 +386,19 @@ function CalendarEntryModal({
             </label>
             <div className="flex items-center gap-2">
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 required
-                min={1}
-                max={600}
-                value={form.durationMinutes}
-                onChange={(e) => setForm((f) => ({ ...f, durationMinutes: Number(e.target.value) }))}
+                value={form.durationMinutes || ''}
+                onKeyDown={(e) => {
+                  if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '');
+                  setForm((f) => ({ ...f, durationMinutes: val ? Number(val) : 0 }));
+                }}
                 className="w-full px-3 py-2.5 rounded-xl text-xs font-medium bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-indigo-500 transition text-slate-800"
               />
               <div className="flex gap-1">
@@ -475,8 +483,22 @@ function CalendarEntryModal({
 // ─── Main Page Component ──────────────────────────────────────────────────────
 
 const SuperAdminAcademicCalendarPage: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const currentYear = new Date().getFullYear();
+
+  const firstSegment = location.pathname.split('/')[1];
+  const routePrefix = [
+    'super-admin',
+    'admin',
+    'general-manager',
+    'manager',
+    'operator',
+    'staff',
+  ].includes(firstSegment)
+    ? `/${firstSegment}`
+    : '/admin';
 
   // ── State ───────────────────────────────────────────────────────────────────
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
@@ -664,10 +686,7 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
           </Button>
 
           <Button
-            onClick={() => {
-              setModalError(null);
-              setShowCreateModal(true);
-            }}
+            onClick={() => navigate(`${routePrefix}/exams/schedule`)}
             className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
           >
             <Plus size={14} />

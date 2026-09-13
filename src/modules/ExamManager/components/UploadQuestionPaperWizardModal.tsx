@@ -240,14 +240,63 @@ export const UploadQuestionPaperWizardModal: React.FC<UploadQuestionPaperWizardM
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => downloadQuestionPaperTemplate('xlsx')}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-white px-3 py-1.5 rounded-xl border border-indigo-200 hover:bg-indigo-50 transition shadow-2xs shrink-0"
-                >
-                  <Download size={13} />
-                  Download Blueprint Template (.xlsx)
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => downloadQuestionPaperTemplate('csv')}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-white px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition shadow-2xs shrink-0"
+                  >
+                    <Download size={13} />
+                    Sample CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadQuestionPaperTemplate('xlsx')}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-white px-3 py-1.5 rounded-xl border border-indigo-200 hover:bg-indigo-50 transition shadow-2xs shrink-0"
+                  >
+                    <Download size={13} />
+                    Download Template (.xlsx)
+                  </button>
+                </div>
+              </div>
+
+              {/* Required Columns Format Banner */}
+              <div className="rounded-2xl border border-blue-200/80 bg-blue-50/50 p-4 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-blue-950 text-xs flex items-center gap-1.5">
+                    <FileSpreadsheet size={15} className="text-blue-600" />
+                    Required Question Paper Format (7 Columns)
+                  </span>
+                  <span className="text-[10px] font-bold text-blue-700 uppercase bg-blue-100/70 px-2 py-0.5 rounded-md">
+                    Answers included
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600">
+                  Every row must provide the question, 4 options (A, B, C, D), and the correct answer key (A, B, C, or D).
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 font-mono text-[10px] font-bold text-slate-800">
+                  <div className="p-1.5 bg-white rounded-lg border border-blue-200 text-center">
+                    question_number
+                  </div>
+                  <div className="p-1.5 bg-white rounded-lg border border-blue-200 text-center">
+                    question
+                  </div>
+                  <div className="p-1.5 bg-white rounded-lg border border-blue-200 text-center">
+                    option_a
+                  </div>
+                  <div className="p-1.5 bg-white rounded-lg border border-blue-200 text-center">
+                    option_b
+                  </div>
+                  <div className="p-1.5 bg-white rounded-lg border border-blue-200 text-center">
+                    option_c
+                  </div>
+                  <div className="p-1.5 bg-white rounded-lg border border-blue-200 text-center">
+                    option_d
+                  </div>
+                  <div className="p-1.5 bg-indigo-100 text-indigo-900 rounded-lg border border-indigo-300 text-center font-black">
+                    correct_answer
+                  </div>
+                </div>
               </div>
 
               {/* Basic Fields */}
@@ -268,11 +317,18 @@ export const UploadQuestionPaperWizardModal: React.FC<UploadQuestionPaperWizardM
                 <div className="space-y-1.5">
                   <label className="font-extrabold text-slate-700">Duration (Minutes)</label>
                   <input
-                    type="number"
-                    min={10}
-                    max={360}
-                    value={durationMinutes}
-                    onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                    type="text"
+                    inputMode="numeric"
+                    value={durationMinutes || ''}
+                    onKeyDown={(e) => {
+                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setDurationMinutes(val ? Number(val) : 0);
+                    }}
                     className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-xs font-semibold focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
                   />
                 </div>
@@ -280,10 +336,20 @@ export const UploadQuestionPaperWizardModal: React.FC<UploadQuestionPaperWizardM
                 <div className="space-y-1.5">
                   <label className="font-extrabold text-slate-700">Marks per Question (+)</label>
                   <input
-                    type="number"
-                    step="0.5"
-                    value={defaultMarks}
-                    onChange={(e) => setDefaultMarks(Number(e.target.value))}
+                    type="text"
+                    inputMode="decimal"
+                    value={defaultMarks === 0 ? '0' : defaultMarks || ''}
+                    onKeyDown={(e) => {
+                      if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                        e.preventDefault();
+                      } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                      setDefaultMarks(val ? Number(val) : 0);
+                    }}
                     className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-xs font-semibold focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
                   />
                 </div>
@@ -291,10 +357,20 @@ export const UploadQuestionPaperWizardModal: React.FC<UploadQuestionPaperWizardM
                 <div className="space-y-1.5">
                   <label className="font-extrabold text-slate-700">Negative Marks (-)</label>
                   <input
-                    type="number"
-                    step="0.25"
-                    value={defaultNegativeMarks}
-                    onChange={(e) => setDefaultNegativeMarks(Number(e.target.value))}
+                    type="text"
+                    inputMode="decimal"
+                    value={defaultNegativeMarks === 0 ? '0' : defaultNegativeMarks || ''}
+                    onKeyDown={(e) => {
+                      if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                        e.preventDefault();
+                      } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                      setDefaultNegativeMarks(val ? Number(val) : 0);
+                    }}
                     className="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-xs font-semibold focus:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
                   />
                 </div>
@@ -532,41 +608,99 @@ export const UploadQuestionPaperWizardModal: React.FC<UploadQuestionPaperWizardM
                 </div>
               </div>
 
-              {/* Sample Question Preview Table */}
-              <div className="space-y-2">
-                <h4 className="font-extrabold text-slate-800 text-xs">
-                  Question Preview ({validationResult.previewRows?.length} sample questions):
-                </h4>
-                <div className="max-h-60 overflow-y-auto space-y-2 border border-slate-200 rounded-2xl p-2.5 bg-slate-50/50">
-                  {validationResult.previewRows?.map((row, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-3 rounded-xl bg-white border text-xs space-y-1.5 ${
-                        row.status === 'VALID' ? 'border-slate-200' : 'border-rose-300 bg-rose-50/20'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-slate-800">
-                          #{row.rowNumber} [{row.subject || 'Subject'}] {row.chapter ? `— ${row.chapter}` : ''}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            row.status === 'VALID'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-rose-100 text-rose-800'
-                          }`}
-                        >
-                          {row.status}
-                        </span>
-                      </div>
-                      <p className="text-slate-700 line-clamp-1">{row.questionText}</p>
-                      {row.errors && row.errors.length > 0 && (
-                        <p className="text-[11px] text-rose-600 font-bold">
-                          Errors: {row.errors.join(', ')}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+              {/* Question Preview Table with Correct Answer Verification */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-extrabold text-slate-800 text-xs">
+                    Question Paper Preview ({validationResult.previewRows?.length || 0} questions parsed):
+                  </h4>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Verify options and correct answer before final import
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white max-h-72 shadow-2xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold sticky top-0">
+                      <tr>
+                        <th className="py-2.5 px-3 text-center w-12">No.</th>
+                        <th className="py-2.5 px-3 min-w-[180px]">Question</th>
+                        <th className="py-2.5 px-2">A</th>
+                        <th className="py-2.5 px-2">B</th>
+                        <th className="py-2.5 px-2">C</th>
+                        <th className="py-2.5 px-2">D</th>
+                        <th className="py-2.5 px-3 text-center">Correct Answer</th>
+                        <th className="py-2.5 px-3 text-right">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {validationResult.previewRows?.map((row: any, idx) => {
+                        const optA = row.options?.find((o: any) => o.key === 'A')?.text || (row.data?.optionA ?? '');
+                        const optB = row.options?.find((o: any) => o.key === 'B')?.text || (row.data?.optionB ?? '');
+                        const optC = row.options?.find((o: any) => o.key === 'C')?.text || (row.data?.optionC ?? '');
+                        const optD = row.options?.find((o: any) => o.key === 'D')?.text || (row.data?.optionD ?? '');
+                        const ans = row.correctAnswer || row.data?.correctAnswer || '—';
+                        const isValid = row.status === 'VALID' || (!row.errors || row.errors.length === 0);
+
+                        return (
+                          <tr
+                            key={idx}
+                            className={`hover:bg-slate-50/70 transition-colors ${
+                              !isValid ? 'bg-rose-50/30' : ''
+                            }`}
+                          >
+                            <td className="py-2.5 px-3 font-mono font-bold text-center text-slate-700">
+                              {row.questionNumber || row.rowNumber}
+                            </td>
+                            <td className="py-2.5 px-3 font-medium text-slate-900 max-w-xs">
+                              <div className="line-clamp-2">{row.questionText}</div>
+                              {row.errors && row.errors.length > 0 && (
+                                <div className="text-[10px] text-rose-600 font-bold mt-1">
+                                  {row.errors.join(', ')}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-2 text-slate-600 max-w-[100px] truncate" title={optA}>
+                              {optA || '—'}
+                            </td>
+                            <td className="py-2.5 px-2 text-slate-600 max-w-[100px] truncate" title={optB}>
+                              {optB || '—'}
+                            </td>
+                            <td className="py-2.5 px-2 text-slate-600 max-w-[100px] truncate" title={optC}>
+                              {optC || '—'}
+                            </td>
+                            <td className="py-2.5 px-2 text-slate-600 max-w-[100px] truncate" title={optD}>
+                              {optD || '—'}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className="inline-flex items-center justify-center h-6 w-6 rounded-lg bg-indigo-50 text-indigo-700 font-black border border-indigo-200 text-xs font-mono shadow-2xs">
+                                {ans}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  isValid
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : 'bg-rose-100 text-rose-800'
+                                }`}
+                              >
+                                {isValid ? (
+                                  <>
+                                    <CheckCircle2 size={10} /> Valid
+                                  </>
+                                ) : (
+                                  <>
+                                    <AlertTriangle size={10} /> Invalid
+                                  </>
+                                )}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

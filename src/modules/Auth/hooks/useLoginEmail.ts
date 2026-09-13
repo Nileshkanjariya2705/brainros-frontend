@@ -4,6 +4,7 @@ import { useAppDispatch } from '@/redux/store';
 import { setCredentials } from '@/redux/slices/authSlice';
 import { useLoginEmailAPI } from '../services';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
+import { createTabSession } from '@/utils/tabSession';
 import type { LoginEmailDto } from '../types/auth.types';
 
 export const useLoginEmail = () => {
@@ -17,6 +18,7 @@ export const useLoginEmail = () => {
     const { data, error: apiError } = await loginEmailAPI(credentials);
 
     if (!apiError && data) {
+      createTabSession();
       dispatch(setCredentials(data));
       navigate(PRIVATE_NAVIGATION.dashboard, { replace: true });
       return true;

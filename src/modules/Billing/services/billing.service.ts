@@ -81,10 +81,36 @@ export interface GenerateInvoicePayload {
   pricePerStudent?: number;
 }
 
+export interface SchoolPricingItem {
+  institutionId: string;
+  name: string;
+  code: string;
+  email?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pricePerStudent: number;
+  currency: string;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+  isActive: boolean;
+  isCustom: boolean;
+  updatedBy?: { id: string; name?: string | null; email?: string | null } | null;
+  updatedAt?: string | null;
+}
+
 export interface FilterOptionsResponse {
   availableYears: number[];
   months: { month: number; name: string }[];
-  schools: { id: string; name: string; code: string; email?: string | null; city?: string | null }[];
+  schools: {
+    id: string;
+    name: string;
+    code: string;
+    email?: string | null;
+    city?: string | null;
+    pricePerStudent?: number;
+    isCustomPrice?: boolean;
+  }[];
   currentPrice: number;
   currentMonth?: number;
   currentYear?: number;
@@ -174,6 +200,24 @@ export const BillingApi = {
     return res.data;
   },
 
+  getSchoolPricings: async (): Promise<{ data: SchoolPricingItem[] }> => {
+    const res = await Axios.get('/billing/schools/pricing');
+    return res.data;
+  },
+
+  getSchoolPricing: async (institutionId: string) => {
+    const res = await Axios.get(`/billing/schools/${institutionId}/pricing`);
+    return res.data;
+  },
+
+  updateSchoolPricing: async (
+    institutionId: string,
+    payload: { pricePerStudent: number; effectiveFrom?: string; effectiveTo?: string; isActive?: boolean },
+  ) => {
+    const res = await Axios.put(`/billing/schools/${institutionId}/pricing`, payload);
+    return res.data;
+  },
+
   getFilterOptions: async (): Promise<{ data: FilterOptionsResponse }> => {
     const res = await Axios.get('/billing/filter-options');
     return res.data;
@@ -198,6 +242,11 @@ export const BillingApi = {
 
   generateInvoice: async (payload: GenerateInvoicePayload) => {
     const res = await Axios.post('/billing/invoices/generate', payload);
+    return res.data;
+  },
+
+  sendBulkInvoices: async (payload: { billingMonth: number; billingYear: number; forceRetryFailed?: boolean }) => {
+    const res = await Axios.post('/billing/invoices/send-all', payload);
     return res.data;
   },
 

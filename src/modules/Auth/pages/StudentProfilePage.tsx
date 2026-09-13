@@ -110,9 +110,66 @@ const StudentProfilePage = () => {
     ? 'Verified Staff'
     : 'Verified Student Profile';
 
-  const accountId = isAdministrativeUser
-    ? (profile as any)?.user?.id || (profile as any)?.userId || profile?.studentCode || 'ADMIN-ACCOUNT'
-    : profile?.studentCode || profile?.studentId || 'BRN-2026-STUDENT';
+  const formatUserAccountId = () => {
+    // 1. If student profile, use studentCode or formatted student ID
+    if (!isAdministrativeUser) {
+      return (
+        profile?.studentCode ||
+        profile?.studentId ||
+        `BRN-2026-${((profile as any)?.id || '').substring(0, 6).toUpperCase()}`
+      );
+    }
+
+    // 2. Check if user already has an explicit custom userCode or staffCode
+    const rawCode =
+      (profile as any)?.userCode ||
+      (profile as any)?.user?.userCode ||
+      (profile as any)?.staffCode ||
+      (profile as any)?.code;
+    if (rawCode && typeof rawCode === 'string' && rawCode.length < 20 && !rawCode.includes('-')) {
+      return rawCode;
+    }
+
+    const userId =
+      (profile as any)?.user?.id ||
+      (profile as any)?.userId ||
+      (profile as any)?.id ||
+      '';
+
+    const shortSuffix = userId ? userId.replace(/-/g, '').slice(0, 6).toUpperCase() : '0001';
+
+    // 3. Format clean standardized role prefixes
+    if (isSuperAdmin || activeRole === 'SUPER_ADMIN') {
+      return `SA-2026-${shortSuffix}`;
+    }
+    if (activeRole === 'ACCOUNTANT') {
+      return `ACC-2026-${shortSuffix}`;
+    }
+    if (activeRole === 'GENERAL_MANAGER') {
+      return `GM-2026-${shortSuffix}`;
+    }
+    if (activeRole === 'MANAGER') {
+      return `MGR-2026-${shortSuffix}`;
+    }
+    if (activeRole === 'OPERATOR') {
+      return `OP-2026-${shortSuffix}`;
+    }
+    if (isAdmin || activeRole === 'ADMIN') {
+      return `ADM-2026-${shortSuffix}`;
+    }
+    if (activeRole === 'INSTITUTION') {
+      return `INST-2026-${shortSuffix}`;
+    }
+    if (activeRole === 'PARENT') {
+      return `PAR-2026-${shortSuffix}`;
+    }
+    if (isStaff || activeRole === 'STAFF') {
+      return `STF-2026-${shortSuffix}`;
+    }
+    return `USR-2026-${shortSuffix}`;
+  };
+
+  const accountId = formatUserAccountId();
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">

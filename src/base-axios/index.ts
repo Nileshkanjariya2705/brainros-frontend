@@ -5,6 +5,7 @@ import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig 
 import { API_URL, API_TIMEOUT } from '@config';
 import { toast } from '@/utils/toast';
 import { clearUserSessionCache } from '@/queryClient';
+import { hasTabSession } from '@/utils/tabSession';
 
 // ** Types **
 import type { ApiErrorResponse } from './types';
@@ -13,10 +14,12 @@ declare module 'axios' {
   export interface AxiosRequestConfig {
     _skipAuthRefresh?: boolean;
     _retry?: boolean;
+    _silent?: boolean; // When true, suppresses error toasts for this request
   }
   export interface InternalAxiosRequestConfig {
     _skipAuthRefresh?: boolean;
     _retry?: boolean;
+    _silent?: boolean;
   }
 }
 
@@ -45,10 +48,24 @@ const PUBLIC_AUTH_PATHS = [
   '/auth/otp/verify',
   '/auth/otp/resend',
   '/auth/refresh',
+  '/auth/logout',
   '/auth/options',
   '/public/',
   '/public/exams',
 ];
+
+// ─── Background / polling paths that should NEVER show intrusive toasts ──
+const SILENT_PATHS = [
+  '/notifications/unread-count',
+  '/notifications',
+  '/admin/exams/check-availability',
+  '/dashboard',
+];
+
+const isSilentPath = (url?: string): boolean => {
+  if (!url) return false;
+  return SILENT_PATHS.some((p) => url.includes(p));
+};
 
 const isPublicAuthUrl = (url?: string): boolean => {
   if (!url) return false;
@@ -93,12 +110,14 @@ Axios.interceptors.response.use(
     const status = error.response?.status;
 
     // 1. Only process 401 Unauthorized for protected requests that haven't been retried yet
+    // AND only when this specific tab has an active session marker
     if (
       status === 401 &&
       originalConfig &&
       !originalConfig._skipAuthRefresh &&
       !originalConfig._retry &&
-      !isPublicAuthUrl(originalConfig.url)
+      !isPublicAuthUrl(originalConfig.url) &&
+      hasTabSession()
     ) {
       originalConfig._retry = true;
 
@@ -147,7 +166,14 @@ Axios.interceptors.response.use(
     }
 
     // 2. Show user-friendly toast for non-auth errors or after retry failure
-    if (originalConfig && !isPublicAuthUrl(originalConfig.url)) {
+    // Skip toast for: silent paths (polling/background), 503 DB-down, or requests marked _silent
+    const isSilent =
+      originalConfig?._silent ||
+      isSilentPath(originalConfig?.url) ||
+      status === 503 ||
+      status === 504;
+
+    if (originalConfig && !isPublicAuthUrl(originalConfig.url) && !isSilent) {
       const errorMsg =
         error.response?.data?.message ||
         (error.response?.data as any)?.error ||

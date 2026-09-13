@@ -4,6 +4,7 @@ import { useAppDispatch } from '@/redux/store';
 import { setCredentials } from '@/redux/slices/authSlice';
 import { useLoginGoogleAPI } from '../services';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
+import { createTabSession } from '@/utils/tabSession';
 
 export const useLoginGoogle = () => {
   const dispatch = useAppDispatch();
@@ -16,6 +17,7 @@ export const useLoginGoogle = () => {
     const { data, error: apiError } = await loginGoogleAPI({ idToken });
 
     if (!apiError && data) {
+      createTabSession();
       dispatch(setCredentials(data));
       navigate(PRIVATE_NAVIGATION.dashboard, { replace: true });
       return true;

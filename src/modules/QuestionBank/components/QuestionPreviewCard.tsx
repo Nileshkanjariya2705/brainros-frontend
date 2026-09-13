@@ -156,9 +156,17 @@ export const QuestionPreviewCard: React.FC<QuestionPreviewCardProps> = ({
         <div className="space-y-2 p-4 rounded-xl border border-slate-200 bg-slate-50/60">
           <label className="text-xs font-bold text-slate-700 block">Enter Numerical Value:</label>
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
             value={numericalInput}
-            onChange={(e) => setNumericalInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                e.preventDefault();
+              } else if (!/[0-9.-]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                e.preventDefault();
+              }
+            }}
+            onChange={(e) => setNumericalInput(e.target.value.replace(/[^0-9.-]/g, ''))}
             placeholder="e.g. 9.81 or 24"
             className="w-full sm:max-w-xs rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
           />

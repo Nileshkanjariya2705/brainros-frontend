@@ -424,13 +424,21 @@ export const StrategyRuleManagementPage: React.FC = () => {
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Threshold</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     required
-                    step="any"
-                    value={formData.threshold}
-                    onChange={(e) =>
-                      setFormData({ ...formData, threshold: Number(e.target.value) })
-                    }
+                    value={formData.threshold === 0 ? '0' : formData.threshold || ''}
+                    onKeyDown={(e) => {
+                      if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                        e.preventDefault();
+                      } else if (!/[0-9.-]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.-]/g, '');
+                      setFormData({ ...formData, threshold: val ? Number(val) : 0 });
+                    }}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>

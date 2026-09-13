@@ -183,6 +183,52 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
       const bps = Array.isArray(data) ? data : data?.items || [];
       setBlueprints(bps);
     });
+
+    // If editing existing exam, load full configuration
+    if (initialExamId) {
+      getReq<any>(`/exams/${initialExamId}`).then(({ data }) => {
+        if (!data) return;
+        const exam = data.data || data;
+        if (exam.title) setExamName(exam.title);
+        if (exam.examTargetId) setSelectedTargetId(exam.examTargetId);
+        if (exam.examTarget?.name) {
+          const tName = exam.examTarget.name.toUpperCase().trim();
+          if (['JEE', 'NEET', 'CET'].includes(tName)) {
+            setFullExamTarget(tName as FullExamTarget);
+          }
+        }
+        if (exam.durationMinutes) setDuration(exam.durationMinutes);
+        if (exam.totalQuestions) setQuestionCount(exam.totalQuestions);
+        if (exam.defaultMarksPerQuestion) setMarksPerQuestion(exam.defaultMarksPerQuestion);
+        if (exam.defaultNegativeMarks !== undefined) setNegativeMarks(exam.defaultNegativeMarks);
+
+        // Sections / subjects / chapter population
+        if (exam.sections && exam.sections.length > 0) {
+          const firstSec = exam.sections[0];
+          if (firstSec.subjectId) setSelectedSubjectId(firstSec.subjectId);
+          if (firstSec.chapterId) setSelectedChapterId(firstSec.chapterId);
+          if (exam.sections.length > 1) {
+            setExamType('FULL_EXAM');
+          } else if (firstSec.chapterId) {
+            setExamType('SPECIFIC_CHAPTER');
+          } else {
+            setExamType('SPECIFIC_SUBJECT');
+          }
+        }
+
+        // Schedule dates if already scheduled
+        if (exam.schedules && exam.schedules.length > 0) {
+          const sc = exam.schedules[0];
+          if (sc.startTime) {
+            const dt = new Date(sc.startTime);
+            setStartDate(dt.toISOString().split('T')[0]);
+            const hrs = String(dt.getHours()).padStart(2, '0');
+            const mins = String(dt.getMinutes()).padStart(2, '0');
+            setStartTime(`${hrs}:${mins}`);
+          }
+        }
+      });
+    }
   }, [isOpen, initialExamId, getReq]);
 
   // Load chapters when selectedSubjectId changes
@@ -205,27 +251,86 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
     });
   }, [selectedSubjectId, getReq]);
 
-  // Filter subjects for the selected target if target is chosen
-  const filteredSubjects = useMemo(() => {
-    if (!selectedTargetId) return subjects;
-    const target = examTargets.find((t) => t.id === selectedTargetId);
-    if (!target) return subjects;
-    const matched = subjects.filter((s) => s.examTargetId === selectedTargetId);
-    return matched.length > 0 ? matched : subjects;
-  }, [subjects, selectedTargetId, examTargets]);
+  // Helper to normalize and get standard clean subject name
+  const getCleanSubjectName = (rawName: string): string => {
+    const s = (rawName || '').toUpperCase().trim();
+    if (s.includes('PHYSIC')) return 'Physics';
+    if (s.includes('CHEM')) return 'Chemistry';
+    if (s.includes('MATH')) return 'Mathematics';
+    if (s.includes('BIO') || s.includes('BOTANY') || s.includes('ZOOLOGY')) return 'Biology';
+    return rawName;
+  };
 
-  // Ensure selectedSubjectId always belongs to the selectedTargetId (for Subject & Chapter exams)
-  useEffect(() => {
-    if (examType === 'FULL_EXAM') return;
-    if (!selectedTargetId || subjects.length === 0) return;
-    const targetSubjects = subjects.filter((s) => s.examTargetId === selectedTargetId);
-    if (targetSubjects.length > 0) {
-      const currentValid = targetSubjects.some((s) => s.id === selectedSubjectId);
-      if (!currentValid) {
-        setSelectedSubjectId(targetSubjects[0].id);
+  // Filter subjects strictly according to:
+  // JEE -> Physics, Mathematics, Chemistry
+  // NEET -> Physics, Biology, Chemistry
+  // CET -> Physics, Mathematics, Chemistry, Biology
+  const filteredSubjects = useMemo(() => {
+    const target = examTargets.find((t) => t.id === selectedTargetId);
+    const tName = (target?.name || (examType === 'FULL_EXAM' ? fullExamTarget : 'JEE')).toUpperCase().trim();
+
+    // Define allowed clean subject names for each target
+    const allowedForTarget: string[] = tName.includes('JEE')
+      ? ['Physics', 'Mathematics', 'Chemistry']
+      : tName.includes('NEET')
+      ? ['Physics', 'Biology', 'Chemistry']
+      : tName.includes('CET')
+      ? ['Physics', 'Mathematics', 'Chemistry', 'Biology']
+      : ['Physics', 'Mathematics', 'Chemistry', 'Biology'];
+
+    // Map and filter subjects
+    const result: any[] = [];
+    const seenNames = new Set<string>();
+
+    for (const allowedName of allowedForTarget) {
+      // Find candidate subject from subjects list matching targetId first, or by name match
+      let candidate = subjects.find(
+        (s) =>
+          s.examTargetId === selectedTargetId &&
+          getCleanSubjectName(s.name).toLowerCase() === allowedName.toLowerCase(),
+      );
+
+      if (!candidate) {
+        candidate = subjects.find((s) => {
+          const clean = getCleanSubjectName(s.name);
+          const sUpper = (s.name || '').toUpperCase();
+          if (clean.toLowerCase() !== allowedName.toLowerCase()) return false;
+          // Avoid picking CAT or mismatched target if target suffix exists
+          if (sUpper.includes('CAT')) return false;
+          if (tName.includes('JEE') && (sUpper.includes('NEET') || sUpper.includes('CET'))) return false;
+          if (tName.includes('NEET') && (sUpper.includes('JEE') || sUpper.includes('CET'))) return false;
+          if (tName.includes('CET') && (sUpper.includes('JEE') || sUpper.includes('NEET'))) return false;
+          return true;
+        });
+      }
+
+      if (!candidate) {
+        candidate = subjects.find(
+          (s) => getCleanSubjectName(s.name).toLowerCase() === allowedName.toLowerCase(),
+        );
+      }
+
+      if (candidate && !seenNames.has(allowedName)) {
+        seenNames.add(allowedName);
+        result.push({
+          ...candidate,
+          displayName: allowedName,
+        });
       }
     }
-  }, [selectedTargetId, subjects, selectedSubjectId, examType]);
+
+    return result;
+  }, [subjects, selectedTargetId, examTargets, examType, fullExamTarget]);
+
+  // Ensure selectedSubjectId always belongs to filteredSubjects (for Subject & Chapter exams)
+  useEffect(() => {
+    if (examType === 'FULL_EXAM') return;
+    if (filteredSubjects.length === 0) return;
+    const currentValid = filteredSubjects.some((s) => s.id === selectedSubjectId);
+    if (!currentValid) {
+      setSelectedSubjectId(filteredSubjects[0].id);
+    }
+  }, [filteredSubjects, selectedSubjectId, examType]);
 
   // Auto-sync selectedTargetId when fullExamTarget changes in FULL_EXAM mode
   useEffect(() => {
@@ -403,7 +508,10 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
       queryClient.invalidateQueries({ queryKey: academicCalendarKeys.all });
       queryClient.invalidateQueries({ queryKey: examKeys.public() });
       onScheduled?.();
-      onClose();
+      setScheduledSuccessData({
+        examId: initialExamId,
+        title: examName || initialExamTitle || 'Exam',
+      });
       return;
     }
 
@@ -900,7 +1008,7 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
                     >
                       {filteredSubjects.map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.name}
+                          {s.displayName || s.name}
                         </option>
                       ))}
                     </select>
@@ -958,10 +1066,18 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
                     </span>
                   </div>
                   <input
-                    type="number"
-                    min={1}
-                    value={questionCount}
-                    onChange={(e) => setQuestionCount(Number(e.target.value))}
+                    type="text"
+                    inputMode="numeric"
+                    value={questionCount || ''}
+                    onKeyDown={(e) => {
+                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setQuestionCount(val ? Number(val) : 0);
+                    }}
                     className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-bold text-slate-900 focus:border-indigo-500 focus:outline-none"
                   />
                   <p className="text-[10px] text-slate-500">
@@ -973,10 +1089,18 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700">Duration (Minutes)</label>
                   <input
-                    type="number"
-                    min={5}
-                    value={duration}
-                    onChange={(e) => setDuration(Number(e.target.value))}
+                    type="text"
+                    inputMode="numeric"
+                    value={duration || ''}
+                    onKeyDown={(e) => {
+                      if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setDuration(val ? Number(val) : 0);
+                    }}
                     className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-bold text-slate-900 focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
@@ -987,10 +1111,20 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700">Marks Per Correct (+)</label>
                   <input
-                    type="number"
-                    min={0}
-                    value={marksPerQuestion}
-                    onChange={(e) => setMarksPerQuestion(Number(e.target.value))}
+                    type="text"
+                    inputMode="decimal"
+                    value={marksPerQuestion === 0 ? '0' : marksPerQuestion || ''}
+                    onKeyDown={(e) => {
+                      if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                        e.preventDefault();
+                      } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                      setMarksPerQuestion(val ? Number(val) : 0);
+                    }}
                     className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-semibold text-slate-900 focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
@@ -998,10 +1132,20 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700">Negative Marks (-)</label>
                   <input
-                    type="number"
-                    min={0}
-                    value={negativeMarks}
-                    onChange={(e) => setNegativeMarks(Number(e.target.value))}
+                    type="text"
+                    inputMode="decimal"
+                    value={negativeMarks === 0 ? '0' : negativeMarks || ''}
+                    onKeyDown={(e) => {
+                      if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                        e.preventDefault();
+                      } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
+                      setNegativeMarks(val ? Number(val) : 0);
+                    }}
                     className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-semibold text-slate-900 focus:border-indigo-500 focus:outline-none"
                   />
                 </div>

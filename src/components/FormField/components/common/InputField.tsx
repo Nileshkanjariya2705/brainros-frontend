@@ -68,6 +68,12 @@ const InputField = <T extends FieldValues>({
   const hasLeft = Boolean(leftIcon);
   const hasRight = isLoading || Boolean(rightIcon);
 
+  const isNumber = type === 'number';
+  const effectiveType = isNumber ? 'text' : type;
+  const effectiveInputMode = inputMode || (isNumber ? 'numeric' : undefined);
+
+  const registerProps = register(name);
+
   return (
     <div className={cn('w-full', wrapperClass)}>
       {label && (
@@ -85,12 +91,12 @@ const InputField = <T extends FieldValues>({
 
         <input
           id={inputId}
-          type={type}
+          type={effectiveType}
           placeholder={placeholder}
           disabled={disabled}
           readOnly={readOnly}
           autoComplete={autoComplete}
-          inputMode={inputMode}
+          inputMode={effectiveInputMode}
           maxLength={maxLength}
           autoFocus={autoFocus}
           aria-invalid={error ? true : undefined}
@@ -111,7 +117,45 @@ const InputField = <T extends FieldValues>({
             className,
           )}
           {...inputProps}
-          {...register(name)}
+          {...registerProps}
+          onKeyDown={(e) => {
+            if (isNumber) {
+              const allowedKeys = [
+                'Backspace',
+                'Delete',
+                'Tab',
+                'Escape',
+                'Enter',
+                'ArrowLeft',
+                'ArrowRight',
+                'ArrowUp',
+                'ArrowDown',
+                'Home',
+                'End',
+              ];
+              if (allowedKeys.includes(e.key) || e.ctrlKey || e.metaKey) {
+                // allowed
+              } else if (e.key === '.') {
+                if (e.currentTarget.value.includes('.')) {
+                  e.preventDefault();
+                }
+              } else if (!/^[0-9]$/.test(e.key)) {
+                e.preventDefault();
+              }
+            }
+            if (inputProps?.onKeyDown) {
+              inputProps.onKeyDown(e);
+            }
+          }}
+          onChange={(e) => {
+            if (isNumber) {
+              e.target.value = e.target.value.replace(/[^0-9.]/g, '');
+            }
+            registerProps.onChange(e);
+            if (inputProps?.onChange) {
+              inputProps.onChange(e);
+            }
+          }}
         />
 
         {hasRight && (

@@ -512,13 +512,20 @@ const CreateQuestionPage: React.FC = () => {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 block">Correct Marks (+)</label>
               <input
-                type="number"
-                min="0"
-                step="0.5"
-                value={formData.marks ?? 4}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, marks: parseFloat(e.target.value) || 0 }))
-                }
+                type="text"
+                inputMode="decimal"
+                value={formData.marks === 0 ? '0' : formData.marks ?? 4}
+                onKeyDown={(e) => {
+                  if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                    e.preventDefault();
+                  } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.]/g, '');
+                  setFormData((prev) => ({ ...prev, marks: val === '' ? 0 : parseFloat(val) }));
+                }}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
               />
             </div>
@@ -527,16 +534,23 @@ const CreateQuestionPage: React.FC = () => {
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 block">Negative Marks (-)</label>
               <input
-                type="number"
-                min="0"
-                step="0.25"
-                value={formData.negativeMarks ?? 1}
-                onChange={(e) =>
+                type="text"
+                inputMode="decimal"
+                value={formData.negativeMarks === 0 ? '0' : formData.negativeMarks ?? 1}
+                onKeyDown={(e) => {
+                  if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                    e.preventDefault();
+                  } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9.]/g, '');
                   setFormData((prev) => ({
                     ...prev,
-                    negativeMarks: parseFloat(e.target.value) || 0,
-                  }))
-                }
+                    negativeMarks: val === '' ? 0 : parseFloat(val),
+                  }));
+                }}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
               />
             </div>
@@ -829,19 +843,26 @@ const CreateQuestionPage: React.FC = () => {
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-700">Exact Value</label>
                   <input
-                    type="number"
-                    step="any"
+                    type="text"
+                    inputMode="decimal"
                     value={formData.answer?.numericalAnswer ?? ''}
-                    onChange={(e) =>
+                    onKeyDown={(e) => {
+                      if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                        e.preventDefault();
+                      } else if (!/[0-9.-]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.-]/g, '');
                       setFormData((prev) => ({
                         ...prev,
                         answer: {
                           ...prev.answer,
-                          numericalAnswer:
-                            e.target.value === '' ? undefined : parseFloat(e.target.value),
+                          numericalAnswer: val === '' ? undefined : parseFloat(val),
                         },
-                      }))
-                    }
+                      }));
+                    }}
                     placeholder="e.g., 9.8"
                     className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
                   />
@@ -852,18 +873,26 @@ const CreateQuestionPage: React.FC = () => {
                     Tolerance (+/- Range)
                   </label>
                   <input
-                    type="number"
-                    step="any"
+                    type="text"
+                    inputMode="decimal"
                     value={formData.answer?.numericalTolerance ?? 0}
-                    onChange={(e) =>
+                    onKeyDown={(e) => {
+                      if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                        e.preventDefault();
+                      } else if (!/[0-9.]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9.]/g, '');
                       setFormData((prev) => ({
                         ...prev,
                         answer: {
                           ...prev.answer,
-                          numericalTolerance: parseFloat(e.target.value) || 0,
+                          numericalTolerance: val === '' ? 0 : parseFloat(val),
                         },
-                      }))
-                    }
+                      }));
+                    }}
                     placeholder="e.g., 0.05"
                     className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
                   />
@@ -873,38 +902,52 @@ const CreateQuestionPage: React.FC = () => {
                   <label className="text-xs font-semibold text-slate-700">Accepted Range (Optional)</label>
                   <div className="flex items-center gap-2">
                     <input
-                      type="number"
-                      step="any"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="Min"
                       value={formData.answer?.numericalRangeStart ?? ''}
-                      onChange={(e) =>
+                      onKeyDown={(e) => {
+                        if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                          e.preventDefault();
+                        } else if (!/[0-9.-]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9.-]/g, '');
                         setFormData((prev) => ({
                           ...prev,
                           answer: {
                             ...prev.answer,
-                            numericalRangeStart:
-                              e.target.value === '' ? undefined : parseFloat(e.target.value),
+                            numericalRangeStart: val === '' ? undefined : parseFloat(val),
                           },
-                        }))
-                      }
+                        }));
+                      }}
                       className="w-1/2 rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
                     />
                     <span className="text-xs text-slate-400">to</span>
                     <input
-                      type="number"
-                      step="any"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="Max"
                       value={formData.answer?.numericalRangeEnd ?? ''}
-                      onChange={(e) =>
+                      onKeyDown={(e) => {
+                        if (e.key === '.' && (e.currentTarget.value.includes('.') || !e.currentTarget.value)) {
+                          e.preventDefault();
+                        } else if (!/[0-9.-]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9.-]/g, '');
                         setFormData((prev) => ({
                           ...prev,
                           answer: {
                             ...prev.answer,
-                            numericalRangeEnd:
-                              e.target.value === '' ? undefined : parseFloat(e.target.value),
+                            numericalRangeEnd: val === '' ? undefined : parseFloat(val),
                           },
-                        }))
-                      }
+                        }));
+                      }}
                       className="w-1/2 rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none"
                     />
                   </div>

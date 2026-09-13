@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Layers, Plus, Play, Trash2, Eye, Lock, Sliders, Pencil } from 'lucide-react';
+import { Layers, Plus, Trash2, Eye, Lock, Sliders, Pencil } from 'lucide-react';
 import {
   useGetAllExamsAPI,
   useGetExamBlueprintsAPI,
@@ -206,16 +206,6 @@ const ExamBlueprintManagementPage: React.FC = () => {
                     >
                       <Pencil size={13} />
                       <span>Edit</span>
-                    </Button>
-
-                    {/* Validate & Generate Exam */}
-                    <Button
-                      size="sm"
-                      onClick={() => handleValidateAndGenerate(bp)}
-                      className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-                    >
-                      <Play size={13} fill="currentColor" />
-                      <span>Validate & Generate</span>
                     </Button>
 
                     {/* Delete Blueprint Template */}

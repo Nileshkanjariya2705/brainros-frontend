@@ -3,6 +3,7 @@ import { useAppDispatch } from '@/redux/store';
 import { setCredentials, logout, setInitializing } from '@/redux/slices/authSlice';
 import { setAuthInterceptorCallbacks, Axios } from '@/base-axios';
 import { fetchAndSyncFeatureFlags } from '@/services/featureFlag.service';
+import { hasTabSession } from '@/utils/tabSession';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -12,7 +13,11 @@ interface AuthProviderProps {
  * Enterprise AuthProvider:
  * 1. Synchronizes Redux auth state with Axios interceptor callbacks.
  * 2. Bootstraps environment feature flags via GET /config/features.
- * 3. Performs initial session bootstrap on app startup via GET /auth/me (auto-refreshed via HttpOnly cookie if needed).
+ * 3. Per-Tab Session Validation:
+ *    - If current tab has NO sessionStorage marker (e.g. new browser tab):
+ *      clears any lingering HttpOnly auth cookies via POST /auth/logout and marks as unauthenticated.
+ *    - If current tab HAS sessionStorage marker (e.g. page refresh in existing tab):
+ *      validates active session via GET /auth/me.
  * 4. Prevents login page flicker by maintaining `isInitializing: true` until verified.
  */
 export const AuthProvider = ({ children }: AuthProviderProps) => {
@@ -34,16 +39,32 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       },
     });
 
-    // 3. Initial Session Bootstrap: Call GET /auth/me with HttpOnly cookies
     let active = true;
 
-    Axios.get('/auth/me')
+    // 3. Per-Tab Session Check
+    if (!hasTabSession()) {
+      // New tab without tab session marker -> clear any lingering backend cookies and require fresh login
+      Axios.post('/auth/logout', {}, { _skipAuthRefresh: true, _silent: true })
+        .catch(() => {})
+        .finally(() => {
+          if (!active) return;
+          dispatch(logout());
+          dispatch(setInitializing(false));
+        });
+      return () => {
+        active = false;
+      };
+    }
+
+    // 4. Existing Tab Session: Validate via GET /auth/me with HttpOnly session cookies
+    Axios.get('/auth/me', { _silent: true })
       .then((res) => {
         if (!active) return;
         const payload = res.data?.data || res.data;
         if (payload) {
           dispatch(setCredentials({ user: payload }));
         } else {
+          dispatch(logout());
           dispatch(setInitializing(false));
         }
       })

@@ -22,7 +22,15 @@ export const authOptionKeys = {
   all: ['auth-options'] as const,
 };
 
-const ALLOWED_TARGET_EXAMS = ['JEE', 'NEET', 'CET'];
+const TARGET_ORDER = [
+  'JEE',
+  'CET',
+  'NEET',
+  'NEET and JEE',
+  'NEET and State CET',
+  'JEE and State CET',
+  'JEE, NEET and State CET',
+];
 
 /**
  * Cached TanStack Query hook for master registration/filter options (/auth/options).
@@ -39,11 +47,22 @@ export const useAuthOptionsQuery = () =>
         : (payload as AuthOptionsData);
 
       if (data && Array.isArray(data.examTargets)) {
+        const filtered = data.examTargets
+          .filter((t) =>
+            TARGET_ORDER.some((name) => name.toLowerCase() === t.name?.trim().toLowerCase())
+          )
+          .sort((a, b) => {
+            const indexA = TARGET_ORDER.findIndex(
+              (name) => name.toLowerCase() === a.name?.trim().toLowerCase()
+            );
+            const indexB = TARGET_ORDER.findIndex(
+              (name) => name.toLowerCase() === b.name?.trim().toLowerCase()
+            );
+            return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
+          });
         return {
           ...data,
-          examTargets: data.examTargets.filter((t) =>
-            ALLOWED_TARGET_EXAMS.includes(t.name?.toUpperCase().trim())
-          ),
+          examTargets: filtered,
         };
       }
       return data;

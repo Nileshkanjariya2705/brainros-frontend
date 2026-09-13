@@ -4,6 +4,7 @@ import { useAppDispatch } from '@/redux/store';
 import { setCredentials } from '@/redux/slices/authSlice';
 import { useVerifyOtpAPI } from '../services';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
+import { createTabSession } from '@/utils/tabSession';
 
 export const useVerifyOtp = () => {
   const dispatch = useAppDispatch();
@@ -16,6 +17,7 @@ export const useVerifyOtp = () => {
     const { data, error: apiError } = await verifyOtpAPI({ mobileNumber, otp, purpose });
 
     if (!apiError && data) {
+      createTabSession();
       dispatch(setCredentials(data));
       navigate(PRIVATE_NAVIGATION.dashboard, { replace: true });
       return true;
