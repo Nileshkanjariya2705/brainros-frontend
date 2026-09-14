@@ -253,7 +253,7 @@ export const ExamCalendarPage: React.FC = () => {
     ? ((queryError as any)?.response?.data?.message || (queryError as any)?.message || 'Failed to load examination calendar.')
     : null;
 
-  // ─── Filters State ────────────────────────────────────────────────────────
+  // ─── Filters & Pagination State ───────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilterPreset, setDateFilterPreset] = useState<
     'ALL' | 'TODAY' | 'UPCOMING' | 'THIS_WEEK' | 'THIS_MONTH' | 'COMPLETED'
@@ -261,6 +261,8 @@ export const ExamCalendarPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // ─── Filter Logic: Date-wise & Search Filtered Exams ───────────────────────
   const filteredExams = useMemo(() => {
@@ -328,6 +330,14 @@ export const ExamCalendarPage: React.FC = () => {
     });
   }, [exams, searchQuery, selectedDate, startDate, endDate, dateFilterPreset]);
 
+  // ─── Pagination Logic ───────────────────────────────────────────────────────
+  const totalItems = filteredExams.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedExams = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredExams.slice(start, start + pageSize);
+  }, [filteredExams, currentPage, pageSize]);
+
   // Metric counts
   const metrics = useMemo(() => {
     const total = exams.length;
@@ -342,6 +352,7 @@ export const ExamCalendarPage: React.FC = () => {
     setStartDate('');
     setEndDate('');
     setDateFilterPreset('ALL');
+    setCurrentPage(1);
   };
 
   const hasActiveDateFilter = Boolean(selectedDate || startDate || endDate || dateFilterPreset !== 'ALL');
@@ -468,6 +479,7 @@ export const ExamCalendarPage: React.FC = () => {
                     setSelectedDate('');
                     setStartDate('');
                     setEndDate('');
+                    setCurrentPage(1);
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
                     isActive
@@ -503,12 +515,18 @@ export const ExamCalendarPage: React.FC = () => {
               type="text"
               placeholder="Search by exam title or subject..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full pl-9 pr-8 py-2 rounded-xl text-xs font-semibold bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-indigo-500 transition"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => {
+                  setSearchQuery('');
+                  setCurrentPage(1);
+                }}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
               >
                 <X size={13} />
@@ -529,12 +547,16 @@ export const ExamCalendarPage: React.FC = () => {
                   setSelectedDate(e.target.value);
                   setStartDate('');
                   setEndDate('');
+                  setCurrentPage(1);
                 }}
                 className="w-full px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-indigo-500 transition text-slate-800"
               />
               {selectedDate && (
                 <button
-                  onClick={() => setSelectedDate('')}
+                  onClick={() => {
+                    setSelectedDate('');
+                    setCurrentPage(1);
+                  }}
                   className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                   title="Clear date"
                 >
@@ -554,6 +576,7 @@ export const ExamCalendarPage: React.FC = () => {
                 onChange={(e) => {
                   setStartDate(e.target.value);
                   setSelectedDate('');
+                  setCurrentPage(1);
                 }}
                 className="w-full px-2.5 py-2 rounded-xl text-xs font-semibold bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-indigo-500 transition text-slate-800"
               />
@@ -567,6 +590,7 @@ export const ExamCalendarPage: React.FC = () => {
                 onChange={(e) => {
                   setEndDate(e.target.value);
                   setSelectedDate('');
+                  setCurrentPage(1);
                 }}
                 className="w-full px-2.5 py-2 rounded-xl text-xs font-semibold bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-indigo-500 transition text-slate-800"
               />
@@ -634,7 +658,7 @@ export const ExamCalendarPage: React.FC = () => {
         <div className="space-y-3.5">
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-bold text-slate-500">
-              Showing {filteredExams.length} of {exams.length} examinations • Latest First
+              Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of {totalItems} examinations • Latest First
             </span>
             <span className="text-[11px] font-mono text-slate-400">
               Timezone: Asia/Kolkata (IST)
@@ -642,7 +666,7 @@ export const ExamCalendarPage: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            {filteredExams.map((exam) => {
+            {paginatedExams.map((exam) => {
               const startDateObj = new Date(exam.plannedStartTime || exam.plannedDate);
               const endDateObj = new Date(exam.plannedEndTime || exam.plannedStartTime);
 
@@ -808,6 +832,62 @@ export const ExamCalendarPage: React.FC = () => {
               );
             })}
           </div>
+
+          {/* Pagination Footer Controls */}
+          {totalItems > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-200 bg-white px-5 py-4 rounded-3xl shadow-xs mt-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-xs font-semibold text-slate-500">
+                  Showing {(currentPage - 1) * pageSize + 1} to{' '}
+                  {Math.min(currentPage * pageSize, totalItems)} of{' '}
+                  <span className="font-bold text-slate-700">{totalItems}</span> examinations
+                </p>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span>•</span>
+                  <label htmlFor="student-calendar-limit-select" className="font-medium text-slate-500">
+                    Per page:
+                  </label>
+                  <select
+                    id="student-calendar-limit-select"
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer shadow-2xs"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="rounded-xl text-xs font-bold"
+                >
+                  Previous
+                </Button>
+                <span className="text-xs font-bold text-slate-700 px-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="rounded-xl text-xs font-bold"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

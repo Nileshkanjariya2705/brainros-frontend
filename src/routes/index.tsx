@@ -286,6 +286,30 @@ const adminRoutes: RouteObject[] = [
         ),
       },
       {
+        path: 'chapters',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW, PERMISSIONS.QUESTION_VIEW]}>
+            <ChapterManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'chapter-management',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW, PERMISSIONS.QUESTION_VIEW]}>
+            <ChapterManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'chapter_management',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW, PERMISSIONS.QUESTION_VIEW]}>
+            <ChapterManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'exam-scheduling',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_SCHEDULE, PERMISSIONS.EXAM_VIEW]}>
@@ -500,6 +524,9 @@ const superAdminChildren: RouteObject[] = [
   { path: 'languages', element: <LanguageManagementPage /> },
   { path: 'language-master', element: <LanguageManagementPage /> },
   { path: 'language_master', element: <LanguageManagementPage /> },
+  { path: 'chapters', element: <ChapterManagementPage /> },
+  { path: 'chapter-management', element: <ChapterManagementPage /> },
+  { path: 'chapter_management', element: <ChapterManagementPage /> },
   {
     path: 'ai-question-paper-translation',
     element: (
@@ -604,6 +631,9 @@ const generalManagerRoutes: RouteObject[] = [
       { path: 'students', element: <AdminStudentsPage /> },
       { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
       { path: 'schools', element: <AdminSchoolsPage /> },
+      { path: 'chapters', element: <ChapterManagementPage /> },
+      { path: 'chapter-management', element: <ChapterManagementPage /> },
+      { path: 'chapter_management', element: <ChapterManagementPage /> },
       { path: 'languages', element: <LanguageManagementPage /> },
       { path: 'exam-scheduling', element: <ExamSchedulingManagementPage /> },
       { path: 'exams/schedule', element: <ScheduleExamPage /> },

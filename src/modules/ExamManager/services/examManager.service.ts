@@ -8,6 +8,7 @@ import type {
   CreateExamFromUploadPayload,
   ExamManagerFilterParams,
   ExamListResponse,
+  ExamItem,
   QuestionPaperPreviewResult,
   ExamQuestionPaperDetail,
 } from '../types/examManager.types';
@@ -173,6 +174,34 @@ export const useGetExamsListAPI = () => {
   );
 
   return { getExamsListAPI, isLoading, error };
+};
+
+// ─── 4b. Get Single Exam Details by ID ───────────────────────────
+export const useGetExamByIdAPI = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const getExamByIdAPI = useCallback(
+    async (examId: string) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await Axios.get(`${EXAM_MANAGER_BASE_PATH}/exams/${examId}`);
+        setIsLoading(false);
+        const data = response?.data?.data !== undefined ? response.data.data : response?.data;
+        return { data: data as ExamItem, error: null };
+      } catch (err: any) {
+        setIsLoading(false);
+        const errorMsg =
+          err?.response?.data?.message || err?.message || 'Failed to fetch exam details.';
+        setError(errorMsg);
+        return { data: null, error: errorMsg };
+      }
+    },
+    [],
+  );
+
+  return { getExamByIdAPI, isLoading, error };
 };
 
 // ─── 5. Download Question Paper Template ─────────────────────────

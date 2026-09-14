@@ -172,7 +172,7 @@ export const AdminSchoolsPage: React.FC = () => {
   const [schools, setSchools] = useState<SchoolItem[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [page, setPage] = useState<number>(1);
-  const [limit] = useState<number>(20);
+  const [limit, setLimit] = useState<number>(10);
   const [search, setSearch] = useState<string>('');
   const [searchInput, setSearchInput] = useState<string>('');
   const [stateFilter, setStateFilter] = useState<string>('');
@@ -700,10 +700,27 @@ export const AdminSchoolsPage: React.FC = () => {
         </div>
 
         {/* ─── Pagination Footer ───────────────────────────────────────── */}
-        <div className="flex items-center justify-between border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 text-xs text-slate-500">
-          <span>
-            Showing <strong>{schools.length}</strong> of <strong>{total}</strong> schools
-          </span>
+        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 text-xs text-slate-500 gap-3">
+          <div className="flex items-center gap-3">
+            <span>
+              Showing <strong>{schools.length}</strong> of <strong>{total}</strong> schools
+            </span>
+            <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+              <span className="text-slate-400">Rows:</span>
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:outline-none"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
 
           <div className="flex items-center gap-1">
             <button

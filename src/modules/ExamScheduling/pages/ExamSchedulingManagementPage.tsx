@@ -62,6 +62,20 @@ export const ExamSchedulingManagementPage: React.FC = () => {
   // State
   const [exams, setExams] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
+  const [pagination, setPagination] = useState<{
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }>({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+  });
 
   const workflowSteps: WorkflowStep[] = [
     {
@@ -107,11 +121,21 @@ export const ExamSchedulingManagementPage: React.FC = () => {
   const { cancelExamAPI } = useCancelExamAPI();
 
   const loadExams = useCallback(async () => {
-    const res = await getExamsListAPI({ page: 1, limit: 100 });
+    const res = await getExamsListAPI({
+      page,
+      limit,
+      status: statusFilter !== 'ALL' ? statusFilter : undefined,
+      search: search.trim() || undefined,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    });
     if (res?.data) {
       setExams(res.data.items || []);
+      if (res.data.pagination) {
+        setPagination(res.data.pagination);
+      }
     }
-  }, [getExamsListAPI]);
+  }, [getExamsListAPI, page, limit, statusFilter, search]);
 
   useEffect(() => {
     loadExams();
@@ -176,11 +200,7 @@ export const ExamSchedulingManagementPage: React.FC = () => {
     loadExams();
   };
 
-  const filteredExams = exams.filter((exam) => {
-    const stName = exam.status?.name || 'DRAFT';
-    if (statusFilter === 'ALL') return true;
-    return stName === statusFilter;
-  });
+  const filteredExams = exams;
 
   const getStatusBadge = (statusName: string) => {
     switch (statusName) {
@@ -241,7 +261,7 @@ export const ExamSchedulingManagementPage: React.FC = () => {
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
             Total Examinations
           </span>
-          <span className="text-2xl font-black text-slate-900 mt-1 block">{exams.length}</span>
+          <span className="text-2xl font-black text-slate-900 mt-1 block">{pagination.total || exams.length}</span>
         </div>
 
         <div className="rounded-3xl border border-indigo-100 bg-indigo-50/40 p-5 shadow-sm">
@@ -272,21 +292,50 @@ export const ExamSchedulingManagementPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-bold">
-        {['ALL', 'DRAFT', 'SUBMITTED', 'APPROVED', 'SCHEDULED', 'ACTIVE', 'ENDED'].map((st) => (
-          <button
-            key={st}
-            onClick={() => setStatusFilter(st)}
-            className={`px-3.5 py-1.5 rounded-xl border transition-all shrink-0 ${
-              statusFilter === st
-                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-            }`}
-          >
-            {st} ({st === 'ALL' ? exams.length : exams.filter((e) => e.status?.name === st).length})
-          </button>
-        ))}
+      {/* Filter Tabs & Search */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-bold">
+          {['ALL', 'DRAFT', 'SUBMITTED', 'APPROVED', 'SCHEDULED', 'ACTIVE', 'ENDED'].map((st) => (
+            <button
+              key={st}
+              onClick={() => {
+                setStatusFilter(st);
+                setPage(1);
+              }}
+              className={`px-3.5 py-1.5 rounded-xl border transition-all shrink-0 ${
+                statusFilter === st
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              {st}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative max-w-xs w-full sm:w-auto">
+          <input
+            type="text"
+            placeholder="Search exams by title..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            className="w-full pl-3 pr-8 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:border-indigo-500 transition"
+          />
+          {search && (
+            <button
+              onClick={() => {
+                setSearch('');
+                setPage(1);
+              }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Exams Grid */}
@@ -617,13 +666,71 @@ export const ExamSchedulingManagementPage: React.FC = () => {
               </div>
             );
           })}
+
+          {/* Pagination Controls */}
+          {pagination.total > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-200 bg-white px-5 py-4 rounded-2xl shadow-xs mt-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-xs font-semibold text-slate-500">
+                  Showing {(page - 1) * limit + 1} to{' '}
+                  {Math.min(page * limit, pagination.total)} of{' '}
+                  <span className="font-bold text-slate-800">{pagination.total}</span> examinations
+                </p>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span>•</span>
+                  <label htmlFor="scheduling-limit-select" className="font-medium text-slate-500">
+                    Per page:
+                  </label>
+                  <select
+                    id="scheduling-limit-select"
+                    value={limit}
+                    onChange={(e) => {
+                      setLimit(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer shadow-2xs"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="rounded-xl text-xs font-bold"
+                >
+                  Previous
+                </Button>
+                <span className="text-xs font-bold text-slate-700 px-2">
+                  Page {page} of {Math.max(1, pagination.totalPages)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+                  disabled={page >= pagination.totalPages}
+                  className="rounded-xl text-xs font-bold"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center p-12 rounded-3xl border border-dashed border-slate-300 bg-white text-center space-y-3">
           <CalendarClock size={32} className="text-slate-400" />
           <h3 className="text-sm font-bold text-slate-800">No Examinations Found</h3>
           <p className="text-xs text-slate-500 max-w-sm">
-            Create an exam to begin the lifecycle authoring, approval, and scheduling workflow.
+            {search || statusFilter !== 'ALL'
+              ? 'No examinations matched your search criteria or status filter. Try clearing filters.'
+              : 'Create an exam to begin the lifecycle authoring, approval, and scheduling workflow.'}
           </p>
         </div>
       )}

@@ -32,7 +32,7 @@ export const StudentComparisonPage: React.FC = () => {
   const fetchComparison = useCallback(async () => {
     const res = await getStudentComparisonAPI({
       examType: examTypeFilter || undefined,
-      limit: 15,
+      limit: 10,
       attemptIds: selectedAttemptIds.length > 0 ? selectedAttemptIds.join(',') : undefined,
     });
     if (res.data) {

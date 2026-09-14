@@ -12,6 +12,8 @@ import {
   RefreshCw,
   Eye,
   Plus,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { toast } from '@/utils/toast';
@@ -86,6 +88,10 @@ export const UploadQuestionPaperPage: React.FC = () => {
   const [scheduledExams, setScheduledExams] = useState<ExamItem[]>([]);
   const [search, setSearch] = useState('');
   const [filterTab, setFilterTab] = useState<'ALL' | 'PENDING' | 'UPLOADED'>('ALL');
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
 
   // ─── Inline Row Progress State Map (examId -> Progress) ───────────────────
   const [rowProgressMap, setRowProgressMap] = useState<Record<string, InlineProgressState>>({});
@@ -96,17 +102,23 @@ export const UploadQuestionPaperPage: React.FC = () => {
 
   // Load Scheduled Exams List
   const loadExams = useCallback(async () => {
-    const res = await getExamsListAPI({ limit: 100, sortBy: 'createdAt', sortOrder: 'desc' });
+    const res = await getExamsListAPI({
+      page,
+      limit,
+      search: search.trim() || undefined,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    });
     if (res.data && res.data.items) {
-      // Show exams that have a schedule or are in SCHEDULED / DRAFT / ACTIVE status
-      const scheduled = res.data.items.filter(
-        (e) => Boolean(e.schedule) || e.status === 'SCHEDULED' || (e.totalQuestions || 0) > 0,
-      );
-      setScheduledExams(scheduled);
+      setScheduledExams(res.data.items);
+      if (res.data.pagination) {
+        setTotalCount(res.data.pagination.total);
+        setTotalPages(res.data.pagination.totalPages);
+      }
 
       // Initialize row progress for any exams currently in PROCESSING status
       const initialProgress: Record<string, InlineProgressState> = {};
-      scheduled.forEach((exam) => {
+      res.data.items.forEach((exam) => {
         if (exam.questionPaperStatus === 'PROCESSING' || exam.id === activeExamIdFromUrl) {
           const total = exam.totalRows || exam.totalQuestions || 100;
           const current = exam.validRows || 0;
@@ -124,7 +136,7 @@ export const UploadQuestionPaperPage: React.FC = () => {
         setRowProgressMap((prev) => ({ ...prev, ...initialProgress }));
       }
     }
-  }, [getExamsListAPI, activeExamIdFromUrl]);
+  }, [getExamsListAPI, activeExamIdFromUrl, page, limit, search]);
 
   useEffect(() => {
     loadExams();
@@ -637,6 +649,59 @@ export const UploadQuestionPaperPage: React.FC = () => {
                   })}
                 </tbody>
               </table>
+            </div>
+
+            {/* ── Pagination Controls ── */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 p-4 text-xs font-semibold">
+              <div className="flex items-center gap-3">
+                <span className="text-slate-500">
+                  Showing <b>{totalCount === 0 ? 0 : (page - 1) * limit + 1}</b>–<b>{Math.min(page * limit, totalCount)}</b> of{' '}
+                  <b>{totalCount}</b> scheduled exams
+                </span>
+                <div className="flex items-center gap-1.5 text-slate-500 border-l border-slate-200 pl-3">
+                  <span>Per page:</span>
+                  <select
+                    value={limit}
+                    onChange={(e) => {
+                      setLimit(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 outline-none focus:border-indigo-500"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="flex items-center gap-1"
+                  >
+                    <ChevronLeft size={14} />
+                    <span>Previous</span>
+                  </Button>
+                  <span className="px-2 text-slate-700 font-bold">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    className="flex items-center gap-1"
+                  >
+                    <span>Next</span>
+                    <ChevronRight size={14} />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -13,6 +13,8 @@ import {
   Sparkles,
   AlertCircle,
   FileCheck,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { toast } from '@/utils/toast';
@@ -42,6 +44,10 @@ export const OperatorScheduledExamsPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [selectedTarget, setSelectedTarget] = useState<string>('ALL');
   const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // ─── Modals State ─────────────────────────────────────────────────────────
   const [uploadTargetExam, setUploadTargetExam] = useState<ExamItem | null>(null);
@@ -69,7 +75,8 @@ export const OperatorScheduledExamsPage: React.FC = () => {
     const res = await getExamsListAPI({
       missingQuestionPaperOnly: true,
       search: search.trim() || undefined,
-      limit: 50,
+      page,
+      limit,
       sortBy: 'createdAt',
       sortOrder: 'desc',
     });
@@ -77,8 +84,11 @@ export const OperatorScheduledExamsPage: React.FC = () => {
 
     if (res.data?.items) {
       setExams(res.data.items);
+      const totalCount = res.data.meta?.total ?? res.data.items.length;
+      setTotal(totalCount);
+      setTotalPages(res.data.meta?.totalPages ?? (Math.ceil(totalCount / limit) || 1));
     }
-  }, [getExamsListAPI, search]);
+  }, [getExamsListAPI, search, page, limit]);
 
   useEffect(() => {
     loadExams();
@@ -460,6 +470,50 @@ export const OperatorScheduledExamsPage: React.FC = () => {
             </table>
           </div>
         )}
+
+        {/* ─── Pagination Footer ───────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 bg-slate-50/50 px-4 py-3 text-xs text-slate-500 gap-3">
+          <div className="flex items-center gap-3">
+            <span>
+              Showing <strong>{exams.length}</strong> of <strong>{total}</strong> exams
+            </span>
+            <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+              <span className="text-slate-400">Rows:</span>
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:border-blue-600 focus:outline-none"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="px-3 font-semibold text-slate-700">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Upload Question Paper Modal */}

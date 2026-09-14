@@ -91,7 +91,7 @@ export const AdminApprovalQueuePage: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [page, setPage] = useState<number>(1);
-  const pageSize = 15;
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // Selection & Modals
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -801,11 +801,29 @@ export const AdminApprovalQueuePage: React.FC = () => {
         )}
 
         {/* ── 6. Server-Side Pagination Controls ─────────────────────────── */}
-        {meta.pages > 1 && (
+        {meta.total > 0 && (
           <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100 pt-4 text-xs font-bold text-slate-600">
-            <div>
-              Showing page {meta.page} of {meta.pages} ({meta.total} total items)
+            <div className="flex items-center gap-3">
+              <div>
+                Showing page {meta.page} of {meta.pages} ({meta.total} total items)
+              </div>
+              <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+                <span className="text-slate-400 font-normal">Rows:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:outline-none"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
             </div>
+
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -814,10 +832,10 @@ export const AdminApprovalQueuePage: React.FC = () => {
               >
                 <ChevronLeft className="h-4 w-4" /> Previous
               </button>
-              <span className="px-2">{page} / {meta.pages}</span>
+              <span className="px-2">{page} / {meta.pages || 1}</span>
               <button
-                onClick={() => setPage((p) => Math.min(meta.pages, p + 1))}
-                disabled={page >= meta.pages || isLoadingItems}
+                onClick={() => setPage((p) => Math.min(meta.pages || 1, p + 1))}
+                disabled={page >= (meta.pages || 1) || isLoadingItems}
                 className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 shadow-xs hover:bg-slate-50 disabled:opacity-40"
               >
                 Next <ChevronRight className="h-4 w-4" />

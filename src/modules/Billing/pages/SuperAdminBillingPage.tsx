@@ -234,7 +234,7 @@ export const SuperAdminBillingPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [search, setSearch] = useState<string>('');
   const [page, setPage] = useState<number>(1);
-  const [pageSize] = useState<number>(15);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // Single school row generation loading state
   const [generatingSchoolId, setGeneratingSchoolId] = useState<string | null>(null);
@@ -1546,11 +1546,28 @@ export const SuperAdminBillingPage: React.FC = () => {
         )}
 
         {/* Pagination Footer */}
-        {meta.pages > 1 && (
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between text-sm text-slate-500 bg-white">
-            <span>
-              Showing page {page} of {meta.pages} ({meta.total} total records)
-            </span>
+        {meta.total > 0 && (
+          <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 bg-white">
+            <div className="flex items-center gap-3">
+              <span>
+                Showing page {page} of {meta.pages || 1} ({meta.total} total records)
+              </span>
+              <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+                <span className="text-slate-400">Rows:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:outline-none"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -1563,7 +1580,7 @@ export const SuperAdminBillingPage: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page >= meta.pages}
+                disabled={page >= (meta.pages || 1)}
                 onClick={() => setPage((p) => p + 1)}
               >
                 Next

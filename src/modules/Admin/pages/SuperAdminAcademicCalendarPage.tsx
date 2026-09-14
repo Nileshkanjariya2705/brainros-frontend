@@ -503,7 +503,7 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
   // ── State ───────────────────────────────────────────────────────────────────
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [page, setPage] = useState<number>(1);
-  const limit = 20;
+  const [limit, setLimit] = useState<number>(10);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -911,13 +911,34 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
           </div>
 
           {/* Server-Side Pagination Controls */}
-          {eventsData?.meta && eventsData.meta.pages > 1 && (
+          {eventsData?.meta && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-200 bg-white px-5 py-4 rounded-2xl shadow-xs">
-              <p className="text-xs font-semibold text-slate-500">
-                Showing {(eventsData.meta.page - 1) * eventsData.meta.limit + 1} to{' '}
-                {Math.min(eventsData.meta.page * eventsData.meta.limit, eventsData.meta.total)} of{' '}
-                {eventsData.meta.total} entries
-              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-xs font-semibold text-slate-500">
+                  Showing {events.length === 0 ? 0 : (eventsData.meta.page - 1) * eventsData.meta.limit + 1} to{' '}
+                  {Math.min(eventsData.meta.page * eventsData.meta.limit, eventsData.meta.total)} of{' '}
+                  <span className="font-bold text-slate-700">{eventsData.meta.total}</span> entries
+                </p>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span>•</span>
+                  <label htmlFor="calendar-limit-select" className="font-medium text-slate-500">
+                    Per page:
+                  </label>
+                  <select
+                    id="calendar-limit-select"
+                    value={limit}
+                    onChange={(e) => {
+                      setLimit(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer shadow-2xs"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
 
               <div className="flex items-center gap-2">
                 <Button
@@ -930,13 +951,13 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
                   Previous
                 </Button>
                 <span className="text-xs font-bold text-slate-700 px-2">
-                  Page {eventsData.meta.page} of {eventsData.meta.pages}
+                  Page {eventsData.meta.page} of {Math.max(1, eventsData.meta.pages || 1)}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage((p) => Math.min(eventsData.meta.pages, p + 1))}
-                  disabled={eventsData.meta.page >= eventsData.meta.pages}
+                  onClick={() => setPage((p) => Math.min(eventsData.meta.pages || 1, p + 1))}
+                  disabled={eventsData.meta.page >= (eventsData.meta.pages || 1)}
                   className="rounded-xl text-xs font-bold"
                 >
                   Next

@@ -19,6 +19,7 @@ import {
   useSubmitQuestionPaperUploadAPI,
   downloadQuestionPaperTemplate,
   useGetExamsListAPI,
+  useGetExamByIdAPI,
 } from '../services/examManager.service';
 import type {
   QuestionPaperPreviewResult,
@@ -44,6 +45,7 @@ export const UploadExamQuestionPaperPage: React.FC = () => {
 
   // ─── Exam Details State ───────────────────────────────────────────────────
   const [exam, setExam] = useState<ExamItem | null>(null);
+  const { getExamByIdAPI } = useGetExamByIdAPI();
   const { getExamsListAPI } = useGetExamsListAPI();
 
   // ─── File & Preview State ─────────────────────────────────────────────────
@@ -62,14 +64,21 @@ export const UploadExamQuestionPaperPage: React.FC = () => {
   // Load target exam metadata
   useEffect(() => {
     if (examId) {
-      getExamsListAPI({ limit: 100 }).then((res) => {
-        if (res.data?.items) {
-          const found = res.data.items.find((e) => e.id === examId);
-          if (found) setExam(found);
+      getExamByIdAPI(examId).then((res) => {
+        if (res.data) {
+          setExam(res.data);
+        } else {
+          // Fallback to query with limit 1
+          getExamsListAPI({ page: 1, limit: 10 }).then((fallbackRes) => {
+            if (fallbackRes.data?.items) {
+              const found = fallbackRes.data.items.find((e) => e.id === examId);
+              if (found) setExam(found);
+            }
+          });
         }
       });
     }
-  }, [examId, getExamsListAPI]);
+  }, [examId, getExamByIdAPI, getExamsListAPI]);
 
   // ─── File Validation & Preview ────────────────────────────────────────────
   const handleFileSelection = useCallback(

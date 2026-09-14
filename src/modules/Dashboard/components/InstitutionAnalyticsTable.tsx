@@ -56,7 +56,7 @@ export const InstitutionAnalyticsTable: React.FC<InstitutionAnalyticsTableProps>
 
   // Ensure descending sort by student count
   const institutions = [...rawInstitutions].sort((a, b) => b.studentCount - a.studentCount);
-  const meta = data?.meta || { page: 1, limit: 50, pages: 1 };
+  const meta = data?.meta || { page: 1, limit: 10, pages: 1 };
   const maxStudentCount = Math.max(...institutions.map((i) => i.studentCount), 1);
 
   return (

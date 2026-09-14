@@ -23,7 +23,7 @@ export const InstitutionRankListPage: React.FC = () => {
   const [selectedExamId, setSelectedExamId] = useState<string>('');
   const [rankBatchId, setRankBatchId] = useState<string>('');
   const [rankPage, setRankPage] = useState(1);
-  const rankLimit = 15;
+  const [rankLimit, setRankLimit] = useState(10);
 
   // ── Queries ──
   const { data: batchesData = [] } = useInstitutionBatchesQuery();
@@ -275,16 +275,33 @@ export const InstitutionRankListPage: React.FC = () => {
         {/* Rank List Pagination */}
         {rankMeta.totalPages > 0 && (
           <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 bg-slate-50/50 px-5 py-3.5 gap-4">
-            <div className="text-xs text-slate-500">
-              Showing rank{' '}
-              <span className="font-bold text-slate-800">
-                {(rankPage - 1) * rankLimit + (rankList.length > 0 ? 1 : 0)}
-              </span>{' '}
-              to{' '}
-              <span className="font-bold text-slate-800">
-                {Math.min(rankPage * rankLimit, rankMeta.total)}
-              </span>{' '}
-              of <span className="font-bold text-slate-800">{rankMeta.total}</span> ranked students
+            <div className="flex items-center gap-3">
+              <div className="text-xs text-slate-500">
+                Showing rank{' '}
+                <span className="font-bold text-slate-800">
+                  {(rankPage - 1) * rankLimit + (rankList.length > 0 ? 1 : 0)}
+                </span>{' '}
+                to{' '}
+                <span className="font-bold text-slate-800">
+                  {Math.min(rankPage * rankLimit, rankMeta.total)}
+                </span>{' '}
+                of <span className="font-bold text-slate-800">{rankMeta.total}</span> ranked students
+              </div>
+              <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+                <span className="text-slate-400 text-xs">Rows:</span>
+                <select
+                  value={rankLimit}
+                  onChange={(e) => {
+                    setRankLimit(Number(e.target.value));
+                    setRankPage(1);
+                  }}
+                  className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:outline-none"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex items-center gap-1">

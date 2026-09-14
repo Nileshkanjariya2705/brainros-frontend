@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { RefreshCw, Code } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { RefreshCw, Code, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Axios } from '@/base-axios';
 import { AuditLogItem } from '@/types/exam.types';
 
@@ -9,10 +9,10 @@ export const AdminAuditLogsPage: React.FC = () => {
   const [actionFilter, setActionFilter] = useState<string>('');
   const [entityFilter, setEntityFilter] = useState<string>('');
   const [inspectLog, setInspectLog] = useState<AuditLogItem | null>(null);
-
-  useEffect(() => {
-    fetchAuditLogs();
-  }, [actionFilter, entityFilter]);
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
+  const [total, setTotal] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
 
   const getArrayData = (response: any): any[] => {
     if (!response) return [];
@@ -22,21 +22,32 @@ export const AdminAuditLogsPage: React.FC = () => {
     return [];
   };
 
-  const fetchAuditLogs = async () => {
+  const fetchAuditLogs = useCallback(async () => {
     try {
       setLoading(true);
-      const params: any = {};
+      const params: any = {
+        page,
+        limit,
+      };
       if (actionFilter) params.action = actionFilter;
       if (entityFilter) params.entityType = entityFilter;
 
       const res = await Axios.get('/admin/audit-logs', { params });
-      setLogs(getArrayData(res));
+      const items = getArrayData(res);
+      setLogs(items);
+      const count = res.data?.meta?.total ?? items.length;
+      setTotal(count);
+      setTotalPages(res.data?.meta?.pages ?? (Math.ceil(count / limit) || 1));
     } catch (err) {
       console.error('Failed to load audit logs', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [actionFilter, entityFilter, page, limit]);
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, [fetchAuditLogs]);
 
   return (
     <div className="space-y-6 pb-12">
@@ -150,6 +161,50 @@ export const AdminAuditLogsPage: React.FC = () => {
               </tbody>
             </table>
           )}
+        </div>
+
+        {/* ─── Pagination Footer ───────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 text-xs text-slate-500 gap-3">
+          <div className="flex items-center gap-3">
+            <span>
+              Showing <strong>{logs.length}</strong> of <strong>{total}</strong> audit records
+            </span>
+            <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+              <span className="text-slate-400">Rows:</span>
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:outline-none"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || loading}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="px-3 font-semibold text-slate-700">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || loading}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 

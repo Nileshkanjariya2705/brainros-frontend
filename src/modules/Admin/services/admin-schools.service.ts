@@ -102,7 +102,7 @@ export const AdminSchoolsApi = {
         data: payload.data,
         meta: payload.meta || {
           page: params?.page || 1,
-          limit: params?.limit || 20,
+          limit: params?.limit || 10,
           total: payload.data.length,
           totalPages: 1,
         },
@@ -115,7 +115,7 @@ export const AdminSchoolsApi = {
         data: payload.data.data,
         meta: payload.data.meta || {
           page: params?.page || 1,
-          limit: params?.limit || 20,
+          limit: params?.limit || 10,
           total: payload.data.data.length,
           totalPages: 1,
         },
@@ -128,7 +128,7 @@ export const AdminSchoolsApi = {
         data: payload,
         meta: {
           page: params?.page || 1,
-          limit: params?.limit || 20,
+          limit: params?.limit || 10,
           total: payload.length,
           totalPages: 1,
         },

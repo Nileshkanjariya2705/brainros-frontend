@@ -33,6 +33,8 @@ export const ChapterManagementPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -134,6 +136,14 @@ export const ChapterManagementPage: React.FC = () => {
       return true;
     });
   }, [chapters, selectedSubjectFilter, selectedStatusFilter, searchQuery]);
+
+  // ─── Pagination Calculations ─────────────────────────────────
+  const totalItems = filteredChapters.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedChapters = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredChapters.slice(start, start + pageSize);
+  }, [filteredChapters, currentPage, pageSize]);
 
   // ─── Stats / Counts ──────────────────────────────────────────
   const stats = useMemo(() => {
@@ -515,12 +525,18 @@ export const ChapterManagementPage: React.FC = () => {
             type="text"
             placeholder="Search chapters by name, code, or subject..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
             className="w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-10 pr-4 py-2.5 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
           />
           {searchQuery && (
             <button
-              onClick={() => setSearchQuery('')}
+              onClick={() => {
+                setSearchQuery('');
+                setCurrentPage(1);
+              }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
               <X size={14} />
@@ -535,7 +551,10 @@ export const ChapterManagementPage: React.FC = () => {
             <label className="text-xs font-bold text-slate-600 whitespace-nowrap">Subject:</label>
             <select
               value={selectedSubjectFilter}
-              onChange={(e) => setSelectedSubjectFilter(e.target.value)}
+              onChange={(e) => {
+                setSelectedSubjectFilter(e.target.value);
+                setCurrentPage(1);
+              }}
               className="rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-xs font-semibold text-slate-800 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
             >
               <option value="ALL">All Subjects</option>
@@ -552,7 +571,10 @@ export const ChapterManagementPage: React.FC = () => {
             <label className="text-xs font-bold text-slate-600 whitespace-nowrap">Status:</label>
             <select
               value={selectedStatusFilter}
-              onChange={(e) => setSelectedStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setSelectedStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
               className="rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-xs font-semibold text-slate-800 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
             >
               <option value="ALL">All Status</option>
@@ -607,7 +629,7 @@ export const ChapterManagementPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                  {filteredChapters.map((chapter, index) => {
+                  {paginatedChapters.map((chapter, index) => {
                     const subjectName = chapter.subject?.name ? formatSubjectDisplayName(chapter.subject.name) : '—';
                     const hasQuestions = (chapter._count?.questions || 0) > 0;
                     const hasTopics = (chapter._count?.topics || 0) > 0;
@@ -618,7 +640,7 @@ export const ChapterManagementPage: React.FC = () => {
                         <td className="py-3.5 pl-6 pr-3">
                           <div className="flex items-center gap-1.5">
                             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 font-extrabold text-[11px] text-slate-700">
-                              {chapter.displayOrder || index + 1}
+                              {chapter.displayOrder || (currentPage - 1) * pageSize + index + 1}
                             </span>
                             <div className="flex flex-col">
                               <button
@@ -729,7 +751,7 @@ export const ChapterManagementPage: React.FC = () => {
 
             {/* Mobile / Tablet Responsive Cards */}
             <div className="block lg:hidden divide-y divide-slate-100 p-3 space-y-3">
-              {filteredChapters.map((chapter, index) => {
+              {paginatedChapters.map((chapter, index) => {
                 const subjectName = chapter.subject?.name ? formatSubjectDisplayName(chapter.subject.name) : '—';
                 const hasQuestions = (chapter._count?.questions || 0) > 0;
                 const hasTopics = (chapter._count?.topics || 0) > 0;
@@ -743,7 +765,7 @@ export const ChapterManagementPage: React.FC = () => {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="flex h-5 w-5 items-center justify-center rounded-md bg-slate-100 font-extrabold text-[10px] text-slate-700">
-                            #{chapter.displayOrder || index + 1}
+                            #{chapter.displayOrder || (currentPage - 1) * pageSize + index + 1}
                           </span>
                           <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-800">
                             {subjectName}
@@ -809,6 +831,62 @@ export const ChapterManagementPage: React.FC = () => {
                 );
               })}
             </div>
+
+            {/* Pagination Controls */}
+            {totalItems > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 bg-slate-50/60 px-6 py-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-xs font-semibold text-slate-500">
+                    Showing {(currentPage - 1) * pageSize + 1} to{' '}
+                    {Math.min(currentPage * pageSize, totalItems)} of{' '}
+                    <span className="font-bold text-slate-800">{totalItems}</span> chapters
+                  </p>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <span>•</span>
+                    <label htmlFor="chapter-page-size" className="font-medium text-slate-500">
+                      Per page:
+                    </label>
+                    <select
+                      id="chapter-page-size"
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer shadow-2xs"
+                    >
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1}
+                    className="rounded-xl text-xs font-bold"
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-xs font-bold text-slate-700 px-2">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                    className="rounded-xl text-xs font-bold"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

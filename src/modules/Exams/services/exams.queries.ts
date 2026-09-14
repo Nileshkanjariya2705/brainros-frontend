@@ -37,7 +37,7 @@ export const useStudentExamsQuery = (params: Record<string, any> = {}) =>
             : [];
       const meta = raw?.meta || raw?.data?.meta || {
         page: params.page || 1,
-        limit: params.limit || 12,
+        limit: params.limit || 10,
         total: data.length,
         totalPages: 1,
       };
@@ -216,7 +216,7 @@ export const useStudentExamHistoryQuery = (params: Record<string, any> = {}) =>
             : [];
       const meta = raw?.meta || raw?.data?.meta || {
         page: params.page || 1,
-        limit: params.limit || 20,
+        limit: params.limit || 10,
         total: data.length,
         totalPages: 1,
       };

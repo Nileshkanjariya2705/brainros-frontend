@@ -30,7 +30,7 @@ export const SalesAgentPerformanceTable: React.FC<SalesAgentPerformanceTableProp
   };
 
   const agents = data?.data || [];
-  const meta = data?.meta || { page: 1, limit: 20, pages: 1 };
+  const meta = data?.meta || { page: 1, limit: 10, pages: 1 };
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">

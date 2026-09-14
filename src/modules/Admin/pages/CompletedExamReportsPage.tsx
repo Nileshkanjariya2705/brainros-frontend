@@ -43,7 +43,7 @@ export const CompletedExamReportsPage: React.FC = () => {
   const [loadingAttendees, setLoadingAttendees] = useState<boolean>(false);
   const [totalAttendees, setTotalAttendees] = useState<number>(0);
   const [page, setPage] = useState<number>(1);
-  const [limit] = useState<number>(20);
+  const [limit, setLimit] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
 
   // Filters & Sorting
@@ -946,9 +946,26 @@ export const CompletedExamReportsPage: React.FC = () => {
 
         {/* Pagination Bar */}
         <div className="bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
-          <div>
-            Showing <span className="font-semibold text-slate-900">{attendees.length}</span> of{' '}
-            <span className="font-semibold text-slate-900">{totalAttendees.toLocaleString()}</span> attendees
+          <div className="flex items-center gap-3">
+            <div>
+              Showing <span className="font-semibold text-slate-900">{attendees.length}</span> of{' '}
+              <span className="font-semibold text-slate-900">{totalAttendees.toLocaleString()}</span> attendees
+            </div>
+            <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+              <span className="text-slate-400">Rows:</span>
+              <select
+                value={limit}
+                onChange={(e) => {
+                  setLimit(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:outline-none"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">

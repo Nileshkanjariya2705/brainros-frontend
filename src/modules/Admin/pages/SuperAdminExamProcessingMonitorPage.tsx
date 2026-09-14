@@ -59,9 +59,11 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
     let isMounted = true;
     const fetchExams = async () => {
       try {
-        const res = await getPublicationDashboardAPI();
+        const res = await getPublicationDashboardAPI({ limit: 50 });
         let rawList: any[] = Array.isArray(res.data)
           ? res.data
+          : Array.isArray((res.data as any)?.items)
+          ? (res.data as any).items
           : Array.isArray((res.data as any)?.data)
           ? (res.data as any).data
           : Array.isArray(res.response?.data?.data)
@@ -122,12 +124,13 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchInput.trim());
+      setPage(1);
     }, 300);
     return () => clearTimeout(handler);
   }, [searchInput]);
 
   const [page, setPage] = useState(1);
-  const [limit] = useState(10);
+  const [limit, setLimit] = useState(10);
   const sortBy = 'updatedAt';
   const sortOrder: 'asc' | 'desc' = 'desc';
 
@@ -747,29 +750,55 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
         </div>
 
         {/* Server-Side Pagination Bar */}
-        {jobsData?.pagination && jobsData.pagination.totalPages > 1 && (
-          <div className="p-4 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-500">
-            <div>
-              Showing page {jobsData.pagination.page} of {jobsData.pagination.totalPages} ({jobsData.pagination.total} total candidate jobs)
+        {jobsData?.pagination && (
+          <div className="p-4 border-t border-slate-100 dark:border-slate-700/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div className="flex items-center gap-3">
+              <span>
+                Showing <b>{jobsData.pagination.total === 0 ? 0 : (page - 1) * limit + 1}</b>–<b>{Math.min(page * limit, jobsData.pagination.total)}</b> of{' '}
+                <b>{jobsData.pagination.total}</b> candidate jobs
+              </span>
+              <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 border-l border-slate-200 dark:border-slate-700 pl-3">
+                <span>Per page:</span>
+                <select
+                  value={limit}
+                  onChange={(e) => {
+                    setLimit(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                size="xs"
-                variant="outline"
-                disabled={jobsData.pagination.page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Previous
-              </Button>
-              <Button
-                size="xs"
-                variant="outline"
-                disabled={jobsData.pagination.page >= jobsData.pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
-              </Button>
-            </div>
+
+            {jobsData.pagination.totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="xs"
+                  variant="outline"
+                  disabled={jobsData.pagination.page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="flex items-center gap-1"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Previous
+                </Button>
+                <span className="px-2 font-bold text-slate-700 dark:text-slate-200">
+                  Page {jobsData.pagination.page} of {jobsData.pagination.totalPages}
+                </span>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  disabled={jobsData.pagination.page >= jobsData.pagination.totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="flex items-center gap-1"
+                >
+                  Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

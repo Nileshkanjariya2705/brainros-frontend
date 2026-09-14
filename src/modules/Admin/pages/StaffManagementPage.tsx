@@ -43,6 +43,7 @@ export const StaffManagementPage: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -71,11 +72,11 @@ export const StaffManagementPage: React.FC = () => {
     isFetching,
     refetch,
   } = useQuery({
-    queryKey: ['admin-staff', page, search, roleFilter, statusFilter],
+    queryKey: ['admin-staff', page, limit, search, roleFilter, statusFilter],
     queryFn: () =>
       AdminStaffApi.getStaffList({
         page,
-        limit: 50,
+        limit,
         search: search.trim() || undefined,
         role: roleFilter || undefined,
         status: statusFilter || undefined,
@@ -99,8 +100,10 @@ export const StaffManagementPage: React.FC = () => {
     return {
       total: p?.total ?? staffList.length,
       totalPages: p?.totalPages || p?.pages || 1,
+      page: p?.page ?? page,
+      limit: p?.limit ?? limit,
     };
-  }, [staffData, staffList]);
+  }, [staffData, staffList, page, limit]);
 
   // Create Staff Mutation
   const createMutation = useMutation({
@@ -415,25 +418,54 @@ export const StaffManagementPage: React.FC = () => {
         )}
 
         {/* Pagination Footer */}
-        {pagination.totalPages > 1 && (
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between text-sm text-slate-500">
-            <span>
-              Showing page {page} of {pagination.totalPages} ({pagination.total} total staff)
-            </span>
+        {pagination.total > 0 && (
+          <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 bg-slate-50/50">
+            <div className="flex flex-wrap items-center gap-3">
+              <span>
+                Showing {(page - 1) * limit + 1} to{' '}
+                {Math.min(page * limit, pagination.total)} of{' '}
+                <span className="font-bold text-slate-800">{pagination.total}</span> staff members
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span>•</span>
+                <label htmlFor="staff-limit-select" className="font-medium text-slate-500">
+                  Per page:
+                </label>
+                <select
+                  id="staff-limit-select"
+                  value={limit}
+                  onChange={(e) => {
+                    setLimit(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer shadow-2xs"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="rounded-xl text-xs font-bold"
               >
                 Previous
               </Button>
+              <span className="text-xs font-bold text-slate-700 px-2">
+                Page {page} of {Math.max(1, pagination.totalPages)}
+              </span>
               <Button
                 variant="outline"
                 size="sm"
                 disabled={page >= pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+                className="rounded-xl text-xs font-bold"
               >
                 Next
               </Button>

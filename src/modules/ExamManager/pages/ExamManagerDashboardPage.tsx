@@ -40,7 +40,7 @@ export const ExamManagerDashboardPage: React.FC = () => {
   const [totalCount, setTotalCount] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [page, setPage] = useState<number>(1);
-  const [limit] = useState<number>(20);
+  const [limit, setLimit] = useState<number>(10);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -372,13 +372,30 @@ export const ExamManagerDashboardPage: React.FC = () => {
           </div>
 
           {/* ── Pagination Controls ──────────────────────────────── */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 text-xs font-semibold">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-xs font-semibold shadow-xs">
+            <div className="flex items-center gap-3">
               <span className="text-slate-500">
-                Showing <b>{(page - 1) * limit + 1}</b>–<b>{Math.min(page * limit, totalCount)}</b> of{' '}
+                Showing <b>{totalCount === 0 ? 0 : (page - 1) * limit + 1}</b>–<b>{Math.min(page * limit, totalCount)}</b> of{' '}
                 <b>{totalCount}</b> exams
               </span>
+              <div className="flex items-center gap-1.5 text-slate-500 border-l border-slate-200 pl-3">
+                <span>Per page:</span>
+                <select
+                  value={limit}
+                  onChange={(e) => {
+                    setLimit(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-700 outline-none focus:border-indigo-500"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
 
+            {totalPages > 1 && (
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
@@ -404,8 +421,8 @@ export const ExamManagerDashboardPage: React.FC = () => {
                   <ChevronRight size={14} />
                 </Button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>

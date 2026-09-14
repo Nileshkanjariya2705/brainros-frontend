@@ -845,12 +845,32 @@ export const useGetAttemptResultStatusAPI = () => {
 export const useGetPublicationDashboardAPI = () => {
   const [get, state] = useAxiosGet();
   const getPublicationDashboardAPI = useCallback(
-    () =>
-      get<{
+    (params?: { page?: number; limit?: number; search?: string; status?: string }) => {
+      const queryParts: string[] = [];
+      if (params?.page) queryParts.push(`page=${params.page}`);
+      if (params?.limit) queryParts.push(`limit=${params.limit}`);
+      if (params?.search && params.search.trim())
+        queryParts.push(`search=${encodeURIComponent(params.search.trim())}`);
+      if (params?.status && params.status !== 'ALL')
+        queryParts.push(`status=${params.status}`);
+      const qs = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+      return get<{
         statusCode: number;
         message: string;
-        data: PublicationDashboardItem[];
-      }>('/admin/exams/results/publication-dashboard'),
+        data: {
+          items: PublicationDashboardItem[];
+          summary?: {
+            totalMonitored: number;
+          };
+          pagination: {
+            total: number;
+            page: number;
+            limit: number;
+            totalPages: number;
+          };
+        } | PublicationDashboardItem[];
+      }>(`/admin/exams/results/publication-dashboard${qs}`);
+    },
     [get],
   );
   return { getPublicationDashboardAPI, ...state };

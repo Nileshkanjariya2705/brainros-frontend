@@ -47,7 +47,7 @@ export const SuperAdminRegistrationsPage: React.FC = () => {
 
   // Pagination & Sorting state
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 

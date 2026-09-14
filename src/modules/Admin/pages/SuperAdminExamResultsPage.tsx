@@ -18,6 +18,8 @@ import {
   FileCheck2,
   HelpCircle,
   Activity,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 // ** Services **
@@ -56,6 +58,11 @@ export const SuperAdminExamResultsPage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<
     'ALL' | 'READY_TO_PUBLISH' | 'PROCESSING' | 'PUBLISHED'
   >('ALL');
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
+  const [totalCount, setTotalCount] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalMonitored, setTotalMonitored] = useState<number>(0);
 
   // Modal State
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
@@ -67,18 +74,35 @@ export const SuperAdminExamResultsPage: React.FC = () => {
 
   // Load publication dashboard
   const loadDashboard = useCallback(async () => {
-    const res = await getPublicationDashboardAPI();
-    const rawList: any[] = Array.isArray(res.data)
-      ? res.data
-      : Array.isArray((res.data as any)?.data)
-      ? (res.data as any).data
-      : Array.isArray(res.response?.data?.data)
-      ? res.response.data.data
-      : [];
-    if (rawList.length > 0) {
+    const res = await getPublicationDashboardAPI({
+      page,
+      limit,
+      search: searchQuery.trim() || undefined,
+      status: filterStatus,
+    });
+    const payload = res.data;
+    if (payload && (payload as any).items) {
+      setExams((payload as any).items);
+      if ((payload as any).pagination) {
+        setTotalCount((payload as any).pagination.total);
+        setTotalPages((payload as any).pagination.totalPages);
+      }
+      if ((payload as any).summary?.totalMonitored !== undefined) {
+        setTotalMonitored((payload as any).summary.totalMonitored);
+      }
+    } else {
+      const rawList: any[] = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray((res.data as any)?.data)
+        ? (res.data as any).data
+        : Array.isArray(res.response?.data?.data)
+        ? res.response.data.data
+        : [];
       setExams(rawList);
+      setTotalCount(rawList.length);
+      setTotalPages(1);
     }
-  }, [getPublicationDashboardAPI]);
+  }, [getPublicationDashboardAPI, page, limit, searchQuery, filterStatus]);
 
   const loadDashboardRef = useRef(loadDashboard);
   useEffect(() => {
@@ -87,11 +111,7 @@ export const SuperAdminExamResultsPage: React.FC = () => {
 
   useEffect(() => {
     loadDashboardRef.current();
-    const interval = setInterval(() => {
-      loadDashboardRef.current();
-    }, 10000); // Stable polling every 10s
-    return () => clearInterval(interval);
-  }, []);
+  }, [page, limit, searchQuery, filterStatus]);
 
   // Open Preview & Confirmation Modal
   const handleOpenPublishModal = async (examId: string) => {
@@ -205,7 +225,7 @@ export const SuperAdminExamResultsPage: React.FC = () => {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-slate-900 dark:text-white">
-              {exams.length}
+              {totalMonitored || totalCount || exams.length}
             </span>
             <span className="text-xs text-slate-500">Exams recorded</span>
           </div>
@@ -273,7 +293,10 @@ export const SuperAdminExamResultsPage: React.FC = () => {
             type="text"
             placeholder="Search exam title, target exam..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
             className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
@@ -283,7 +306,10 @@ export const SuperAdminExamResultsPage: React.FC = () => {
             (status) => (
               <button
                 key={status}
-                onClick={() => setFilterStatus(status)}
+                onClick={() => {
+                  setFilterStatus(status);
+                  setPage(1);
+                }}
                 className={cn(
                   'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap',
                   filterStatus === status
@@ -509,6 +535,59 @@ export const SuperAdminExamResultsPage: React.FC = () => {
                 })}
               </tbody>
             </table>
+
+            {/* ── Pagination Controls ── */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30 p-4 text-xs font-semibold">
+              <div className="flex items-center gap-3">
+                <span className="text-slate-500 dark:text-slate-400">
+                  Showing <b>{totalCount === 0 ? 0 : (page - 1) * limit + 1}</b>–<b>{Math.min(page * limit, totalCount)}</b> of{' '}
+                  <b>{totalCount}</b> exams
+                </span>
+                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 border-l border-slate-200 dark:border-slate-700 pl-3">
+                  <span>Per page:</span>
+                  <select
+                    value={limit}
+                    onChange={(e) => {
+                      setLimit(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="flex items-center gap-1"
+                  >
+                    <ChevronLeft size={14} />
+                    <span>Previous</span>
+                  </Button>
+                  <span className="px-2 text-slate-700 dark:text-slate-200 font-bold">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    className="flex items-center gap-1"
+                  >
+                    <span>Next</span>
+                    <ChevronRight size={14} />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

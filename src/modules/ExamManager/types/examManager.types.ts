@@ -269,7 +269,13 @@ export interface ExamQuestionPaperDetail {
 
 export interface ExamListResponse {
   items: ExamItem[];
-  pagination: {
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+  meta?: {
     total: number;
     page: number;
     limit: number;

@@ -97,7 +97,7 @@ export const StudentNotificationsPage: React.FC = () => {
   const queryParams = useMemo(
     () => ({
       page: currentPage,
-      limit: 15,
+      limit: 10,
       unreadOnly: activeTab === 'UNREAD' ? true : undefined,
     }),
     [currentPage, activeTab],

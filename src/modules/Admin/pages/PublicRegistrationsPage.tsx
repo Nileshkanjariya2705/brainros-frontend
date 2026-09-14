@@ -325,7 +325,7 @@ const DeactivateModal: React.FC<DeactivateModalProps> = ({
 export const PublicRegistrationsPage: React.FC = () => {
   // Query Filter State
   const [page, setPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(20);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [search, setSearch] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('createdAt');
