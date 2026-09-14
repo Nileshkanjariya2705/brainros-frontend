@@ -1,55 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import { Users, Calendar, CheckCircle } from 'lucide-react';
-import { Axios } from '@/base-axios';
 import { BatchItem, BatchStudentItem } from '@/types/exam.types';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
+import {
+  useInstitutionBatchesQuery,
+  useInstitutionBatchStudentsQuery,
+} from '../services/institutionDashboard.service';
 
 export const BatchManagementPage: React.FC = () => {
-  const [batches, setBatches] = useState<BatchItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [selectedBatch, setSelectedBatch] = useState<BatchItem | null>(null);
-  const [students, setStudents] = useState<BatchStudentItem[]>([]);
-  const [loadingStudents, setLoadingStudents] = useState<boolean>(false);
+  const { data: rawBatches = [], isLoading: loading } = useInstitutionBatchesQuery();
+  const batches: BatchItem[] = (rawBatches as any) || [];
 
+  const [selectedBatchId, setSelectedBatchId] = useState<string>('');
+
+  // Default select first batch when loaded
   useEffect(() => {
-    fetchBatches();
-  }, []);
-
-  const getArrayData = (response: any): any[] => {
-    if (!response) return [];
-    if (Array.isArray(response)) return response;
-    if (Array.isArray(response.data)) return response.data;
-    if (Array.isArray(response.data?.data)) return response.data.data;
-    return [];
-  };
-
-  const fetchBatches = async () => {
-    try {
-      setLoading(true);
-      const res = await Axios.get('/institutions/me/batches');
-      const batchList = getArrayData(res);
-      setBatches(batchList);
-      if (batchList.length > 0 && !selectedBatch) {
-        selectBatch(batchList[0]);
-      }
-    } catch (err) {
-      console.error('Failed to fetch batches', err);
-    } finally {
-      setLoading(false);
+    if (batches.length > 0 && !selectedBatchId) {
+      setSelectedBatchId(batches[0].id);
     }
-  };
+  }, [batches, selectedBatchId]);
 
-  const selectBatch = async (batch: BatchItem) => {
-    setSelectedBatch(batch);
-    try {
-      setLoadingStudents(true);
-      const res = await Axios.get(`/institutions/me/batches/${batch.id}/students`);
-      setStudents(getArrayData(res));
-    } catch (err) {
-      console.error('Failed to load batch students', err);
-    } finally {
-      setLoadingStudents(false);
-    }
+  const selectedBatch = batches.find((b) => b.id === selectedBatchId) || (batches.length > 0 ? batches[0] : null);
+
+  const { data: rawStudents = [], isLoading: loadingStudents } = useInstitutionBatchStudentsQuery(selectedBatch?.id);
+  const students: BatchStudentItem[] = rawStudents;
+
+  const selectBatch = (batch: BatchItem) => {
+    setSelectedBatchId(batch.id);
   };
 
   return (

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Axios } from '@/base-axios';
 
 export interface InstitutionSummary {
@@ -273,6 +273,108 @@ export function useInstitutionRankingsQuery(params: {
     },
     placeholderData: (previousData) => previousData,
     staleTime: 30 * 1000,
+  });
+}
+
+export function useInstitutionBatchStudentsQuery(batchId?: string) {
+  return useQuery<any[]>({
+    queryKey: institutionKeys.batchStudents(batchId || ''),
+    queryFn: async () => {
+      if (!batchId) return [];
+      const res = await Axios.get(`/institutions/me/batches/${batchId}/students`);
+      const raw = res.data?.data ?? res.data;
+      return Array.isArray(raw) ? raw : [];
+    },
+    enabled: Boolean(batchId),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useInstitutionReportsQuery() {
+  return useQuery<any[]>({
+    queryKey: institutionKeys.reports(),
+    queryFn: async () => {
+      const res = await Axios.get('/institutions/me/reports');
+      const raw = res.data?.data ?? res.data;
+      return Array.isArray(raw) ? raw : [];
+    },
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      const hasActive = Array.isArray(data) && data.some((r: any) => r.status === 'PENDING' || r.status === 'PROCESSING');
+      return hasActive ? 4000 : false;
+    },
+    staleTime: 10 * 1000,
+  });
+}
+
+export function useCreateInstitutionReportMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { reportType: string; format: string; filters?: Record<string, any> }) => {
+      const res = await Axios.post('/institutions/me/reports', payload);
+      return res.data?.data ?? res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: institutionKeys.reports() });
+    },
+  });
+}
+
+export function useInstitutionBulkUploadsQuery() {
+  return useQuery<any[]>({
+    queryKey: institutionKeys.bulkUploads(),
+    queryFn: async () => {
+      const res = await Axios.get('/institutions/me/bulk-uploads');
+      const raw = res.data?.data ?? res.data;
+      return Array.isArray(raw) ? raw : [];
+    },
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useInstitutionBulkUploadPreviewQuery(uploadId?: string) {
+  return useQuery<any>({
+    queryKey: institutionKeys.bulkUploadPreview(uploadId || ''),
+    queryFn: async () => {
+      if (!uploadId) return null;
+      const res = await Axios.get(`/institutions/me/bulk-uploads/${uploadId}/preview`);
+      return res.data?.data ?? res.data;
+    },
+    enabled: Boolean(uploadId),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useInstitutionBulkUploadMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ file, batchId }: { file: File; batchId?: string }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (batchId) formData.append('batchId', batchId);
+      const res = await Axios.post('/institutions/me/bulk-uploads', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return res.data?.data ?? res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: institutionKeys.bulkUploads() });
+    },
+  });
+}
+
+export function useInstitutionConfirmBulkUploadMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (uploadId: string) => {
+      const res = await Axios.post(`/institutions/me/bulk-uploads/${uploadId}/confirm`, {});
+      return res.data?.data ?? res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: institutionKeys.bulkUploads() });
+      qc.invalidateQueries({ queryKey: institutionKeys.students() });
+      qc.invalidateQueries({ queryKey: institutionKeys.dashboard() });
+    },
   });
 }
 

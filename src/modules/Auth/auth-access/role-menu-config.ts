@@ -31,6 +31,7 @@ import {
   Activity,
   Receipt,
   UserCog,
+  Sparkles,
 } from 'lucide-react';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 import { PERMISSIONS } from './permission.constants';
@@ -343,18 +344,18 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
       },
     ],
   },
-  // {
-  //   categoryKey: 'QUESTION_STUDIO',
-  //   categoryLabel: 'Content Studio',
-  //   items: [
-  //     {
-  //       key: 'ai-question-paper-translation',
-  //       label: 'AI Question Paper Translation',
-  //       to: PRIVATE_NAVIGATION.superAdminAiQuestionPaperTranslation,
-  //       icon: Sparkles,
-  //     },
-  //   ],
-  // },
+  {
+    categoryKey: 'QUESTION_STUDIO',
+    categoryLabel: 'Content Studio',
+    items: [
+      {
+        key: 'ai-question-paper-translation',
+        label: 'AI Question Paper Translation',
+        to: PRIVATE_NAVIGATION.superAdminAiQuestionPaperTranslation,
+        icon: Sparkles,
+      },
+    ],
+  },
   {
     categoryKey: 'EXAM_STUDIO',
     categoryLabel: 'Exam Operations & Results',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   CalendarClock,
@@ -16,13 +16,13 @@ import {
   AlertCircle,
   FileSpreadsheet,
 } from 'lucide-react';
-import { useGetExamsListAPI } from '@/modules/ExamManager/services/examManager.service';
+import { useExamManagerExamsQuery } from '@/modules/ExamManager/services/examManager.queries';
 import {
-  useSubmitExamAPI,
-  useApproveExamAPI,
-  useActivateExamAPI,
-  useCancelExamAPI,
-} from '../services/examScheduling.service';
+  useSubmitExamMutation,
+  useApproveExamMutation,
+  useActivateExamMutation,
+  useCancelExamMutation,
+} from '../services/examScheduling.queries';
 import { ScheduleExamModal } from '../components/ScheduleExamModal';
 import { RescheduleExamModal } from '../components/RescheduleExamModal';
 import { ExamLifecycleTimelineModal } from '../components/ExamLifecycleTimelineModal';
@@ -60,22 +60,10 @@ export const ExamSchedulingManagementPage: React.FC = () => {
     : '/admin';
 
   // State
-  const [exams, setExams] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
-  const [pagination, setPagination] = useState<{
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  }>({
-    total: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 1,
-  });
 
   const workflowSteps: WorkflowStep[] = [
     {
@@ -113,54 +101,47 @@ export const ExamSchedulingManagementPage: React.FC = () => {
   const [activeExam, setActiveExam] = useState<any | null>(null);
   const [activeSchedule, setActiveSchedule] = useState<ExamScheduleItem | null>(null);
 
-  // APIs
-  const { getExamsListAPI, isLoading: isLoadingExams } = useGetExamsListAPI();
-  const { submitExamAPI } = useSubmitExamAPI();
-  const { approveExamAPI } = useApproveExamAPI();
-  const { activateExamAPI } = useActivateExamAPI();
-  const { cancelExamAPI } = useCancelExamAPI();
+  // TanStack Query & Mutations
+  const { data: examData, isLoading: isLoadingExams, refetch: refetchExams } = useExamManagerExamsQuery({
+    page,
+    limit,
+    status: statusFilter !== 'ALL' ? statusFilter : undefined,
+    search: search.trim() || undefined,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  });
 
-  const loadExams = useCallback(async () => {
-    const res = await getExamsListAPI({
-      page,
-      limit,
-      status: statusFilter !== 'ALL' ? statusFilter : undefined,
-      search: search.trim() || undefined,
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
-    });
-    if (res?.data) {
-      setExams(res.data.items || []);
-      if (res.data.pagination) {
-        setPagination(res.data.pagination);
-      }
-    }
-  }, [getExamsListAPI, page, limit, statusFilter, search]);
+  const exams = examData?.items || [];
+  const pagination = examData?.pagination || {
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+  };
 
-  useEffect(() => {
-    loadExams();
-  }, [loadExams]);
+  const submitMutation = useSubmitExamMutation();
+  const approveMutation = useApproveExamMutation();
+  const activateMutation = useActivateExamMutation();
+  const cancelMutation = useCancelExamMutation();
 
   // Actions
   const handleSubmitForApproval = async (examId: string) => {
     if (!window.confirm('Submit this exam for Super Admin review and approval?')) return;
-    const { error } = await submitExamAPI(examId, { comment: 'Submitted by admin for review.' });
-    if (error) {
-      alert(typeof error === 'string' ? error : 'Failed to submit exam');
-      return;
+    try {
+      await submitMutation.mutateAsync({ examId, payload: { comment: 'Submitted by admin for review.' } });
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || 'Failed to submit exam');
     }
-    loadExams();
   };
 
   const handleApproveExam = async (examId: string) => {
     if (!window.confirm('Approve this exam? This certifies questions and enables scheduling.'))
       return;
-    const { error } = await approveExamAPI(examId, { comment: 'Exam certified by Super Admin.' });
-    if (error) {
-      alert(typeof error === 'string' ? error : 'Failed to approve exam');
-      return;
+    try {
+      await approveMutation.mutateAsync({ examId, payload: { comment: 'Exam certified by Super Admin.' } });
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || 'Failed to approve exam');
     }
-    loadExams();
   };
 
   const handleActivateExam = async (scheduleId: string, questionCount: number = 0) => {
@@ -178,12 +159,11 @@ export const ExamSchedulingManagementPage: React.FC = () => {
     )
       return;
 
-    const { error } = await activateExamAPI(scheduleId);
-    if (error) {
-      alert(typeof error === 'string' ? error : 'Failed to activate exam schedule');
-      return;
+    try {
+      await activateMutation.mutateAsync(scheduleId);
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || 'Failed to activate exam schedule');
     }
-    loadExams();
   };
 
   const handleCancelExam = async (examId: string, examTitle?: string) => {
@@ -192,12 +172,11 @@ export const ExamSchedulingManagementPage: React.FC = () => {
     );
     if (reason === null) return;
 
-    const { error } = await cancelExamAPI(examId, reason || undefined);
-    if (error) {
-      alert(typeof error === 'string' ? error : 'Failed to cancel exam');
-      return;
+    try {
+      await cancelMutation.mutateAsync({ examId, reason: reason || undefined });
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || 'Failed to cancel exam');
     }
-    loadExams();
   };
 
   const filteredExams = exams;
@@ -269,7 +248,7 @@ export const ExamSchedulingManagementPage: React.FC = () => {
             Approved (Ready to Schedule)
           </span>
           <span className="text-2xl font-black text-indigo-900 mt-1 block">
-            {exams.filter((e) => e.status?.name === 'APPROVED').length}
+            {exams.filter((e: any) => (typeof e.status === 'string' ? e.status : e.status?.name) === 'APPROVED').length}
           </span>
         </div>
 
@@ -278,7 +257,7 @@ export const ExamSchedulingManagementPage: React.FC = () => {
             Scheduled Windows
           </span>
           <span className="text-2xl font-black text-purple-900 mt-1 block">
-            {exams.filter((e) => e.status?.name === 'SCHEDULED').length}
+            {exams.filter((e: any) => (typeof e.status === 'string' ? e.status : e.status?.name) === 'SCHEDULED').length}
           </span>
         </div>
 
@@ -287,7 +266,7 @@ export const ExamSchedulingManagementPage: React.FC = () => {
             Active Live Tests
           </span>
           <span className="text-2xl font-black text-emerald-900 mt-1 block">
-            {exams.filter((e) => e.status?.name === 'ACTIVE').length}
+            {exams.filter((e: any) => (typeof e.status === 'string' ? e.status : e.status?.name) === 'ACTIVE').length}
           </span>
         </div>
       </div>
@@ -347,9 +326,9 @@ export const ExamSchedulingManagementPage: React.FC = () => {
         </div>
       ) : filteredExams.length > 0 ? (
         <div className="space-y-4">
-          {filteredExams.map((exam) => {
-            const stName = exam.status?.name || 'DRAFT';
-            const schedule = exam.schedules?.[0] as ExamScheduleItem | undefined;
+          {filteredExams.map((exam: any) => {
+            const stName = typeof exam.status === 'string' ? exam.status : exam.status?.name || 'DRAFT';
+            const schedule = (exam.schedules?.[0] || exam.schedule) as ExamScheduleItem | undefined;
             const currentStepIdx = LIFECYCLE_STEPS.indexOf(stName);
 
             return (
@@ -377,9 +356,9 @@ export const ExamSchedulingManagementPage: React.FC = () => {
                       <span className="rounded-lg px-2 py-0.5 text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                         Type: {exam.examType || exam.type || 'Standard'}
                       </span>
-                      {exam._count?.examQuestions > 0 ? (
+                      {(exam._count?.examQuestions || exam.totalQuestions || 0) > 0 ? (
                         <span className="rounded-lg px-2 py-0.5 text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
-                          <CheckCircle2 size={11} /> Paper: Uploaded ({exam._count.examQuestions} Qs)
+                          <CheckCircle2 size={11} /> Paper: Uploaded ({exam._count?.examQuestions || exam.totalQuestions} Qs)
                         </span>
                       ) : (
                         <span className="rounded-lg px-2 py-0.5 text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
@@ -397,7 +376,7 @@ export const ExamSchedulingManagementPage: React.FC = () => {
                         </>
                       )}
                       <span>•</span>
-                      <span>{exam.totalQuestions} Questions</span>
+                      <span>{exam.totalQuestions || 0} Questions</span>
                       <span>•</span>
                       <span>{exam.durationMinutes} mins</span>
                       <span>•</span>
@@ -748,7 +727,7 @@ export const ExamSchedulingManagementPage: React.FC = () => {
             setIsScheduleOpen(false);
             setActiveExam(null);
           }}
-          onScheduled={loadExams}
+          onScheduled={refetchExams}
         />
       )}
 
@@ -756,7 +735,7 @@ export const ExamSchedulingManagementPage: React.FC = () => {
         schedule={activeSchedule}
         isOpen={isRescheduleOpen}
         onClose={() => setIsRescheduleOpen(false)}
-        onRescheduled={loadExams}
+        onRescheduled={refetchExams}
       />
 
       {activeExam && (

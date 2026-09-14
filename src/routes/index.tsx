@@ -390,6 +390,14 @@ const adminRoutes: RouteObject[] = [
         ),
       },
       {
+        path: 'exams/:examId/question-paper/add',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE]}>
+            <ManualQuestionEntryPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'exams/:examId/question-paper/view',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>

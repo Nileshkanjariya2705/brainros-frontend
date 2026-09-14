@@ -22,37 +22,13 @@ import { Axios } from '@/base-axios';
 import { toast } from '@/utils/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { questionPaperKeys, examKeys, adminKeys } from '@/services/queryKeys';
-
-interface QuestionDraft {
-  id: string;
-  questionNumber: number;
-  questionText: string;
-  optionA: string;
-  optionB: string;
-  optionC: string;
-  optionD: string;
-  correctAnswer: 'A' | 'B' | 'C' | 'D';
-  explanation?: string;
-}
-
-const createInitialDrafts = (count: number): QuestionDraft[] => {
-  const targetCount = Math.max(1, count || 1);
-  const list: QuestionDraft[] = [];
-  for (let i = 1; i <= targetCount; i++) {
-    list.push({
-      id: `q-${i}`,
-      questionNumber: i,
-      questionText: '',
-      optionA: '',
-      optionB: '',
-      optionC: '',
-      optionD: '',
-      correctAnswer: 'A',
-      explanation: '',
-    });
-  }
-  return list;
-};
+import {
+  QuestionDraft,
+  createInitialDrafts,
+  loadManualQuestionDraft,
+  saveManualQuestionDraft,
+  clearManualQuestionDraft,
+} from '../utils/manualQuestionDraft';
 
 export const ManualQuestionEntryPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
@@ -76,8 +52,11 @@ export const ManualQuestionEntryPage: React.FC = () => {
   const [exam, setExam] = useState<any | null>(null);
   const [isLoadingExam, setIsLoadingExam] = useState(true);
 
-  // ── Questions State ───────────────────────────────────────────────────────────
+  // ── Questions & Draft State ───────────────────────────────────────────────────
   const [questions, setQuestions] = useState<QuestionDraft[]>(() => createInitialDrafts(10));
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isDraftRestored, setIsDraftRestored] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
 
   // ── Active Navigation & Animation State ───────────────────────────────────────
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -89,7 +68,7 @@ export const ManualQuestionEntryPage: React.FC = () => {
   const navScrollRef = useRef<HTMLDivElement>(null);
   const questionInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Fetch target exam context & auto-allocate total question slots
+  // Fetch target exam context & restore draft if available or allocate total question slots
   useEffect(() => {
     if (!examId) return;
 
@@ -101,7 +80,22 @@ export const ManualQuestionEntryPage: React.FC = () => {
         if (data) {
           setExam(data);
           const totalQ = data.totalQuestions || 10;
-          setQuestions(createInitialDrafts(totalQ));
+          const savedDraft = loadManualQuestionDraft(examId, data.examVersionId);
+          if (savedDraft && savedDraft.questions.length > 0) {
+            setQuestions(savedDraft.questions);
+            setCurrentIndex(savedDraft.currentIndex);
+            setIsDraftRestored(true);
+            const restoredDate = new Date(savedDraft.updatedAt);
+            setLastSavedTime(
+              restoredDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            );
+            toast.info(
+              `Your unsaved Question Paper draft has been restored (${savedDraft.questions.length} questions).`,
+            );
+          } else {
+            setQuestions(createInitialDrafts(totalQ));
+          }
+          setIsInitialized(true);
         }
       })
       .catch(() => {
@@ -112,14 +106,58 @@ export const ManualQuestionEntryPage: React.FC = () => {
             if (data) {
               setExam(data);
               const totalQ = data.totalQuestions || 10;
-              setQuestions(createInitialDrafts(totalQ));
+              const savedDraft = loadManualQuestionDraft(examId, data.examVersionId);
+              if (savedDraft && savedDraft.questions.length > 0) {
+                setQuestions(savedDraft.questions);
+                setCurrentIndex(savedDraft.currentIndex);
+                setIsDraftRestored(true);
+                const restoredDate = new Date(savedDraft.updatedAt);
+                setLastSavedTime(
+                  restoredDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                );
+                toast.info(
+                  `Your unsaved Question Paper draft has been restored (${savedDraft.questions.length} questions).`,
+                );
+              } else {
+                setQuestions(createInitialDrafts(totalQ));
+              }
+              setIsInitialized(true);
             }
           })
           .catch(() => {
             setIsLoadingExam(false);
+            const savedDraft = loadManualQuestionDraft(examId);
+            if (savedDraft && savedDraft.questions.length > 0) {
+              setQuestions(savedDraft.questions);
+              setCurrentIndex(savedDraft.currentIndex);
+              setIsDraftRestored(true);
+              toast.info(`Your unsaved Question Paper draft has been restored.`);
+            }
+            setIsInitialized(true);
           });
       });
   }, [examId]);
+
+  // Debounced autosave to localStorage on questions or index changes
+  useEffect(() => {
+    if (!isInitialized || !examId || questions.length === 0) return;
+
+    const timer = setTimeout(() => {
+      const saved = saveManualQuestionDraft(
+        examId,
+        currentIndex,
+        questions,
+        exam?.examVersionId,
+      );
+      if (saved) {
+        setLastSavedTime(
+          new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        );
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [questions, currentIndex, examId, isInitialized, exam?.examVersionId]);
 
   // Auto-scroll the top horizontal bar to keep active question centered in view
   useEffect(() => {
@@ -154,6 +192,7 @@ export const ManualQuestionEntryPage: React.FC = () => {
   // Navigate to Question with Directional Slide Animation
   const goToQuestion = (targetIndex: number) => {
     if (targetIndex === currentIndex || targetIndex < 0 || targetIndex >= questions.length) return;
+    saveManualQuestionDraft(examId || '', targetIndex, questions, exam?.examVersionId);
     setSlideDirection(targetIndex > currentIndex ? 'next' : 'prev');
     setCurrentIndex(targetIndex);
     setTimeout(() => {
@@ -165,21 +204,24 @@ export const ManualQuestionEntryPage: React.FC = () => {
   const handleDuplicateCurrent = () => {
     if (currentIndex < questions.length - 1) {
       const nextIdx = currentIndex + 1;
-      setQuestions((prev) =>
-        prev.map((q, idx) =>
-          idx === nextIdx
-            ? {
-                ...q,
-                questionText: `${currentQ.questionText} (Copy)`,
-                optionA: currentQ.optionA,
-                optionB: currentQ.optionB,
-                optionC: currentQ.optionC,
-                optionD: currentQ.optionD,
-                correctAnswer: currentQ.correctAnswer,
-                explanation: currentQ.explanation,
-              }
-            : q,
-        ),
+      const updatedQuestions = questions.map((q, idx) =>
+        idx === nextIdx
+          ? {
+              ...q,
+              questionText: `${currentQ.questionText} (Copy)`,
+              optionA: currentQ.optionA,
+              optionB: currentQ.optionB,
+              optionC: currentQ.optionC,
+              optionD: currentQ.optionD,
+              correctAnswer: currentQ.correctAnswer,
+              explanation: currentQ.explanation,
+            }
+          : q,
+      );
+      setQuestions(updatedQuestions);
+      saveManualQuestionDraft(examId || '', nextIdx, updatedQuestions, exam?.examVersionId);
+      setLastSavedTime(
+        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       );
       setSlideDirection('next');
       setCurrentIndex(nextIdx);
@@ -191,21 +233,24 @@ export const ManualQuestionEntryPage: React.FC = () => {
 
   // Clear Active Question Form
   const handleClearCurrent = () => {
-    setQuestions((prev) =>
-      prev.map((q, idx) =>
-        idx === currentIndex
-          ? {
-              ...q,
-              questionText: '',
-              optionA: '',
-              optionB: '',
-              optionC: '',
-              optionD: '',
-              correctAnswer: 'A',
-              explanation: '',
-            }
-          : q,
-      ),
+    const updatedQuestions = questions.map((q, idx) =>
+      idx === currentIndex
+        ? {
+            ...q,
+            questionText: '',
+            optionA: '',
+            optionB: '',
+            optionC: '',
+            optionD: '',
+            correctAnswer: 'A' as const,
+            explanation: '',
+          }
+        : q,
+    );
+    setQuestions(updatedQuestions);
+    saveManualQuestionDraft(examId || '', currentIndex, updatedQuestions, exam?.examVersionId);
+    setLastSavedTime(
+      new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     );
     toast.info(`Cleared Question #${currentIndex + 1}`);
     questionInputRef.current?.focus();
@@ -229,10 +274,18 @@ export const ManualQuestionEntryPage: React.FC = () => {
       return;
     }
 
+    const nextIdx = currentIndex < questions.length - 1 ? currentIndex + 1 : currentIndex;
+
+    // Immediately persist current progress to localStorage before advancing
+    saveManualQuestionDraft(examId || '', nextIdx, questions, exam?.examVersionId);
+    setLastSavedTime(
+      new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    );
+
     if (currentIndex < questions.length - 1) {
       // Advance to next preallocated question slot with slide animation
       setSlideDirection('next');
-      setCurrentIndex(currentIndex + 1);
+      setCurrentIndex(nextIdx);
       setTimeout(() => questionInputRef.current?.focus(), 50);
     } else {
       // On the final question: Show preview
@@ -244,8 +297,10 @@ export const ManualQuestionEntryPage: React.FC = () => {
   // Previous Question
   const handlePrevious = () => {
     if (currentIndex > 0) {
+      const prevIdx = currentIndex - 1;
+      saveManualQuestionDraft(examId || '', prevIdx, questions, exam?.examVersionId);
       setSlideDirection('prev');
-      setCurrentIndex(currentIndex - 1);
+      setCurrentIndex(prevIdx);
       setTimeout(() => questionInputRef.current?.focus(), 50);
     }
   };
@@ -318,6 +373,7 @@ export const ManualQuestionEntryPage: React.FC = () => {
   // Save / Publish All Questions
   const handleSaveQuestions = async () => {
     if (!validateAllQuestions()) {
+      // Keep draft intact so user can correct invalid questions
       return;
     }
 
@@ -339,6 +395,9 @@ export const ManualQuestionEntryPage: React.FC = () => {
         `/admin/exam-manager/exams/${examId}/manual-questions`,
         payload,
       );
+
+      // ONLY remove localStorage draft AFTER backend confirms successful persistence
+      clearManualQuestionDraft(examId || '', exam?.examVersionId);
 
       const translationJobId =
         res?.data?.data?.translationJobId ||
@@ -364,6 +423,7 @@ export const ManualQuestionEntryPage: React.FC = () => {
       }
     } catch (err: any) {
       setIsSubmitting(false);
+      // On backend or network failure, KEEP the draft so work is never lost
       const msg =
         err?.response?.data?.message ||
         err?.message ||
@@ -390,7 +450,7 @@ export const ManualQuestionEntryPage: React.FC = () => {
             <ArrowLeft size={18} />
           </button>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-bold text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
                 <FileText size={12} />
                 Question Paper Studio
@@ -399,6 +459,17 @@ export const ManualQuestionEntryPage: React.FC = () => {
               <span className="text-xs font-bold text-slate-600">
                 {completedCount} of {expectedQuestionsCount} Questions Completed
               </span>
+              {lastSavedTime && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                  <Check size={11} />
+                  Draft saved {lastSavedTime}
+                </span>
+              )}
+              {isDraftRestored && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-sky-700 ring-1 ring-inset ring-sky-600/20">
+                  Restored
+                </span>
+              )}
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
               {exam?.title || exam?.examName || 'Examination Question Paper'}

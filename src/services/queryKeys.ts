@@ -44,6 +44,9 @@ export const resultKeys = {
 
 export const adminKeys = {
   all: ['admin'] as const,
+  schools: (params: Record<string, any> = {}) => [...adminKeys.all, 'schools', params] as const,
+  schoolDetail: (schoolId: string) => [...adminKeys.all, 'schools', 'detail', schoolId] as const,
+  schoolFilterOptions: () => [...adminKeys.all, 'schools', 'filter-options'] as const,
   students: (filters: Record<string, any> = {}) => [...adminKeys.all, 'students', filters] as const,
   studentFilterOptions: () => [...adminKeys.all, 'students', 'filter-options'] as const,
   publicRegistrations: (filters: Record<string, any> = {}) =>
@@ -69,6 +72,40 @@ export const adminKeys = {
     [...adminKeys.all, 'approvals', params] as const,
   auditLogs: (params: Record<string, any> = {}) =>
     [...adminKeys.all, 'audit-logs', params] as const,
+};
+
+export const academicKeys = {
+  all: ['academic'] as const,
+  subjects: (examTargetId?: string) => [...academicKeys.all, 'subjects', examTargetId || 'all'] as const,
+  examTargets: () => [...academicKeys.all, 'exam-targets'] as const,
+  chapters: (subjectId?: string) => [...academicKeys.all, 'chapters', subjectId || 'all'] as const,
+  allChapters: (params: Record<string, any> = {}) => [...academicKeys.all, 'all-chapters', params] as const,
+};
+
+export const languageKeys = {
+  all: ['languages'] as const,
+  list: (includeInactive = false) => [...languageKeys.all, 'list', { includeInactive }] as const,
+  detail: (languageId: string) => [...languageKeys.all, 'detail', languageId] as const,
+  completeness: (questionId: string) => [...languageKeys.all, 'completeness', questionId] as const,
+  questionTranslations: (questionId: string) => [...languageKeys.all, 'question', questionId] as const,
+  examLanguages: (examId: string) => [...languageKeys.all, 'exam', examId] as const,
+};
+
+export const aiTranslationKeys = {
+  all: ['ai-translation'] as const,
+  scheduledExams: () => [...aiTranslationKeys.all, 'scheduled-exams'] as const,
+  job: (jobId: string) => [...aiTranslationKeys.all, 'job', jobId] as const,
+  jobQuestions: (jobId: string) => [...aiTranslationKeys.all, 'job', jobId, 'questions'] as const,
+};
+
+export const examManagerKeys = {
+  all: ['exam-manager'] as const,
+  exams: (params: Record<string, any> = {}) => [...examManagerKeys.all, 'exams', params] as const,
+  examDetail: (examId: string) => [...examManagerKeys.all, 'exams', 'detail', examId] as const,
+  questionPaper: (examId: string, versionId?: string) =>
+    [...examManagerKeys.all, 'question-papers', examId, versionId || 'latest'] as const,
+  importHistory: (params: Record<string, any> = {}) =>
+    [...examManagerKeys.all, 'import-history', params] as const,
 };
 
 export const parentKeys = {
@@ -118,11 +155,16 @@ export const institutionKeys = {
     [...institutionKeys.all, 'students', filters || {}] as const,
   admissionYears: () => [...institutionKeys.all, 'admission-years'] as const,
   batches: () => [...institutionKeys.all, 'batches'] as const,
+  batchStudents: (batchId: string) =>
+    [...institutionKeys.all, 'batches', batchId, 'students'] as const,
   rankExams: () => [...institutionKeys.all, 'rank-exams'] as const,
   rankings: (filters?: Record<string, any>) =>
     [...institutionKeys.all, 'rankings', filters || {}] as const,
   reports: (filters?: Record<string, any>) =>
     [...institutionKeys.all, 'reports', filters || {}] as const,
+  bulkUploads: () => [...institutionKeys.all, 'bulk-uploads'] as const,
+  bulkUploadPreview: (uploadId: string) =>
+    [...institutionKeys.all, 'bulk-uploads', uploadId, 'preview'] as const,
 };
 
 export const billingKeys = {

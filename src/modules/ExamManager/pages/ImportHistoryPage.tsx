@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   History,
@@ -10,10 +10,8 @@ import {
   BookOpen,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
-import {
-  useGetExamImportHistoryAPI,
-  downloadQuestionPaperErrorReport,
-} from '../services/examManager.service';
+import { downloadQuestionPaperErrorReport } from '../services/examManager.service';
+import { useImportHistoryQuery } from '../services/examManager.queries';
 import type { ExamImportSession } from '../types/examManager.types';
 
 export const ImportHistoryPage: React.FC = () => {
@@ -32,22 +30,10 @@ export const ImportHistoryPage: React.FC = () => {
     ? `/${firstSegment}`
     : '/admin';
 
-  const [historyItems, setHistoryItems] = useState<ExamImportSession[]>([]);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const { getExamImportHistoryAPI, isLoading } = useGetExamImportHistoryAPI();
-
-  const loadHistory = useCallback(async () => {
-    const res = await getExamImportHistoryAPI();
-    const list = Array.isArray(res.data)
-      ? res.data
-      : (res.data as any)?.data || [];
-    setHistoryItems(list);
-  }, [getExamImportHistoryAPI]);
-
-  useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
+  const { data: historyData, isLoading } = useImportHistoryQuery();
+  const historyItems: ExamImportSession[] = (historyData as any)?.sessions || (Array.isArray(historyData) ? historyData : []);
 
   const handleDownloadErrors = async (importId: string) => {
     try {

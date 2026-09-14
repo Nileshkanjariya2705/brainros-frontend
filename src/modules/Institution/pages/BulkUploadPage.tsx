@@ -14,59 +14,41 @@ import {
   BulkUploadPreview,
   BulkUploadErrorItem,
 } from '@/types/exam.types';
+import {
+  useInstitutionBatchesQuery,
+  useInstitutionBulkUploadsQuery,
+  useInstitutionBulkUploadMutation,
+  useInstitutionConfirmBulkUploadMutation,
+} from '../services/institutionDashboard.service';
 
 export const BulkUploadPage: React.FC = () => {
-  const [batches, setBatches] = useState<BatchItem[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState<boolean>(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Staged Upload details
   const [activeUpload, setActiveUpload] = useState<BulkUploadItem | null>(null);
   const [preview, setPreview] = useState<BulkUploadPreview | null>(null);
-  const [submitting, setSubmitting] = useState<boolean>(false);
   const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
 
-  // Previous uploads history
-  const [uploadHistory, setUploadHistory] = useState<BulkUploadItem[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
+  // TanStack React Query
+  const { data: rawBatches = [] } = useInstitutionBatchesQuery();
+  const batches: BatchItem[] = (rawBatches as any) || [];
+
+  const { data: rawHistory = [], isLoading: loadingHistory } = useInstitutionBulkUploadsQuery();
+  const uploadHistory: BulkUploadItem[] = rawHistory;
+
+  const uploadMutation = useInstitutionBulkUploadMutation();
+  const confirmMutation = useInstitutionConfirmBulkUploadMutation();
+
+  const uploading = uploadMutation.isPending;
+  const submitting = confirmMutation.isPending;
 
   useEffect(() => {
-    fetchBatches();
-    fetchHistory();
-  }, []);
-
-  const getArrayData = (response: any): any[] => {
-    if (!response) return [];
-    if (Array.isArray(response)) return response;
-    if (Array.isArray(response.data)) return response.data;
-    if (Array.isArray(response.data?.data)) return response.data.data;
-    return [];
-  };
-
-  const fetchBatches = async () => {
-    try {
-      const res = await Axios.get('/institutions/me/batches');
-      const batchList = getArrayData(res);
-      setBatches(batchList);
-      if (batchList.length > 0) setSelectedBatchId(batchList[0].id);
-    } catch (err) {
-      console.error(err);
+    if (batches.length > 0 && !selectedBatchId) {
+      setSelectedBatchId(batches[0].id);
     }
-  };
-
-  const fetchHistory = async () => {
-    try {
-      setLoadingHistory(true);
-      const res = await Axios.get('/institutions/me/bulk-uploads');
-      setUploadHistory(getArrayData(res));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingHistory(false);
-    }
-  };
+  }, [batches, selectedBatchId]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -83,24 +65,17 @@ export const BulkUploadPage: React.FC = () => {
     }
 
     try {
-      setUploading(true);
       setUploadError(null);
-      const formData = new FormData();
-      formData.append('file', file);
-      if (selectedBatchId) formData.append('batchId', selectedBatchId);
-
-      const res = await Axios.post('/institutions/me/bulk-uploads', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const res = await uploadMutation.mutateAsync({
+        file,
+        batchId: selectedBatchId || undefined,
       });
 
-      setActiveUpload(res.data);
-      await fetchPreview(res.data.id);
-      await fetchHistory();
+      setActiveUpload(res);
+      await fetchPreview(res.id);
       setFile(null);
     } catch (err: any) {
-      setUploadError(err.response?.data?.message || 'Bulk upload failed');
-    } finally {
-      setUploading(false);
+      setUploadError(err.response?.data?.message || err.message || 'Bulk upload failed');
     }
   };
 
@@ -116,16 +91,10 @@ export const BulkUploadPage: React.FC = () => {
   const handleSubmitForApproval = async () => {
     if (!activeUpload) return;
     try {
-      setSubmitting(true);
-      await Axios.post(`/institutions/me/bulk-uploads/${activeUpload.id}/submit`, {
-        notes: 'Submitted via B2B Institution Portal for Super Admin review.',
-      });
+      await confirmMutation.mutateAsync(activeUpload.id);
       setSubmitSuccess(true);
-      await fetchHistory();
     } catch (err: any) {
-      setUploadError(err.response?.data?.message || 'Failed to submit upload for approval.');
-    } finally {
-      setSubmitting(false);
+      setUploadError(err.response?.data?.message || err.message || 'Failed to submit upload for approval.');
     }
   };
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -15,7 +15,7 @@ import {
   Check,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
-import { useGetExamQuestionPaperAPI } from '../services/examManager.service';
+import { useQuestionPaperDetailQuery } from '../services/examManager.queries';
 import type { ExamQuestionPaperDetail, QuestionPaperQuestion } from '../types/examManager.types';
 
 export const ViewQuestionPaperPage: React.FC = () => {
@@ -35,19 +35,9 @@ export const ViewQuestionPaperPage: React.FC = () => {
     ? `/${firstSegment}`
     : '/admin';
 
-  const { getExamQuestionPaperAPI, isLoading, error } = useGetExamQuestionPaperAPI();
-  const [paper, setPaper] = useState<ExamQuestionPaperDetail | null>(null);
+  const { data: rawPaper, isLoading, error, refetch } = useQuestionPaperDetailQuery(examId);
+  const paper = (rawPaper as unknown as ExamQuestionPaperDetail) || null;
   const [selectedSection, setSelectedSection] = useState<string>('ALL');
-
-  useEffect(() => {
-    if (examId) {
-      getExamQuestionPaperAPI(examId).then((res) => {
-        if (res.data) {
-          setPaper(res.data);
-        }
-      });
-    }
-  }, [examId, getExamQuestionPaperAPI]);
 
   // Filter questions by section if selected
   const filteredQuestions = useMemo(() => {
@@ -143,9 +133,9 @@ export const ViewQuestionPaperPage: React.FC = () => {
           <div className="bg-white rounded-3xl border border-rose-200 p-12 text-center shadow-xs">
             <AlertCircle size={36} className="mx-auto text-rose-500 mb-3" />
             <h3 className="text-base font-bold text-slate-900">Failed to Load Question Paper</h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">{error}</p>
+            <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">{(error as any)?.message || 'Failed to load question paper'}</p>
             <Button
-              onClick={() => examId && getExamQuestionPaperAPI(examId)}
+              onClick={() => refetch()}
               className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl"
             >
               Try Again
@@ -331,7 +321,7 @@ export const ViewQuestionPaperPage: React.FC = () => {
                       {/* Options Grid */}
                       {q.options && q.options.length > 0 && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                          {q.options.map((opt) => {
+                          {q.options.map((opt: any) => {
                             const isCorrect = opt.isCorrect;
                             return (
                               <div

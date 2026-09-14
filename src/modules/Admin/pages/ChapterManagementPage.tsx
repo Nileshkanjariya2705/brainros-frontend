@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   BookOpen,
   Plus,
@@ -15,27 +15,24 @@ import {
   ArrowDown,
 } from 'lucide-react';
 import {
-  useGetAllChaptersAPI,
-  useGetSubjectsAPI,
-  useCreateChapterAPI,
-  useUpdateChapterAPI,
-  useDeleteChapterAPI,
-  useReorderChaptersAPI,
-} from '@/modules/Academic/services/academic.service';
+  useAcademicSubjectsQuery,
+  useAllAcademicChaptersQuery,
+  useCreateChapterMutation,
+  useUpdateChapterMutation,
+  useDeleteChapterMutation,
+  useReorderChaptersMutation,
+} from '@/modules/Academic/services/academic.queries';
 import type { ChapterItem, CreateChapterPayload, UpdateChapterPayload } from '@/modules/Academic/types/academic.types';
 import Button from '@/components/ui/Button';
 import { formatSubjectDisplayName, isAllowedSubject } from '@/constants/subjects.constant';
 
 export const ChapterManagementPage: React.FC = () => {
   // ─── State ───────────────────────────────────────────────────
-  const [chapters, setChapters] = useState<ChapterItem[]>([]);
-  const [subjects, setSubjects] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Modals state
@@ -63,46 +60,30 @@ export const ChapterManagementPage: React.FC = () => {
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // ─── API Hooks ────────────────────────────────────────────────
-  const { getAllChaptersAPI, isLoading: isFetchingChapters } = useGetAllChaptersAPI();
-  const { getSubjectsAPI } = useGetSubjectsAPI();
-  const { createChapterAPI, isLoading: isCreating } = useCreateChapterAPI();
-  const { updateChapterAPI, isLoading: isUpdating } = useUpdateChapterAPI();
-  const { deleteChapterAPI, isLoading: isDeleting } = useDeleteChapterAPI();
-  const { reorderChaptersAPI } = useReorderChaptersAPI();
+  // ─── React Query Hooks ─────────────────────────────────────────
+  const { data: rawSubjects = [] } = useAcademicSubjectsQuery();
+  const subjects = useMemo(
+    () => rawSubjects.filter((s: any) => isAllowedSubject(s.name)),
+    [rawSubjects],
+  );
 
-  // ─── Load Initial Data ───────────────────────────────────────
-  const loadData = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      const [subjectsRes, chaptersRes] = await Promise.all([
-        getSubjectsAPI(),
-        getAllChaptersAPI({ includeInactive: true }),
-      ]);
+  const {
+    data: chaptersData,
+    isLoading: isFetchingChapters,
+    refetch: loadData,
+  } = useAllAcademicChaptersQuery({ limit: 1000 });
 
-      const rawSubList = Array.isArray(subjectsRes?.data)
-        ? subjectsRes.data
-        : (subjectsRes?.data as any)?.data || [];
-      const subList = rawSubList.filter((s: any) => isAllowedSubject(s.name));
-      setSubjects(subList);
+  const chapters = chaptersData?.chapters || [];
 
-      const chList = Array.isArray(chaptersRes?.data)
-        ? chaptersRes.data
-        : (chaptersRes?.data as any)?.data || [];
-      setChapters(chList);
-    } catch (err: any) {
-      setFeedbackMsg({
-        type: 'error',
-        text: err?.message || 'Failed to load master data.',
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [getSubjectsAPI, getAllChaptersAPI]);
+  const createMutation = useCreateChapterMutation();
+  const updateMutation = useUpdateChapterMutation();
+  const deleteMutation = useDeleteChapterMutation();
+  const reorderMutation = useReorderChaptersMutation();
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const isCreating = createMutation.isPending;
+  const isUpdating = updateMutation.isPending;
+  const isDeleting = deleteMutation.isPending;
+  const isRefreshing = isFetchingChapters;
 
   // Auto-dismiss alert messages
   useEffect(() => {
@@ -277,25 +258,23 @@ export const ChapterManagementPage: React.FC = () => {
       isActive: formData.isActive,
     };
 
-    const res = await createChapterAPI(payload);
-    if (res?.error) {
+    try {
+      await createMutation.mutateAsync(payload);
+      setFeedbackMsg({
+        type: 'success',
+        text: `Chapter "${payload.name}" was created successfully.`,
+      });
+      setSuccessPopupMsg({
+        title: 'Chapter Created Successfully!',
+        desc: `Chapter "${payload.name}" has been created and indexed under the curriculum.`,
+      });
+      setIsAddModalOpen(false);
+    } catch (err: any) {
       setFeedbackMsg({
         type: 'error',
-        text: typeof res.error === 'string' ? res.error : (res.error as any).message || 'Failed to create chapter.',
+        text: err?.response?.data?.message || err?.message || 'Failed to create chapter.',
       });
-      return;
     }
-
-    setFeedbackMsg({
-      type: 'success',
-      text: `Chapter "${payload.name}" was created successfully.`,
-    });
-    setSuccessPopupMsg({
-      title: 'Chapter Created Successfully!',
-      desc: `Chapter "${payload.name}" has been created and indexed under the curriculum.`,
-    });
-    setIsAddModalOpen(false);
-    loadData();
   };
 
   // ─── Submit Edit Chapter ─────────────────────────────────────
@@ -325,78 +304,67 @@ export const ChapterManagementPage: React.FC = () => {
       isActive: formData.isActive,
     };
 
-    const res = await updateChapterAPI(editingChapter.id, payload);
-    if (res?.error) {
+    try {
+      await updateMutation.mutateAsync({ id: editingChapter.id, payload });
+      setFeedbackMsg({
+        type: 'success',
+        text: `Chapter "${formData.name}" was updated successfully.`,
+      });
+      setSuccessPopupMsg({
+        title: 'Chapter Updated Successfully!',
+        desc: `Chapter "${formData.name}" details and settings have been saved.`,
+      });
+      setEditingChapter(null);
+    } catch (err: any) {
       setFeedbackMsg({
         type: 'error',
-        text: typeof res.error === 'string' ? res.error : (res.error as any).message || 'Failed to update chapter.',
+        text: err?.response?.data?.message || err?.message || 'Failed to update chapter.',
       });
-      return;
     }
-
-    setFeedbackMsg({
-      type: 'success',
-      text: `Chapter "${formData.name}" was updated successfully.`,
-    });
-    setSuccessPopupMsg({
-      title: 'Chapter Updated Successfully!',
-      desc: `Chapter "${formData.name}" details and settings have been saved.`,
-    });
-    setEditingChapter(null);
-    loadData();
   };
 
   // ─── Toggle Quick Status (Active / Inactive) ─────────────────
   const handleToggleStatus = async (chapter: ChapterItem) => {
     const newStatus = !chapter.isActive;
-    const res = await updateChapterAPI(chapter.id, { isActive: newStatus });
-    if (res?.error) {
+    try {
+      await updateMutation.mutateAsync({ id: chapter.id, payload: { isActive: newStatus } });
+      setFeedbackMsg({
+        type: 'success',
+        text: `Chapter "${chapter.name}" is now ${newStatus ? 'ACTIVE' : 'INACTIVE/ARCHIVED'}.`,
+      });
+    } catch (err: any) {
       setFeedbackMsg({
         type: 'error',
-        text: typeof res.error === 'string' ? res.error : (res.error as any).message || 'Status update failed.',
+        text: err?.response?.data?.message || err?.message || 'Status update failed.',
       });
-      return;
     }
-
-    setChapters((prev) =>
-      prev.map((c) => (c.id === chapter.id ? { ...c, isActive: newStatus } : c)),
-    );
-
-    setFeedbackMsg({
-      type: 'success',
-      text: `Chapter "${chapter.name}" is now ${newStatus ? 'ACTIVE' : 'INACTIVE/ARCHIVED'}.`,
-    });
   };
 
   // ─── Confirm Delete / Deactivate ─────────────────────────────
   const handleConfirmDelete = async () => {
     if (!deletingChapter) return;
 
-    const res = await deleteChapterAPI(deletingChapter.id);
-    if (res?.error) {
+    try {
+      const resData: any = await deleteMutation.mutateAsync(deletingChapter.id);
+      if (resData?.deactivated) {
+        setFeedbackMsg({
+          type: 'success',
+          text: resData.message || `Chapter "${deletingChapter.name}" has been deactivated to preserve references.`,
+        });
+      } else {
+        setFeedbackMsg({
+          type: 'success',
+          text: resData?.message || `Chapter "${deletingChapter.name}" was deleted successfully.`,
+        });
+      }
+    } catch (err: any) {
       setFeedbackMsg({
         type: 'error',
-        text: typeof res.error === 'string' ? res.error : (res.error as any).message || 'Operation failed.',
+        text: err?.response?.data?.message || err?.message || 'Operation failed.',
       });
+    } finally {
       setDeletingChapter(null);
-      return;
     }
-
-    const resData = (res?.data as any) || {};
-    if (resData.deactivated) {
-      setFeedbackMsg({
-        type: 'success',
-        text: resData.message || `Chapter "${deletingChapter.name}" has been deactivated to preserve references.`,
-      });
-    } else {
-      setFeedbackMsg({
-        type: 'success',
-        text: resData.message || `Chapter "${deletingChapter.name}" was deleted successfully.`,
-      });
-    }
-
-    setDeletingChapter(null);
-    loadData();
   };
 
   // ─── Move Chapter Order (Up / Down) ──────────────────────────
@@ -415,18 +383,16 @@ export const ChapterManagementPage: React.FC = () => {
     const [moved] = reorderedList.splice(currentIndex, 1);
     reorderedList.splice(targetIndex, 0, moved);
 
-    const chapterIds = reorderedList.map((c) => c.id);
+    const orders = reorderedList.map((c, idx) => ({ id: c.id, displayOrder: idx + 1 }));
 
-    const res = await reorderChaptersAPI(chapter.subjectId, chapterIds);
-    if (res?.error) {
+    try {
+      await reorderMutation.mutateAsync(orders);
+    } catch (err: any) {
       setFeedbackMsg({
         type: 'error',
         text: 'Failed to reorder chapters.',
       });
-      return;
     }
-
-    loadData();
   };
 
   return (
@@ -453,7 +419,7 @@ export const ChapterManagementPage: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <button
-            onClick={loadData}
+            onClick={() => loadData()}
             disabled={isRefreshing}
             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition-all disabled:opacity-50"
           >
@@ -558,7 +524,7 @@ export const ChapterManagementPage: React.FC = () => {
               className="rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-xs font-semibold text-slate-800 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100"
             >
               <option value="ALL">All Subjects</option>
-              {subjects.map((sub) => (
+              {subjects.map((sub: any) => (
                 <option key={sub.id} value={sub.id}>
                   {formatSubjectDisplayName(sub.name)} {sub.examTarget?.name ? `(${sub.examTarget.name})` : ''}
                 </option>
@@ -931,7 +897,7 @@ export const ChapterManagementPage: React.FC = () => {
                   }`}
                 >
                   <option value="">-- Select Subject --</option>
-                  {subjects.map((s) => (
+                  {subjects.map((s: any) => (
                     <option key={s.id} value={s.id}>
                       {formatSubjectDisplayName(s.name)} {s.examTarget?.name ? `(${s.examTarget.name})` : ''}
                     </option>
@@ -1090,7 +1056,7 @@ export const ChapterManagementPage: React.FC = () => {
                   onChange={(e) => handleSubjectChange(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-3 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 disabled:opacity-60"
                 >
-                  {subjects.map((s) => (
+                  {subjects.map((s: any) => (
                     <option key={s.id} value={s.id}>
                       {formatSubjectDisplayName(s.name)} {s.examTarget?.name ? `(${s.examTarget.name})` : ''}
                     </option>

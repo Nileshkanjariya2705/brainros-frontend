@@ -21,30 +21,21 @@ import {
 } from 'lucide-react';
 import {
   completedExamReportsService,
-  CompletedLiveExamItem,
-  LiveExamSummaryMetrics,
-  AttendeeItem,
-  StudentAttemptAnalysisResponse,
+  type AttendeeItem,
+  type StudentAttemptAnalysisResponse,
 } from '../services/completedExamReports.service';
+import {
+  useCompletedExamsQuery,
+  useCompletedExamSummaryQuery,
+  useCompletedExamAttendeesQuery,
+} from '../services/completedExamReports.queries';
 import { useJobProgress } from '@/hooks/useJobProgress';
 
 export const CompletedExamReportsPage: React.FC = () => {
   // ── State ──
-  const [exams, setExams] = useState<CompletedLiveExamItem[]>([]);
   const [selectedExamId, setSelectedExamId] = useState<string>('');
-  const [loadingExams, setLoadingExams] = useState<boolean>(true);
-
-  // Summary State
-  const [summary, setSummary] = useState<LiveExamSummaryMetrics | null>(null);
-  const [loadingSummary, setLoadingSummary] = useState<boolean>(false);
-
-  // Attendees List State
-  const [attendees, setAttendees] = useState<AttendeeItem[]>([]);
-  const [loadingAttendees, setLoadingAttendees] = useState<boolean>(false);
-  const [totalAttendees, setTotalAttendees] = useState<number>(0);
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
-  const [totalPages, setTotalPages] = useState<number>(1);
 
   // Filters & Sorting
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -88,64 +79,48 @@ export const CompletedExamReportsPage: React.FC = () => {
     },
   });
 
-  // ── Load Completed Live Exams ──
-  const fetchCompletedExams = useCallback(async () => {
-    try {
-      setLoadingExams(true);
-      const list = await completedExamReportsService.getCompletedLiveExams();
-      setExams(list);
-      if (list.length > 0) {
-        setSelectedExamId((prev) => (prev ? prev : list[0].id));
-      }
-    } catch (err: any) {
-      setActionErrorMessage(err?.response?.data?.message || 'Failed to load completed live exams.');
-    } finally {
-      setLoadingExams(false);
-    }
-  }, []);
+  // ── React Queries ──
+  const {
+    data: examsData = [],
+    isLoading: loadingExams,
+  } = useCompletedExamsQuery();
+
+  const exams = examsData;
 
   useEffect(() => {
-    fetchCompletedExams();
-  }, [fetchCompletedExams]);
-
-  // ── Load Exam Summary & Attendees when selectedExamId changes ──
-  const fetchExamDetails = useCallback(async () => {
-    if (!selectedExamId) return;
-
-    try {
-      setLoadingSummary(true);
-      const summaryData = await completedExamReportsService.getLiveExamSummary(selectedExamId);
-      setSummary(summaryData);
-    } catch (err: any) {
-      console.error('Error fetching exam summary:', err);
-    } finally {
-      setLoadingSummary(false);
+    if (exams.length > 0 && !selectedExamId) {
+      setSelectedExamId(exams[0].id);
     }
+  }, [exams, selectedExamId]);
 
-    try {
-      setLoadingAttendees(true);
-      const attendeesData = await completedExamReportsService.getLiveExamAttendees(selectedExamId, {
-        search: searchTerm,
-        status: statusFilter,
-        sortBy,
-        sortOrder,
-        page,
-        limit,
-      });
-      setAttendees(attendeesData.items);
-      setTotalAttendees(attendeesData.meta.total);
-      setTotalPages(attendeesData.meta.totalPages);
-    } catch (err: any) {
-      console.error('Error fetching attendees:', err);
-      setActionErrorMessage('Failed to load attendees list.');
-    } finally {
-      setLoadingAttendees(false);
-    }
-  }, [selectedExamId, searchTerm, statusFilter, sortBy, sortOrder, page, limit]);
+  const {
+    data: summaryData,
+    isLoading: loadingSummary,
+    refetch: refetchSummary,
+  } = useCompletedExamSummaryQuery(selectedExamId || undefined);
+  const summary = summaryData || null;
 
-  useEffect(() => {
-    fetchExamDetails();
-  }, [fetchExamDetails]);
+  const {
+    data: attendeesResponse,
+    isLoading: loadingAttendees,
+    refetch: refetchAttendees,
+  } = useCompletedExamAttendeesQuery(selectedExamId || undefined, {
+    page,
+    limit,
+    search: searchTerm || undefined,
+    status: statusFilter !== 'ALL' ? statusFilter : undefined,
+    sortBy,
+    sortOrder,
+  });
+
+  const attendees = attendeesResponse?.items || [];
+  const totalAttendees = attendeesResponse?.meta?.total || 0;
+  const totalPages = attendeesResponse?.meta?.totalPages || 1;
+
+  const fetchExamDetails = useCallback(() => {
+    refetchSummary();
+    refetchAttendees();
+  }, [refetchSummary, refetchAttendees]);
 
   // ── Pre-send Inspection: Load analysis when emailConfirmTarget is selected ──
   useEffect(() => {

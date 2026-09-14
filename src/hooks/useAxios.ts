@@ -38,15 +38,32 @@ const toError = <T>(error: unknown): ExtendedResponse<T> => {
   const axiosError = error as AxiosError<ApiErrorResponse>;
   const errorResponse = axiosError?.response?.data;
   const errorData = errorResponse?.data;
+  const rawMsg = errorResponse?.message || errorData?.message || (errorResponse as any)?.error;
+  
+  let formattedMsg: string | undefined;
+  if (Array.isArray(rawMsg)) {
+    formattedMsg = rawMsg.filter(Boolean).join('. ');
+  } else if (typeof rawMsg === 'string' && rawMsg.trim().length > 0) {
+    formattedMsg = rawMsg;
+  } else if (!axiosError?.response && (axiosError?.code === 'ERR_NETWORK' || (typeof navigator !== 'undefined' && !navigator.onLine))) {
+    formattedMsg = 'Unable to connect to the server. Please check your internet connection and try again.';
+  } else if (axiosError?.code === 'ECONNABORTED' || axiosError?.message?.includes('timeout')) {
+    formattedMsg = 'The request took too long to complete. Please try again.';
+  } else if (axiosError?.message) {
+    formattedMsg = axiosError.message;
+  } else {
+    formattedMsg = String(error);
+  }
+
   return {
     isSuccess: false,
     data: errorData as T,
-    message: errorResponse?.message || errorData?.message,
+    message: formattedMsg,
     status: axiosError?.response?.status,
     statusText: axiosError?.response?.statusText,
     headers: axiosError?.response?.headers,
     response: axiosError?.response,
-    error: errorResponse?.message || errorData?.message || axiosError?.message || String(error),
+    error: formattedMsg,
   };
 };
 

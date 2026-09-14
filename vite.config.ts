@@ -12,6 +12,9 @@ export default defineConfig({
   server: {
     port: 3001,
     open: true,
+    watch: {
+      ignored: ['**/playwright-report/**', '**/test-results/**', '**/tests/**', '**/.git/**'],
+    },
   },
   // Used by Playwright E2E (`npm run preview`). Fixed port + strictPort so the
   // E2E base URL is deterministic and never silently drifts to another port.

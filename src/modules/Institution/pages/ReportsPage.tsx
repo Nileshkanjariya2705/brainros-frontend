@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   FileText,
   FileSpreadsheet,
@@ -10,71 +10,42 @@ import {
 } from 'lucide-react';
 import { Axios } from '@/base-axios';
 import { BatchItem, ReportJobItem } from '@/types/exam.types';
+import {
+  useInstitutionReportsQuery,
+  useInstitutionBatchesQuery,
+  useCreateInstitutionReportMutation,
+} from '../services/institutionDashboard.service';
 
 export const ReportsPage: React.FC = () => {
-  const [reports, setReports] = useState<ReportJobItem[]>([]);
-  const [batches, setBatches] = useState<BatchItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-
   // New report form state
   const [reportType, setReportType] = useState<string>('STUDENT_WISE');
   const [format, setFormat] = useState<'XLSX' | 'PDF'>('XLSX');
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
-  const [requesting, setRequesting] = useState<boolean>(false);
   const [requestError, setRequestError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchReports();
-    fetchBatches();
-    const interval = setInterval(fetchReports, 5000); // Polling for in-progress reports
-    return () => clearInterval(interval);
-  }, []);
+  // TanStack React Query
+  const { data: rawReports = [], isLoading: loading, refetch: fetchReports } = useInstitutionReportsQuery();
+  const reports: ReportJobItem[] = rawReports;
 
-  const getArrayData = (response: any): any[] => {
-    if (!response) return [];
-    if (Array.isArray(response)) return response;
-    if (Array.isArray(response.data)) return response.data;
-    if (Array.isArray(response.data?.data)) return response.data.data;
-    return [];
-  };
+  const { data: rawBatches = [] } = useInstitutionBatchesQuery();
+  const batches: BatchItem[] = (rawBatches as any) || [];
 
-  const fetchReports = async () => {
-    try {
-      const res = await Axios.get('/institutions/me/reports');
-      setReports(getArrayData(res));
-    } catch (err) {
-      console.error('Failed to fetch reports', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchBatches = async () => {
-    try {
-      const res = await Axios.get('/institutions/me/batches');
-      setBatches(getArrayData(res));
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const createReportMutation = useCreateInstitutionReportMutation();
+  const requesting = createReportMutation.isPending;
 
   const handleRequestReport = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      setRequesting(true);
       setRequestError(null);
-      await Axios.post('/institutions/me/reports', {
+      await createReportMutation.mutateAsync({
         reportType,
         format,
         filters: {
           ...(selectedBatchId && { batchId: selectedBatchId }),
         },
       });
-      await fetchReports();
     } catch (err: any) {
-      setRequestError(err.response?.data?.message || 'Failed to request report generation');
-    } finally {
-      setRequesting(false);
+      setRequestError(err.response?.data?.message || err.message || 'Failed to request report generation');
     }
   };
 
@@ -190,7 +161,7 @@ export const ReportsPage: React.FC = () => {
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <h2 className="text-lg font-bold text-slate-900">Generated Reports Queue</h2>
           <button
-            onClick={fetchReports}
+            onClick={() => fetchReports()}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:underline"
           >
             <RefreshCw className="h-3.5 w-3.5" /> Refresh List

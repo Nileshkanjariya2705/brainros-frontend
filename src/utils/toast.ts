@@ -26,16 +26,31 @@ class ToastManager {
     this.listeners.forEach((listener) => listener([...this.toasts]));
   }
 
-  show(message: string, type: ToastType = 'info', duration: number = 4000) {
+  private normalizeMessage(input: unknown): string {
+    if (!input) return '';
+    if (typeof input === 'string') return input.trim();
+    if (Array.isArray(input)) return input.filter(Boolean).map((item) => this.normalizeMessage(item)).join('. ');
+    if (typeof input === 'object') {
+      const obj = input as any;
+      if (typeof obj.message === 'string') return obj.message.trim();
+      if (Array.isArray(obj.message)) return obj.message.filter(Boolean).join('. ');
+      if (typeof obj.error === 'string') return obj.error.trim();
+    }
+    return String(input);
+  }
+
+  show(rawMessage: unknown, type: ToastType = 'info', duration: number = 4000) {
+    const message = this.normalizeMessage(rawMessage);
     if (!message) return;
 
-    // Deduplicate identical error/warning messages within a 2-second window
+    // Deduplicate identical error/warning/info messages within a 2-second window
+    const normalizedKey = `${type}:${message.toLowerCase()}`;
     const now = Date.now();
-    const lastTime = this.recentMessages.get(`${type}:${message}`) || 0;
+    const lastTime = this.recentMessages.get(normalizedKey) || 0;
     if (now - lastTime < 2000) {
       return;
     }
-    this.recentMessages.set(`${type}:${message}`, now);
+    this.recentMessages.set(normalizedKey, now);
 
     const id = `${now}-${Math.random().toString(36).substr(2, 9)}`;
     const toast: ToastItem = { id, type, message, duration };
@@ -50,19 +65,19 @@ class ToastManager {
     }
   }
 
-  success(message: string, duration?: number) {
+  success(message: unknown, duration?: number) {
     this.show(message, 'success', duration);
   }
 
-  error(message: string, duration?: number) {
+  error(message: unknown, duration?: number) {
     this.show(message, 'error', duration);
   }
 
-  warning(message: string, duration?: number) {
+  warning(message: unknown, duration?: number) {
     this.show(message, 'warning', duration);
   }
 
-  info(message: string, duration?: number) {
+  info(message: unknown, duration?: number) {
     this.show(message, 'info', duration);
   }
 

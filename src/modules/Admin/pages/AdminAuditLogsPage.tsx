@@ -1,18 +1,16 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { RefreshCw, Code, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Axios } from '@/base-axios';
+import { adminKeys } from '@/services/queryKeys';
 import { AuditLogItem } from '@/types/exam.types';
 
 export const AdminAuditLogsPage: React.FC = () => {
-  const [logs, setLogs] = useState<AuditLogItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
   const [actionFilter, setActionFilter] = useState<string>('');
   const [entityFilter, setEntityFilter] = useState<string>('');
   const [inspectLog, setInspectLog] = useState<AuditLogItem | null>(null);
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
-  const [total, setTotal] = useState<number>(0);
-  const [totalPages, setTotalPages] = useState<number>(1);
 
   const getArrayData = (response: any): any[] => {
     if (!response) return [];
@@ -22,32 +20,35 @@ export const AdminAuditLogsPage: React.FC = () => {
     return [];
   };
 
-  const fetchAuditLogs = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params: any = {
-        page,
-        limit,
-      };
+  const {
+    data: auditData,
+    isLoading: loading,
+    refetch: fetchAuditLogs,
+  } = useQuery({
+    queryKey: adminKeys.auditLogs({
+      page,
+      limit,
+      action: actionFilter || undefined,
+      entityType: entityFilter || undefined,
+    }),
+    queryFn: async () => {
+      const params: any = { page, limit };
       if (actionFilter) params.action = actionFilter;
       if (entityFilter) params.entityType = entityFilter;
 
       const res = await Axios.get('/admin/audit-logs', { params });
       const items = getArrayData(res);
-      setLogs(items);
       const count = res.data?.meta?.total ?? items.length;
-      setTotal(count);
-      setTotalPages(res.data?.meta?.pages ?? (Math.ceil(count / limit) || 1));
-    } catch (err) {
-      console.error('Failed to load audit logs', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [actionFilter, entityFilter, page, limit]);
+      const pages = res.data?.meta?.pages ?? (Math.ceil(count / limit) || 1);
+      return { logs: items as AuditLogItem[], total: count, totalPages: pages };
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
 
-  useEffect(() => {
-    fetchAuditLogs();
-  }, [fetchAuditLogs]);
+  const logs = auditData?.logs || [];
+  const total = auditData?.total || 0;
+  const totalPages = auditData?.totalPages || 1;
 
   return (
     <div className="space-y-6 pb-12">
@@ -63,7 +64,7 @@ export const AdminAuditLogsPage: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={fetchAuditLogs}
+          onClick={() => fetchAuditLogs()}
           className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50"
         >
           <RefreshCw className="h-3.5 w-3.5" /> Refresh Trails

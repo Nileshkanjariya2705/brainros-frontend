@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Building2,
@@ -24,10 +24,13 @@ import {
 import {
   AdminSchoolsApi,
   type SchoolItem,
-  type SchoolFilterOptions,
   type BulkUploadPreviewResponse,
   type CreateSchoolPayload,
 } from '../services/admin-schools.service';
+import {
+  useAdminSchoolsQuery,
+  useAdminSchoolFiltersQuery,
+} from '../services/admin-schools.queries';
 import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
 import { useJobProgress } from '@/hooks/useJobProgress';
@@ -169,19 +172,12 @@ export const AdminSchoolsPage: React.FC = () => {
     : '/admin';
 
   // State
-  const [schools, setSchools] = useState<SchoolItem[]>([]);
-  const [total, setTotal] = useState<number>(0);
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
   const [search, setSearch] = useState<string>('');
   const [searchInput, setSearchInput] = useState<string>('');
   const [stateFilter, setStateFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [filterOptions, setFilterOptions] = useState<SchoolFilterOptions>({
-    states: [],
-    districts: [],
-  });
 
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
@@ -231,43 +227,24 @@ export const AdminSchoolsPage: React.FC = () => {
     },
   ];
 
-  // Load filter options once
-  useEffect(() => {
-    AdminSchoolsApi.getFilterOptions()
-      .then(setFilterOptions)
-      .catch((err) => console.error('Failed to load filter options', err));
-  }, []);
+  // React Query Hooks
+  const {
+    data: schoolsData,
+    isLoading,
+    refetch: fetchSchools,
+  } = useAdminSchoolsQuery({
+    page,
+    limit,
+    search: search || undefined,
+    stateId: stateFilter || undefined,
+    status: statusFilter || undefined,
+  });
 
-  // Fetch schools
-  const fetchSchools = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res: any = await AdminSchoolsApi.getSchools({
-        page,
-        limit,
-        search: search || undefined,
-        stateId: stateFilter || undefined,
-        status: statusFilter || undefined,
-      });
-      const list = Array.isArray(res)
-        ? res
-        : Array.isArray(res?.data)
-          ? res.data
-          : [];
-      const totalCount =
-        res?.meta?.total ?? (Array.isArray(res) ? res.length : list.length);
-      setSchools(list);
-      setTotal(totalCount);
-    } catch (err: any) {
-      console.error('Failed to fetch schools', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, limit, search, stateFilter, statusFilter]);
+  const { data: filterOptionsData } = useAdminSchoolFiltersQuery();
+  const filterOptions = filterOptionsData || { states: [], districts: [] };
 
-  useEffect(() => {
-    fetchSchools();
-  }, [fetchSchools]);
+  const schools = schoolsData?.schools || [];
+  const total = schoolsData?.total || 0;
 
   // Debounced search
   useEffect(() => {
@@ -371,11 +348,11 @@ export const AdminSchoolsPage: React.FC = () => {
   // Metric stats
   const totalPages = Math.ceil(total / limit) || 1;
   const activeCount = useMemo(
-    () => schools.filter((s) => s.status === 'ACTIVE').length,
+    () => schools.filter((s: any) => s.status === 'ACTIVE').length,
     [schools],
   );
   const totalStudents = useMemo(
-    () => schools.reduce((acc, curr) => acc + (curr.studentCount || 0), 0),
+    () => schools.reduce((acc: number, curr: any) => acc + (curr.studentCount || 0), 0),
     [schools],
   );
 
@@ -556,7 +533,7 @@ export const AdminSchoolsPage: React.FC = () => {
 
           {/* Refresh Button */}
           <button
-            onClick={fetchSchools}
+            onClick={() => fetchSchools()}
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
             title="Refresh schools"
           >
@@ -610,7 +587,7 @@ export const AdminSchoolsPage: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                schools.map((school) => (
+                schools.map((school: any) => (
                   <tr key={school.id} className="hover:bg-slate-50/60 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">

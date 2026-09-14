@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   FileSpreadsheet,
@@ -14,9 +14,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
-import { useGetExamsListAPI } from '../services/examManager.service';
-import { useSubmitExamAPI } from '@/modules/ExamScheduling/services/examScheduling.service';
-import type { ExamItem } from '../types/examManager.types';
+import { useExamManagerExamsQuery } from '../services/examManager.queries';
+import { useSubmitExamMutation } from '@/modules/ExamScheduling/services/examScheduling.queries';
 import { toast } from '@/utils/toast';
 
 export const ExamManagerDashboardPage: React.FC = () => {
@@ -35,47 +34,29 @@ export const ExamManagerDashboardPage: React.FC = () => {
     ? `/${firstSegment}`
     : '/admin';
 
-  // Data & State
-  const [exams, setExams] = useState<ExamItem[]>([]);
-  const [totalCount, setTotalCount] = useState<number>(0);
-  const [totalPages, setTotalPages] = useState<number>(1);
+  // Filters & Pagination
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
-
-  // Filters
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
 
-  // APIs
-  const { getExamsListAPI, isLoading } = useGetExamsListAPI();
-  const { submitExamAPI } = useSubmitExamAPI();
+  // TanStack React Query
+  const { data: examData, isLoading } = useExamManagerExamsQuery({
+    search: search.trim() || undefined,
+    type: selectedType === 'ALL' ? undefined : selectedType,
+    status: selectedStatus === 'ALL' ? undefined : selectedStatus,
+    page,
+    limit,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  });
 
-  // Load exams with server-side filters & pagination
-  const loadExams = useCallback(async () => {
-    const res = await getExamsListAPI({
-      search: search.trim() || undefined,
-      type: selectedType === 'ALL' ? undefined : selectedType,
-      status: selectedStatus === 'ALL' ? undefined : selectedStatus,
-      page,
-      limit,
-      sortBy: 'createdAt',
-      sortOrder: 'desc',
-    });
+  const exams = examData?.items || [];
+  const totalCount = examData?.pagination?.total || 0;
+  const totalPages = examData?.pagination?.totalPages || 1;
 
-    if (res.data) {
-      const payload = res.data;
-      setExams(payload.items || []);
-      if (payload.pagination) {
-        setTotalCount(payload.pagination.total);
-        setTotalPages(payload.pagination.totalPages);
-      }
-    }
-  }, [getExamsListAPI, search, selectedType, selectedStatus, page, limit]);
-
-  useEffect(() => {
-    loadExams();
-  }, [loadExams]);
+  const submitMutation = useSubmitExamMutation();
 
   const handleOpenUpload = () => {
     navigate(`${routePrefix}/exam-manager/upload`);
@@ -85,15 +66,16 @@ export const ExamManagerDashboardPage: React.FC = () => {
     if (!window.confirm(`Submit exam "${title}" for Super Admin review and approval?`)) {
       return;
     }
-    const { error } = await submitExamAPI(examId, {
-      comment: 'Exam created via Question Paper upload and submitted by Admin.',
-    });
-    if (error) {
-      toast.error(typeof error === 'string' ? error : 'Failed to submit exam');
-      return;
+    try {
+      await submitMutation.mutateAsync({
+        examId,
+        payload: { comment: 'Exam created via Question Paper upload and submitted by Admin.' },
+      });
+      toast.success('Exam submitted for approval!');
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error?.message || 'Failed to submit exam';
+      toast.error(msg);
     }
-    toast.success('Exam submitted for approval!');
-    loadExams();
   };
 
   const getStatusBadge = (st: string) => {

@@ -36,22 +36,22 @@ export const TEST_USERS: Record<string, UserRoleCredentials> = {
   operator: {
     mobileNumber: '9000000098',
     role: 'OPERATOR',
-    expectedDashboardUrl: '/staff/dashboard',
+    expectedDashboardUrl: '/operator/dashboard',
   },
   manager: {
     mobileNumber: '9000000097',
     role: 'MANAGER',
-    expectedDashboardUrl: '/staff/dashboard',
+    expectedDashboardUrl: '/manager/dashboard',
   },
   generalManager: {
     mobileNumber: '9000000096',
     role: 'GENERAL_MANAGER',
-    expectedDashboardUrl: '/staff/dashboard',
+    expectedDashboardUrl: '/general-manager/dashboard',
   },
   accountant: {
     mobileNumber: '9000000099',
     role: 'ACCOUNTANT',
-    expectedDashboardUrl: '/staff/dashboard',
+    expectedDashboardUrl: '/accountant/dashboard',
   },
 };
 
@@ -71,46 +71,35 @@ export async function loginViaUI(page: Page, userKey: keyof typeof TEST_USERS | 
   }
 }
 
-const AUTH_CACHE: Record<string, { token: string; refreshToken: string; user: any }> = {};
-
 /**
  * Logs in via direct backend API call and injects access/refresh tokens into localStorage/cookies for rapid test setups.
  */
 export async function loginViaAPI(page: Page, mobileNumber: string, otp: string = '123456') {
   const backendBase = process.env.VITE_API_URL || 'http://127.0.0.1:3000';
-  
-  let authData = AUTH_CACHE[mobileNumber];
 
-  if (!authData) {
-    // 1. Send OTP
-    const sendRes = await page.request.post(`${backendBase}/auth/login/request-otp`, {
-      data: { identifier: mobileNumber },
-    });
-    const sendJson = await sendRes.json();
+  // 1. Send OTP
+  const sendRes = await page.request.post(`${backendBase}/auth/login/request-otp`, {
+    data: { identifier: mobileNumber },
+  });
+  const sendJson = await sendRes.json();
 
-    if (!sendJson?.data?.loginRequestId) {
-      throw new Error(`Failed to request OTP via API for ${mobileNumber}: ${JSON.stringify(sendJson)}`);
-    }
-
-    // 2. Verify OTP
-    const verifyRes = await page.request.post(`${backendBase}/auth/login/verify-otp`, {
-      data: { loginRequestId: sendJson.data.loginRequestId, otp },
-    });
-    const verifyJson = await verifyRes.json();
-
-    if (!verifyJson?.data?.accessToken) {
-      throw new Error(`Failed to login via API for ${mobileNumber}: ${JSON.stringify(verifyJson)}`);
-    }
-
-    authData = {
-      token: verifyJson.data.accessToken,
-      refreshToken: verifyJson.data.refreshToken,
-      user: verifyJson.data.user,
-    };
-    AUTH_CACHE[mobileNumber] = authData;
+  if (!sendJson?.data?.loginRequestId) {
+    throw new Error(`Failed to request OTP via API for ${mobileNumber}: ${JSON.stringify(sendJson)}`);
   }
 
-  const { token, refreshToken, user } = authData;
+  // 2. Verify OTP
+  const verifyRes = await page.request.post(`${backendBase}/auth/login/verify-otp`, {
+    data: { loginRequestId: sendJson.data.loginRequestId, otp },
+  });
+  const verifyJson = await verifyRes.json();
+
+  if (!verifyJson?.data?.accessToken) {
+    throw new Error(`Failed to login via API for ${mobileNumber}: ${JSON.stringify(verifyJson)}`);
+  }
+
+  const token = verifyJson.data.accessToken;
+  const refreshToken = verifyJson.data.refreshToken;
+  const user = verifyJson.data.user;
 
   // Clear any existing cookies to ensure clean isolation
   await page.context().clearCookies();
@@ -123,16 +112,18 @@ export async function loginViaAPI(page: Page, mobileNumber: string, otp: string 
     { name: 'refreshToken', value: refreshToken, domain: 'localhost', path: '/' },
   ]);
 
-  // Set auth state into localStorage in page context
-  await page.goto('/login');
-  await page.evaluate(({ token, refreshToken, user }) => {
-    localStorage.setItem('access_token', token);
-    localStorage.setItem('refresh_token', refreshToken);
-    localStorage.setItem('accessToken', token);
-    localStorage.setItem('refreshToken', refreshToken);
-    localStorage.setItem('user', JSON.stringify(user));
-  }, { token, refreshToken, user });
-  await page.reload({ waitUntil: 'domcontentloaded' });
+  // Inject into page before navigation
+  await page.addInitScript(
+    ({ token, refreshToken, user }) => {
+      sessionStorage.setItem('auth_tab_session', `tab-test-${Date.now()}`);
+      localStorage.setItem('access_token', token);
+      localStorage.setItem('refresh_token', refreshToken);
+      localStorage.setItem('accessToken', token);
+      localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('user', JSON.stringify(user));
+    },
+    { token, refreshToken, user },
+  );
 
   return { token, user };
 }

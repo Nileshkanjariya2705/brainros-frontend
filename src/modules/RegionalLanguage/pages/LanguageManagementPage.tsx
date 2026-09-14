@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
 import {
   Globe2,
   Plus,
@@ -11,33 +10,17 @@ import {
   Sparkles,
   Save,
   X,
-  UploadCloud,
 } from 'lucide-react';
 import {
-  useGetLanguagesAPI,
-  useCreateLanguageAPI,
-  useUpdateLanguageAPI,
-  useDeleteLanguageAPI,
-} from '../services/regionalLanguage.service';
+  useSupportedLanguagesQuery,
+  useCreateLanguageMutation,
+  useUpdateLanguageMutation,
+  useDeleteLanguageMutation,
+} from '../services/regionalLanguage.queries';
 import type { SupportedLanguage } from '../types/regionalLanguage.types';
 import Button from '@/components/ui/Button';
 
 const LanguageManagementPage: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const firstSegment = location.pathname.split('/')[1];
-  const routePrefix = [
-    'super-admin',
-    'admin',
-    'general-manager',
-    'manager',
-    'operator',
-    'staff',
-  ].includes(firstSegment)
-    ? `/${firstSegment}`
-    : '/admin';
-
-  const [languages, setLanguages] = useState<SupportedLanguage[]>([]);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLang, setEditingLang] = useState<SupportedLanguage | null>(null);
@@ -52,19 +35,13 @@ const LanguageManagementPage: React.FC = () => {
   const [formIsActive, setFormIsActive] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { getLanguagesAPI } = useGetLanguagesAPI();
-  const { createLanguageAPI, isLoading: isCreating } = useCreateLanguageAPI();
-  const { updateLanguageAPI, isLoading: isUpdating } = useUpdateLanguageAPI();
-  const { deleteLanguageAPI } = useDeleteLanguageAPI();
+  const { data: languages = [], isLoading } = useSupportedLanguagesQuery(true);
+  const createMutation = useCreateLanguageMutation();
+  const updateMutation = useUpdateLanguageMutation();
+  const deleteMutation = useDeleteLanguageMutation();
 
-  const fetchLanguages = useCallback(async () => {
-    const { data } = await getLanguagesAPI(true);
-    if (data) setLanguages(data);
-  }, [getLanguagesAPI]);
-
-  useEffect(() => {
-    fetchLanguages();
-  }, [fetchLanguages]);
+  const isCreating = createMutation.isPending;
+  const isUpdating = updateMutation.isPending;
 
   const handleOpenCreateModal = () => {
     setEditingLang(null);
@@ -97,106 +74,88 @@ const LanguageManagementPage: React.FC = () => {
     }
     setErrorMsg(null);
 
-    if (editingLang) {
-      const { error } = await updateLanguageAPI(editingLang.id, {
-        name: formName.trim(),
-        nativeName: formNativeName.trim() || formName.trim(),
-        description: formDesc.trim() || undefined,
-        displayOrder: formOrder,
-        isActive: formIsActive,
-      });
-
-      if (error) {
-        setErrorMsg(typeof error === 'string' ? error : 'Failed to update language');
-        return;
+    try {
+      if (editingLang) {
+        await updateMutation.mutateAsync({
+          id: editingLang.id,
+          payload: {
+            code: formCode.trim().toUpperCase(),
+            name: formName.trim(),
+            nativeName: formNativeName.trim() || undefined,
+            description: formDesc.trim() || undefined,
+            displayOrder: Number(formOrder),
+            isActive: formIsActive,
+          },
+        });
+        setSuccessPopupMsg({
+          title: 'Language Updated',
+          desc: `"${formName.trim()}" has been updated successfully.`,
+        });
+      } else {
+        await createMutation.mutateAsync({
+          code: formCode.trim().toUpperCase(),
+          name: formName.trim(),
+          nativeName: formNativeName.trim() || undefined,
+          description: formDesc.trim() || undefined,
+          displayOrder: Number(formOrder),
+          isActive: formIsActive,
+        });
+        setSuccessPopupMsg({
+          title: 'Language Added',
+          desc: `"${formName.trim()}" is now available for regional exam translations.`,
+        });
       }
-
-      setSuccessPopupMsg({
-        title: 'Language Updated Successfully!',
-        desc: `Configuration and settings for "${formName.trim()}" have been saved.`,
-      });
-    } else {
-      const { error } = await createLanguageAPI({
-        code: formCode.trim().toLowerCase(),
-        name: formName.trim(),
-        nativeName: formNativeName.trim() || formName.trim(),
-        description: formDesc.trim() || undefined,
-        displayOrder: formOrder,
-        isActive: formIsActive,
-      });
-
-      if (error) {
-        setErrorMsg(typeof error === 'string' ? error : 'Failed to create language');
-        return;
-      }
-
-      setSuccessPopupMsg({
-        title: 'Language Created Successfully!',
-        desc: `Language "${formName.trim()}" (${formCode.trim().toUpperCase()}) is now active in language master.`,
-      });
+      setIsModalOpen(false);
+    } catch (err: any) {
+      setErrorMsg(err?.response?.data?.message || err?.message || 'Operation failed');
     }
-
-    setIsModalOpen(false);
-    fetchLanguages();
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this language?')) return;
-    const { error } = await deleteLanguageAPI(id);
-    if (error) {
-      alert(typeof error === 'string' ? error : 'Cannot delete language');
-      return;
+  const handleDelete = async (lang: SupportedLanguage) => {
+    if (!window.confirm(`Are you sure you want to deactivate or remove "${lang.name}"?`)) return;
+    try {
+      await deleteMutation.mutateAsync(lang.id);
+    } catch (err: any) {
+      alert(err?.response?.data?.message || err?.message || 'Failed to delete language');
     }
-    fetchLanguages();
   };
 
-  const filteredLanguages = languages.filter((l) =>
+  const filteredLanguages = languages.filter((l: SupportedLanguage) =>
     `${l.name} ${l.nativeName} ${l.code}`.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-16">
       {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700 ring-1 ring-inset ring-indigo-500/20 mb-2">
             <Globe2 size={13} />
-            <span>Regional Language Engine</span>
+            <span>Multi-Lingual Exam Engine</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Regional Language Master
+            Regional Language Manager
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Configure official regional languages, native scripts, display priority, and
-            availability
+            Configure, order, and toggle regional Indian languages supported for AI question
+            translations & live student exam switching
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => navigate(`${routePrefix}/languages/import`)}
-            className="flex items-center gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold"
-          >
-            <UploadCloud size={16} />
-            <span>Bulk Import Translations</span>
-          </Button>
-
-          <Button
-            onClick={handleOpenCreateModal}
-            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200"
-          >
-            <Plus size={16} />
-            <span>Add New Language</span>
-          </Button>
-        </div>
+        <Button
+          onClick={handleOpenCreateModal}
+          className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md shadow-indigo-200 shrink-0"
+        >
+          <Plus size={16} />
+          <span>Add Language</span>
+        </Button>
       </div>
 
       {/* KPI Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-            Total Languages
+            Configured Languages
           </span>
           <span className="text-2xl font-black text-slate-900 mt-1 block">{languages.length}</span>
         </div>
@@ -206,7 +165,7 @@ const LanguageManagementPage: React.FC = () => {
             Active in Exams
           </span>
           <span className="text-2xl font-black text-emerald-900 mt-1 block">
-            {languages.filter((l) => l.isActive).length}
+            {languages.filter((l: SupportedLanguage) => l.isActive).length}
           </span>
         </div>
 
@@ -264,7 +223,13 @@ const LanguageManagementPage: React.FC = () => {
             </thead>
 
             <tbody className="divide-y divide-slate-100">
-              {filteredLanguages.map((lang) => (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-400">
+                    Loading languages...
+                  </td>
+                </tr>
+              ) : filteredLanguages.map((lang: SupportedLanguage) => (
                 <tr key={lang.id} className="hover:bg-slate-50/60 transition-colors">
                   <td className="px-6 py-4 font-mono font-bold text-slate-400">
                     #{lang.displayOrder}
@@ -309,7 +274,7 @@ const LanguageManagementPage: React.FC = () => {
                         <Edit2 size={13} />
                       </button>
                       <button
-                        onClick={() => handleDelete(lang.id)}
+                        onClick={() => handleDelete(lang)}
                         className="rounded-lg border border-slate-200 p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors"
                         title="Delete Language"
                       >

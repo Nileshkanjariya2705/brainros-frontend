@@ -3,7 +3,7 @@
  * Restricts question authoring and filters to core subjects for JEE and NEET.
  */
 
-export const TARGET_EXAMS = ['JEE', 'NEET'] as const;
+export const TARGET_EXAMS = ['JEE', 'NEET', 'CET'] as const;
 
 export const ALLOWED_CORE_SUBJECTS = ['Physics', 'Chemistry', 'Mathematics', 'Biology'] as const;
 
@@ -16,9 +16,7 @@ export const isAllowedSubject = (subjectName?: string): boolean => {
     lower.includes('physics') ||
     lower.includes('chemistry') ||
     lower.includes('math') ||
-    lower.includes('bio') ||
-    lower.includes('botany') ||
-    lower.includes('zoology')
+    lower.includes('bio')
   );
 };
 
@@ -30,8 +28,6 @@ export const formatSubjectDisplayName = (name: string): string => {
   if (lower.includes('physics')) return 'Physics';
   if (lower.includes('chemistry')) return 'Chemistry';
   if (lower.includes('math')) return 'Mathematics';
-  if (lower.includes('botany')) return 'Biology (Botany)';
-  if (lower.includes('zoology')) return 'Biology (Zoology)';
-  if (lower.includes('bio')) return 'Biology';
+  if (lower.includes('bio') || lower.includes('botany') || lower.includes('zoology')) return 'Biology';
   return name;
 };

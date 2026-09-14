@@ -3,7 +3,7 @@ import { loginViaUI, TEST_USERS } from '../helpers/auth.helper';
 
 test.describe('Authentication & Session Management', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear cookies & storage for isolation
+    // Clear cookies for isolation
     await page.context().clearCookies();
   });
 
@@ -51,7 +51,7 @@ test.describe('Authentication & Session Management', () => {
 
   test('AUTH-007 to 010: Staff Roles (Operator, Manager, GM, Accountant) Login', async ({ page }) => {
     await loginViaUI(page, 'operator');
-    await expect(page).toHaveURL(/\/staff\/dashboard/);
+    await expect(page).toHaveURL(/\/operator\/dashboard/);
   });
 
   test('AUTH-011: Invalid OTP Rejection Error Message', async ({ page }) => {
@@ -80,13 +80,13 @@ test.describe('Authentication & Session Management', () => {
     await expect(page).toHaveURL(/\/student\/dashboard/);
 
     // Click Logout button in header
-    const logoutBtn = page.locator('button:has-text("Logout"), button[title="Sign Out"]').first();
+    const logoutBtn = page.getByRole('button', { name: /logout|sign out/i }).first();
     await expect(logoutBtn).toBeVisible({ timeout: 10000 });
     await logoutBtn.click();
 
     // Click confirm logout button in modal
     const confirmLogoutBtn = page.getByRole('button', { name: /yes, log out/i });
-    await expect(confirmLogoutBtn).toBeVisible();
+    await expect(confirmLogoutBtn).toBeVisible({ timeout: 5000 });
     await confirmLogoutBtn.click();
 
     // Verify redirected to login screen
