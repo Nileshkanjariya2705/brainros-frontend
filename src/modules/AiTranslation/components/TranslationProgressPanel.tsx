@@ -77,9 +77,6 @@ export const TranslationProgressPanel: React.FC<TranslationProgressPanelProps> =
   const completedLanguagesCount = jobDetails.languageStatuses.filter(
     (l) => l.status === 'COMPLETED',
   ).length;
-  const failedLanguagesCount = jobDetails.languageStatuses.filter(
-    (l) => l.status === 'FAILED',
-  ).length;
   const retryingLanguagesCount = jobDetails.languageStatuses.filter(
     (l) => l.status === 'RETRYING',
   ).length;
