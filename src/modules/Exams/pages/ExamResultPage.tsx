@@ -74,20 +74,23 @@ const ExamResultPage = () => {
     refetch: refetchStatus,
   } = useResultStatusQuery(attemptId);
 
+  const isPendingPublication = Boolean(
+    resultStatusData?.availability === 'RESULT_PENDING' ||
+      (resultStatusData?.examType === 'LIVE' &&
+        resultStatusData?.publicationStatus !== 'PUBLISHED'),
+  );
+
   const isReady = Boolean(
-    resultStatusData?.availability === 'PUBLISHED' ||
-      resultStatusData?.availability === 'RESULT_READY' ||
-      resultStatusData?.resultStatus === 'PUBLISHED' ||
-      resultStatusData?.resultStatus === 'COMPLETED' ||
-      resultStatusData?.resultStatus === 'EVALUATED' ||
-      (resultStatusData as any)?.status === 'EVALUATED' ||
-      (resultStatusData as any)?.attemptStatus === 'EVALUATED' ||
-      resultStatusData?.reportAvailable === true ||
-      resultStatusData?.resultAvailable === true,
+    !isPendingPublication &&
+      (resultStatusData?.availability === 'PUBLISHED' ||
+        resultStatusData?.publicationStatus === 'PUBLISHED' ||
+        (resultStatusData?.reportAvailable === true &&
+          resultStatusData?.publicationStatus === 'PUBLISHED')),
   );
 
   const isPolling =
     !isReady &&
+    !isPendingPublication &&
     (isStatusLoading ||
       resultStatusData?.availability === 'PROCESSING' ||
       resultStatusData?.processingStatus === 'PROCESSING');
@@ -160,7 +163,7 @@ const ExamResultPage = () => {
   };
 
   // ─── Case 1: LIVE EXAM Awaiting Super Admin Publication ──────────
-  if (resultStatusData?.availability === 'RESULT_PENDING') {
+  if (isPendingPublication || resultStatusData?.availability === 'RESULT_PENDING') {
     return (
       <div className="max-w-2xl mx-auto py-12 px-4 space-y-6">
         <div className="rounded-3xl bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-900/50 p-8 text-center shadow-xl shadow-indigo-100/30 dark:shadow-none">
@@ -177,14 +180,14 @@ const ExamResultPage = () => {
           </h1>
 
           <p className="mt-3 text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-lg mx-auto">
-            {resultStatusData.message}
+            {resultStatusData?.message || 'Your responses have been saved and scored.'}
           </p>
 
           <div className="mt-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-left space-y-2 text-xs">
             <div className="flex justify-between text-slate-600 dark:text-slate-400">
               <span>Exam Title:</span>
               <span className="font-semibold text-slate-900 dark:text-white">
-                {resultStatusData.examTitle}
+                {resultStatusData?.examTitle || 'Live Examination'}
               </span>
             </div>
             <div className="flex justify-between text-slate-600 dark:text-slate-400">

@@ -98,9 +98,6 @@ const ScheduleExamPage = lazyRoute(
 const ViewQuestionPaperPage = lazyRoute(
   () => import('@/modules/ExamManager/pages/ViewQuestionPaperPage'),
 );
-const ImportHistoryPage = lazyRoute(
-  () => import('@/modules/ExamManager/pages/ImportHistoryPage'),
-);
 const StrategyRuleManagementPage = lazyRoute(
   () => import('@/modules/Analysis/pages/StrategyRuleManagementPage'),
 );
@@ -405,14 +402,7 @@ const adminRoutes: RouteObject[] = [
           </ProtectedRoute>
         ),
       },
-      {
-        path: 'exam-manager/history',
-        element: (
-          <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
-            <ImportHistoryPage />
-          </ProtectedRoute>
-        ),
-      },
+
       {
         path: 'strategy-rules',
         element: (
@@ -480,7 +470,7 @@ const adminRoutes: RouteObject[] = [
       {
         path: 'students',
         element: (
-          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW]}>
+          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW, PERMISSIONS.STUDENT_VIEW]}>
             <AdminStudentsPage />
           </ProtectedRoute>
         ),
@@ -488,7 +478,7 @@ const adminRoutes: RouteObject[] = [
       {
         path: 'public-registrations',
         element: (
-          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW]}>
+          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW, PERMISSIONS.STUDENT_VIEW]}>
             <PublicRegistrationsPage />
           </ProtectedRoute>
         ),
@@ -496,7 +486,7 @@ const adminRoutes: RouteObject[] = [
       {
         path: 'public_registrations',
         element: (
-          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW]}>
+          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW, PERMISSIONS.STUDENT_VIEW]}>
             <PublicRegistrationsPage />
           </ProtectedRoute>
         ),
@@ -504,7 +494,7 @@ const adminRoutes: RouteObject[] = [
       {
         path: 'students/bulk-register',
         element: (
-          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW]}>
+          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW, PERMISSIONS.STUDENT_VIEW]}>
             <SuperAdminBulkStudentRegistrationPage />
           </ProtectedRoute>
         ),
@@ -512,7 +502,7 @@ const adminRoutes: RouteObject[] = [
       {
         path: 'schools',
         element: (
-          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW]}>
+          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW, PERMISSIONS.STUDENT_VIEW, PERMISSIONS.INSTITUTION_VIEW]}>
             <AdminSchoolsPage />
           </ProtectedRoute>
         ),
@@ -570,7 +560,7 @@ const superAdminChildren: RouteObject[] = [
   { path: 'exams/:examId/question-paper/add', element: <ManualQuestionEntryPage /> },
   { path: 'exams/:examId/question-paper/view', element: <ViewQuestionPaperPage /> },
   { path: 'exams/schedule', element: <ScheduleExamPage /> },
-  { path: 'exam-manager/history', element: <ImportHistoryPage /> },
+
   { path: 'exam-scheduling', element: <ExamSchedulingManagementPage /> },
   { path: 'strategy-rules', element: <StrategyRuleManagementPage /> },
   { path: 'leaderboard', element: <AdminLeaderboardPage /> },
@@ -651,7 +641,7 @@ const generalManagerRoutes: RouteObject[] = [
       { path: 'exams/:examId/question-paper/upload', element: <UploadExamQuestionPaperPage /> },
       { path: 'exams/:examId/question-paper/add', element: <ManualQuestionEntryPage /> },
       { path: 'exams/:examId/question-paper/view', element: <ViewQuestionPaperPage /> },
-      { path: 'exam-manager/history', element: <ImportHistoryPage /> },
+
       { path: 'completed-exams', element: <CompletedExamReportsPage /> },
       { path: 'reports', element: <CompletedExamReportsPage /> },
       { path: 'approvals', element: <AdminApprovalQueuePage /> },
@@ -704,7 +694,7 @@ const operatorRoutes: RouteObject[] = [
       { path: 'exams/:examId/question-paper/upload', element: <UploadExamQuestionPaperPage /> },
       { path: 'exams/:examId/question-paper/add', element: <ManualQuestionEntryPage /> },
       { path: 'exams/:examId/question-paper/view', element: <ViewQuestionPaperPage /> },
-      { path: 'exam-manager/history', element: <ImportHistoryPage /> },
+
       { path: 'completed-exams', element: <CompletedExamReportsPage /> },
       { path: 'reports', element: <CompletedExamReportsPage /> },
       { path: 'approvals', element: <AdminApprovalQueuePage /> },

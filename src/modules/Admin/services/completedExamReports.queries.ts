@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { adminKeys, resultKeys } from '@/services/queryKeys';
+import { toast } from '@/utils/toast';
 import {
   completedExamReportsService,
   type CompletedLiveExamItem,
@@ -97,6 +98,10 @@ export function useApproveReportMutation() {
     onSuccess: (_data, { examId }) => {
       qc.invalidateQueries({ queryKey: adminKeys.completedExamSummary(examId) });
       qc.invalidateQueries({ queryKey: adminKeys.completedExamAttendees(examId) });
+      toast.success('Attempt report approved successfully!');
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Failed to approve report.');
     },
   });
 }

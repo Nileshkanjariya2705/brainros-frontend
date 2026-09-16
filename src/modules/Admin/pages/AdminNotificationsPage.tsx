@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import cn from 'classnames';
 import {
   Bell,
   Mail,
@@ -17,6 +19,8 @@ import {
   Layers,
 } from 'lucide-react';
 import { Axios } from '@/base-axios';
+import { notificationKeys } from '@/services/queryKeys';
+import { toast } from '@/utils/toast';
 import { NotificationItem, NotificationTemplateItem } from '@/types/exam.types';
 
 export interface AdminActionAlert {
@@ -49,6 +53,8 @@ export interface ActionAlertsResponse {
 
 export const AdminNotificationsPage: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
 
   const [activeMainTab, setActiveMainTab] = useState<'ALERTS' | 'IN_APP' | 'GATEWAYS' | 'TEMPLATES'>('ALERTS');
   const [actionAlerts, setActionAlerts] = useState<AdminActionAlert[]>([]);
@@ -147,10 +153,30 @@ export const AdminNotificationsPage: React.FC = () => {
 
   const handleMarkAllRead = async () => {
     try {
+      setIsMarkingAllRead(true);
       await Axios.patch('/notifications/read-all');
-      fetchInAppNotifications();
-    } catch (err) {
+
+      setAlertsSummary({
+        total: 0,
+        questionPapersPending: 0,
+        answerKeysPending: 0,
+        approvalsPending: 0,
+      });
+      setActionAlerts([]);
+      setInAppNotifications((prev) =>
+        prev.map((n) => ({ ...n, isRead: true, status: 'READ' }))
+      );
+
+      // Immediately zero out topbar bell count badge
+      queryClient.setQueryData(notificationKeys.unreadCount(), 0);
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+
+      toast.success('All notifications marked as read');
+    } catch (err: any) {
       console.error('Failed to mark all as read:', err);
+      toast.error(err?.message || 'Failed to mark all as read');
+    } finally {
+      setIsMarkingAllRead(false);
     }
   };
 
@@ -254,6 +280,16 @@ export const AdminNotificationsPage: React.FC = () => {
 
         <div className="flex items-center gap-2.5">
           <button
+            type="button"
+            onClick={handleMarkAllRead}
+            disabled={isMarkingAllRead}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 px-3.5 py-2 text-xs font-bold shadow-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all cursor-pointer disabled:opacity-50"
+          >
+            <CheckCircle2 className={cn("h-3.5 w-3.5", isMarkingAllRead && "animate-spin")} />
+            {isMarkingAllRead ? 'Marking All Read...' : 'Mark All as Read'}
+          </button>
+          <button
+            type="button"
             onClick={() => {
               fetchActionAlerts();
               fetchInAppNotifications();

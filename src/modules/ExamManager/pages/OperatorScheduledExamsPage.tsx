@@ -74,6 +74,7 @@ export const OperatorScheduledExamsPage: React.FC = () => {
     setIsLoading(true);
     const res = await getExamsListAPI({
       missingQuestionPaperOnly: true,
+      notConductedOnly: true,
       search: search.trim() || undefined,
       page,
       limit,
@@ -231,6 +232,18 @@ export const OperatorScheduledExamsPage: React.FC = () => {
   };
 
   const filteredExams = exams.filter((exam) => {
+    const isConducted =
+      exam.status === 'COMPLETED' ||
+      exam.status === 'ENDED' ||
+      exam.status === 'CANCELLED' ||
+      exam.schedule?.status === 'COMPLETED' ||
+      exam.schedule?.status === 'ENDED' ||
+      exam.schedule?.status === 'CANCELLED' ||
+      (Boolean(exam.schedule?.endTime) &&
+        new Date(exam.schedule!.endTime).getTime() < Date.now());
+
+    if (isConducted) return false;
+
     if (selectedTarget === 'ALL') return true;
     return (exam.target || (exam as any).targetExam || '').toUpperCase().includes(selectedTarget.toUpperCase());
   });

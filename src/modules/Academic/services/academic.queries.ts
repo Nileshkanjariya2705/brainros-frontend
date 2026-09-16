@@ -60,17 +60,36 @@ export function useAllAcademicChaptersQuery(params: {
   }>({
     queryKey: academicKeys.allChapters(params),
     queryFn: async () => {
-      const res = await Axios.get(`${ACADEMIC_BASE_PATH}/chapters/all`, { params });
+      const res = await Axios.get(`${ACADEMIC_BASE_PATH}/chapters`, { params });
       const raw = res.data;
-      const list: ChapterItem[] = Array.isArray(raw)
-        ? raw
-        : Array.isArray(raw?.data)
+
+      const payload =
+        raw?.data !== undefined &&
+        typeof raw?.data === 'object' &&
+        !Array.isArray(raw.data) &&
+        'data' in raw.data
           ? raw.data
-          : Array.isArray(raw?.data?.data)
-            ? raw.data.data
-            : [];
-      const total = raw?.meta?.total ?? list.length;
-      const totalPages = raw?.meta?.pages ?? raw?.meta?.totalPages ?? (Math.ceil(total / (params.limit || 10)) || 1);
+          : raw?.data !== undefined
+            ? raw.data
+            : raw;
+
+      let list: ChapterItem[] = [];
+      if (Array.isArray(payload)) {
+        list = payload;
+      } else if (Array.isArray(payload?.data)) {
+        list = payload.data;
+      } else if (Array.isArray(raw?.data)) {
+        list = raw.data;
+      } else if (Array.isArray(raw)) {
+        list = raw;
+      }
+
+      const metaObj = payload?.meta ?? raw?.meta ?? raw?.data?.meta;
+      const total = metaObj?.total ?? list.length;
+      const totalPages =
+        metaObj?.pages ??
+        metaObj?.totalPages ??
+        (Math.ceil(total / (params.limit || 10)) || 1);
 
       return {
         chapters: list,

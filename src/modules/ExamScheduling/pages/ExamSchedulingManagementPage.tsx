@@ -6,15 +6,11 @@ import {
   ShieldCheck,
   Zap,
   RotateCcw,
-  History,
   XCircle,
   Clock,
   Layers,
-  Server,
-  LayoutDashboard,
   CheckCircle2,
   AlertCircle,
-  FileSpreadsheet,
 } from 'lucide-react';
 import { useExamManagerExamsQuery } from '@/modules/ExamManager/services/examManager.queries';
 import {
@@ -23,6 +19,7 @@ import {
   useActivateExamMutation,
   useCancelExamMutation,
 } from '../services/examScheduling.queries';
+import { toast } from '@/utils/toast';
 import { ScheduleExamModal } from '../components/ScheduleExamModal';
 import { RescheduleExamModal } from '../components/RescheduleExamModal';
 import { ExamLifecycleTimelineModal } from '../components/ExamLifecycleTimelineModal';
@@ -140,7 +137,7 @@ export const ExamSchedulingManagementPage: React.FC = () => {
     try {
       await approveMutation.mutateAsync({ examId, payload: { comment: 'Exam certified by Super Admin.' } });
     } catch (err: any) {
-      alert(err?.response?.data?.message || err?.message || 'Failed to approve exam');
+      toast.error(err?.response?.data?.message || err?.message || 'Failed to approve exam');
     }
   };
 
@@ -385,90 +382,8 @@ export const ExamSchedulingManagementPage: React.FC = () => {
                   </div>
 
                   {/* Top Right Quick Actions */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Button
-                      size="sm"
-                      onClick={() => navigate(`/admin/exams/${exam.id}/manage`)}
-                      className="flex items-center gap-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-700 font-bold shadow-sm"
-                    >
-                      <LayoutDashboard size={13} />
-                      <span>Exam Management</span>
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setActiveExam(exam);
-                        setIsScheduleOpen(true);
-                      }}
-                      className="flex items-center gap-1.5 text-xs text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 border-indigo-200 font-bold"
-                    >
-                      <CalendarClock size={13} />
-                      <span>Schedule</span>
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const firstSeg = window.location.pathname.split('/')[1];
-                        const routePrefix = [
-                          'super-admin',
-                          'admin',
-                          'general-manager',
-                          'manager',
-                          'operator',
-                          'staff',
-                        ].includes(firstSeg)
-                          ? `/${firstSeg}`
-                          : '/admin';
-                        navigate(`${routePrefix}/exam-manager/upload?activeExamId=${exam.id}`);
-                      }}
-                      className={`flex items-center gap-1.5 text-xs font-bold ${
-                        (exam._count?.examQuestions || 0) > 0
-                          ? 'text-slate-700 bg-slate-50 hover:bg-slate-100 border-slate-200'
-                          : 'text-amber-800 bg-amber-50/80 hover:bg-amber-100 border-amber-300 shadow-xs'
-                      }`}
-                    >
-                      <FileSpreadsheet
-                        size={13}
-                        className={
-                          (exam._count?.examQuestions || 0) > 0 ? 'text-slate-500' : 'text-amber-600'
-                        }
-                      />
-                      <span>
-                        {(exam._count?.examQuestions || 0) > 0 ? 'View Paper' : 'Upload Paper'}
-                      </span>
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setActiveExam(exam);
-                        setIsTimelineOpen(true);
-                      }}
-                      className="flex items-center gap-1.5 text-xs text-slate-700 bg-slate-50 hover:bg-slate-100 border-slate-200"
-                    >
-                      <History size={13} />
-                      <span>Audit Trail</span>
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setActiveExam(exam);
-                        setIsAccessCheckOpen(true);
-                      }}
-                      className="flex items-center gap-1.5 text-xs text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100 border-indigo-200"
-                    >
-                      <Server size={13} />
-                      <span>Test Student Access</span>
-                    </Button>
-
-                    {stName !== 'CANCELLED' && stName !== 'COMPLETED' && (
+                  {stName !== 'CANCELLED' && stName !== 'COMPLETED' && (
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={() => handleCancelExam(exam.id, exam.title)}
                         className="rounded-xl border border-slate-200 p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors"
@@ -476,8 +391,8 @@ export const ExamSchedulingManagementPage: React.FC = () => {
                       >
                         <XCircle size={15} />
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Stepper Progress Bar */}
@@ -598,29 +513,7 @@ export const ExamSchedulingManagementPage: React.FC = () => {
                     </Button>
                   )}
 
-                  {stName === 'SCHEDULED' && (exam._count?.examQuestions || 0) === 0 && (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        const firstSeg = window.location.pathname.split('/')[1];
-                        const routePrefix = [
-                          'super-admin',
-                          'admin',
-                          'general-manager',
-                          'manager',
-                          'operator',
-                          'staff',
-                        ].includes(firstSeg)
-                          ? `/${firstSeg}`
-                          : '/admin';
-                        navigate(`${routePrefix}/exam-manager/upload?activeExamId=${exam.id}`);
-                      }}
-                      className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-sm"
-                    >
-                      <FileSpreadsheet size={13} />
-                      <span>Upload Question Paper First</span>
-                    </Button>
-                  )}
+
 
                   {stName === 'SCHEDULED' && schedule && (
                     <Button

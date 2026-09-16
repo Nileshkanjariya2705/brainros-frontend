@@ -88,7 +88,7 @@ export const fetchPublicRegistrationsAPI = async (
   if (params.classId && params.classId !== 'ALL') queryParams.set('classId', params.classId);
 
   const response = await Axios.get(`${BASE_URL}?${queryParams.toString()}`);
-  return response.data;
+  return response.data?.data || response.data;
 };
 
 /**
@@ -96,7 +96,7 @@ export const fetchPublicRegistrationsAPI = async (
  */
 export const fetchPublicRegistrationStatsAPI = async (): Promise<PublicRegistrationStats> => {
   const response = await Axios.get(`${BASE_URL}/stats`);
-  return response.data;
+  return response.data?.data || response.data;
 };
 
 /**
@@ -105,7 +105,7 @@ export const fetchPublicRegistrationStatsAPI = async (): Promise<PublicRegistrat
 export const fetchPublicRegistrationFilterOptionsAPI = async (stateId?: string) => {
   const url = stateId ? `${BASE_URL}/filter-options?stateId=${stateId}` : `${BASE_URL}/filter-options`;
   const response = await Axios.get(url);
-  return response.data;
+  return response.data?.data || response.data;
 };
 
 /**
@@ -113,7 +113,7 @@ export const fetchPublicRegistrationFilterOptionsAPI = async (stateId?: string) 
  */
 export const fetchPublicStudentByIdAPI = async (studentId: string) => {
   const response = await Axios.get(`${BASE_URL}/${studentId}`);
-  return response.data;
+  return response.data?.data || response.data;
 };
 
 /**
@@ -121,7 +121,7 @@ export const fetchPublicStudentByIdAPI = async (studentId: string) => {
  */
 export const deactivatePublicStudentAPI = async (studentId: string, reason?: string) => {
   const response = await Axios.patch(`${BASE_URL}/${studentId}/deactivate`, { reason });
-  return response.data;
+  return response.data?.data || response.data;
 };
 
 /**
@@ -129,7 +129,7 @@ export const deactivatePublicStudentAPI = async (studentId: string, reason?: str
  */
 export const activatePublicStudentAPI = async (studentId: string) => {
   const response = await Axios.patch(`${BASE_URL}/${studentId}/activate`);
-  return response.data;
+  return response.data?.data || response.data;
 };
 
 /**
@@ -149,7 +149,7 @@ export const useDeactivatePublicStudentAPI = () => {
           { reason },
           config,
         );
-        return { data: response.data, error: null };
+        return { data: response.data?.data || response.data, error: null };
       } catch (err: any) {
         const msg = err?.response?.data?.message || err?.message || 'Failed to deactivate student.';
         setError(msg);

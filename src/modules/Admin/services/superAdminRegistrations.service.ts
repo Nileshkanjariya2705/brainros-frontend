@@ -142,10 +142,10 @@ export const useSuperAdminRegistrationFiltersQuery = (stateId?: string) => {
         'JEE',
         'CET',
         'NEET',
-        'NEET and JEE',
-        'NEET and State CET',
-        'JEE and State CET',
-        'JEE, NEET and State CET',
+        'NEET + JEE',
+        'NEET + State CET',
+        'JEE + State CET',
+        'JEE + NEET + State CET',
       ];
       if (data && Array.isArray(data.examTargets)) {
         return {

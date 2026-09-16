@@ -133,12 +133,12 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         to: PRIVATE_NAVIGATION.adminStudents,
         icon: Users,
       },
-      {
-        key: 'public-registrations',
-        label: 'Public Registrations',
-        to: PRIVATE_NAVIGATION.superAdminPublicRegistrations,
-        icon: Globe,
-      },
+      // {
+      //   key: 'public-registrations',
+      //   label: 'Public Registrations',
+      //   to: PRIVATE_NAVIGATION.superAdminPublicRegistrations,
+      //   icon: Globe,
+      // },
       {
         key: 'schools-management',
         label: 'Schools / Colleges',
@@ -170,10 +170,10 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         icon: UploadCloud,
       },
       {
-        key: 'exam-import-history',
-        label: 'Import History',
-        to: PRIVATE_NAVIGATION.adminExamImportHistory,
-        icon: History,
+        key: 'admin-ai-translation',
+        label: 'AI Question Paper Translation',
+        to: PRIVATE_NAVIGATION.adminAiQuestionPaperTranslation,
+        icon: Sparkles,
       },
     ],
   },
@@ -511,6 +511,13 @@ export const GENERAL_MANAGER_MENU_GROUPS: MenuGroupConfig[] = [
         permission: PERMISSIONS.EXAM_VIEW,
       },
       {
+        key: 'gm-ai-translation',
+        label: 'AI Question Paper Translation',
+        to: PRIVATE_NAVIGATION.generalManagerAiQuestionPaperTranslation,
+        icon: Sparkles,
+        permission: PERMISSIONS.EXAM_VIEW,
+      },
+      {
         key: 'gm-reports',
         label: 'Exam Reports',
         to: PRIVATE_NAVIGATION.generalManagerCompletedExams,
@@ -614,6 +621,13 @@ export const OPERATOR_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Upload Question Paper',
         to: PRIVATE_NAVIGATION.operatorUploadPaper,
         icon: UploadCloud,
+        permission: PERMISSIONS.EXAM_VIEW,
+      },
+      {
+        key: 'operator-ai-translation',
+        label: 'AI Question Paper Translation',
+        to: PRIVATE_NAVIGATION.operatorAiQuestionPaperTranslation,
+        icon: Sparkles,
         permission: PERMISSIONS.EXAM_VIEW,
       },
       {

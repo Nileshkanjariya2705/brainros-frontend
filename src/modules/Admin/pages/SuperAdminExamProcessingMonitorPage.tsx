@@ -21,6 +21,10 @@ import {
   XCircle,
   HelpCircle,
   Layers,
+  ArrowLeft,
+  Calendar,
+  Users,
+  ArrowUpDown,
 } from 'lucide-react';
 
 // ** Queries & Services **
@@ -34,6 +38,7 @@ import {
 } from '@/modules/Admin/services/examProcessing.queries';
 import { useGetPublicationDashboardAPI } from '@/modules/Exams/services';
 import { completedExamReportsService } from '@/modules/Admin/services/completedExamReports.service';
+import type { PublicationDashboardItem } from '@/types/exam.types';
 
 // ** Hooks **
 import { useExamProcessingMonitor } from '@/hooks/useExamProcessingMonitor';
@@ -47,74 +52,134 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlExamId = searchParams.get('examId') || '';
 
-  // Exam list for dropdown selector
-  const { getPublicationDashboardAPI, isLoading: isExamsListLoading } =
+  // ─── Directory List State (when !urlExamId) ──────────────────────────
+  const { getPublicationDashboardAPI, isLoading: isDashboardLoading } =
     useGetPublicationDashboardAPI();
-  const [examOptions, setExamOptions] = useState<
-    { examId: string; examTitle: string; examType: string }[]
-  >([]);
+  const [directoryExams, setDirectoryExams] = useState<PublicationDashboardItem[]>([]);
+  const [dirSearchInput, setDirSearchInput] = useState('');
+  const [dirDebouncedSearch, setDirDebouncedSearch] = useState('');
+  const [dirStatus, setDirStatus] = useState<
+    'ALL' | 'READY_TO_PUBLISH' | 'PUBLISHED' | 'PROCESSING' | 'NOT_READY'
+  >('ALL');
+  const [dirPage, setDirPage] = useState(1);
+  const [dirLimit, setDirLimit] = useState(10);
+  const [dirTotalCount, setDirTotalCount] = useState(0);
+  const [dirTotalPages, setDirTotalPages] = useState(1);
+  const [dirTotalMonitored, setDirTotalMonitored] = useState(0);
 
-  // Load available exams (handles array directly from useAxiosGet or wrapped envelope)
+  // Debounce directory search
   useEffect(() => {
-    let isMounted = true;
-    const fetchExams = async () => {
-      try {
-        const res = await getPublicationDashboardAPI({ limit: 50 });
-        let rawList: any[] = Array.isArray(res.data)
+    const handler = setTimeout(() => {
+      setDirDebouncedSearch(dirSearchInput.trim());
+      setDirPage(1);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [dirSearchInput]);
+
+  // Load publication dashboard directory
+  const loadDirectoryExams = useCallback(async () => {
+    try {
+      const res = await getPublicationDashboardAPI({
+        page: dirPage,
+        limit: dirLimit,
+        search: dirDebouncedSearch || undefined,
+        status: dirStatus,
+      });
+
+      const payload = res.data;
+      let rawList: any[] = [];
+      if (payload && (payload as any).items) {
+        rawList = (payload as any).items;
+        if ((payload as any).pagination) {
+          setDirTotalCount((payload as any).pagination.total || 0);
+          setDirTotalPages((payload as any).pagination.totalPages || 1);
+        }
+        if ((payload as any).summary?.totalMonitored !== undefined) {
+          setDirTotalMonitored((payload as any).summary.totalMonitored);
+        }
+      } else {
+        rawList = Array.isArray(res.data)
           ? res.data
-          : Array.isArray((res.data as any)?.items)
-          ? (res.data as any).items
           : Array.isArray((res.data as any)?.data)
           ? (res.data as any).data
           : Array.isArray(res.response?.data?.data)
           ? res.response.data.data
           : [];
-
-        // Fallback: If publication dashboard returned 0 exams, fetch from completed exams service
-        if (rawList.length === 0) {
-          try {
-            const completed = await completedExamReportsService.getCompletedLiveExams();
-            if (Array.isArray(completed) && completed.length > 0) {
-              rawList = completed.map((c) => ({
-                examId: c.id,
-                examTitle: c.title,
-                examType: 'LIVE',
-              }));
-            }
-          } catch (completedErr) {
-            console.warn('Completed exams fallback error:', completedErr);
-          }
-        }
-
-        if (isMounted && rawList.length > 0) {
-          const list = rawList.map((e: any) => ({
-            examId: e.examId || e.id,
-            examTitle: e.examTitle || e.title,
-            examType: e.examType || 'LIVE',
-          }));
-          setExamOptions(list);
-
-          const currentValid = list.some((item) => item.examId === urlExamId);
-          if (!urlExamId || !currentValid) {
-            setSearchParams({ examId: list[0].examId }, { replace: true });
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load exams for monitor:', err);
+        setDirTotalCount(rawList.length);
+        setDirTotalPages(1);
       }
-    };
 
-    fetchExams();
+      // Fallback: If publication dashboard returned 0 exams, fetch from completed exams service
+      if (rawList.length === 0 && !dirDebouncedSearch && dirStatus === 'ALL') {
+        try {
+          const completed = await completedExamReportsService.getCompletedLiveExams();
+          if (Array.isArray(completed) && completed.length > 0) {
+            rawList = completed.map((c) => ({
+              examId: c.id,
+              examTitle: c.title,
+              examTarget: 'LIVE',
+              examStatus: 'COMPLETED',
+              examType: 'LIVE',
+              totalCandidates: 0,
+              finalizedAttempts: 0,
+              evaluatedAttempts: 0,
+              analyticsCompletedAttempts: 0,
+              rankingCompleted: false,
+              securityReviewCompleted: false,
+              publicationStatus: 'NOT_READY',
+              isReadyToPublish: false,
+              notReadyReason: null,
+              publishedAt: null,
+              publishedBy: null,
+              publicationVersion: 1,
+            }));
+            setDirTotalCount(rawList.length);
+            setDirTotalPages(1);
+          }
+        } catch (completedErr) {
+          console.warn('Completed exams directory fallback error:', completedErr);
+        }
+      }
 
-    return () => {
-      isMounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      setDirectoryExams(rawList);
+    } catch (err) {
+      console.error('Failed to load publication directory exams:', err);
+    }
+  }, [getPublicationDashboardAPI, dirPage, dirLimit, dirDebouncedSearch, dirStatus]);
 
-  const selectedExamId = urlExamId || (examOptions[0]?.examId ?? '');
+  useEffect(() => {
+    loadDirectoryExams();
+  }, [loadDirectoryExams]);
 
-  // Table filters & pagination state
+  // Sort directory exams by latest completed schedule end time / created time
+  const sortedDirectoryExams = useMemo(() => {
+    return [...directoryExams].sort((a, b) => {
+      const timeA = a.lastSchedule?.endTime
+        ? new Date(a.lastSchedule.endTime).getTime()
+        : 0;
+      const timeB = b.lastSchedule?.endTime
+        ? new Date(b.lastSchedule.endTime).getTime()
+        : 0;
+      if (timeA !== timeB) return timeB - timeA;
+      // Secondary sort: publishedAt date
+      const pubA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const pubB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return pubB - pubA;
+    });
+  }, [directoryExams]);
+
+  // Exam list for top dropdown selector in detailed view
+  const examOptions = useMemo(() => {
+    return directoryExams.map((e) => ({
+      examId: e.examId,
+      examTitle: e.examTitle,
+      examType: e.examType || 'LIVE',
+    }));
+  }, [directoryExams]);
+
+  const selectedExamId = urlExamId;
+
+  // ─── Detailed Processing Monitor State (when urlExamId is set) ──────
   const [statusFilter, setStatusFilter] = useState<
     'ALL' | 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'RETRYING'
   >('ALL');
@@ -200,7 +265,11 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
 
   // Handle Exam Selection Change
   const handleSelectExam = (id: string) => {
-    setSearchParams({ examId: id });
+    if (!id) {
+      setSearchParams({});
+    } else {
+      setSearchParams({ examId: id });
+    }
     setPage(1);
     setSearchInput('');
     setStatusFilter('ALL');
@@ -231,6 +300,7 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
         setIsPublishModalOpen(false);
         setPublishSuccessMsg(null);
         setConfirmPublishChecked(false);
+        loadDirectoryExams();
       }, 2500);
     } catch (err: any) {
       setPublishErrorMsg(
@@ -239,17 +309,422 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
     }
   };
 
+  // Format date helper
+  const formatDate = (dateStr?: string | null) => {
+    if (!dateStr) return '—';
+    try {
+      return new Date(dateStr).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // ═════════════════════════════════════════════════════════════════════
+  // VIEW 1: EXAM DIRECTORY LIST VIEW (WHEN !urlExamId)
+  // ═════════════════════════════════════════════════════════════════════
+  if (!urlExamId) {
+    return (
+      <div className="space-y-6 pb-16">
+        {/* ─── Page Header ────────────────────────────────────────────── */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm">
+          <div>
+            <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-1">
+              <Activity className="w-4 h-4" />
+              Live Result Pipeline Observability
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Exam Result Processing
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
+              Select an exam below to inspect live processing pipelines, evaluation progress, time/strategy analytics, and result publication readiness.
+            </p>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => loadDirectoryExams()}
+            className="self-start md:self-auto border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200"
+          >
+            <RotateCw className={cn('w-4 h-4 mr-1.5', isDashboardLoading && 'animate-spin')} />
+            Refresh Directory
+          </Button>
+        </div>
+
+        {/* ─── Metric Summary Cards ────────────────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Total Monitored
+              </span>
+              <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
+                <Layers className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white mt-2">
+              {dirTotalMonitored || dirTotalCount}
+            </div>
+            <span className="text-[11px] text-slate-400 mt-1 block">Active exam pipelines</span>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                Ready To Publish
+              </span>
+              <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-2">
+              {sortedDirectoryExams.filter((e) => e.publicationStatus === 'READY_TO_PUBLISH').length}
+            </div>
+            <span className="text-[11px] text-slate-400 mt-1 block">Evaluated & un-published</span>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                Published Results
+              </span>
+              <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400">
+                <Award className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-blue-700 dark:text-blue-300 mt-2">
+              {sortedDirectoryExams.filter((e) => e.publicationStatus === 'PUBLISHED').length}
+            </div>
+            <span className="text-[11px] text-slate-400 mt-1 block">Visible on student portal</span>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                In Progress
+              </span>
+              <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
+                <Clock className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-amber-700 dark:text-amber-300 mt-2">
+              {
+                sortedDirectoryExams.filter(
+                  (e) =>
+                    e.publicationStatus === 'NOT_READY' || e.publicationStatus === 'PROCESSING',
+                ).length
+              }
+            </div>
+            <span className="text-[11px] text-slate-400 mt-1 block">Active processing/evaluation</span>
+          </div>
+        </div>
+
+        {/* ─── Directory Table Card ─────────────────────────────────────── */}
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden">
+          {/* Controls Bar: Search + Status Tabs + Sort Badge */}
+          <div className="p-4 border-b border-slate-100 dark:border-slate-700/60 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search exam by title or target..."
+                value={dirSearchInput}
+                onChange={(e) => setDirSearchInput(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-xs md:text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Status Filter Tabs */}
+              <div className="flex items-center gap-1 overflow-x-auto pb-1 lg:pb-0">
+                {(
+                  [
+                    { id: 'ALL', label: 'All Exams' },
+                    { id: 'READY_TO_PUBLISH', label: 'Ready' },
+                    { id: 'PUBLISHED', label: 'Published' },
+                    { id: 'PROCESSING', label: 'Processing' },
+                    { id: 'NOT_READY', label: 'In Progress' },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setDirStatus(tab.id);
+                      setDirPage(1);
+                    }}
+                    className={cn(
+                      'px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap',
+                      dirStatus === tab.id
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700',
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sort Order Badge */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                <ArrowUpDown className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Sorted by Latest Completed</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Directory Table */}
+          <div className="overflow-x-auto">
+            {isDashboardLoading ? (
+              <div className="py-20 flex flex-col items-center justify-center gap-2">
+                <Loader label="Loading completed exams directory..." />
+              </div>
+            ) : sortedDirectoryExams.length === 0 ? (
+              <div className="py-16 text-center text-slate-500 dark:text-slate-400">
+                <HelpCircle className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
+                <p className="font-medium text-slate-700 dark:text-slate-300">
+                  No exams match the specified filter criteria
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Try adjusting search keywords or selecting a different status tab.
+                </p>
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    <th className="py-3.5 px-4">Exam Name & Target</th>
+                    <th className="py-3.5 px-4">Completed / Schedule</th>
+                    <th className="py-3.5 px-4">Attempts</th>
+                    <th className="py-3.5 px-4 w-44">Evaluation Progress</th>
+                    <th className="py-3.5 px-4">Status</th>
+                    <th className="py-3.5 px-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50 text-xs md:text-sm">
+                  {sortedDirectoryExams.map((exam) => {
+                    const evalPercentage =
+                      exam.finalizedAttempts > 0
+                        ? Math.min(
+                            100,
+                            Math.round(
+                              (exam.evaluatedAttempts / exam.finalizedAttempts) * 100,
+                            ),
+                          )
+                        : exam.evaluatedAttempts > 0
+                        ? 100
+                        : 0;
+
+                    return (
+                      <tr
+                        key={exam.examId}
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-750 transition-colors cursor-pointer"
+                        onClick={() => handleSelectExam(exam.examId)}
+                      >
+                        {/* Exam Name & Target */}
+                        <td className="py-3.5 px-4 align-middle">
+                          <div className="font-bold text-slate-900 dark:text-white group-hover:text-indigo-600">
+                            {exam.examTitle}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                              {exam.examTarget || 'General Target'}
+                            </span>
+                            <span
+                              className={cn(
+                                'text-[10px] font-bold px-1.5 py-0.5 rounded uppercase',
+                                exam.examType === 'LIVE'
+                                  ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+                                  : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300',
+                              )}
+                            >
+                              {exam.examType || 'LIVE'}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Schedule / Completed Date */}
+                        <td className="py-3.5 px-4 align-middle text-slate-600 dark:text-slate-300">
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            <span>
+                              {exam.lastSchedule?.endTime
+                                ? formatDate(exam.lastSchedule.endTime)
+                                : exam.publishedAt
+                                ? formatDate(exam.publishedAt)
+                                : 'Completed recently'}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Attempt Numbers */}
+                        <td className="py-3.5 px-4 align-middle">
+                          <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-medium">
+                            <Users className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{exam.finalizedAttempts || exam.totalCandidates || 0} Attempts</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            {exam.evaluatedAttempts} Evaluated
+                          </div>
+                        </td>
+
+                        {/* Progress Bar */}
+                        <td className="py-3.5 px-4 align-middle">
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[11px] font-semibold">
+                              <span className="text-slate-600 dark:text-slate-300">
+                                {evalPercentage}%
+                              </span>
+                              <span className="text-slate-400">
+                                {exam.evaluatedAttempts} / {exam.finalizedAttempts || exam.evaluatedAttempts}
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                              <div
+                                className={cn(
+                                  'h-full transition-all duration-300 rounded-full',
+                                  evalPercentage === 100
+                                    ? 'bg-emerald-500'
+                                    : 'bg-indigo-600 dark:bg-indigo-500',
+                                )}
+                                style={{ width: `${evalPercentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Pipeline Status */}
+                        <td className="py-3.5 px-4 align-middle">
+                          {exam.publicationStatus === 'READY_TO_PUBLISH' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Ready to Publish
+                            </span>
+                          ) : exam.publicationStatus === 'PUBLISHED' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700">
+                              <Award className="w-3.5 h-3.5" /> Published
+                            </span>
+                          ) : exam.publicationStatus === 'PROCESSING' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700">
+                              <RotateCw className="w-3.5 h-3.5 animate-spin" /> Processing
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                              <Clock className="w-3.5 h-3.5" /> In Progress
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Action */}
+                        <td className="py-3.5 px-4 align-middle text-right">
+                          <Button
+                            size="xs"
+                            variant="primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectExam(exam.examId);
+                            }}
+                            className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-sm"
+                          >
+                            Inspect Pipeline <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Directory Pagination Footer */}
+          {dirTotalPages > 0 && (
+            <div className="p-4 border-t border-slate-100 dark:border-slate-700/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+              <div className="flex items-center gap-3">
+                <span>
+                  Showing <b>{dirTotalCount === 0 ? 0 : (dirPage - 1) * dirLimit + 1}</b>–
+                  <b>{Math.min(dirPage * dirLimit, dirTotalCount)}</b> of <b>{dirTotalCount}</b> exams
+                </span>
+                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 border-l border-slate-200 dark:border-slate-700 pl-3">
+                  <span>Per page:</span>
+                  <select
+                    value={dirLimit}
+                    onChange={(e) => {
+                      setDirLimit(Number(e.target.value));
+                      setDirPage(1);
+                    }}
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+
+              {dirTotalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    disabled={dirPage <= 1}
+                    onClick={() => setDirPage((p) => Math.max(1, p - 1))}
+                    className="flex items-center gap-1"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Previous
+                  </Button>
+                  <span className="px-2 font-bold text-slate-700 dark:text-slate-200">
+                    Page {dirPage} of {dirTotalPages}
+                  </span>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    disabled={dirPage >= dirTotalPages}
+                    onClick={() => setDirPage((p) => p + 1)}
+                    className="flex items-center gap-1"
+                  >
+                    Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // VIEW 2: DETAILED LIVE PIPELINE MONITOR VIEW (WHEN urlExamId IS SET)
+  // ═════════════════════════════════════════════════════════════════════
   return (
     <div className="space-y-6 pb-16">
       {/* ─── Top Control Header ────────────────────────────────────────── */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm">
         <div>
-          <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-1">
-            <Activity className="w-4 h-4" />
-            Live Result Pipeline Observability
+          <div className="flex items-center gap-3 mb-2">
+            {/* Back to Exam Directory List */}
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => setSearchParams({})}
+              className="border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back to Exam Directory
+            </Button>
+            <span className="text-slate-300 dark:text-slate-600">|</span>
+            <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 text-xs font-semibold uppercase tracking-wider">
+              <Activity className="w-4 h-4" />
+              Pipeline Observability
+            </div>
           </div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Exam Result Processing
+            {summary?.examTitle || 'Exam Result Processing'}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
             Live BullMQ processing pipeline monitoring student evaluation, time/strategy analytics, batch ranking snapshots, and publication readiness.
@@ -264,17 +739,12 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
               onChange={(e) => handleSelectExam(e.target.value)}
               className="w-full bg-slate-50 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 text-xs md:text-sm rounded-xl px-3 py-2.5 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
             >
-              {isExamsListLoading ? (
-                <option value="">Loading exams...</option>
-              ) : examOptions.length === 0 ? (
-                <option value="">No active/live exams found</option>
-              ) : (
-                examOptions.map((opt) => (
-                  <option key={opt.examId} value={opt.examId}>
-                    {opt.examTitle} ({opt.examType})
-                  </option>
-                ))
-              )}
+              <option value="">← Back to Exam Directory</option>
+              {examOptions.map((opt) => (
+                <option key={opt.examId} value={opt.examId}>
+                  {opt.examTitle} ({opt.examType})
+                </option>
+              ))}
             </select>
           </div>
 
@@ -392,8 +862,8 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
                 summary?.overallPercentage === 100
                   ? 'bg-emerald-500'
                   : summary?.failedJobs && summary.failedJobs > 0
-                    ? 'bg-amber-500'
-                    : 'bg-indigo-600 dark:bg-indigo-500',
+                  ? 'bg-amber-500'
+                  : 'bg-indigo-600 dark:bg-indigo-500',
               )}
               style={{ width: `${summary?.overallPercentage || 0}%` }}
             />
@@ -699,8 +1169,8 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
                               job.status === 'COMPLETED'
                                 ? 'bg-emerald-500'
                                 : job.status === 'FAILED'
-                                  ? 'bg-rose-500'
-                                  : 'bg-indigo-500',
+                                ? 'bg-rose-500'
+                                : 'bg-indigo-500',
                             )}
                             style={{ width: `${job.progress}%` }}
                           />
@@ -754,7 +1224,8 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
           <div className="p-4 border-t border-slate-100 dark:border-slate-700/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
             <div className="flex items-center gap-3">
               <span>
-                Showing <b>{jobsData.pagination.total === 0 ? 0 : (page - 1) * limit + 1}</b>–<b>{Math.min(page * limit, jobsData.pagination.total)}</b> of{' '}
+                Showing <b>{jobsData.pagination.total === 0 ? 0 : (page - 1) * limit + 1}</b>–
+                <b>{Math.min(page * limit, jobsData.pagination.total)}</b> of{' '}
                 <b>{jobsData.pagination.total}</b> candidate jobs
               </span>
               <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 border-l border-slate-200 dark:border-slate-700 pl-3">
@@ -1011,3 +1482,4 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
 };
 
 export default SuperAdminExamProcessingMonitorPage;
+

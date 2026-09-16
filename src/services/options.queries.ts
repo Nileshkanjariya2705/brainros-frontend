@@ -22,14 +22,14 @@ export const authOptionKeys = {
   all: ['auth-options'] as const,
 };
 
-const TARGET_ORDER = [
+export const TARGET_ORDER = [
   'JEE',
   'CET',
   'NEET',
-  'NEET and JEE',
-  'NEET and State CET',
-  'JEE and State CET',
-  'JEE, NEET and State CET',
+  'NEET + JEE',
+  'NEET + State CET',
+  'JEE + State CET',
+  'JEE + NEET + State CET',
 ];
 
 /**

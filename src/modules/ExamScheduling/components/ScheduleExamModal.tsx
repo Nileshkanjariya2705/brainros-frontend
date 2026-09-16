@@ -24,6 +24,7 @@ import { useAxiosGet } from '@/hooks/useAxios';
 import { useQueryClient } from '@tanstack/react-query';
 import { adminKeys, examKeys, academicCalendarKeys } from '@/services/queryKeys';
 import Button from '@/components/ui/Button';
+import { toast } from '@/utils/toast';
 
 interface ScheduleExamModalProps {
   examId?: string;
@@ -504,6 +505,7 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
         return;
       }
 
+      toast.success(initialExamId ? 'Exam schedule updated successfully!' : 'Examination scheduled successfully!');
       queryClient.invalidateQueries({ queryKey: adminKeys.scheduledExams() });
       queryClient.invalidateQueries({ queryKey: academicCalendarKeys.all });
       queryClient.invalidateQueries({ queryKey: examKeys.public() });
@@ -550,9 +552,11 @@ export const ScheduleExamModal: React.FC<ScheduleExamModalProps> = ({
               : (res.error as any).message
             : 'Failed to schedule exam.';
       setErrorMsg(msg);
+      toast.error(msg);
       return;
     }
 
+    toast.success('Examination scheduled successfully!');
     queryClient.invalidateQueries({ queryKey: adminKeys.scheduledExams() });
     queryClient.invalidateQueries({ queryKey: academicCalendarKeys.all });
     queryClient.invalidateQueries({ queryKey: examKeys.public() });

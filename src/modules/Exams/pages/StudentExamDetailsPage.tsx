@@ -165,10 +165,10 @@ export const StudentExamDetailsPage: React.FC = () => {
                           : exam.status?.name}
               </span>
 
-              {exam.schedule?.startTime && (
+              {(exam.schedule?.startTime || accessDetails?.startTime) && (
                 <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
                   <Calendar size={13} className="text-slate-400" />
-                  {new Date(exam.schedule.startTime).toLocaleString('en-IN', {
+                  {new Date((exam.schedule?.startTime || accessDetails?.startTime)!).toLocaleString('en-IN', {
                     dateStyle: 'medium',
                     timeStyle: 'short',
                     timeZone: 'Asia/Kolkata',

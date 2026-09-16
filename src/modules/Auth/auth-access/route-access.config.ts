@@ -241,11 +241,6 @@ export const ROUTE_ACCESS_REGISTRY: Record<string, RouteAccessRule> = {
     permissions: [PERMISSIONS.EXAM_CREATE, PERMISSIONS.BULK_UPLOAD],
     roles: [ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
   },
-  [PRIVATE_NAVIGATION.operatorExamImportHistory]: {
-    path: PRIVATE_NAVIGATION.operatorExamImportHistory,
-    permissions: [PERMISSIONS.EXAM_VIEW],
-    roles: [ROLES.OPERATOR, ROLES.GENERAL_MANAGER, ROLES.SUPER_ADMIN],
-  },
   [PRIVATE_NAVIGATION.operatorReports]: {
     path: PRIVATE_NAVIGATION.operatorReports,
     permissions: [PERMISSIONS.REPORT_VIEW],

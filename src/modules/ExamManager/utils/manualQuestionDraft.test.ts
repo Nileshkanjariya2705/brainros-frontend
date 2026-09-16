@@ -41,23 +41,41 @@ describe('Manual Question Paper Draft Local Storage Architecture', () => {
       {
         id: 'q-1',
         questionNumber: 1,
+        difficulty: 'EASY',
+        type: 'SINGLE_CORRECT',
         questionText: 'What is the SI unit of Force?',
         optionA: 'Joule',
         optionB: 'Newton',
         optionC: 'Watt',
         optionD: 'Pascal',
         correctAnswer: 'B',
+        correctAnswers: ['B'],
+        numericalAnswer: '',
+        assertion: '',
+        reason: '',
+        columnA: [],
+        columnB: [],
+        matchPairs: [],
         explanation: 'Force is measured in Newtons (N).',
       },
       {
         id: 'q-2',
         questionNumber: 2,
-        questionText: 'What is the chemical formula of Water?',
-        optionA: 'H2O',
-        optionB: 'CO2',
-        optionC: 'NaCl',
-        optionD: 'CH4',
+        difficulty: 'HARD',
+        type: 'MULTIPLE_CORRECT',
+        questionText: 'Which are noble gases?',
+        optionA: 'Helium',
+        optionB: 'Neon',
+        optionC: 'Oxygen',
+        optionD: 'Argon',
         correctAnswer: 'A',
+        correctAnswers: ['A', 'B', 'D'],
+        numericalAnswer: '',
+        assertion: '',
+        reason: '',
+        columnA: [],
+        columnB: [],
+        matchPairs: [],
       },
     ];
 
@@ -68,10 +86,13 @@ describe('Manual Question Paper Draft Local Storage Architecture', () => {
     expect(loaded).not.toBeNull();
     expect(loaded?.currentIndex).toBe(1);
     expect(loaded?.questions).toHaveLength(2);
+    expect(loaded?.questions[0].difficulty).toBe('EASY');
+    expect(loaded?.questions[0].type).toBe('SINGLE_CORRECT');
     expect(loaded?.questions[0].questionText).toBe('What is the SI unit of Force?');
     expect(loaded?.questions[0].correctAnswer).toBe('B');
-    expect(loaded?.questions[1].questionText).toBe('What is the chemical formula of Water?');
-    expect(loaded?.questions[1].correctAnswer).toBe('A');
+    expect(loaded?.questions[1].difficulty).toBe('HARD');
+    expect(loaded?.questions[1].type).toBe('MULTIPLE_CORRECT');
+    expect(loaded?.questions[1].correctAnswers).toEqual(['A', 'B', 'D']);
   });
 
   it('4. Preserves incomplete drafts locally without rejection', () => {
@@ -79,12 +100,21 @@ describe('Manual Question Paper Draft Local Storage Architecture', () => {
       {
         id: 'q-1',
         questionNumber: 1,
+        difficulty: 'MEDIUM',
+        type: 'SINGLE_CORRECT',
         questionText: 'Incomplete question statement...',
         optionA: 'Option A filled',
         optionB: '',
         optionC: '',
         optionD: '',
         correctAnswer: 'A',
+        correctAnswers: ['A'],
+        numericalAnswer: '',
+        assertion: '',
+        reason: '',
+        columnA: [],
+        columnB: [],
+        matchPairs: [],
       },
     ];
 
@@ -113,12 +143,21 @@ describe('Manual Question Paper Draft Local Storage Architecture', () => {
       {
         id: 'q-1',
         questionNumber: 1,
+        difficulty: 'EASY',
+        type: 'SINGLE_CORRECT',
         questionText: 'Exam Alpha Question',
         optionA: 'A1',
         optionB: 'A2',
         optionC: 'A3',
         optionD: 'A4',
         correctAnswer: 'A',
+        correctAnswers: ['A'],
+        numericalAnswer: '',
+        assertion: '',
+        reason: '',
+        columnA: [],
+        columnB: [],
+        matchPairs: [],
       },
     ];
 
@@ -126,12 +165,21 @@ describe('Manual Question Paper Draft Local Storage Architecture', () => {
       {
         id: 'q-1',
         questionNumber: 1,
+        difficulty: 'VERY_HARD',
+        type: 'NUMERICAL',
         questionText: 'Exam Beta Question',
-        optionA: 'B1',
-        optionB: 'B2',
-        optionC: 'B3',
-        optionD: 'B4',
-        correctAnswer: 'C',
+        optionA: '',
+        optionB: '',
+        optionC: '',
+        optionD: '',
+        correctAnswer: 'A',
+        correctAnswers: [],
+        numericalAnswer: '42.5',
+        assertion: '',
+        reason: '',
+        columnA: [],
+        columnB: [],
+        matchPairs: [],
       },
     ];
 
@@ -143,6 +191,7 @@ describe('Manual Question Paper Draft Local Storage Architecture', () => {
 
     expect(loadedA?.questions[0].questionText).toBe('Exam Alpha Question');
     expect(loadedB?.questions[0].questionText).toBe('Exam Beta Question');
+    expect(loadedB?.questions[0].numericalAnswer).toBe('42.5');
   });
 
   it('7. Clears draft on request after successful server persistence', () => {

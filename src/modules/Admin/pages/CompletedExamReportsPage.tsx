@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import cn from 'classnames';
 import {
   Building2,
   Mail,
@@ -18,6 +20,15 @@ import {
   ShieldCheck,
   Check,
   AlertTriangle,
+  ArrowLeft,
+  Calendar,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  HelpCircle,
+  Activity,
+  RotateCw,
 } from 'lucide-react';
 import {
   completedExamReportsService,
@@ -29,15 +40,166 @@ import {
   useCompletedExamSummaryQuery,
   useCompletedExamAttendeesQuery,
 } from '../services/completedExamReports.queries';
+import { useGetPublicationDashboardAPI } from '@/modules/Exams/services';
+import type { PublicationDashboardItem } from '@/types/exam.types';
 import { useJobProgress } from '@/hooks/useJobProgress';
 
 export const CompletedExamReportsPage: React.FC = () => {
-  // ── State ──
-  const [selectedExamId, setSelectedExamId] = useState<string>('');
+  // ── URL Search Params ──
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlExamId = searchParams.get('examId') || '';
+  const selectedExamId = urlExamId;
+
+  // ── Directory List State (when !urlExamId) ──
+  const { getPublicationDashboardAPI, isLoading: isDashboardLoading } =
+    useGetPublicationDashboardAPI();
+  const [directoryExams, setDirectoryExams] = useState<PublicationDashboardItem[]>([]);
+  const [dirSearchInput, setDirSearchInput] = useState('');
+  const [dirDebouncedSearch, setDirDebouncedSearch] = useState('');
+  const [dirStatus, setDirStatus] = useState<
+    'ALL' | 'READY_TO_PUBLISH' | 'PUBLISHED' | 'PROCESSING' | 'NOT_READY'
+  >('ALL');
+  const [dirPage, setDirPage] = useState(1);
+  const [dirLimit, setDirLimit] = useState(10);
+  const [dirTotalCount, setDirTotalCount] = useState(0);
+  const [dirTotalPages, setDirTotalPages] = useState(1);
+  const [dirTotalMonitored, setDirTotalMonitored] = useState(0);
+
+  // Debounce directory search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDirDebouncedSearch(dirSearchInput.trim());
+      setDirPage(1);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [dirSearchInput]);
+
+  // Load completed exams directory
+  const loadDirectoryExams = useCallback(async () => {
+    try {
+      const res = await getPublicationDashboardAPI({
+        page: dirPage,
+        limit: dirLimit,
+        search: dirDebouncedSearch || undefined,
+        status: dirStatus,
+      });
+
+      const payload = res.data;
+      let rawList: any[] = [];
+      if (payload && (payload as any).items) {
+        rawList = (payload as any).items;
+        if ((payload as any).pagination) {
+          setDirTotalCount((payload as any).pagination.total || 0);
+          setDirTotalPages((payload as any).pagination.totalPages || 1);
+        }
+        if ((payload as any).summary?.totalMonitored !== undefined) {
+          setDirTotalMonitored((payload as any).summary.totalMonitored);
+        }
+      } else {
+        rawList = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray((res.data as any)?.data)
+          ? (res.data as any).data
+          : Array.isArray(res.response?.data?.data)
+          ? res.response.data.data
+          : [];
+        setDirTotalCount(rawList.length);
+        setDirTotalPages(1);
+      }
+
+      // Fallback: If publication dashboard returned 0 exams, fetch from completed exams service
+      if (rawList.length === 0 && !dirDebouncedSearch && dirStatus === 'ALL') {
+        try {
+          const completed = await completedExamReportsService.getCompletedLiveExams();
+          if (Array.isArray(completed) && completed.length > 0) {
+            rawList = completed.map((c) => ({
+              examId: c.id,
+              examTitle: c.title,
+              examTarget: c.examTarget?.name || 'LIVE',
+              examStatus: 'COMPLETED',
+              examType: 'LIVE',
+              totalCandidates: c.totalAttempts || 0,
+              finalizedAttempts: c.totalAttempts || 0,
+              evaluatedAttempts: c.totalAttempts || 0,
+              analyticsCompletedAttempts: c.totalAttempts || 0,
+              rankingCompleted: true,
+              securityReviewCompleted: true,
+              publicationStatus: c.publicationStatus || 'PUBLISHED',
+              isReadyToPublish: true,
+              notReadyReason: null,
+              publishedAt: null,
+              publishedBy: null,
+              publicationVersion: 1,
+              lastSchedule: c.endTime
+                ? { startTime: c.startTime || '', endTime: c.endTime, status: 'COMPLETED' }
+                : null,
+            }));
+            setDirTotalCount(rawList.length);
+            setDirTotalPages(1);
+          }
+        } catch (completedErr) {
+          console.warn('Completed exams directory fallback error:', completedErr);
+        }
+      }
+
+      setDirectoryExams(rawList);
+    } catch (err) {
+      console.error('Failed to load completed exam directory:', err);
+    }
+  }, [getPublicationDashboardAPI, dirPage, dirLimit, dirDebouncedSearch, dirStatus]);
+
+  useEffect(() => {
+    loadDirectoryExams();
+  }, [loadDirectoryExams]);
+
+  // Sort directory exams by latest completed schedule end time / created time
+  const sortedDirectoryExams = useMemo(() => {
+    return [...directoryExams].sort((a, b) => {
+      const timeA = a.lastSchedule?.endTime
+        ? new Date(a.lastSchedule.endTime).getTime()
+        : 0;
+      const timeB = b.lastSchedule?.endTime
+        ? new Date(b.lastSchedule.endTime).getTime()
+        : 0;
+      if (timeA !== timeB) return timeB - timeA;
+      const pubA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const pubB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return pubB - pubA;
+    });
+  }, [directoryExams]);
+
+  // Handle Exam Selection Change
+  const handleSelectExam = (id: string) => {
+    if (!id) {
+      setSearchParams({});
+    } else {
+      setSearchParams({ examId: id });
+    }
+    setPage(1);
+    setSearchTerm('');
+  };
+
+  // Format date helper
+  const formatDate = (dateStr?: string | null) => {
+    if (!dateStr) return '—';
+    try {
+      return new Date(dateStr).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // ── Detailed View State (when urlExamId is set) ──
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
 
-  // Filters & Sorting
+  // Filters & Sorting for attendees
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<string>('submittedAt');
@@ -79,19 +241,9 @@ export const CompletedExamReportsPage: React.FC = () => {
     },
   });
 
-  // ── React Queries ──
-  const {
-    data: examsData = [],
-    isLoading: loadingExams,
-  } = useCompletedExamsQuery();
+  const { data: examsData = [] } = useCompletedExamsQuery();
 
   const exams = examsData;
-
-  useEffect(() => {
-    if (exams.length > 0 && !selectedExamId) {
-      setSelectedExamId(exams[0].id);
-    }
-  }, [exams, selectedExamId]);
 
   const {
     data: summaryData,
@@ -197,20 +349,6 @@ export const CompletedExamReportsPage: React.FC = () => {
     }
   };
 
-  // ── Approve Report ──
-  const handleApproveReport = async (attempt: AttendeeItem) => {
-    try {
-      setActionErrorMessage(null);
-      await completedExamReportsService.approveReport(selectedExamId, attempt.attemptId);
-      setActionSuccessMessage(`Analysis report approved for ${attempt.studentName}.`);
-      fetchExamDetails();
-    } catch (err: any) {
-      setActionErrorMessage(err?.response?.data?.message || 'Failed to approve report.');
-    } finally {
-      setTimeout(() => setActionSuccessMessage(null), 6000);
-    }
-  };
-
   // ── Trigger Email Dispatch ──
   const handleSendEmail = async (attempt: AttendeeItem) => {
     try {
@@ -297,6 +435,370 @@ export const CompletedExamReportsPage: React.FC = () => {
 
   const selectedExam = exams.find((e) => e.id === selectedExamId);
 
+  // ═════════════════════════════════════════════════════════════════════
+  // VIEW 1: COMPLETED EXAMS DIRECTORY LIST VIEW (WHEN !urlExamId)
+  // ═════════════════════════════════════════════════════════════════════
+  if (!urlExamId) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 p-4 md:p-8 space-y-6">
+        {/* ── Page Header ── */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
+          <div>
+            <div className="flex items-center gap-2 text-indigo-600 text-xs font-semibold uppercase tracking-wider mb-1">
+              <Activity className="w-4 h-4" />
+              Completed Live Exam Reports
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">
+              Completed Live Exam Directory
+            </h1>
+            <p className="text-sm text-slate-600 mt-1 max-w-2xl">
+              Select a completed live exam to view student attendee scorecards, deep diagnostic analytics & bulk PDF email dispatch.
+            </p>
+          </div>
+
+          <button
+            onClick={() => loadDirectoryExams()}
+            className="self-start md:self-auto px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-2 shadow-xs transition-all"
+          >
+            <RotateCw className={cn('w-4 h-4', isDashboardLoading && 'animate-spin')} />
+            Refresh Directory
+          </button>
+        </div>
+
+        {/* ── Metric Summary Cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Total Monitored Exams
+              </span>
+              <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
+                <Layers className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-slate-900 mt-2">
+              {dirTotalMonitored || dirTotalCount}
+            </div>
+            <span className="text-[11px] text-slate-500 mt-1 block">Completed live exam pipelines</span>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
+                Ready To Publish
+              </span>
+              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-emerald-700 mt-2">
+              {sortedDirectoryExams.filter((e) => e.publicationStatus === 'READY_TO_PUBLISH').length}
+            </div>
+            <span className="text-[11px] text-slate-500 mt-1 block">Evaluated scorecards ready</span>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
+                Published Results
+              </span>
+              <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
+                <Award className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-blue-700 mt-2">
+              {sortedDirectoryExams.filter((e) => e.publicationStatus === 'PUBLISHED').length}
+            </div>
+            <span className="text-[11px] text-slate-500 mt-1 block">Published to student portals</span>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-amber-600 uppercase tracking-wider">
+                In Progress
+              </span>
+              <div className="p-2 rounded-xl bg-amber-50 text-amber-600">
+                <Clock className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-amber-700 mt-2">
+              {
+                sortedDirectoryExams.filter(
+                  (e) =>
+                    e.publicationStatus === 'NOT_READY' || e.publicationStatus === 'PROCESSING',
+                ).length
+              }
+            </div>
+            <span className="text-[11px] text-slate-500 mt-1 block">Active evaluation pipelines</span>
+          </div>
+        </div>
+
+        {/* ── Directory Table Card ── */}
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
+          {/* Toolbar: Search + Status Tabs + Sort Indicator */}
+          <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search exam by title or target..."
+                value={dirSearchInput}
+                onChange={(e) => setDirSearchInput(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 text-xs md:text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Status Filter Tabs */}
+              <div className="flex items-center gap-1 overflow-x-auto pb-1 lg:pb-0">
+                {(
+                  [
+                    { id: 'ALL', label: 'All Exams' },
+                    { id: 'READY_TO_PUBLISH', label: 'Ready' },
+                    { id: 'PUBLISHED', label: 'Published' },
+                    { id: 'PROCESSING', label: 'Processing' },
+                    { id: 'NOT_READY', label: 'In Progress' },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setDirStatus(tab.id);
+                      setDirPage(1);
+                    }}
+                    className={cn(
+                      'px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap',
+                      dirStatus === tab.id
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sort Order Badge */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Sorted by Latest Completed</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Directory Table */}
+          <div className="overflow-x-auto">
+            {isDashboardLoading ? (
+              <div className="py-20 flex flex-col items-center justify-center gap-2 text-slate-500">
+                <RefreshCw className="w-6 h-6 animate-spin text-indigo-600" />
+                <span className="text-sm font-medium">Loading completed live exams...</span>
+              </div>
+            ) : sortedDirectoryExams.length === 0 ? (
+              <div className="py-16 text-center text-slate-500">
+                <HelpCircle className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                <p className="font-medium text-slate-700">No completed live exams found</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Try adjusting your search terms or status filter.
+                </p>
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-3.5 px-6">Exam Title & Target</th>
+                    <th className="py-3.5 px-6">Completed / Schedule</th>
+                    <th className="py-3.5 px-6">Attempts</th>
+                    <th className="py-3.5 px-6 w-48">Evaluated Progress</th>
+                    <th className="py-3.5 px-6">Result Status</th>
+                    <th className="py-3.5 px-6 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {sortedDirectoryExams.map((exam) => {
+                    const evalPercentage =
+                      exam.finalizedAttempts > 0
+                        ? Math.min(
+                            100,
+                            Math.round(
+                              (exam.evaluatedAttempts / exam.finalizedAttempts) * 100,
+                            ),
+                          )
+                        : exam.evaluatedAttempts > 0
+                        ? 100
+                        : 0;
+
+                    return (
+                      <tr
+                        key={exam.examId}
+                        className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                        onClick={() => handleSelectExam(exam.examId)}
+                      >
+                        {/* Exam Name & Target */}
+                        <td className="py-4 px-6 align-middle">
+                          <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                            {exam.examTitle}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs font-medium text-slate-500">
+                              {exam.examTarget || 'General Target'}
+                            </span>
+                            <span
+                              className={cn(
+                                'text-[10px] font-bold px-1.5 py-0.5 rounded uppercase',
+                                exam.examType === 'LIVE'
+                                  ? 'bg-rose-100 text-rose-700'
+                                  : 'bg-indigo-100 text-indigo-700',
+                              )}
+                            >
+                              {exam.examType || 'LIVE'}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Completed Date */}
+                        <td className="py-4 px-6 align-middle text-slate-600">
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            <span>
+                              {exam.lastSchedule?.endTime
+                                ? formatDate(exam.lastSchedule.endTime)
+                                : exam.publishedAt
+                                ? formatDate(exam.publishedAt)
+                                : 'Completed recently'}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Attempt Numbers */}
+                        <td className="py-4 px-6 align-middle">
+                          <div className="flex items-center gap-1 text-slate-800 font-medium text-xs">
+                            <Users className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{exam.finalizedAttempts || exam.totalCandidates || 0} Attendees</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400 mt-0.5">
+                            {exam.evaluatedAttempts} Evaluated
+                          </div>
+                        </td>
+
+                        {/* Evaluation Progress Bar */}
+                        <td className="py-4 px-6 align-middle">
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-[11px] font-semibold">
+                              <span className="text-slate-700">{evalPercentage}%</span>
+                              <span className="text-slate-400">
+                                {exam.evaluatedAttempts} / {exam.finalizedAttempts || exam.evaluatedAttempts}
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                              <div
+                                className={cn(
+                                  'h-full transition-all duration-300 rounded-full',
+                                  evalPercentage === 100 ? 'bg-emerald-500' : 'bg-indigo-600',
+                                )}
+                                style={{ width: `${evalPercentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Pipeline Status */}
+                        <td className="py-4 px-6 align-middle">
+                          {exam.publicationStatus === 'READY_TO_PUBLISH' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Ready to Publish
+                            </span>
+                          ) : exam.publicationStatus === 'PUBLISHED' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300">
+                              <Award className="w-3.5 h-3.5" /> Published
+                            </span>
+                          ) : exam.publicationStatus === 'PROCESSING' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-300">
+                              <RotateCw className="w-3.5 h-3.5 animate-spin" /> Processing
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                              <Clock className="w-3.5 h-3.5" /> In Progress
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Action */}
+                        <td className="py-4 px-6 align-middle text-right">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectExam(exam.examId);
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-all shadow-xs flex items-center gap-1.5 ml-auto"
+                          >
+                            Inspect Reports <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Directory Pagination Footer */}
+          {dirTotalPages > 0 && (
+            <div className="p-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+              <div className="flex items-center gap-3">
+                <span>
+                  Showing <b>{dirTotalCount === 0 ? 0 : (dirPage - 1) * dirLimit + 1}</b>–
+                  <b>{Math.min(dirPage * dirLimit, dirTotalCount)}</b> of <b>{dirTotalCount}</b> exams
+                </span>
+                <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+                  <span>Per page:</span>
+                  <select
+                    value={dirLimit}
+                    onChange={(e) => {
+                      setDirLimit(Number(e.target.value));
+                      setDirPage(1);
+                    }}
+                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 outline-none focus:border-indigo-500"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+
+              {dirTotalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={dirPage <= 1}
+                    onClick={() => setDirPage((p) => Math.max(1, p - 1))}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium disabled:opacity-50 flex items-center gap-1"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" /> Previous
+                  </button>
+                  <span className="px-2 font-bold text-slate-700">
+                    Page {dirPage} of {dirTotalPages}
+                  </span>
+                  <button
+                    disabled={dirPage >= dirTotalPages}
+                    onClick={() => setDirPage((p) => p + 1)}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium disabled:opacity-50 flex items-center gap-1"
+                  >
+                    Next <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════════════
+  // VIEW 2: DETAILED ATTENDEE PERFORMANCE REPORTS (WHEN urlExamId IS SET)
+  // ═════════════════════════════════════════════════════════════════════
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 p-4 md:p-8 space-y-6">
       {/* ── Toast Messages ── */}
@@ -325,14 +827,23 @@ export const CompletedExamReportsPage: React.FC = () => {
       ═══════════════════════════════════════════════════════════════ */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2.5">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-              Live Exams Only
-            </span>
-            <span className="text-xs text-slate-500">• Mock Tests Excluded</span>
+          <div className="flex items-center gap-3 mb-2">
+            <button
+              onClick={() => handleSelectExam('')}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Back to Exam Directory
+            </button>
+            <span className="text-slate-300">|</span>
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                Live Exams Only
+              </span>
+              <span>• Mock Tests Excluded</span>
+            </div>
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight mt-1">
-            Completed Live Exam Reports
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">
+            {summary?.examTitle || selectedExam?.title || 'Completed Live Exam Reports'}
           </h1>
           <p className="text-sm text-slate-600 mt-1">
             Authoritative student attendee performance directory, deep diagnostic analytics & automated PDF dispatch.
@@ -344,22 +855,15 @@ export const CompletedExamReportsPage: React.FC = () => {
           <div className="relative min-w-[280px] md:min-w-[340px]">
             <select
               value={selectedExamId}
-              onChange={(e) => {
-                setSelectedExamId(e.target.value);
-                setPage(1);
-              }}
-              disabled={loadingExams || exams.length === 0}
-              className="w-full appearance-none bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-500 text-slate-800 px-4 py-2.5 pr-10 rounded-xl text-sm font-medium shadow-xs transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50"
+              onChange={(e) => handleSelectExam(e.target.value)}
+              className="w-full appearance-none bg-white border border-slate-200 hover:border-slate-300 focus:border-indigo-500 text-slate-800 px-4 py-2.5 pr-10 rounded-xl text-sm font-medium shadow-xs transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             >
-              {exams.length === 0 ? (
-                <option value="">No completed Live Exams found</option>
-              ) : (
-                exams.map((exam, idx) => (
-                  <option key={exam.id} value={exam.id}>
-                    {idx === 0 ? `★ [Latest] ${exam.title}` : exam.title}
-                  </option>
-                ))
-              )}
+              <option value="">← Back to Exam Directory</option>
+              {exams.map((exam, idx) => (
+                <option key={exam.id} value={exam.id}>
+                  {idx === 0 ? `★ [Latest] ${exam.title}` : exam.title}
+                </option>
+              ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
               ▼
@@ -841,18 +1345,6 @@ export const CompletedExamReportsPage: React.FC = () => {
                           View
                         </button>
 
-                        {/* Approve Report */}
-                        {item.reportStatus === 'READY_FOR_REVIEW' && isAttemptEvaluated(item) && (
-                          <button
-                            onClick={() => handleApproveReport(item)}
-                            className="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-200 transition-all flex items-center gap-1.5 shadow-xs"
-                            title="Approve Report for Email Sending"
-                          >
-                            <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
-                            Approve
-                          </button>
-                        )}
-
                         {/* Send Email */}
                         <button
                           onClick={() => setEmailConfirmTarget(item)}
@@ -980,21 +1472,21 @@ export const CompletedExamReportsPage: React.FC = () => {
         };
         const previewQuestions = emailPreviewAnalysis?.questionsReview || [];
 
-        const score = previewAnalysis?.score ?? previewAnalysis?.totalScore ?? emailConfirmTarget.score ?? 0;
-        const maxScore = previewAnalysis?.maxScore ?? emailConfirmTarget.maxScore ?? selectedExam?.totalMarks ?? 0;
-        const percentage = previewAnalysis?.percentage ?? emailConfirmTarget.percentage ?? 0;
-        const accuracy = previewAnalysis?.accuracy ?? emailConfirmTarget.accuracy ?? 0;
-        const correctAnswers = previewAnalysis?.correctAnswers ?? (previewQuestions.filter((q) => q.isCorrect).length);
-        const wrongAnswers = previewAnalysis?.wrongAnswers ?? (previewQuestions.filter((q) => q.isAttempted && !q.isCorrect).length);
-        const unattempted = previewAnalysis?.unattempted ?? (previewQuestions.filter((q) => !q.isAttempted).length);
-        const timeUsedSeconds = previewAnalysis?.timeUsedSeconds ?? 0;
-        const avgTime = Number(previewAnalysis?.averageTimePerQuestion || 0).toFixed(1);
-        const quadrant = (previewAnalysis?.quadrant || 'BALANCED').replace(/_/g, ' ');
-        const avoidableNegatives = previewAnalysis?.strategyAnalysis?.avoidableNegativeMarks ?? previewAnalysis?.attemptStrategy?.avoidableNegativeMarks ?? Math.round(wrongAnswers * 1);
-        const projectedScore = previewAnalysis?.strategyAnalysis?.projectedScore ?? (score + wrongAnswers);
+        const score = previewAnalysis?.score ?? previewAnalysis?.totalScore ?? previewAnalysis?.overall?.obtainedMarks ?? emailConfirmTarget.score ?? 0;
+        const maxScore = previewAnalysis?.maxScore ?? previewAnalysis?.overall?.totalMarks ?? emailConfirmTarget.maxScore ?? selectedExam?.totalMarks ?? 0;
+        const percentage = previewAnalysis?.percentage ?? previewAnalysis?.overall?.percentage ?? emailConfirmTarget.percentage ?? 0;
+        const accuracy = previewAnalysis?.accuracy ?? previewAnalysis?.overall?.accuracy ?? emailConfirmTarget.accuracy ?? 0;
+        const correctAnswers = previewAnalysis?.correctAnswers ?? previewAnalysis?.overall?.correctCount ?? (previewQuestions.filter((q) => q.isCorrect).length);
+        const wrongAnswers = previewAnalysis?.wrongAnswers ?? previewAnalysis?.overall?.wrongCount ?? (previewQuestions.filter((q) => q.isAttempted && !q.isCorrect).length);
+        const unattempted = previewAnalysis?.unattempted ?? previewAnalysis?.overall?.unattemptedCount ?? (previewQuestions.filter((q) => !q.isAttempted).length);
+        const timeUsedSeconds = previewAnalysis?.timeUsedSeconds ?? previewAnalysis?.overall?.timeUsedSeconds ?? previewAnalysis?.timeAnalysis?.totalTimeUsedSeconds ?? 0;
+        const avgTime = Number(previewAnalysis?.averageTimePerQuestion ?? previewAnalysis?.overall?.averageTimePerQuestionSeconds ?? previewAnalysis?.timeAnalysis?.averageTimePerQuestionSeconds ?? 0).toFixed(1);
+        const quadrant = (previewAnalysis?.quadrant ?? previewAnalysis?.overall?.speedAccuracyQuadrant ?? 'BALANCED').replace(/_/g, ' ');
+        const avoidableNegatives = previewAnalysis?.strategyAnalysis?.avoidableNegativeMarks ?? previewAnalysis?.attemptStrategy?.negativeMarkingPenalty ?? Math.round(wrongAnswers * 1);
+        const projectedScore = previewAnalysis?.strategyAnalysis?.projectedScore ?? previewAnalysis?.attemptStrategy?.scoreWithoutNegativeMarking ?? (score + wrongAnswers);
 
-        const subjects = previewAnalysis?.subjectAnalysis || previewAnalysis?.subjectResults || [];
-        const chapters = previewAnalysis?.chapterAnalysis || previewAnalysis?.chapterResults || [];
+        const subjects = previewAnalysis?.subjectAnalysis || previewAnalysis?.subjectResults || previewAnalysis?.subjects?.items || [];
+        const chapters = previewAnalysis?.chapterAnalysis || previewAnalysis?.chapterResults || previewAnalysis?.chapters?.items || [];
         const masteredChapters = chapters.filter((c: any) => (c.accuracy ?? 0) >= 70);
         const criticalChapters = chapters.filter((c: any) => (c.accuracy ?? 0) < 50);
         const recommendations = previewAnalysis?.recommendations || [];
@@ -1704,23 +2196,23 @@ export const CompletedExamReportsPage: React.FC = () => {
                         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                           <span className="text-xs text-slate-500 font-semibold uppercase">Total Score</span>
                           <div className="text-2xl font-bold text-slate-900 mt-1">
-                            {analysisData.analysis?.score ?? analysisData.analysis?.totalScore ?? '—'}
+                            {analysisData.analysis?.score ?? analysisData.analysis?.totalScore ?? analysisData.analysis?.overall?.obtainedMarks ?? '—'}
                             <span className="text-xs font-normal text-slate-500 ml-1">
-                              / {analysisData.analysis?.maxScore ?? selectedExam?.totalMarks}
+                              / {analysisData.analysis?.maxScore ?? analysisData.analysis?.overall?.totalMarks ?? selectedExam?.totalMarks}
                             </span>
                           </div>
                           <div className="text-xs text-indigo-600 mt-1 font-semibold">
-                            {Number(analysisData.analysis?.percentage || 0).toFixed(1)}% Score
+                            {Number(analysisData.analysis?.percentage ?? analysisData.analysis?.overall?.percentage ?? 0).toFixed(1)}% Score
                           </div>
                         </div>
 
                         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                           <span className="text-xs text-slate-500 font-semibold uppercase">Accuracy</span>
                           <div className="text-2xl font-bold text-emerald-600 mt-1">
-                            {Number(analysisData.analysis?.accuracy || 0).toFixed(1)}%
+                            {Number(analysisData.analysis?.accuracy ?? analysisData.analysis?.overall?.accuracy ?? 0).toFixed(1)}%
                           </div>
                           <div className="text-xs text-slate-500 mt-1">
-                            Correct: {analysisData.analysis?.correctAnswers || 0} / Wrong: {analysisData.analysis?.wrongAnswers || 0}
+                            Correct: {analysisData.analysis?.correctAnswers ?? analysisData.analysis?.overall?.correctCount ?? 0} / Wrong: {analysisData.analysis?.wrongAnswers ?? analysisData.analysis?.overall?.wrongCount ?? 0}
                           </div>
                         </div>
 
@@ -1739,12 +2231,12 @@ export const CompletedExamReportsPage: React.FC = () => {
                         <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                           <span className="text-xs text-slate-500 font-semibold uppercase">Time Spent</span>
                           <div className="text-2xl font-bold text-amber-600 mt-1">
-                            {analysisData.analysis?.timeUsedSeconds
-                              ? `${Math.floor(analysisData.analysis.timeUsedSeconds / 60)}m ${analysisData.analysis.timeUsedSeconds % 60}s`
+                            {(analysisData.analysis?.timeUsedSeconds ?? analysisData.analysis?.overall?.timeUsedSeconds ?? analysisData.analysis?.timeAnalysis?.totalTimeUsedSeconds)
+                              ? `${Math.floor((analysisData.analysis?.timeUsedSeconds ?? analysisData.analysis?.overall?.timeUsedSeconds ?? analysisData.analysis?.timeAnalysis?.totalTimeUsedSeconds) / 60)}m ${(analysisData.analysis?.timeUsedSeconds ?? analysisData.analysis?.overall?.timeUsedSeconds ?? analysisData.analysis?.timeAnalysis?.totalTimeUsedSeconds) % 60}s`
                               : '—'}
                           </div>
                           <div className="text-xs text-slate-500 mt-1">
-                            Avg {Number(analysisData.analysis?.averageTimePerQuestion || 0).toFixed(1)}s / question
+                            Avg {Number(analysisData.analysis?.averageTimePerQuestion ?? analysisData.analysis?.overall?.averageTimePerQuestionSeconds ?? analysisData.analysis?.timeAnalysis?.averageTimePerQuestionSeconds ?? 0).toFixed(1)}s / question
                           </div>
                         </div>
                       </div>
@@ -1758,12 +2250,12 @@ export const CompletedExamReportsPage: React.FC = () => {
                         <div className="grid md:grid-cols-2 gap-4 text-xs text-slate-700">
                           <div className="p-4 rounded-xl bg-white border border-slate-200">
                             <span className="font-semibold text-indigo-700 block mb-1">Attempt Discipline</span>
-                            Unattempted questions: <strong>{analysisData.analysis?.unattempted ?? 0}</strong>.
-                            Accuracy rate stands at <strong>{Number(analysisData.analysis?.accuracy || 0).toFixed(1)}%</strong>.
+                            Unattempted questions: <strong>{analysisData.analysis?.unattempted ?? analysisData.analysis?.overall?.unattemptedCount ?? 0}</strong>.
+                            Accuracy rate stands at <strong>{Number(analysisData.analysis?.accuracy ?? analysisData.analysis?.overall?.accuracy ?? 0).toFixed(1)}%</strong>.
                           </div>
                           <div className="p-4 rounded-xl bg-white border border-slate-200">
                             <span className="font-semibold text-emerald-700 block mb-1">Negative Marking Impact</span>
-                            Avoidable negative mark deduction estimated at ~<strong>{(analysisData.analysis?.wrongAnswers || 0) * 1} marks</strong>.
+                            Avoidable negative mark deduction estimated at ~<strong>{(analysisData.analysis?.wrongAnswers ?? analysisData.analysis?.overall?.wrongCount ?? 0) * 1} marks</strong>.
                           </div>
                         </div>
                       </div>
@@ -1787,7 +2279,7 @@ export const CompletedExamReportsPage: React.FC = () => {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {(analysisData.analysis?.subjectAnalysis || analysisData.analysis?.subjectResults || []).map((sub: any, i: number) => (
+                            {(analysisData.analysis?.subjectAnalysis || analysisData.analysis?.subjectResults || analysisData.analysis?.subjects?.items || []).map((sub: any, i: number) => (
                               <tr key={i} className="hover:bg-slate-50/80">
                                 <td className="px-5 py-3.5 font-bold text-slate-900">{sub.subjectName || sub.name || sub.subject?.name}</td>
                                 <td className="px-5 py-3.5 text-right font-mono font-semibold text-indigo-600">
@@ -1812,7 +2304,7 @@ export const CompletedExamReportsPage: React.FC = () => {
                     <div className="space-y-4">
                       <h4 className="font-bold text-slate-900 text-sm">Chapter-Level Mastery & Accuracy</h4>
                       <div className="grid md:grid-cols-2 gap-3.5">
-                        {(analysisData.analysis?.chapterAnalysis || analysisData.analysis?.chapterResults || []).map((ch: any, i: number) => (
+                        {(analysisData.analysis?.chapterAnalysis || analysisData.analysis?.chapterResults || analysisData.analysis?.chapters?.items || []).map((ch: any, i: number) => (
                           <div key={i} className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between">
                             <div>
                               <div className="font-semibold text-slate-900 text-xs">{ch.chapterName || ch.name || ch.chapter?.name}</div>
@@ -1821,7 +2313,7 @@ export const CompletedExamReportsPage: React.FC = () => {
                             <div className="text-right">
                               <span className="font-mono text-sm font-bold text-indigo-600">{Number(ch.accuracy || 0).toFixed(1)}%</span>
                               <div className="text-[10px] text-slate-500 uppercase font-semibold mt-0.5">
-                                {ch.performanceStatus || (ch.accuracy >= 70 ? 'STRONG' : ch.accuracy >= 40 ? 'AVERAGE' : 'WEAK')}
+                                {ch.performanceStatus || ch.status || (ch.accuracy >= 70 ? 'STRONG' : ch.accuracy >= 40 ? 'AVERAGE' : 'WEAK')}
                               </div>
                             </div>
                           </div>
@@ -1839,12 +2331,20 @@ export const CompletedExamReportsPage: React.FC = () => {
                           <div className="space-y-2 text-xs text-slate-700">
                             <div className="flex justify-between py-1 border-b border-slate-200">
                               <span className="text-slate-500">Average Time / Question:</span>
-                              <span className="font-mono font-bold text-slate-900">{Number(analysisData.analysis?.timeAnalysis?.averageTimePerQuestion || analysisData.analysis?.averageTimePerQuestion || 0).toFixed(1)}s</span>
+                              <span className="font-mono font-bold text-slate-900">
+                                {Number(
+                                  analysisData.analysis?.averageTimePerQuestion ??
+                                  analysisData.analysis?.timeAnalysis?.averageTimePerQuestion ??
+                                  analysisData.analysis?.overall?.averageTimePerQuestionSeconds ??
+                                  analysisData.analysis?.timeAnalysis?.averageTimePerQuestionSeconds ??
+                                  0
+                                ).toFixed(1)}s
+                              </span>
                             </div>
                             <div className="flex justify-between py-1 border-b border-slate-200">
                               <span className="text-slate-500">Total Duration Used:</span>
                               <span className="font-mono font-bold text-slate-900">
-                                {Math.floor((analysisData.analysis?.timeUsedSeconds || 0) / 60)} minutes
+                                {Math.floor((analysisData.analysis?.timeUsedSeconds ?? analysisData.analysis?.overall?.timeUsedSeconds ?? analysisData.analysis?.timeAnalysis?.totalTimeUsedSeconds ?? 0) / 60)} minutes
                               </span>
                             </div>
                           </div>
@@ -1860,7 +2360,9 @@ export const CompletedExamReportsPage: React.FC = () => {
                               <span className="font-bold text-indigo-700">
                                 {(
                                   analysisData.analysis?.strategyAnalysis?.primaryClassification ||
+                                  analysisData.analysis?.attemptStrategy?.accuracyVsSpeedProfile ||
                                   analysisData.analysis?.attemptStrategy?.riskProfile ||
+                                  analysisData.analysis?.overall?.speedAccuracyQuadrant ||
                                   'BALANCED'
                                 ).replace(/_/g, ' ')}
                               </span>
@@ -1875,8 +2377,9 @@ export const CompletedExamReportsPage: React.FC = () => {
                               <span className="text-slate-500">Avoidable Negative Loss:</span>
                               <span className="font-mono font-bold text-rose-600">
                                 −{analysisData.analysis?.strategyAnalysis?.avoidableNegativeMarks ??
+                                  analysisData.analysis?.attemptStrategy?.negativeMarkingPenalty ??
                                   analysisData.analysis?.strategyAnalysis?.metrics?.avoidableNegativeMarks ??
-                                  Math.round((analysisData.analysis?.wrongAnswers || 0) * 1)}{' '}
+                                  Math.round((analysisData.analysis?.wrongAnswers ?? analysisData.analysis?.overall?.wrongCount ?? 0) * 1)}{' '}
                                 Marks
                               </span>
                             </div>
@@ -1884,9 +2387,10 @@ export const CompletedExamReportsPage: React.FC = () => {
                               <span className="text-slate-500">Estimated Projected Score:</span>
                               <span className="font-mono font-bold text-emerald-600">
                                 {analysisData.analysis?.strategyAnalysis?.projectedScore ??
+                                  analysisData.analysis?.attemptStrategy?.scoreWithoutNegativeMarking ??
                                   analysisData.analysis?.strategyAnalysis?.metrics?.projectedScore ??
-                                  (analysisData.analysis?.score || 0) +
-                                    (analysisData.analysis?.wrongAnswers || 0)}{' '}
+                                  (analysisData.analysis?.score ?? analysisData.analysis?.overall?.obtainedMarks ?? 0) +
+                                    (analysisData.analysis?.wrongAnswers ?? analysisData.analysis?.overall?.wrongCount ?? 0)}{' '}
                                 Marks
                               </span>
                             </div>

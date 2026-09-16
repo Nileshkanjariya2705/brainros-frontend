@@ -42,6 +42,7 @@ import {
   billingKeys,
   staffKeys,
 } from '@/services/queryKeys';
+import { toast } from '@/utils/toast';
 
 export interface QueueTypeOption {
   key: string;
@@ -287,8 +288,11 @@ export const AdminApprovalQueuePage: React.FC = () => {
       setApprovingItem(null);
       await invalidateQueueData();
       await invalidateTargetResource(item.resourceType);
+      toast.success(`${item.resourceType || 'Request'} approved successfully!`);
     } catch (err: any) {
-      setActionError(err.response?.data?.message || 'Approval failed');
+      const msg = err.response?.data?.message || 'Approval failed';
+      setActionError(msg);
+      toast.error(msg);
     } finally {
       setProcessing(false);
     }
@@ -309,8 +313,11 @@ export const AdminApprovalQueuePage: React.FC = () => {
       setRejectionReason('');
       await invalidateQueueData();
       await invalidateTargetResource(rejectedType);
+      toast.success(`${rejectedType || 'Request'} rejected successfully.`);
     } catch (err: any) {
-      setActionError(err.response?.data?.message || 'Rejection failed');
+      const msg = err.response?.data?.message || 'Rejection failed';
+      setActionError(msg);
+      toast.error(msg);
     } finally {
       setProcessing(false);
     }
@@ -325,11 +332,15 @@ export const AdminApprovalQueuePage: React.FC = () => {
         approvalRequestIds: selectedIds,
         comment: 'Bulk approved by Super Admin',
       });
+      const count = selectedIds.length;
       setSelectedIds([]);
       await invalidateQueueData();
       await invalidateTargetResource(selectedQueue !== 'ALL' ? selectedQueue : undefined);
+      toast.success(`${count} request(s) approved successfully!`);
     } catch (err: any) {
-      setActionError(err.response?.data?.message || 'Bulk approval failed');
+      const msg = err.response?.data?.message || 'Bulk approval failed';
+      setActionError(msg);
+      toast.error(msg);
     } finally {
       setProcessing(false);
     }

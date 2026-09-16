@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   FileSpreadsheet,
   UploadCloud,
-  History,
   BookOpen,
   Search,
   Layers,
@@ -118,15 +117,6 @@ export const ExamManagerDashboardPage: React.FC = () => {
 
         {/* Primary Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <Button
-            variant="outline"
-            onClick={() => navigate(`${routePrefix}/exam-manager/history`)}
-            className="flex items-center gap-1.5 text-xs font-bold border-slate-200 hover:bg-slate-50 text-slate-700"
-          >
-            <History size={14} />
-            <span>Import History</span>
-          </Button>
-
           <Button
             variant="primary"
             onClick={handleOpenUpload}

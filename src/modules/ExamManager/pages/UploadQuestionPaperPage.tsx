@@ -106,6 +106,7 @@ export const UploadQuestionPaperPage: React.FC = () => {
       page,
       limit,
       search: search.trim() || undefined,
+      notConductedOnly: true,
       sortBy: 'createdAt',
       sortOrder: 'desc',
     });
@@ -254,6 +255,19 @@ export const UploadQuestionPaperPage: React.FC = () => {
   // ─── Filtered Scheduled Exams ──────────────────────────────────────────────
   const filteredScheduledExams = useMemo(() => {
     return scheduledExams.filter((exam) => {
+      // Exclude exams that are completed, ended, cancelled or whose schedule window ended in the past
+      const isConducted =
+        exam.status === 'COMPLETED' ||
+        exam.status === 'ENDED' ||
+        exam.status === 'CANCELLED' ||
+        exam.schedule?.status === 'COMPLETED' ||
+        exam.schedule?.status === 'ENDED' ||
+        exam.schedule?.status === 'CANCELLED' ||
+        (Boolean(exam.schedule?.endTime) &&
+          new Date(exam.schedule!.endTime).getTime() < Date.now());
+
+      if (isConducted) return false;
+
       const q = search.toLowerCase();
       const matchesText =
         exam.title.toLowerCase().includes(q) ||

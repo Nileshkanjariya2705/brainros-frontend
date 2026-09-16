@@ -13,6 +13,8 @@ import {
   Loader2,
   AlertTriangle,
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import type { ScheduledExam } from '../types/ai-translation.types';
 
@@ -31,16 +33,29 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
 
-  // Compute summary stats
+  // Filter out exams that have already been completed / past schedule window
+  const notCompletedExams = useMemo(() => {
+    const now = Date.now();
+    return exams.filter((exam) => {
+      if (exam.endTime && new Date(exam.endTime).getTime() < now) {
+        return false;
+      }
+      return true;
+    });
+  }, [exams]);
+
+  // Compute summary stats from active/upcoming exams
   const stats = useMemo(() => {
-    const total = exams.length;
+    const total = notCompletedExams.length;
     let pendingUpload = 0;
     let processing = 0;
     let completed = 0;
     let failed = 0;
 
-    for (const exam of exams) {
+    for (const exam of notCompletedExams) {
       const status = exam.translationJob?.status;
       if (!exam.translationJob) {
         pendingUpload++;
@@ -56,11 +71,11 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
     }
 
     return { total, pendingUpload, processing, completed, failed };
-  }, [exams]);
+  }, [notCompletedExams]);
 
   // Filtered exams
   const filteredExams = useMemo(() => {
-    return exams.filter((exam) => {
+    return notCompletedExams.filter((exam) => {
       // Search match
       const query = searchQuery.toLowerCase().trim();
       const matchesSearch =
@@ -90,7 +105,25 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
 
       return true;
     });
-  }, [exams, searchQuery, statusFilter]);
+  }, [notCompletedExams, searchQuery, statusFilter]);
+
+  // Pagination calculation
+  const totalCount = filteredExams.length;
+  const totalPages = Math.ceil(totalCount / limit) || 1;
+  const paginatedExams = useMemo(() => {
+    const start = (page - 1) * limit;
+    return filteredExams.slice(start, start + limit);
+  }, [filteredExams, page, limit]);
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setPage(1);
+  };
+
+  const handleStatusFilterChange = (filter: StatusFilter) => {
+    setStatusFilter(filter);
+    setPage(1);
+  };
 
   const getStatusBadge = (exam: ScheduledExam) => {
     if (!exam.translationJob) {
@@ -225,7 +258,7 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Search by exam name or code..."
                 className="w-full sm:w-64 pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
@@ -244,7 +277,7 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
                 <button
                   key={f.id}
                   type="button"
-                  onClick={() => setStatusFilter(f.id)}
+                  onClick={() => handleStatusFilterChange(f.id)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     statusFilter === f.id
                       ? 'bg-indigo-600 text-white shadow-sm'
@@ -287,6 +320,7 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
                 onClick={() => {
                   setSearchQuery('');
                   setStatusFilter('ALL');
+                  setPage(1);
                 }}
                 className="mt-4 px-4 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl hover:bg-indigo-100 transition-colors cursor-pointer"
               >
@@ -295,126 +329,193 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
             )}
           </div>
         ) : (
-          <div className="divide-y divide-slate-200 dark:divide-slate-800">
-            {filteredExams.map((exam) => {
-              const hasJob = !!exam.translationJob;
-              const isProcessing =
-                exam.translationJob?.status === 'PROCESSING' ||
-                exam.translationJob?.status === 'QUEUED';
+          <>
+            <div className="divide-y divide-slate-200 dark:divide-slate-800">
+              {paginatedExams.map((exam) => {
+                const hasJob = !!exam.translationJob;
+                const isProcessing =
+                  exam.translationJob?.status === 'PROCESSING' ||
+                  exam.translationJob?.status === 'QUEUED';
 
-              return (
-                <div
-                  key={exam.scheduleId}
-                  className="p-5 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-5"
-                >
-                  {/* Left Column: Exam Details */}
-                  <div className="space-y-3 min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                        {exam.examTitle}
-                      </h3>
-                      {exam.examCode && (
-                        <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                          {exam.examCode}
-                        </span>
-                      )}
-                      {getStatusBadge(exam)}
-                    </div>
-
-                    {/* Metadata Items */}
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                      <div className="flex items-center gap-1.5">
-                        <CalendarClock className="w-4 h-4 text-indigo-500 shrink-0" />
-                        <span>
-                          {new Date(exam.startTime).toLocaleDateString()} (
-                          {new Date(exam.startTime).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                          )
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-4 h-4 text-amber-500 shrink-0" />
-                        <span>{exam.durationMinutes} Minutes</span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <HelpCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                        <span>
-                          {exam.totalQuestionsConfigured || 0} Questions Configured
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Target Languages */}
-                    <div className="flex items-center gap-2 pt-1">
-                      <Globe2 className="w-3.5 h-3.5 text-sky-500 shrink-0" />
-                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium shrink-0">
-                        Target Languages ({exam.targetLanguages?.length || 0}):
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {exam.targetLanguages && exam.targetLanguages.length > 0 ? (
-                          exam.targetLanguages.map((lang) => (
-                            <span
-                              key={lang.id}
-                              className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800/60"
-                            >
-                              {lang.name}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">English only</span>
+                return (
+                  <div
+                    key={exam.scheduleId}
+                    className="p-5 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-5"
+                  >
+                    {/* Left Column: Exam Details */}
+                    <div className="space-y-3 min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                          {exam.examTitle}
+                        </h3>
+                        {exam.examCode && (
+                          <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                            {exam.examCode}
+                          </span>
                         )}
+                        {getStatusBadge(exam)}
+                      </div>
+
+                      {/* Metadata Items */}
+                      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        <div className="flex items-center gap-1.5">
+                          <CalendarClock className="w-4 h-4 text-indigo-500 shrink-0" />
+                          <span>
+                            {new Date(exam.startTime).toLocaleDateString()} (
+                            {new Date(exam.startTime).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                            )
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+                          <span>{exam.durationMinutes} Minutes</span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <HelpCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>
+                            {exam.totalQuestionsConfigured || 0} Questions Configured
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Target Languages */}
+                      <div className="flex items-center gap-2 pt-1">
+                        <Globe2 className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium shrink-0">
+                          Target Languages ({exam.targetLanguages?.length || 0}):
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {exam.targetLanguages && exam.targetLanguages.length > 0 ? (
+                            exam.targetLanguages.map((lang) => (
+                              <span
+                                key={lang.id}
+                                className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800/60"
+                              >
+                                {lang.name}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">English only</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Right Column: Action Buttons */}
-                  <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center">
-                    {!hasJob ? (
-                      <button
-                        type="button"
-                        onClick={() => onSelectExam(exam, 'upload')}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-600/20 hover:shadow-md hover:shadow-indigo-600/30 transition-all cursor-pointer"
-                      >
-                        <UploadCloud className="w-4 h-4" />
-                        Upload Question Paper
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => onSelectExam(exam, 'view')}
-                          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                            isProcessing
-                              ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
-                              : 'bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white shadow-sm'
-                          }`}
-                        >
-                          <Eye className="w-4 h-4" />
-                          {isProcessing ? 'View Live Progress' : 'View / Manage Translations'}
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-
+                    {/* Right Column: Action Buttons */}
+                    <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center">
+                      {!hasJob ? (
                         <button
                           type="button"
                           onClick={() => onSelectExam(exam, 'upload')}
-                          className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                          title="Upload new question paper or replace existing"
+                          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-600/20 hover:shadow-md hover:shadow-indigo-600/30 transition-all cursor-pointer"
                         >
-                          <UploadCloud className="w-3.5 h-3.5" />
-                          Re-upload
+                          <UploadCloud className="w-4 h-4" />
+                          Upload Question Paper
+                          <ArrowRight className="w-3.5 h-3.5" />
                         </button>
-                      </>
-                    )}
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => onSelectExam(exam, 'view')}
+                            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                              isProcessing
+                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+                                : 'bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white shadow-sm'
+                            }`}
+                          >
+                            <Eye className="w-4 h-4" />
+                            {isProcessing ? 'View Live Progress' : 'View / Manage Translations'}
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => onSelectExam(exam, 'upload')}
+                            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                            title="Upload new question paper or replace existing"
+                          >
+                            <UploadCloud className="w-3.5 h-3.5" />
+                            Re-upload
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="px-5 py-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/50">
+              <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                <span>
+                  Showing{' '}
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    {(page - 1) * limit + 1}
+                  </span>{' '}
+                  to{' '}
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    {Math.min(page * limit, totalCount)}
+                  </span>{' '}
+                  of{' '}
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    {totalCount}
+                  </span>{' '}
+                  exams
+                </span>
+
+                <div className="flex items-center gap-1.5 ml-2">
+                  <span>Per page:</span>
+                  <select
+                    value={limit}
+                    onChange={(e) => {
+                      setLimit(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-400 px-2">
+                  Page <span className="font-semibold text-slate-900 dark:text-white">{page}</span> of{' '}
+                  <span className="font-semibold text-slate-900 dark:text-white">{totalPages}</span>
+                </span>
+
+                <button
+                  type="button"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -156,6 +156,12 @@ export const useGetExamsListAPI = () => {
         if (params.limit) queryParts.push(`limit=${params.limit}`);
         if (params.sortBy) queryParts.push(`sortBy=${params.sortBy}`);
         if (params.sortOrder) queryParts.push(`sortOrder=${params.sortOrder}`);
+        if (params.missingQuestionPaperOnly !== undefined)
+          queryParts.push(`missingQuestionPaperOnly=${params.missingQuestionPaperOnly}`);
+        if (params.notConductedOnly !== undefined)
+          queryParts.push(`notConductedOnly=${params.notConductedOnly}`);
+        if (params.excludeCompleted !== undefined)
+          queryParts.push(`excludeCompleted=${params.excludeCompleted}`);
 
         const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
         const response = await Axios.get(`${EXAM_MANAGER_BASE_PATH}/exams${queryString}`);

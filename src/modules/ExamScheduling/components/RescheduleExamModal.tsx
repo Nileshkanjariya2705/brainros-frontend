@@ -3,6 +3,7 @@ import { X, RotateCcw, CheckCircle2, AlertCircle, Globe } from 'lucide-react';
 import { useRescheduleExamAPI } from '../services/examScheduling.service';
 import type { ExamScheduleItem } from '../types/examScheduling.types';
 import Button from '@/components/ui/Button';
+import { toast } from '@/utils/toast';
 
 interface RescheduleExamModalProps {
   schedule: ExamScheduleItem | null;
@@ -111,6 +112,7 @@ export const RescheduleExamModal: React.FC<RescheduleExamModalProps> = ({
       return;
     }
 
+    toast.success('Exam schedule updated successfully!');
     onRescheduled?.();
     onClose();
   };

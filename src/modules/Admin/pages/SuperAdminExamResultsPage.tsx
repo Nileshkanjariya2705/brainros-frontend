@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import cn from 'classnames';
 import {
   Award,
   CheckCircle2,
   Clock,
-  AlertTriangle,
   RefreshCw,
   Search,
   Users,
@@ -13,7 +13,6 @@ import {
   Send,
   Eye,
   Check,
-  Lock,
   Layers,
   FileCheck2,
   HelpCircle,
@@ -25,31 +24,26 @@ import {
 // ** Services **
 import {
   useGetPublicationDashboardAPI,
-  useGetPublicationPreviewAPI,
   usePublishExamResultsAPI,
 } from '@/modules/Exams/services';
 
 // ** Components **
 import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
-import Modal from '@/components/ui/Modal';
 
 // ** Types **
-import type {
-  PublicationDashboardItem,
-  PublicationPreviewResponse,
-} from '@/types/exam.types';
+import type { PublicationDashboardItem } from '@/types/exam.types';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
+import { toast } from '@/utils/toast';
 
 export const SuperAdminExamResultsPage: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // APIs
   const { getPublicationDashboardAPI, isLoading: isDashboardLoading } =
     useGetPublicationDashboardAPI();
-  const { getPublicationPreviewAPI, isLoading: isPreviewLoading } =
-    useGetPublicationPreviewAPI();
-  const { publishExamResultsAPI, isLoading: isPublishing } =
+  const { publishExamResultsAPI } =
     usePublishExamResultsAPI();
 
   // State
@@ -64,13 +58,8 @@ export const SuperAdminExamResultsPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalMonitored, setTotalMonitored] = useState<number>(0);
 
-  // Modal State
-  const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
-  const [previewData, setPreviewData] =
-    useState<PublicationPreviewResponse | null>(null);
-  const [confirmChecked, setConfirmChecked] = useState(false);
-  const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
-  const [actionErrorMsg, setActionErrorMsg] = useState<string | null>(null);
+  // Direct Publish Loading State
+  const [publishingExamId, setPublishingExamId] = useState<string | null>(null);
 
   // Load publication dashboard
   const loadDashboard = useCallback(async () => {
@@ -113,40 +102,33 @@ export const SuperAdminExamResultsPage: React.FC = () => {
     loadDashboardRef.current();
   }, [page, limit, searchQuery, filterStatus]);
 
-  // Open Preview & Confirmation Modal
-  const handleOpenPublishModal = async (examId: string) => {
-    setSelectedExamId(examId);
-    setConfirmChecked(false);
-    setActionErrorMsg(null);
-    setActionSuccessMsg(null);
-
-    const res = await getPublicationPreviewAPI(examId);
-    if (res.data && res.data.data) {
-      setPreviewData(res.data.data);
-    }
-  };
-
-  // Execute Official Result Publication
-  const handleExecutePublish = async () => {
-    if (!selectedExamId || !confirmChecked) return;
-    setActionErrorMsg(null);
-
-    const res = await publishExamResultsAPI(selectedExamId);
-    if (res.data && res.data.data) {
-      setActionSuccessMsg(
-        `Official results for "${res.data.data.examTitle}" published successfully!`,
-      );
-      loadDashboard();
-      setTimeout(() => {
-        setSelectedExamId(null);
-        setPreviewData(null);
-        setActionSuccessMsg(null);
-      }, 2000);
-    } else if (res.error) {
-      setActionErrorMsg(
-        (res.error as any)?.message ||
-          'Failed to publish results. Please ensure all readiness criteria are met.',
-      );
+  // Execute Direct Result Publication (No popup modal)
+  const handleDirectPublish = async (exam: PublicationDashboardItem) => {
+    setPublishingExamId(exam.examId);
+    try {
+      const res = await publishExamResultsAPI(exam.examId);
+      if (res.isSuccess || res.status === 200 || !res.error || res.data) {
+        const title =
+          (res.data as any)?.data?.examTitle ||
+          (res.data as any)?.examTitle ||
+          exam.examTitle;
+        toast.success(
+          `Exam result published successfully for "${title}"!`,
+        );
+        // Invalidate all query caches and refresh publication dashboard
+        queryClient.invalidateQueries();
+        loadDashboard();
+      } else {
+        toast.error(
+          res.message ||
+            (res.error as any)?.message ||
+            'Failed to publish results. Please ensure all readiness criteria are met.',
+        );
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to publish results.');
+    } finally {
+      setPublishingExamId(null);
     }
   };
 
@@ -477,7 +459,7 @@ export const SuperAdminExamResultsPage: React.FC = () => {
                                 <Eye className="w-3.5 h-3.5 mr-1" /> View Leaderboard
                               </Button>
                             </div>
-                          ) : exam.publicationStatus === 'READY_TO_PUBLISH' ? (
+                          ) : exam.publicationStatus === 'READY_TO_PUBLISH' || (exam.evaluatedAttempts > 0 && exam.evaluatedAttempts === exam.finalizedAttempts) ? (
                             <div>
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 animate-pulse">
                                 <Award className="w-3.5 h-3.5" /> Ready to Publish
@@ -485,10 +467,19 @@ export const SuperAdminExamResultsPage: React.FC = () => {
                               <div className="flex flex-col gap-1.5 mt-2">
                                 <Button
                                   size="sm"
-                                  onClick={() => handleOpenPublishModal(exam.examId)}
-                                  className="bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white shadow-md font-semibold text-xs flex items-center gap-1.5"
+                                  disabled={publishingExamId === exam.examId}
+                                  onClick={() => handleDirectPublish(exam)}
+                                  className="bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white shadow-md font-semibold text-xs flex items-center gap-1.5 disabled:opacity-50"
                                 >
-                                  <Send className="w-3.5 h-3.5" /> Publish Results
+                                  {publishingExamId === exam.examId ? (
+                                    <>
+                                      <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Publishing...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Send className="w-3.5 h-3.5" /> Publish Results
+                                    </>
+                                  )}
                                 </Button>
                                 <Button
                                   size="xs"
@@ -591,161 +582,6 @@ export const SuperAdminExamResultsPage: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* ─── Result Publication Preview & Confirmation Modal ─────────── */}
-      <Modal
-        isOpen={Boolean(selectedExamId)}
-        onClose={() => {
-          if (!isPublishing) {
-            setSelectedExamId(null);
-            setPreviewData(null);
-          }
-        }}
-        title="Authorize Official Result Publication"
-      >
-        <div className="space-y-5">
-          {isPreviewLoading || !previewData ? (
-            <div className="py-12 flex flex-col items-center justify-center gap-2">
-              <Loader label="Fetching readiness audit & candidate snapshot..." />
-            </div>
-          ) : (
-            <>
-              {/* Exam Info Card */}
-              <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                    Live Examination
-                  </span>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                    Ready for Release
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                  {previewData.examTitle}
-                </h3>
-                <div className="text-xs text-slate-500 flex items-center gap-4">
-                  <span>
-                    Target:{' '}
-                    {typeof previewData.examTarget === 'object'
-                      ? (previewData.examTarget as any)?.name
-                      : previewData.examTarget || 'General'}
-                  </span>
-                  <span>Version: v{previewData.currentPublicationVersion}</span>
-                </div>
-              </div>
-
-              {/* Readiness Checks Grid */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg">
-                  <div className="text-emerald-700 dark:text-emerald-300 font-semibold">
-                    ✓ Attempts Finalized
-                  </div>
-                  <div className="text-slate-700 dark:text-slate-300 font-bold text-sm mt-0.5">
-                    {previewData.finalizedAttempts} Candidates
-                  </div>
-                </div>
-
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg">
-                  <div className="text-emerald-700 dark:text-emerald-300 font-semibold">
-                    ✓ Evaluation & Scoring
-                  </div>
-                  <div className="text-slate-700 dark:text-slate-300 font-bold text-sm mt-0.5">
-                    {previewData.evaluatedAttempts} / {previewData.finalizedAttempts} Complete
-                  </div>
-                </div>
-
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg">
-                  <div className="text-emerald-700 dark:text-emerald-300 font-semibold">
-                    ✓ Analytics & Strategy
-                  </div>
-                  <div className="text-slate-700 dark:text-slate-300 font-bold text-sm mt-0.5">
-                    {previewData.analyticsCompleted} / {previewData.finalizedAttempts} Computed
-                  </div>
-                </div>
-
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg">
-                  <div className="text-emerald-700 dark:text-emerald-300 font-semibold">
-                    ✓ Rank & Percentile
-                  </div>
-                  <div className="text-slate-700 dark:text-slate-300 font-bold text-sm mt-0.5">
-                    Batch Snapshot Ready
-                  </div>
-                </div>
-              </div>
-
-              {/* Warning Notice */}
-              <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex gap-3 text-xs text-amber-800 dark:text-amber-200">
-                <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
-                <div className="space-y-1">
-                  <span className="font-bold">Irreversible Action:</span>
-                  <p>
-                    Publishing results will immediately make individual scorecards, subject breakdowns, percentile rankings, and answer reviews visible to all candidates, parents, and institutions.
-                  </p>
-                </div>
-              </div>
-
-              {/* Confirmation Checkbox */}
-              <label className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={confirmChecked}
-                  onChange={(e) => setConfirmChecked(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500"
-                />
-                <span className="text-xs text-slate-700 dark:text-slate-300 font-medium">
-                  I confirm that all evaluation benchmarks and integrity checks have been verified. I authorize immediate official publication.
-                </span>
-              </label>
-
-              {/* Action Feedback */}
-              {actionSuccessMsg && (
-                <div className="p-3 bg-emerald-100 dark:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-700 rounded-lg text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4" />
-                  {actionSuccessMsg}
-                </div>
-              )}
-
-              {actionErrorMsg && (
-                <div className="p-3 bg-rose-100 dark:bg-rose-900/60 border border-rose-300 dark:border-rose-700 rounded-lg text-rose-800 dark:text-rose-200 text-xs font-semibold flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4" />
-                  {actionErrorMsg}
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedExamId(null);
-                    setPreviewData(null);
-                  }}
-                  disabled={isPublishing}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleExecutePublish}
-                  disabled={!confirmChecked || isPublishing}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-2"
-                >
-                  {isPublishing ? (
-                    <>
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      Publishing Results...
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="w-4 h-4" />
-                      Confirm & Publish Results
-                    </>
-                  )}
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-      </Modal>
     </div>
   );
 };

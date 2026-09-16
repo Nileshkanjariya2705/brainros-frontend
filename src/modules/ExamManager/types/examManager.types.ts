@@ -125,6 +125,8 @@ export interface ExamManagerFilterParams {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   missingQuestionPaperOnly?: boolean;
+  notConductedOnly?: boolean;
+  excludeCompleted?: boolean;
 }
 
 export interface ExamItem {
