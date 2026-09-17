@@ -435,7 +435,7 @@ export const SuperAdminExamResultsPage: React.FC = () => {
                       {/* Status & Action */}
                       <td className="py-4 px-4 align-top">
                         <div className="flex flex-col gap-2">
-                          {exam.publicationStatus === 'PUBLISHED' ? (
+                          {exam.publicationStatus === 'PUBLISHED' && exam.publishedAt ? (
                             <div>
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                                 <CheckCircle2 className="w-3.5 h-3.5" /> Official Result Published
@@ -445,19 +445,36 @@ export const SuperAdminExamResultsPage: React.FC = () => {
                                   {new Date(exam.publishedAt).toLocaleString()}
                                 </div>
                               )}
-                              <Button
-                                size="xs"
-                                variant="outline"
-                                className="mt-2 text-xs"
-                                onClick={() =>
-                                  navigate(
-                                    PRIVATE_NAVIGATION.adminLeaderboard +
-                                      `?examId=${exam.examId}`,
-                                  )
-                                }
-                              >
-                                <Eye className="w-3.5 h-3.5 mr-1" /> View Leaderboard
-                              </Button>
+                              <div className="flex items-center gap-1.5 mt-2">
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  className="text-xs"
+                                  onClick={() =>
+                                    navigate(
+                                      PRIVATE_NAVIGATION.adminLeaderboard +
+                                        `?examId=${exam.examId}`,
+                                    )
+                                  }
+                                >
+                                  <Eye className="w-3.5 h-3.5 mr-1" /> Leaderboard
+                                </Button>
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  disabled={publishingExamId === exam.examId}
+                                  onClick={() => handleDirectPublish(exam)}
+                                  className="text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-xs flex items-center gap-1"
+                                  title="Re-publish results if scores or rankings were recalculated"
+                                >
+                                  {publishingExamId === exam.examId ? (
+                                    <RefreshCw className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Send className="w-3 h-3" />
+                                  )}
+                                  Re-publish
+                                </Button>
+                              </div>
                             </div>
                           ) : exam.publicationStatus === 'READY_TO_PUBLISH' || (exam.evaluatedAttempts > 0 && exam.evaluatedAttempts === exam.finalizedAttempts) ? (
                             <div>

@@ -22,8 +22,10 @@ import {
   Check,
   X,
   Download,
+  Mail,
 } from 'lucide-react';
 import { Axios } from '@/base-axios';
+import { toast } from '@/utils/toast';
 
 // ** Services **
 import {
@@ -82,15 +84,34 @@ const ExamResultPage = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Exam_Analysis_Report_${attemptId}.pdf`);
+      const cleanExamTitle = (analysis?.examTitle || 'Exam').replace(/[^a-zA-Z0-9_-]/g, '_');
+      link.setAttribute('download', `Exam_Analysis_Report_${cleanExamTitle}_${attemptId.slice(0, 8)}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
+      toast.success('Exam analysis PDF report downloaded successfully!');
     } catch (err) {
       console.error('Failed to download PDF report', err);
+      toast.error('Failed to download PDF report. Please try again.');
     } finally {
       setIsDownloadingPdf(false);
+    }
+  };
+
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  const handleSendEmail = async () => {
+    if (!attemptId) return;
+    try {
+      setIsSendingEmail(true);
+      const res = await Axios.post(`/results/${attemptId}/send-email`);
+      toast.success(res.data?.message || 'Detailed exam report emailed successfully!');
+    } catch (err: any) {
+      console.error('Failed to send report email', err);
+      toast.error(err?.response?.data?.message || 'Failed to send report email. Please try again.');
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -401,6 +422,22 @@ const ExamResultPage = () => {
               <Download size={14} className="text-indigo-600" />
             )}
             <span>{isDownloadingPdf ? 'Generating PDF...' : 'Download PDF Report'}</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSendEmail}
+            disabled={isSendingEmail}
+            className="flex items-center gap-1.5 text-xs font-bold border-teal-300 text-teal-800 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800 shadow-2xs"
+            title="Send detailed report PDF to registered email"
+          >
+            {isSendingEmail ? (
+              <RefreshCw size={14} className="animate-spin text-teal-600" />
+            ) : (
+              <Mail size={14} className="text-teal-600" />
+            )}
+            <span>{isSendingEmail ? 'Sending Email...' : 'Send to Mail'}</span>
           </Button>
 
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">

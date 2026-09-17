@@ -714,13 +714,6 @@ export const ACCOUNTANT_MENU_GROUPS: MenuGroupConfig[] = [
         permission: PERMISSIONS.BILL_VIEW,
       },
       {
-        key: 'accountant-reports',
-        label: 'Financial Reports',
-        to: PRIVATE_NAVIGATION.accountantReports,
-        icon: FileText,
-        permission: PERMISSIONS.REPORT_VIEW,
-      },
-      {
         key: 'accountant-notifications',
         label: 'Notification Center',
         to: PRIVATE_NAVIGATION.accountantNotifications,

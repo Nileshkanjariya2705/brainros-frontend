@@ -860,7 +860,7 @@ export const SuperAdminBillingPage: React.FC = () => {
                                 ₹{rate.toLocaleString('en-IN')}
                               </span>
                               <span className="text-[11px] font-normal text-slate-400 font-sans">/ student</span>
-                              {isSuperAdmin && (
+                              {(isSuperAdmin || isAccountant) && (
                                 <button
                                   type="button"
                                   onClick={() => startInlineEdit(school.id, rate)}
@@ -890,7 +890,7 @@ export const SuperAdminBillingPage: React.FC = () => {
                         </td>
                         <td className="py-4 px-4 sm:px-6 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            {isSuperAdmin && (
+                            {(isSuperAdmin || isAccountant) && (
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -1313,7 +1313,7 @@ export const SuperAdminBillingPage: React.FC = () => {
                             <span className="font-semibold text-slate-800">
                               ₹{(bill.pricePerStudent > 0 ? bill.pricePerStudent : currentPricing).toLocaleString('en-IN')}
                             </span>
-                            {isSuperAdmin && (
+                            {(isSuperAdmin || isAccountant) && (
                               <button
                                 type="button"
                                 onClick={() => startInlineEdit(bill.institution.id, bill.pricePerStudent > 0 ? bill.pricePerStudent : currentPricing)}

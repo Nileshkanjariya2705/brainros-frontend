@@ -138,6 +138,9 @@ const AdminAuditLogsPage = lazyRoute(() => import('@/modules/Admin/pages/AdminAu
 const AdminNotificationsPage = lazyRoute(
   () => import('@/modules/Admin/pages/AdminNotificationsPage'),
 );
+const StaffNotificationsPage = lazyRoute(
+  () => import('@/modules/Admin/pages/StaffNotificationsPage'),
+);
 const ExamCalendarPage = lazyRoute(() => import('@/modules/ExamScheduling/pages/ExamCalendarPage'));
 const StudentProfilePage = lazyRoute(() => import('@/modules/Auth/pages/StudentProfilePage'));
 const StudentNotificationsPage = lazyRoute(
@@ -315,6 +318,14 @@ const adminRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_SCHEDULE, PERMISSIONS.EXAM_VIEW]}>
             <ExamSchedulingManagementPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exams/schedule',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_SCHEDULE]}>
+            <ScheduleExamPage />
           </ProtectedRoute>
         ),
       },
@@ -678,7 +689,7 @@ const generalManagerRoutes: RouteObject[] = [
       { path: 'leaderboard', element: <AdminLeaderboardPage /> },
       { path: 'historical-datasets', element: <HistoricalDatasetsPage /> },
       { path: 'audit-logs', element: <AdminAuditLogsPage /> },
-      { path: 'notifications', element: <AdminNotificationsPage /> },
+      { path: 'notifications', element: <StaffNotificationsPage /> },
       { path: 'profile', element: <StudentProfilePage /> },
     ],
   },
@@ -728,7 +739,7 @@ const operatorRoutes: RouteObject[] = [
       { path: 'approvals', element: <AdminApprovalQueuePage /> },
       { path: 'billing', element: <SuperAdminBillingPage /> },
       { path: 'leaderboard', element: <AdminLeaderboardPage /> },
-      { path: 'notifications', element: <AdminNotificationsPage /> },
+      { path: 'notifications', element: <StaffNotificationsPage /> },
       { path: 'profile', element: <StudentProfilePage /> },
     ],
   },
@@ -750,7 +761,7 @@ const accountantRoutes: RouteObject[] = [
       { path: 'dashboard', element: <StaffDashboardPage /> },
       { path: 'billing', element: <SuperAdminBillingPage /> },
       { path: 'reports', element: <CompletedExamReportsPage /> },
-      { path: 'notifications', element: <AdminNotificationsPage /> },
+      { path: 'notifications', element: <StaffNotificationsPage /> },
       { path: 'profile', element: <StudentProfilePage /> },
     ],
   },
@@ -772,7 +783,7 @@ const salesAgentRoutes: RouteObject[] = [
       { path: 'dashboard', element: <InstitutionDashboardPage /> },
       { path: 'schools', element: <AdminSchoolsPage /> },
       { path: 'reports', element: <ReportsPage /> },
-      { path: 'notifications', element: <AdminNotificationsPage /> },
+      { path: 'notifications', element: <StaffNotificationsPage /> },
       { path: 'profile', element: <StudentProfilePage /> },
     ],
   },
@@ -807,7 +818,7 @@ const staffRoutes: RouteObject[] = [
       { path: 'students', element: <AdminStudentsPage /> },
       { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
       { path: 'reports', element: <CompletedExamReportsPage /> },
-      { path: 'notifications', element: <AdminNotificationsPage /> },
+      { path: 'notifications', element: <StaffNotificationsPage /> },
       { path: 'profile', element: <StudentProfilePage /> },
     ],
   },

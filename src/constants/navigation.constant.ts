@@ -102,7 +102,7 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   superAdminLeaderboard: '/super-admin/leaderboard',
   superAdminHistoricalDatasets: '/super-admin/historical-datasets',
   superAdminControlCenter: '/super-admin/control-center',
-  superAdminApprovalQueue: '/super-admin/approval-queue',
+  superAdminApprovalQueue: '/super-admin/approvals',
   superAdminAuditLogs: '/super-admin/audit-logs',
   superAdminNotifications: '/super-admin/notifications',
   superAdminInstitutionDashboard: '/super-admin/institution',

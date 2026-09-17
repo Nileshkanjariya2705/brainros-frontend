@@ -58,7 +58,7 @@ export const StaffDashboardPage: React.FC = () => {
     activeRole === 'GENERAL_MANAGER'
       ? '/general-manager'
       : activeRole === 'MANAGER'
-      ? '/manager'
+      ? '/admin'
       : activeRole === 'OPERATOR'
       ? '/operator'
       : activeRole === 'ACCOUNTANT'
@@ -138,7 +138,7 @@ export const StaffDashboardPage: React.FC = () => {
       color: 'bg-amber-600',
       badge: 'Results',
       badgeColor: 'bg-amber-100 text-amber-800',
-      visible: can(PERMISSIONS.EXAM_VIEW) || can(PERMISSIONS.REPORT_VIEW),
+      visible: (can(PERMISSIONS.EXAM_VIEW) || can(PERMISSIONS.REPORT_VIEW)) && !isAccountant,
     },
     // {
     //   title: 'Completed Exam Reports',

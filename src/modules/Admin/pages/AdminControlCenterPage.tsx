@@ -141,7 +141,7 @@ export const AdminControlCenterPage: React.FC = () => {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <NavLink
-              to={PRIVATE_NAVIGATION.adminApprovalQueue}
+              to={PRIVATE_NAVIGATION.superAdminApprovalQueue}
               className="relative inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/30 transition hover:bg-amber-400"
             >
               <Zap className="h-4 w-4" /> Approval Queue
@@ -189,7 +189,7 @@ export const AdminControlCenterPage: React.FC = () => {
             </div>
           </div>
           <NavLink
-            to={PRIVATE_NAVIGATION.adminApprovalQueue}
+            to={PRIVATE_NAVIGATION.superAdminApprovalQueue}
             className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-amber-500"
           >
             Review Requests <ArrowRight className="h-3.5 w-3.5" />
