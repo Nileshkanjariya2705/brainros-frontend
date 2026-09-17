@@ -9,6 +9,7 @@ import { ActiveExamBanner } from './ActiveExamBanner';
 import { LogoutConfirmationModal } from '@/components/feedback/LogoutConfirmationModal';
 import { DashboardMainContentSkeleton } from '@/components/ui/Skeleton';
 import { RecentNotificationPreview } from '@/modules/Notification/components/RecentNotificationPreview';
+import NoIndexHead from '@/components/seo/NoIndexHead';
 
 // ** Hooks & Auth Access **
 import { useAuth } from '@/hooks/useAuth';
@@ -350,6 +351,7 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
+      <NoIndexHead />
       {/* ══════════════════════════════════════════════════════════════════════
           1. DESKTOP PERMANENT SIDEBAR (ALWAYS VISIBLE & NON-CLOSABLE >= 1024px)
           ══════════════════════════════════════════════════════════════════════ */}

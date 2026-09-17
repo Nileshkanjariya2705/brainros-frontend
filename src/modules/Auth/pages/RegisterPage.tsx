@@ -23,6 +23,7 @@ import { InputField, SelectField, PhoneInputField, OtpPinInput } from '@/compone
 import Button from '@/components/ui/Button';
 import RegisterStepper from '../components/RegisterStepper';
 import PageLoader from '@/components/feedback/PageLoader';
+import SeoHead from '@/components/seo/SeoHead';
 
 // ** Hooks & Services **
 import { useRegisterStudent } from '../hooks/useRegisterStudent';
@@ -436,6 +437,11 @@ const RegisterPage = () => {
 
   return (
     <div className="w-full max-w-2xl space-y-6 animate-in fade-in zoom-in-95 duration-300 text-slate-900">
+      <SeoHead
+        title="Student Registration & Account Creation | Brainros"
+        description="Register as a student on Brainros to access online practice exams for NEET, JEE, and CET with instant AI evaluation and regional language support."
+        canonicalPath="/register"
+      />
       {/* Page Header */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center space-x-2 rounded-full bg-indigo-500/10 px-3.5 py-1 text-xs font-semibold text-indigo-400 border border-indigo-500/20 shadow-sm">

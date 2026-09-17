@@ -67,31 +67,20 @@ export const PublicNavbar: React.FC = () => {
 
         {/* ── Desktop Nav Links ──────────────────────────────────── */}
         <nav className="hidden md:flex items-center gap-5 lg:gap-7 text-xs font-semibold text-slate-600">
-          <Link
-            to={isHomePage ? '#test-series' : '/#test-series'}
-            className="hover:text-indigo-600 transition-colors"
-          >
-            Test Series
+          <Link to="/exams" className="hover:text-indigo-600 transition-colors">
+            Exams Directory
           </Link>
-          <Link
-            to={isHomePage ? '#features' : '/#features'}
-            className="hover:text-indigo-600 transition-colors"
-          >
-            Features
+          <Link to="/exams/neet" className="hover:text-indigo-600 transition-colors">
+            NEET
           </Link>
-          <Link
-            to={isHomePage ? '#languages' : '/#languages'}
-            className="hover:text-indigo-600 transition-colors flex items-center gap-1"
-          >
-            <Languages size={13} className="text-indigo-500" />
-            <span>9 Languages</span>
+          <Link to="/exams/jee" className="hover:text-indigo-600 transition-colors">
+            JEE
           </Link>
-          <Link
-            to={isHomePage ? '#rank-engine' : '/#rank-engine'}
-            className="hover:text-indigo-600 transition-colors flex items-center gap-1"
-          >
-            <TrendingUp size={13} className="text-purple-500" />
-            <span>AI Rank</span>
+          <Link to="/about" className="hover:text-indigo-600 transition-colors">
+            About Us
+          </Link>
+          <Link to="/contact" className="hover:text-indigo-600 transition-colors">
+            Contact
           </Link>
         </nav>
 

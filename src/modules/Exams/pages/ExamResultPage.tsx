@@ -21,7 +21,9 @@ import {
   ChevronRight,
   Check,
   X,
+  Download,
 } from 'lucide-react';
+import { Axios } from '@/base-axios';
 
 // ** Services **
 import {
@@ -66,6 +68,31 @@ const ExamResultPage = () => {
     | 'recommendations'
     | 'review'
   >('overview');
+
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!attemptId) return;
+    try {
+      setIsDownloadingPdf(true);
+      const response = await Axios.get(`/results/${attemptId}/pdf`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Exam_Analysis_Report_${attemptId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download PDF report', err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   // TanStack Query for Result Status with auto-polling (polls every 3s, terminates on terminal state)
   const {
@@ -360,6 +387,21 @@ const ExamResultPage = () => {
               <span>View Leaderboard</span>
             </Button>
           )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadPdf}
+            disabled={isDownloadingPdf}
+            className="flex items-center gap-1.5 text-xs font-bold border-indigo-300 text-indigo-800 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800 shadow-2xs"
+          >
+            {isDownloadingPdf ? (
+              <RefreshCw size={14} className="animate-spin text-indigo-600" />
+            ) : (
+              <Download size={14} className="text-indigo-600" />
+            )}
+            <span>{isDownloadingPdf ? 'Generating PDF...' : 'Download PDF Report'}</span>
+          </Button>
 
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
             Exam Target:{' '}

@@ -32,6 +32,7 @@ import type { Exam } from '@/types/exam.types';
 
 // ** Components **
 import PublicNavbar from '@/components/layout/PublicNavbar';
+import SeoHead from '@/components/seo/SeoHead';
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -100,8 +101,39 @@ export const HomePage: React.FC = () => {
     }
   };
 
+  const homeJsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'Brainros',
+      url: 'https://www.brainros.com',
+      description:
+        'Brainros is an AI-powered online examination, assessment, and multi-language practice platform for NEET, JEE, CET, and competitive entrance exams.',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: 'https://www.brainros.com/exams?search={search_term_string}',
+        'query-input': 'required name=search_term_string',
+      },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'EducationalOrganization',
+      name: 'Brainros Educational Platform',
+      url: 'https://www.brainros.com',
+      logo: 'https://www.brainros.com/logo.svg',
+      description:
+        'Online examination, assessment, and regional language question paper translation platform for competitive entrance exams.',
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-white text-slate-900 selection:bg-indigo-200 selection:text-indigo-900">
+      <SeoHead
+        title="Brainros — AI-Powered Online Examination & Assessment Platform"
+        description="Brainros is India's leading AI-powered online examination platform for NEET, JEE, and CET. Practice with real exam simulation, instant AI score diagnostics, and 9 regional Indian languages."
+        canonicalPath="/"
+        jsonLd={homeJsonLd}
+      />
       {/* ══ TOP NAVIGATION NAVBAR ═══════════════════════════════════ */}
       <PublicNavbar />
 

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   CalendarClock,
   Clock,
@@ -7,14 +8,13 @@ import {
   AlertCircle,
   Sparkles,
   Search,
-  UploadCloud,
-  Eye,
   CheckCircle2,
   Loader2,
   AlertTriangle,
   ArrowRight,
   ChevronLeft,
   ChevronRight,
+  UploadCloud,
 } from 'lucide-react';
 import type { ScheduledExam } from '../types/ai-translation.types';
 
@@ -31,31 +31,44 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
   isLoading = false,
   onSelectExam,
 }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const firstSegment = location.pathname.split('/')[1];
+  const routePrefix = [
+    'super-admin',
+    'super_admin',
+    'admin',
+    'general-manager',
+    'manager',
+    'operator',
+    'staff',
+  ].includes(firstSegment)
+    ? `/${firstSegment}`
+    : '/admin';
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
 
-  // Filter out exams that have already been completed / past schedule window
-  const notCompletedExams = useMemo(() => {
-    const now = Date.now();
-    return exams.filter((exam) => {
-      if (exam.endTime && new Date(exam.endTime).getTime() < now) {
-        return false;
-      }
-      return true;
+  // Sort all exams by latest startTime first
+  const sortedExams = useMemo(() => {
+    return [...exams].sort((a, b) => {
+      const dateA = new Date(a.startTime).getTime();
+      const dateB = new Date(b.startTime).getTime();
+      return dateB - dateA; // descending — latest first
     });
   }, [exams]);
 
-  // Compute summary stats from active/upcoming exams
+  // Compute summary stats from all exams
   const stats = useMemo(() => {
-    const total = notCompletedExams.length;
+    const total = sortedExams.length;
     let pendingUpload = 0;
     let processing = 0;
     let completed = 0;
     let failed = 0;
 
-    for (const exam of notCompletedExams) {
+    for (const exam of sortedExams) {
       const status = exam.translationJob?.status;
       if (!exam.translationJob) {
         pendingUpload++;
@@ -71,11 +84,11 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
     }
 
     return { total, pendingUpload, processing, completed, failed };
-  }, [notCompletedExams]);
+  }, [sortedExams]);
 
   // Filtered exams
   const filteredExams = useMemo(() => {
-    return notCompletedExams.filter((exam) => {
+    return sortedExams.filter((exam) => {
       // Search match
       const query = searchQuery.toLowerCase().trim();
       const matchesSearch =
@@ -105,7 +118,7 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
 
       return true;
     });
-  }, [notCompletedExams, searchQuery, statusFilter]);
+  }, [sortedExams, searchQuery, statusFilter]);
 
   // Pagination calculation
   const totalCount = filteredExams.length;
@@ -127,9 +140,17 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
 
   const getStatusBadge = (exam: ScheduledExam) => {
     if (!exam.translationJob) {
+      if ((exam.currentQuestionsCount || 0) > 0) {
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+            <Sparkles className="w-3.5 h-3.5" />
+            {exam.currentQuestionsCount} Questions Ready
+          </span>
+        );
+      }
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-          <UploadCloud className="w-3.5 h-3.5" />
+          <AlertCircle className="w-3.5 h-3.5" />
           Pending Upload
         </span>
       );
@@ -204,7 +225,7 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
             </p>
           </div>
           <div className="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-100 dark:border-amber-900">
-            <UploadCloud className="w-5 h-5" />
+            <AlertCircle className="w-5 h-5" />
           </div>
         </div>
 
@@ -406,44 +427,44 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
                       </div>
                     </div>
 
-                    {/* Right Column: Action Buttons */}
+                    {/* Right Column: Manage Translation / Upload Question Paper Button */}
                     <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center">
-                      {!hasJob ? (
+                      {hasJob ? (
+                        <button
+                          type="button"
+                          onClick={() => onSelectExam(exam, 'view')}
+                          className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                            isProcessing
+                              ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-600/20'
+                              : 'bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white shadow-sm'
+                          }`}
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          <span>{isProcessing ? 'Translating In Progress' : 'Manage Translation'}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (exam.currentQuestionsCount || 0) > 0 ? (
                         <button
                           type="button"
                           onClick={() => onSelectExam(exam, 'upload')}
                           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-600/20 hover:shadow-md hover:shadow-indigo-600/30 transition-all cursor-pointer"
                         >
-                          <UploadCloud className="w-4 h-4" />
-                          Upload Question Paper
+                          <Sparkles className="w-4 h-4" />
+                          <span>Start AI Translation</span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </button>
                       ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => onSelectExam(exam, 'view')}
-                            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                              isProcessing
-                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
-                                : 'bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white shadow-sm'
-                            }`}
-                          >
-                            <Eye className="w-4 h-4" />
-                            {isProcessing ? 'View Live Progress' : 'View / Manage Translations'}
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => onSelectExam(exam, 'upload')}
-                            className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl font-semibold text-xs border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                            title="Upload new question paper or replace existing"
-                          >
-                            <UploadCloud className="w-3.5 h-3.5" />
-                            Re-upload
-                          </button>
-                        </>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`${routePrefix}/exams/${exam.examId}/question-paper/add`)
+                          }
+                          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-600/20 hover:shadow-md hover:shadow-indigo-600/30 transition-all cursor-pointer"
+                        >
+                          <UploadCloud className="w-4 h-4" />
+                          <span>Upload Question Paper</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
                       )}
                     </div>
                   </div>

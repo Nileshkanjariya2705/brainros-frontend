@@ -34,6 +34,10 @@ import { lazyRoute } from '@/utils/lazyRoute';
 const HomePage = lazyRoute(() => import('@/modules/Home/pages/HomePage'));
 const LoginPage = lazyRoute(() => import('@/modules/Auth/pages/LoginPage'));
 const RegisterPage = lazyRoute(() => import('@/modules/Auth/pages/RegisterPage'));
+const AboutPage = lazyRoute(() => import('@/modules/Public/pages/AboutPage'));
+const ContactPage = lazyRoute(() => import('@/modules/Public/pages/ContactPage'));
+const ExamsDirectoryPage = lazyRoute(() => import('@/modules/Exams/pages/ExamsDirectoryPage'));
+const PublicExamTargetPage = lazyRoute(() => import('@/modules/Exams/pages/PublicExamTargetPage'));
 
 // Role Dashboards
 const StudentDashboardPage = lazyRoute(
@@ -371,7 +375,23 @@ const adminRoutes: RouteObject[] = [
         ),
       },
       {
+        path: 'ai_translation',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE]}>
+            <AiQuestionPaperTranslationPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'ai-question-paper-translation',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE]}>
+            <AiQuestionPaperTranslationPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'ai_question_paper_translation',
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.EXAM_CREATE]}>
             <AiQuestionPaperTranslationPage />
@@ -543,6 +563,14 @@ const superAdminChildren: RouteObject[] = [
   },
   {
     path: 'ai_question_paper_translation',
+    element: (
+      <ProtectedRoute roles={[ROLES.SUPER_ADMIN]}>
+        <AiQuestionPaperTranslationPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: 'ai_translation',
     element: (
       <ProtectedRoute roles={[ROLES.SUPER_ADMIN]}>
         <AiQuestionPaperTranslationPage />
@@ -910,12 +938,20 @@ const protectedFullScreenRoutes: RouteObject[] = [
 // ══════════════════════════════════════════════════════════════════════════
 // 15. MASTER ROUTER
 // ══════════════════════════════════════════════════════════════════════════
+const publicSiteRoutes: RouteObject[] = [
+  { path: '/about', element: <AboutPage /> },
+  { path: '/contact', element: <ContactPage /> },
+  { path: '/exams', element: <ExamsDirectoryPage /> },
+  { path: '/exams/:targetOrSlug', element: <PublicExamTargetPage /> },
+];
+
 const router = createBrowserRouter([
   {
     path: PUBLIC_NAVIGATION.home,
     element: <HomePage />,
     errorElement: <RouteErrorBoundary />,
   },
+  ...publicSiteRoutes.map((r) => ({ ...r, errorElement: <RouteErrorBoundary /> })),
   {
     element: <PublicRoute />,
     errorElement: <RouteErrorBoundary />,

@@ -27,6 +27,7 @@ import {
 import cn from 'classnames';
 import { API_URL } from '@config';
 import { toast } from '@/utils/toast';
+import NoIndexHead from '@/components/seo/NoIndexHead';
 
 // ** Services & Hooks **
 import {
@@ -1021,6 +1022,7 @@ const ExamInterfacePage = () => {
 
   return (
     <div className="flex h-screen w-screen flex-col bg-slate-50 text-slate-900 overflow-hidden select-none font-sans">
+      <NoIndexHead />
       {/* ══ HEADER BAR ════════════════════════════════════════════════ */}
       <header className="relative z-20 flex min-h-14 sm:h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-2.5 sm:px-6 py-1.5 sm:py-0 flex-wrap sm:flex-nowrap gap-x-2 gap-y-1.5 shadow-xs">
         {/* Left: Brand & Exam Meta */}

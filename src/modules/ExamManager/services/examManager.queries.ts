@@ -54,8 +54,8 @@ export function useQuestionPaperDetailQuery(examId?: string, versionId?: string)
     queryFn: async () => {
       if (!examId) throw new Error('Exam ID required');
       const url = versionId
-        ? `${EXAM_MANAGER_BASE_PATH}/question-papers/${examId}?versionId=${versionId}`
-        : `${EXAM_MANAGER_BASE_PATH}/question-papers/${examId}`;
+        ? `${EXAM_MANAGER_BASE_PATH}/exams/${examId}/question-paper?versionId=${versionId}`
+        : `${EXAM_MANAGER_BASE_PATH}/exams/${examId}/question-paper`;
       const response = await Axios.get(url);
       return response?.data?.data !== undefined ? response.data.data : response?.data;
     },

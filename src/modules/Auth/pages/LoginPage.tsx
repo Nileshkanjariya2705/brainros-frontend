@@ -4,6 +4,7 @@ import { Navigate, Link } from 'react-router-dom';
 import { ShieldCheck, GraduationCap, LockKeyhole } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import PageLoader from '@/components/feedback/PageLoader';
+import SeoHead from '@/components/seo/SeoHead';
 
 export const LoginPage = () => {
   const { isAuthenticated, isInitializing } = useAuth();
@@ -18,6 +19,11 @@ export const LoginPage = () => {
 
   return (
     <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in-95 duration-200">
+      <SeoHead
+        title="Student & Institution Login | Brainros Online Exam Platform"
+        description="Sign in to your Brainros account to access online mock exams, NEET/JEE test series, AI evaluation reports, and institutional dashboards."
+        canonicalPath="/login"
+      />
       {/* Top Header */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3.5 py-1 text-xs font-bold text-indigo-700 border border-indigo-200/80 shadow-2xs">

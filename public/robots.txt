@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+Allow: /exams
+Allow: /exams/*
+Allow: /about
+Allow: /contact
+Allow: /login
+Allow: /register
+
+# Disallow private user portals, dashboards, exams & backend APIs
+Disallow: /student/
+Disallow: /admin/
+Disallow: /super-admin/
+Disallow: /institution/
+Disallow: /parent/
+Disallow: /staff/
+Disallow: /operator/
+Disallow: /accountant/
+Disallow: /sales-agent/
+Disallow: /manager/
+Disallow: /general-manager/
+Disallow: /exam/interface/
+Disallow: /exam/result/
+Disallow: /billing/
+Disallow: /api/
+
+Sitemap: https://www.brainros.com/sitemap.xml

@@ -307,11 +307,11 @@ export const ManualQuestionEntryPage: React.FC = () => {
       const updatedQuestions = questions.map((q, idx) =>
         idx === nextIdx
           ? {
-              ...currentQ,
-              id: q.id,
-              questionNumber: q.questionNumber,
-              questionText: `${currentQ.questionText} (Copy)`,
-            }
+            ...currentQ,
+            id: q.id,
+            questionNumber: q.questionNumber,
+            questionText: `${currentQ.questionText} (Copy)`,
+          }
           : q,
       );
       setQuestions(updatedQuestions);
@@ -332,25 +332,25 @@ export const ManualQuestionEntryPage: React.FC = () => {
     const updatedQuestions = questions.map((q, idx) =>
       idx === currentIndex
         ? {
-            id: q.id,
-            questionNumber: q.questionNumber,
-            difficulty: 'MEDIUM' as QuestionDifficulty,
-            type: 'SINGLE_CORRECT' as QuestionType,
-            questionText: '',
-            optionA: '',
-            optionB: '',
-            optionC: '',
-            optionD: '',
-            correctAnswer: 'A' as const,
-            correctAnswers: ['A'] as ('A' | 'B' | 'C' | 'D')[],
-            numericalAnswer: '',
-            assertion: '',
-            reason: '',
-            columnA: getDefaultColumnA(),
-            columnB: getDefaultColumnB(),
-            matchPairs: getDefaultMatchPairs(),
-            explanation: '',
-          }
+          id: q.id,
+          questionNumber: q.questionNumber,
+          difficulty: 'MEDIUM' as QuestionDifficulty,
+          type: 'SINGLE_CORRECT' as QuestionType,
+          questionText: '',
+          optionA: '',
+          optionB: '',
+          optionC: '',
+          optionD: '',
+          correctAnswer: 'A' as const,
+          correctAnswers: ['A'] as ('A' | 'B' | 'C' | 'D')[],
+          numericalAnswer: '',
+          assertion: '',
+          reason: '',
+          columnA: getDefaultColumnA(),
+          columnB: getDefaultColumnB(),
+          matchPairs: getDefaultMatchPairs(),
+          explanation: '',
+        }
         : q,
     );
     setQuestions(updatedQuestions);
@@ -855,11 +855,10 @@ export const ManualQuestionEntryPage: React.FC = () => {
 
         <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
           <div
-            className={`h-2 rounded-full transition-all duration-300 ${
-              completedCount === expectedQuestionsCount
+            className={`h-2 rounded-full transition-all duration-300 ${completedCount === expectedQuestionsCount
                 ? 'bg-emerald-500'
                 : 'bg-gradient-to-r from-indigo-500 to-purple-600'
-            }`}
+              }`}
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -895,15 +894,14 @@ export const ManualQuestionEntryPage: React.FC = () => {
                   setIsPreviewMode(false);
                   goToQuestion(idx);
                 }}
-                className={`relative flex flex-col items-center justify-center min-w-[42px] h-[42px] px-2 rounded-xl text-xs font-black transition-all duration-150 shrink-0 ${
-                  isCurrent
+                className={`relative flex flex-col items-center justify-center min-w-[42px] h-[42px] px-2 rounded-xl text-xs font-black transition-all duration-150 shrink-0 ${isCurrent
                     ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-200 scale-105 ring-2 ring-indigo-500/40'
                     : isFilled
-                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300'
-                    : hasError
-                    ? 'bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-transparent'
-                }`}
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300'
+                      : hasError
+                        ? 'bg-rose-50 text-rose-800 border border-rose-200 hover:bg-rose-100'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-transparent'
+                  }`}
                 title={`Question ${idx + 1}: ${isFilled ? 'Completed' : 'Pending'}`}
               >
                 <span>{idx + 1}</span>
@@ -951,9 +949,8 @@ export const ManualQuestionEntryPage: React.FC = () => {
             return (
               <div
                 key={q.id}
-                className={`rounded-3xl border bg-white p-5 shadow-sm space-y-3 ${
-                  !isFilled ? 'border-amber-300 ring-1 ring-amber-300/30' : 'border-slate-200'
-                }`}
+                className={`rounded-3xl border bg-white p-5 shadow-sm space-y-3 ${!isFilled ? 'border-amber-300 ring-1 ring-amber-300/30' : 'border-slate-200'
+                  }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
                   <div className="flex items-center gap-2">
@@ -1054,10 +1051,10 @@ export const ManualQuestionEntryPage: React.FC = () => {
                         key === 'A'
                           ? q.optionA
                           : key === 'B'
-                          ? q.optionB
-                          : key === 'C'
-                          ? q.optionC
-                          : q.optionD;
+                            ? q.optionB
+                            : key === 'C'
+                              ? q.optionC
+                              : q.optionD;
                       const isCorrect =
                         q.type === 'MULTIPLE_CORRECT'
                           ? (q.correctAnswers || []).includes(key)
@@ -1066,18 +1063,16 @@ export const ManualQuestionEntryPage: React.FC = () => {
                       return (
                         <div
                           key={key}
-                          className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs font-medium ${
-                            isCorrect
+                          className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs font-medium ${isCorrect
                               ? 'border-emerald-500 bg-emerald-50/60 text-emerald-950 font-bold'
                               : 'border-slate-200 bg-slate-50/50 text-slate-700'
-                          }`}
+                            }`}
                         >
                           <span
-                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold ${
-                              isCorrect
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold ${isCorrect
                                 ? 'bg-emerald-600 text-white'
                                 : 'bg-slate-200 text-slate-700'
-                            }`}
+                              }`}
                           >
                             {key}
                           </span>
@@ -1099,11 +1094,10 @@ export const ManualQuestionEntryPage: React.FC = () => {
         <div className="overflow-hidden">
           <div
             key={currentQ.id}
-            className={`rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm space-y-5 transition-all duration-200 ${
-              slideDirection === 'next'
+            className={`rounded-3xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm space-y-5 transition-all duration-200 ${slideDirection === 'next'
                 ? 'animate-in slide-in-from-right-8 duration-200'
                 : 'animate-in slide-in-from-left-8 duration-200'
-            }`}
+              }`}
           >
             {/* Card Header: Question Number & Action Tools */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
@@ -1161,11 +1155,10 @@ export const ManualQuestionEntryPage: React.FC = () => {
                         key={opt.value}
                         type="button"
                         onClick={() => handleUpdateField('difficulty', opt.value)}
-                        className={`px-2 py-2 rounded-xl text-xs font-bold border transition-all text-center ${
-                          isSelected
+                        className={`px-2 py-2 rounded-xl text-xs font-bold border transition-all text-center ${isSelected
                             ? `${opt.color} ring-2 ring-indigo-500/30 font-extrabold shadow-xs scale-105`
                             : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
-                        }`}
+                          }`}
                       >
                         {opt.label}
                       </button>
@@ -1319,11 +1312,10 @@ export const ManualQuestionEntryPage: React.FC = () => {
                 placeholder={`Type or paste Question #${currentIndex + 1} statement here...`}
                 value={currentQ.questionText}
                 onChange={(e) => handleUpdateField('questionText', e.target.value)}
-                className={`w-full rounded-2xl border bg-white p-3.5 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-100 transition-colors ${
-                  validationErrors[`${currentQ.id}_questionText`]
+                className={`w-full rounded-2xl border bg-white p-3.5 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-100 transition-colors ${validationErrors[`${currentQ.id}_questionText`]
                     ? 'border-rose-400 focus:border-rose-500'
                     : 'border-slate-200 focus:border-indigo-500'
-                }`}
+                  }`}
               />
               {validationErrors[`${currentQ.id}_questionText`] && (
                 <p className="text-xs text-rose-600 font-semibold mt-1">
@@ -1371,8 +1363,8 @@ export const ManualQuestionEntryPage: React.FC = () => {
                     {currentQ.type === 'MULTIPLE_CORRECT'
                       ? 'Options & Correct Answer(s) — Select All That Apply'
                       : currentQ.type === 'MATCH_FOLLOWING'
-                      ? 'Answer Options (Combination Choices)'
-                      : 'Answer Options & Correct Answer'} <span className="text-rose-500">*</span>
+                        ? 'Answer Options (Combination Choices)'
+                        : 'Answer Options & Correct Answer'} <span className="text-rose-500">*</span>
                   </label>
                   {currentQ.type === 'MULTIPLE_CORRECT' && (
                     <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
@@ -1387,18 +1379,18 @@ export const ManualQuestionEntryPage: React.FC = () => {
                       key === 'A'
                         ? currentQ.optionA
                         : key === 'B'
-                        ? currentQ.optionB
-                        : key === 'C'
-                        ? currentQ.optionC
-                        : currentQ.optionD;
+                          ? currentQ.optionB
+                          : key === 'C'
+                            ? currentQ.optionC
+                            : currentQ.optionD;
                     const optField =
                       key === 'A'
                         ? 'optionA'
                         : key === 'B'
-                        ? 'optionB'
-                        : key === 'C'
-                        ? 'optionC'
-                        : 'optionD';
+                          ? 'optionB'
+                          : key === 'C'
+                            ? 'optionC'
+                            : 'optionD';
 
                     const isMultiple = currentQ.type === 'MULTIPLE_CORRECT';
                     const isCorrect = isMultiple
@@ -1410,11 +1402,10 @@ export const ManualQuestionEntryPage: React.FC = () => {
                     return (
                       <div
                         key={key}
-                        className={`rounded-2xl border p-3.5 transition-all ${
-                          isCorrect
+                        className={`rounded-2xl border p-3.5 transition-all ${isCorrect
                             ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20 shadow-xs'
                             : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-xs font-black text-slate-700">
@@ -1429,11 +1420,10 @@ export const ManualQuestionEntryPage: React.FC = () => {
                                 handleUpdateField('correctAnswer', key);
                               }
                             }}
-                            className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold transition-all ${
-                              isCorrect
+                            className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold transition-all ${isCorrect
                                 ? 'bg-emerald-600 text-white shadow-xs scale-105'
                                 : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-900'
-                            }`}
+                              }`}
                           >
                             {isCorrect ? (
                               <>
@@ -1450,11 +1440,10 @@ export const ManualQuestionEntryPage: React.FC = () => {
                           placeholder={`Enter Option ${key} text...`}
                           value={optVal}
                           onChange={(e) => handleUpdateField(optField, e.target.value)}
-                          className={`w-full rounded-xl border bg-white px-3 py-2 text-xs sm:text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-100 transition-colors ${
-                            optErr
+                          className={`w-full rounded-xl border bg-white px-3 py-2 text-xs sm:text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-100 transition-colors ${optErr
                               ? 'border-rose-400 focus:border-rose-500'
                               : 'border-slate-200 focus:border-indigo-500'
-                          }`}
+                            }`}
                         />
                         {optErr && (
                           <p className="text-xs text-rose-600 font-semibold mt-1">{optErr}</p>

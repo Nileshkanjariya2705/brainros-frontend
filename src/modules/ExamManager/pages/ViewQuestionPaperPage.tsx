@@ -26,6 +26,7 @@ export const ViewQuestionPaperPage: React.FC = () => {
   const firstSegment = location.pathname.split('/')[1];
   const routePrefix = [
     'super-admin',
+    'super_admin',
     'admin',
     'general-manager',
     'manager',
@@ -85,7 +86,9 @@ export const ViewQuestionPaperPage: React.FC = () => {
                 </h1>
                 {paper?.examTarget && (
                   <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                    {paper.examTarget.name}
+                    {typeof paper.examTarget === 'string'
+                      ? paper.examTarget
+                      : (paper.examTarget as any)?.name || 'General'}
                   </span>
                 )}
               </div>

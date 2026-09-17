@@ -14,6 +14,7 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
+  Languages,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { toast } from '@/utils/toast';
@@ -46,6 +47,7 @@ export const UploadQuestionPaperPage: React.FC = () => {
   const firstSegment = location.pathname.split('/')[1];
   const routePrefix = [
     'super-admin',
+    'super_admin',
     'admin',
     'general-manager',
     'manager',
@@ -611,9 +613,22 @@ export const UploadQuestionPaperPage: React.FC = () => {
                                 onClick={() =>
                                   navigate(`${routePrefix}/exams/${exam.id}/question-paper/view`)
                                 }
-                                className="inline-flex items-center gap-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50 text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xs"
+                                className="inline-flex items-center gap-1 text-slate-700 border-slate-200 hover:bg-slate-50 text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xs"
                               >
                                 <Eye size={12} /> View Question Paper
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  navigate(
+                                    `${routePrefix}/ai-question-paper-translation?examId=${exam.id}`,
+                                  )
+                                }
+                                className="inline-flex items-center gap-1 text-purple-700 border-purple-200 bg-purple-50/50 hover:bg-purple-100/60 text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xs"
+                              >
+                                <Languages size={13} className="text-purple-600" />
+                                <span>View Translation</span>
                               </Button>
                               <Button
                                 size="sm"
@@ -642,7 +657,7 @@ export const UploadQuestionPaperPage: React.FC = () => {
                                 }
                                 className="inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs"
                               >
-                                <Plus size={12} /> Add Question Paper
+                                <UploadCloud size={12} /> Upload Question Paper
                               </Button>
                             </div>
                           ) : (
@@ -653,8 +668,8 @@ export const UploadQuestionPaperPage: React.FC = () => {
                               }
                               className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-xs"
                             >
-                              <Plus size={13} />
-                              <span>Add Question Paper</span>
+                              <UploadCloud size={13} />
+                              <span>Upload Question Paper</span>
                             </Button>
                           )}
                         </td>

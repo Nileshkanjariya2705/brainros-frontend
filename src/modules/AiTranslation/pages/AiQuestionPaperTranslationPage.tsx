@@ -24,7 +24,7 @@ import { QuestionPaperViewPanel } from '../components/QuestionPaperViewPanel';
 import type { ScheduledExam, UploadValidationResponse } from '../types/ai-translation.types';
 
 export const AiQuestionPaperTranslationPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedExam, setSelectedExam] = useState<ScheduledExam | null>(null);
   const [activeTab, setActiveTab] = useState<'upload' | 'translations'>('upload');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -162,13 +162,22 @@ export const AiQuestionPaperTranslationPage: React.FC = () => {
     setSelectedLanguageForView('en');
     setActionMessage(null);
 
+    const newParams = new URLSearchParams(searchParams);
+    if (exam.examId) newParams.set('examId', exam.examId);
+    if (exam.scheduleId && exam.scheduleId !== exam.examId) {
+      newParams.set('scheduleId', exam.scheduleId);
+    }
+
     if (exam.translationJob?.id) {
       setActiveJobId(exam.translationJob.id);
       setActiveTab(mode === 'upload' ? 'upload' : 'translations');
+      newParams.set('jobId', exam.translationJob.id);
     } else {
       setActiveJobId(null);
       setActiveTab('upload');
+      newParams.delete('jobId');
     }
+    setSearchParams(newParams, { replace: true });
   };
 
   const handleBackToList = () => {
@@ -178,6 +187,7 @@ export const AiQuestionPaperTranslationPage: React.FC = () => {
     setViewingPaper(false);
     setActiveJobId(null);
     setActionMessage(null);
+    setSearchParams({}, { replace: true });
     refetchExams();
   };
 
@@ -226,6 +236,10 @@ export const AiQuestionPaperTranslationPage: React.FC = () => {
       setValidationData(null);
       setSelectedFile(null);
       setActiveTab('translations');
+      setSearchParams(
+        { examId: selectedExam.examId, jobId: result.jobId },
+        { replace: true },
+      );
       setActionMessage({
         type: 'success',
         text: result.message || 'Questions saved! AI translation is now running.',
@@ -489,6 +503,25 @@ export const AiQuestionPaperTranslationPage: React.FC = () => {
               {/* Flow Level 2B: Upload Flow (FileUploadZone + Validation & Preview Table) */}
               {(!activeJobId || activeTab === 'upload') && (
                 <div className="space-y-6">
+                  {/* Step Indicator — shown when no translation job exists yet */}
+                  {!activeJobId && (
+                    <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 dark:from-indigo-950/40 dark:via-purple-950/40 dark:to-indigo-950/40 border border-indigo-200/60 dark:border-indigo-800/60 rounded-2xl p-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-sm font-black shadow-sm shadow-indigo-600/20 shrink-0">
+                          1
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-100">
+                            Upload Question Paper to Start AI Translation
+                          </h3>
+                          <p className="text-xs text-indigo-600/80 dark:text-indigo-400/80 mt-0.5">
+                            Upload the English question paper (Excel/CSV) below. Once validated and submitted, AI will automatically generate translations in all configured regional languages.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <FileUploadZone
                     selectedFile={selectedFile}
                     onFileSelected={(file) => {
