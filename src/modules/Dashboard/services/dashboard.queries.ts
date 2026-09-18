@@ -1,5 +1,5 @@
 // ** Packages **
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 
 // ** Base Axios **
 import { Axios } from '@/base-axios';
@@ -29,16 +29,18 @@ export const useDashboardStatsQuery = () =>
  * Cached TanStack Query hook for Student Personalized Dashboard.
  * Prevents re-fetching the entire dashboard payload on sub-component renders.
  */
-export const useStudentDashboardQuery = () =>
+export const useStudentDashboardQuery = (params?: { page?: number; limit?: number }) =>
   useQuery<StudentDashboardResponse>({
-    queryKey: studentKeys.dashboard(),
+    queryKey: [...studentKeys.dashboard(), params],
     queryFn: async () => {
       const res = await Axios.get<StudentDashboardResponse | { data: StudentDashboardResponse }>(
         '/students/me/dashboard',
+        { params }
       );
       return (res.data as any).data || res.data;
     },
     staleTime: 0,
+    placeholderData: keepPreviousData,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   });

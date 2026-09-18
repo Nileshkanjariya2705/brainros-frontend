@@ -1,9 +1,14 @@
 User-agent: *
 Allow: /
+Allow: /about
+Allow: /features
+Allow: /services
 Allow: /exams
 Allow: /exams/*
-Allow: /about
 Allow: /contact
+Allow: /faq
+Allow: /privacy-policy
+Allow: /terms
 Allow: /login
 Allow: /register
 
@@ -11,6 +16,7 @@ Allow: /register
 Disallow: /student/
 Disallow: /admin/
 Disallow: /super-admin/
+Disallow: /super_admin/
 Disallow: /institution/
 Disallow: /parent/
 Disallow: /staff/

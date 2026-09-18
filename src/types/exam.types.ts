@@ -1628,20 +1628,28 @@ export interface StudentDashboardResponse {
     avoidableNegativeMarks: number;
     scoreGainOpportunity: number;
   } | null;
-  recentResults: Array<{
-    attemptId: string;
-    examId: string;
-    examTitle: string;
-    examType: string;
-    date: string;
-    score: number;
-    maxScore: number;
-    percentage: number;
-    accuracy: number;
-    rank: number | null;
-    totalCandidates: number | null;
-    percentile: number | null;
-  }>;
+  recentResults: {
+    data: Array<{
+      attemptId: string;
+      examId: string;
+      examTitle: string;
+      examType: string;
+      date: string;
+      score: number;
+      maxScore: number;
+      percentage: number;
+      accuracy: number;
+      rank: number | null;
+      totalCandidates: number | null;
+      percentile: number | null;
+    }>;
+    meta: {
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+  };
   unreadNotificationCount: number;
 }
 

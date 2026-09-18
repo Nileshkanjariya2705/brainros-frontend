@@ -1,5 +1,5 @@
 // ** Providers **
-import AppProviders from '@/providers/AppProviders';
+import AppProviders from './providers/AppProviders';
 
 // ** Routes **
 import AppRouter from '@/routes';

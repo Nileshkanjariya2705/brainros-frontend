@@ -6,6 +6,7 @@ import { createBrowserRouter, RouterProvider, type RouteObject, Navigate } from 
 import ProtectedRoute from './ProtectedRoute';
 import PublicRoute from './PublicRoute';
 import AuthLayout from '@/components/layout/AuthLayout';
+import PublicLayout from '@/components/layout/PublicLayout';
 import StudentLayout from '@/components/layouts/StudentLayout';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
@@ -26,6 +27,7 @@ import {
   PRIVATE_NAVIGATION,
   NOT_FOUND_PATH,
 } from '@/constants/navigation.constant';
+import { ENABLE_AUTH_ROUTES } from '@/config';
 
 // ** Utils **
 import { lazyRoute } from '@/utils/lazyRoute';
@@ -38,6 +40,11 @@ const AboutPage = lazyRoute(() => import('@/modules/Public/pages/AboutPage'));
 const ContactPage = lazyRoute(() => import('@/modules/Public/pages/ContactPage'));
 const ExamsDirectoryPage = lazyRoute(() => import('@/modules/Exams/pages/ExamsDirectoryPage'));
 const PublicExamTargetPage = lazyRoute(() => import('@/modules/Exams/pages/PublicExamTargetPage'));
+const FeaturesPage = lazyRoute(() => import('@/modules/Public/pages/FeaturesPage'));
+const ServicesPage = lazyRoute(() => import('@/modules/Public/pages/ServicesPage'));
+const PrivacyPolicyPage = lazyRoute(() => import('@/modules/Public/pages/PrivacyPolicyPage'));
+const TermsPage = lazyRoute(() => import('@/modules/Public/pages/TermsPage'));
+const FaqPage = lazyRoute(() => import('@/modules/Public/pages/FaqPage'));
 
 // Role Dashboards
 const StudentDashboardPage = lazyRoute(
@@ -181,10 +188,15 @@ const OperatorScheduledExamsPage = lazyRoute(
 // ══════════════════════════════════════════════════════════════════════════
 // 1. PUBLIC ROUTES (Unauthenticated Only)
 // ══════════════════════════════════════════════════════════════════════════
-const publicRoutes: RouteObject[] = [
-  { path: PUBLIC_NAVIGATION.login, element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
-];
+const publicRoutes: RouteObject[] = ENABLE_AUTH_ROUTES
+  ? [
+      { path: PUBLIC_NAVIGATION.login, element: <LoginPage /> },
+      { path: '/register', element: <RegisterPage /> },
+    ]
+  : [
+      { path: PUBLIC_NAVIGATION.login, element: <Navigate to={PUBLIC_NAVIGATION.home} replace /> },
+      { path: '/register', element: <Navigate to={PUBLIC_NAVIGATION.home} replace /> },
+    ];
 
 // ══════════════════════════════════════════════════════════════════════════
 // 2. STUDENT ROLE DASHBOARD & ROUTES (/student/*)
@@ -900,16 +912,6 @@ const legacyAndSharedRoutes: RouteObject[] = [
     path: '/notifications',
     element: <Navigate to={PRIVATE_NAVIGATION.studentNotifications} replace />,
   },
-  {
-    path: '/exams/:examId',
-    element: (
-      <ProtectedRoute permissions={[PERMISSIONS.EXAM_VIEW]}>
-        <StudentLayout />
-      </ProtectedRoute>
-    ),
-    children: [{ path: '', element: <StudentExamDetailsPage /> }],
-  },
-  { path: '/exams', element: <Navigate to={PRIVATE_NAVIGATION.studentExams} replace /> },
   { path: '/history', element: <Navigate to={PRIVATE_NAVIGATION.studentHistory} replace /> },
   {
     path: '/performance-trends',
@@ -949,20 +951,29 @@ const protectedFullScreenRoutes: RouteObject[] = [
 // ══════════════════════════════════════════════════════════════════════════
 // 15. MASTER ROUTER
 // ══════════════════════════════════════════════════════════════════════════
-const publicSiteRoutes: RouteObject[] = [
+const publicMarketingRoutes: RouteObject[] = [
+  { path: PUBLIC_NAVIGATION.home, element: <HomePage /> },
   { path: '/about', element: <AboutPage /> },
-  { path: '/contact', element: <ContactPage /> },
+  { path: '/features', element: <FeaturesPage /> },
+  { path: '/services', element: <ServicesPage /> },
   { path: '/exams', element: <ExamsDirectoryPage /> },
+  { path: '/exams/jee', element: <PublicExamTargetPage /> },
+  { path: '/exams/neet', element: <PublicExamTargetPage /> },
+  { path: '/exams/cet', element: <PublicExamTargetPage /> },
   { path: '/exams/:targetOrSlug', element: <PublicExamTargetPage /> },
+  { path: '/contact', element: <ContactPage /> },
+  { path: '/faq', element: <FaqPage /> },
+  { path: '/privacy-policy', element: <PrivacyPolicyPage /> },
+  { path: '/privacy', element: <Navigate to="/privacy-policy" replace /> },
+  { path: '/terms', element: <TermsPage /> },
 ];
 
 const router = createBrowserRouter([
   {
-    path: PUBLIC_NAVIGATION.home,
-    element: <HomePage />,
+    element: <PublicLayout />,
     errorElement: <RouteErrorBoundary />,
+    children: publicMarketingRoutes,
   },
-  ...publicSiteRoutes.map((r) => ({ ...r, errorElement: <RouteErrorBoundary /> })),
   {
     element: <PublicRoute />,
     errorElement: <RouteErrorBoundary />,

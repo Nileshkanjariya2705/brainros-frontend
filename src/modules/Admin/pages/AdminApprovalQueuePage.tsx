@@ -101,6 +101,7 @@ export const AdminApprovalQueuePage: React.FC = () => {
   const [viewingItem, setViewingItem] = useState<ApprovalRequestItem | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [processing, setProcessing] = useState<boolean>(false);
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [actionError, setActionError] = useState<string | null>(null);
 
   // Debounce search input
@@ -277,7 +278,8 @@ export const AdminApprovalQueuePage: React.FC = () => {
 
   const handleApproveConfirm = async (item: ApprovalRequestItem) => {
     try {
-      setProcessing(true);
+      setApprovingItem(null);
+      setProcessingIds((prev) => new Set(prev).add(item.id));
       setActionError(null);
       const isMock = item.resourceType === 'MOCK_TEST' || item.entitySummary?.isMock;
       const comment = isMock
@@ -285,7 +287,6 @@ export const AdminApprovalQueuePage: React.FC = () => {
         : `${item.resourceType} approved and processed by Super Admin.`;
 
       await Axios.post(`/admin/approvals/${item.id}/approve`, { comment });
-      setApprovingItem(null);
       await invalidateQueueData();
       await invalidateTargetResource(item.resourceType);
       toast.success(`${item.resourceType || 'Request'} approved successfully!`);
@@ -294,7 +295,11 @@ export const AdminApprovalQueuePage: React.FC = () => {
       setActionError(msg);
       toast.error(msg);
     } finally {
-      setProcessing(false);
+      setProcessingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
     }
   };
 
@@ -302,14 +307,15 @@ export const AdminApprovalQueuePage: React.FC = () => {
     e.preventDefault();
     if (!rejectingItem || !rejectionReason.trim()) return;
 
+    const itemId = rejectingItem.id;
+    const rejectedType = rejectingItem.resourceType;
     try {
-      setProcessing(true);
+      setRejectingItem(null);
+      setProcessingIds((prev) => new Set(prev).add(itemId));
       setActionError(null);
-      const rejectedType = rejectingItem.resourceType;
-      await Axios.post(`/admin/approvals/${rejectingItem.id}/reject`, {
+      await Axios.post(`/admin/approvals/${itemId}/reject`, {
         reason: rejectionReason,
       });
-      setRejectingItem(null);
       setRejectionReason('');
       await invalidateQueueData();
       await invalidateTargetResource(rejectedType);
@@ -319,7 +325,11 @@ export const AdminApprovalQueuePage: React.FC = () => {
       setActionError(msg);
       toast.error(msg);
     } finally {
-      setProcessing(false);
+      setProcessingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
     }
   };
 
@@ -777,18 +787,22 @@ export const AdminApprovalQueuePage: React.FC = () => {
                             <span>View</span>
                           </button>
 
-                          {item.status === 'PENDING' ? (
+                          {processingIds.has(item.id) ? (
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-500">
+                              <RefreshCw className="h-4 w-4 animate-spin text-indigo-500" /> Processing...
+                            </div>
+                          ) : item.status === 'PENDING' ? (
                             <>
                               <button
                                 onClick={() => setApprovingItem(item)}
-                                disabled={processing}
+                                disabled={processingIds.has(item.id) || processing}
                                 className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-500 disabled:opacity-50 transition"
                               >
                                 <Check className="h-3.5 w-3.5" /> Approve
                               </button>
                               <button
                                 onClick={() => setRejectingItem(item)}
-                                disabled={processing}
+                                disabled={processingIds.has(item.id) || processing}
                                 className="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-rose-500 disabled:opacity-50 transition"
                               >
                                 <X className="h-3.5 w-3.5" /> Reject

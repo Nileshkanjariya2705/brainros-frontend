@@ -159,7 +159,12 @@ export const AvailableExamsPage = () => {
             </div>
             <div className="flex items-center gap-2 text-indigo-200">
               <Target size={15} className="text-indigo-300" />
-              <span>Target: {user?.studentProfile?.examTarget || 'General'}</span>
+              <span>
+                Target:{' '}
+                {typeof user?.studentProfile?.examTarget === 'object'
+                  ? (user?.studentProfile?.examTarget as any)?.name || 'General'
+                  : user?.studentProfile?.examTarget || 'General'}
+              </span>
             </div>
             <div className="flex items-center gap-2 text-indigo-200">
               <TrendingUp size={15} className="text-emerald-400" />

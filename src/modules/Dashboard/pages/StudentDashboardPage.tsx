@@ -383,7 +383,9 @@ const formatTimer = (sec: number) => {
 
 export const StudentDashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { data, isLoading, isFetching, error, refetch } = useStudentDashboardQuery();
+  const [examPage, setExamPage] = useState(1);
+  const examLimit = 5;
+  const { data, isLoading, isFetching, error, refetch } = useStudentDashboardQuery({ page: examPage, limit: examLimit });
   const [trendMetric, setTrendMetric] = useState<'SCORE' | 'ACCURACY' | 'RANK' | 'PERCENTILE'>(
     'SCORE',
   );
@@ -446,7 +448,8 @@ export const StudentDashboardPage: React.FC = () => {
   const recommendations = data?.recommendations || [];
   const timeMgmt = data?.timeManagement;
   const strategy = data?.attemptStrategy;
-  const recentResults = data?.recentResults || [];
+  const recentResults = data?.recentResults?.data || [];
+  const recentMeta = data?.recentResults?.meta;
   const trend = data?.trendSummary;
 
   return (
@@ -684,7 +687,10 @@ export const StudentDashboardPage: React.FC = () => {
 
         {/* Dynamic Multi-Point Bar / Trend Display */}
         {trend && trend.recentScores.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 pt-2">
+          <div
+            className="flex gap-4 overflow-x-auto scroll-smooth pb-4 pt-2 no-scrollbar snap-x snap-mandatory items-center"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
             {trend.recentScores.map((item, idx) => {
               let valDisplay = '';
               let subDisplay = '';
@@ -708,7 +714,7 @@ export const StudentDashboardPage: React.FC = () => {
                 <div
                   key={idx}
                   className={cn(
-                    'rounded-2xl border p-4 text-center transition-all',
+                    'rounded-2xl border p-4 text-center transition-all min-w-[120px] shrink-0 snap-center',
                     isLatest
                       ? 'border-indigo-600 bg-indigo-50/50 shadow-xs ring-2 ring-indigo-500/20'
                       : 'border-slate-200 bg-slate-50/60',
@@ -864,12 +870,6 @@ export const StudentDashboardPage: React.FC = () => {
             <p className="mt-1 text-xs text-slate-500 max-w-md mx-auto">
               Complete more mock tests to generate personalized chapter diagnoses, pacing tips, and targeted revision priorities.
             </p>
-            <button
-              onClick={() => navigate('/student/mock-tests')}
-              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 transition shadow-sm"
-            >
-              Explore Available Mock Tests <ArrowRight size={13} />
-            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1127,13 +1127,12 @@ export const StudentDashboardPage: React.FC = () => {
 
               <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                 <span
-                  className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                    predRank.confidence === 'HIGH'
+                  className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${predRank.confidence === 'HIGH'
                       ? 'bg-emerald-100 text-emerald-800'
                       : predRank.confidence === 'MEDIUM'
                         ? 'bg-amber-100 text-amber-800'
                         : 'bg-slate-100 text-slate-700'
-                  }`}
+                    }`}
                 >
                   {predRank.confidence || 'Medium'} Confidence
                 </span>
@@ -1172,7 +1171,7 @@ export const StudentDashboardPage: React.FC = () => {
       <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Recent Completed Exams</h3>
+            <h3 className="text-base font-bold text-slate-900">Completed Exams</h3>
             <p className="text-xs text-slate-500">Detailed records of your evaluated sessions.</p>
           </div>
           <div className="flex items-center gap-3">
@@ -1214,7 +1213,7 @@ export const StudentDashboardPage: React.FC = () => {
                       {row.rank ? `#${row.rank.toLocaleString('en-IN')}` : '—'}
                     </td>
                     <td className="py-3.5 px-3 text-right font-mono font-bold text-indigo-600">
-                      {row.percentile ?? '—'}
+                      {typeof row.percentile === 'number' ? round2(row.percentile) : row.percentile ?? '—'}
                     </td>
                     <td className="py-3.5 px-3 text-right">
                       <button
@@ -1233,6 +1232,45 @@ export const StudentDashboardPage: React.FC = () => {
         ) : (
           <div className="rounded-2xl bg-slate-50 p-8 text-center text-xs text-slate-500">
             No completed exams found yet. Start your first mock to see results!
+          </div>
+        )}
+
+        {/* Server-side Pagination Controls */}
+        {recentMeta && recentMeta.totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-2">
+            <span className="text-xs text-slate-500 font-semibold">
+              Showing {(recentMeta.page - 1) * recentMeta.limit + 1} to{' '}
+              {Math.min(recentMeta.page * recentMeta.limit, recentMeta.total)} of {recentMeta.total} results
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setExamPage((p) => Math.max(1, p - 1))}
+                disabled={recentMeta.page === 1}
+                className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-xl border transition-all',
+                  recentMeta.page > 1
+                    ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm'
+                    : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed',
+                )}
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <span className="text-xs font-bold text-slate-700 px-2">
+                Page {recentMeta.page} of {recentMeta.totalPages}
+              </span>
+              <button
+                onClick={() => setExamPage((p) => Math.min(recentMeta.totalPages, p + 1))}
+                disabled={recentMeta.page === recentMeta.totalPages}
+                className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-xl border transition-all',
+                  recentMeta.page < recentMeta.totalPages
+                    ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm'
+                    : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed',
+                )}
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
         )}
       </div>

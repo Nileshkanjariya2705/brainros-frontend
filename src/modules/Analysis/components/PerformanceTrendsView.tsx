@@ -239,14 +239,17 @@ export const PerformanceTrendsView: React.FC<PerformanceTrendsViewProps> = ({
         {/* Chart View Area */}
         <div className="min-h-[220px] flex flex-col justify-end">
           {activeChartTab === 'SCORE' && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 items-end pt-8">
+            <div 
+              className="flex gap-4 overflow-x-auto scroll-smooth pb-4 pt-8 no-scrollbar snap-x snap-mandatory items-end"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
               {scoreTrend.map((pt) => {
                 const heightPercent = Math.max(
                   15,
                   Math.min(100, (pt.score / pt.maximumScore) * 100),
                 );
                 return (
-                  <div key={pt.attemptId} className="flex flex-col items-center gap-2 group">
+                  <div key={pt.attemptId} className="flex flex-col items-center gap-2 group min-w-[100px] sm:min-w-[120px] shrink-0 snap-center">
                     <span className="text-[11px] font-black text-indigo-700">{pt.score}</span>
                     <div className="w-full h-36 bg-slate-100 rounded-2xl p-1 flex flex-col justify-end">
                       <div
@@ -263,10 +266,13 @@ export const PerformanceTrendsView: React.FC<PerformanceTrendsViewProps> = ({
           )}
 
           {activeChartTab === 'ACCURACY' && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 items-end pt-8">
+            <div 
+              className="flex gap-4 overflow-x-auto scroll-smooth pb-4 pt-8 no-scrollbar snap-x snap-mandatory items-end"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
               {accuracyTrend.map((pt) => {
                 return (
-                  <div key={pt.attemptId} className="flex flex-col items-center gap-2 group">
+                  <div key={pt.attemptId} className="flex flex-col items-center gap-2 group min-w-[100px] sm:min-w-[120px] shrink-0 snap-center">
                     <span className="text-[11px] font-black text-teal-600">{pt.accuracy}%</span>
                     <div className="w-full h-36 bg-slate-100 rounded-2xl p-1 flex flex-col justify-end">
                       <div
@@ -283,10 +289,13 @@ export const PerformanceTrendsView: React.FC<PerformanceTrendsViewProps> = ({
           )}
 
           {activeChartTab === 'RANK' && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 items-end pt-8">
+            <div 
+              className="flex gap-4 overflow-x-auto scroll-smooth pb-4 pt-8 no-scrollbar snap-x snap-mandatory items-end"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
               {rankTrend.map((pt) => {
                 return (
-                  <div key={pt.attemptId} className="flex flex-col items-center gap-2 group">
+                  <div key={pt.attemptId} className="flex flex-col items-center gap-2 group min-w-[100px] sm:min-w-[120px] shrink-0 snap-center">
                     <span className="text-[11px] font-black text-purple-700">
                       {pt.rank ? `#${pt.rank}` : 'Pending'}
                     </span>
@@ -307,11 +316,14 @@ export const PerformanceTrendsView: React.FC<PerformanceTrendsViewProps> = ({
           )}
 
           {activeChartTab === 'TIME' && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 items-end pt-8">
+            <div 
+              className="flex gap-4 overflow-x-auto scroll-smooth pb-4 pt-8 no-scrollbar snap-x snap-mandatory items-end"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
               {timeTrend.map((pt) => {
                 const mins = pt.timeUsedSeconds ? Math.round(pt.timeUsedSeconds / 60) : 0;
                 return (
-                  <div key={pt.attemptId} className="flex flex-col items-center gap-2 group">
+                  <div key={pt.attemptId} className="flex flex-col items-center gap-2 group min-w-[100px] sm:min-w-[120px] shrink-0 snap-center">
                     <span className="text-[11px] font-black text-amber-700">{mins} min</span>
                     <div className="w-full h-36 bg-slate-100 rounded-2xl p-1 flex flex-col justify-end">
                       <div
@@ -417,15 +429,18 @@ export const PerformanceTrendsView: React.FC<PerformanceTrendsViewProps> = ({
 
           {/* Selected Subject Trend Points Grid */}
           {activeSubject && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 pt-2">
+            <div 
+              className="flex gap-4 overflow-x-auto scroll-smooth pb-4 pt-2 no-scrollbar snap-x snap-mandatory items-center"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
               {activeSubject.points.map((pt) => (
                 <div
                   key={pt.attemptId}
-                  className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-center"
+                  className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-center min-w-[120px] shrink-0 snap-center"
                 >
                   <span className="text-xs font-extrabold text-slate-700 block">{pt.label}</span>
                   <span className="text-base font-black text-indigo-700 block mt-0.5">
-                    {pt.accuracy}%
+                    {Math.round(Number(pt.accuracy) * 100) / 100}%
                   </span>
                   <span className="text-[10px] text-slate-400 font-bold block">
                     {pt.score} / {pt.maxScore} Marks

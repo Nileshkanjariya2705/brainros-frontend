@@ -10,7 +10,7 @@ export interface SeoHeadProps {
   jsonLd?: Record<string, any> | Array<Record<string, any>>;
 }
 
-const PRODUCTION_DOMAIN = 'https://www.brainros.com';
+export const PRODUCTION_DOMAIN = 'https://www.brainros.com';
 
 const updateMetaTag = (attributeName: string, attributeValue: string, content: string) => {
   let element = document.querySelector(`meta[${attributeName}="${attributeValue}"]`);
@@ -46,19 +46,22 @@ export const SeoHead: React.FC<SeoHeadProps> = ({
     const formattedTitle = title.includes('Brainros') ? title : `${title} | Brainros`;
     document.title = formattedTitle;
 
-    // 2. Canonical URL
-    const currentPath = canonicalPath || window.location.pathname;
+    // 2. Canonical URL handling
+    const currentPath = canonicalPath !== undefined ? canonicalPath : window.location.pathname;
     const cleanPath = currentPath.startsWith('/') ? currentPath : `/${currentPath}`;
-    const fullCanonicalUrl = `${PRODUCTION_DOMAIN}${cleanPath === '/' ? '' : cleanPath}`;
+    const fullCanonicalUrl =
+      cleanPath === '/' ? `${PRODUCTION_DOMAIN}/` : `${PRODUCTION_DOMAIN}${cleanPath}`;
     updateLinkTag('canonical', fullCanonicalUrl);
 
     // 3. Meta Description & Robots
     updateMetaTag('name', 'description', description);
     updateMetaTag('name', 'robots', robots);
     updateMetaTag('name', 'googlebot', robots);
+    updateMetaTag('name', 'author', 'Brainros');
 
     // 4. Open Graph Tags
     updateMetaTag('property', 'og:site_name', 'Brainros');
+    updateMetaTag('property', 'og:locale', 'en_US');
     updateMetaTag('property', 'og:type', ogType);
     updateMetaTag('property', 'og:title', formattedTitle);
     updateMetaTag('property', 'og:description', description);
@@ -90,3 +93,4 @@ export const SeoHead: React.FC<SeoHeadProps> = ({
 };
 
 export default SeoHead;
+

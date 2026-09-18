@@ -23,4 +23,13 @@ if (!import.meta.env.VITE_API_BASE_URL) {
   console.warn('[config] VITE_API_BASE_URL is not defined in env. Defaulting to http://localhost:3000');
 }
 
-export { API_URL, API_TIMEOUT, APP_NAME, APP_ENV, IS_DEV, IS_PROD };
+// ** Contact & Support **
+const CONTACT_EMAIL = import.meta.env.VITE_CONTACT_EMAIL ?? 'info@brainros.com';
+
+// ** Feature Flags / Route Switches **
+const ENABLE_AUTH_ROUTES =
+  import.meta.env.VITE_ENABLE_AUTH_ROUTES !== 'false' &&
+  import.meta.env.VITE_ENABLE_AUTH_ROUTES !== '0';
+
+export { API_URL, API_TIMEOUT, APP_NAME, APP_ENV, IS_DEV, IS_PROD, ENABLE_AUTH_ROUTES, CONTACT_EMAIL };
+
