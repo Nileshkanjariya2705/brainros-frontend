@@ -171,6 +171,12 @@ const SuperAdminBulkStudentRegistrationPage = lazyRoute(
 const CompletedExamReportsPage = lazyRoute(
   () => import('@/modules/Admin/pages/CompletedExamReportsPage'),
 );
+const SuperAdminExamHistoryPage = lazyRoute(
+  () =>
+    import('@/modules/Admin/pages/SuperAdminExamHistoryPage').then((m) => ({
+      default: m.SuperAdminExamHistoryPage,
+    })),
+);
 const AdminStudentsPage = lazyRoute(() => import('@/modules/Admin/pages/AdminStudentsPage'));
 const PublicRegistrationsPage = lazyRoute(
   () => import('@/modules/Admin/pages/PublicRegistrationsPage'),
@@ -354,6 +360,14 @@ const adminRoutes: RouteObject[] = [
         element: (
           <ProtectedRoute permissions={[PERMISSIONS.RESULT_VIEW]}>
             <SuperAdminExamProcessingMonitorPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'exam-history',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.RESULT_VIEW]}>
+            <SuperAdminExamHistoryPage />
           </ProtectedRoute>
         ),
       },
@@ -602,6 +616,7 @@ const superAdminChildren: RouteObject[] = [
   },
   { path: 'exams/results', element: <SuperAdminExamResultsPage /> },
   { path: 'exams/result-processing', element: <SuperAdminExamProcessingMonitorPage /> },
+  { path: 'exam-history', element: <SuperAdminExamHistoryPage /> },
   { path: 'completed-exams', element: <CompletedExamReportsPage /> },
   { path: 'exam-manager', element: <ExamManagerDashboardPage /> },
   { path: 'exam-manager/upload', element: <UploadQuestionPaperPage /> },
@@ -693,6 +708,7 @@ const generalManagerRoutes: RouteObject[] = [
       { path: 'exams/:examId/question-paper/add', element: <ManualQuestionEntryPage /> },
       { path: 'exams/:examId/question-paper/view', element: <ViewQuestionPaperPage /> },
 
+      { path: 'exam-history', element: <SuperAdminExamHistoryPage /> },
       { path: 'completed-exams', element: <CompletedExamReportsPage /> },
       { path: 'reports', element: <CompletedExamReportsPage /> },
       { path: 'approvals', element: <AdminApprovalQueuePage /> },

@@ -53,7 +53,7 @@ export const SuperAdminExamResultsPage: React.FC = () => {
     'ALL' | 'READY_TO_PUBLISH' | 'PROCESSING' | 'PUBLISHED'
   >('ALL');
   const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(10);
+  const [limit, setLimit] = useState<number>(5);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalMonitored, setTotalMonitored] = useState<number>(0);
@@ -559,8 +559,9 @@ export const SuperAdminExamResultsPage: React.FC = () => {
                       setLimit(Number(e.target.value));
                       setPage(1);
                     }}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500"
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500 cursor-pointer"
                   >
+                    <option value={5}>5</option>
                     <option value={10}>10</option>
                     <option value={20}>20</option>
                     <option value={50}>50</option>
@@ -568,27 +569,27 @@ export const SuperAdminExamResultsPage: React.FC = () => {
                 </div>
               </div>
 
-              {totalPages > 1 && (
+              {(totalPages > 1 || Math.ceil(totalCount / limit) > 1) && (
                 <div className="flex items-center gap-2">
                   <Button
                     size="sm"
                     variant="outline"
                     disabled={page <= 1}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    className="flex items-center gap-1"
+                    className="flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
                   >
                     <ChevronLeft size={14} />
                     <span>Previous</span>
                   </Button>
                   <span className="px-2 text-slate-700 dark:text-slate-200 font-bold">
-                    Page {page} of {totalPages}
+                    Page {page} of {totalPages || Math.ceil(totalCount / limit) || 1}
                   </span>
                   <Button
                     size="sm"
                     variant="outline"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    className="flex items-center gap-1"
+                    disabled={page >= (totalPages || Math.ceil(totalCount / limit) || 1)}
+                    onClick={() => setPage((p) => Math.min(totalPages || Math.ceil(totalCount / limit) || 1, p + 1))}
+                    className="flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
                   >
                     <span>Next</span>
                     <ChevronRight size={14} />

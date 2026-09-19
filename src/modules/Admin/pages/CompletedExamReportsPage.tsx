@@ -60,7 +60,7 @@ export const CompletedExamReportsPage: React.FC = () => {
     'ALL' | 'READY_TO_PUBLISH' | 'PUBLISHED' | 'PROCESSING' | 'NOT_READY'
   >('ALL');
   const [dirPage, setDirPage] = useState(1);
-  const [dirLimit, setDirLimit] = useState(10);
+  const [dirLimit, setDirLimit] = useState(5);
   const [dirTotalCount, setDirTotalCount] = useState(0);
   const [dirTotalPages, setDirTotalPages] = useState(1);
   const [dirTotalMonitored, setDirTotalMonitored] = useState(0);
@@ -89,22 +89,24 @@ export const CompletedExamReportsPage: React.FC = () => {
       if (payload && (payload as any).items) {
         rawList = (payload as any).items;
         if ((payload as any).pagination) {
-          setDirTotalCount((payload as any).pagination.total || 0);
-          setDirTotalPages((payload as any).pagination.totalPages || 1);
+          const total = (payload as any).pagination.total || 0;
+          setDirTotalCount(total);
+          setDirTotalPages((payload as any).pagination.totalPages || Math.ceil(total / dirLimit) || 1);
         }
         if ((payload as any).summary?.totalMonitored !== undefined) {
           setDirTotalMonitored((payload as any).summary.totalMonitored);
         }
       } else {
-        rawList = Array.isArray(res.data)
+        const allItems = Array.isArray(res.data)
           ? res.data
           : Array.isArray((res.data as any)?.data)
           ? (res.data as any).data
           : Array.isArray(res.response?.data?.data)
           ? res.response.data.data
           : [];
-        setDirTotalCount(rawList.length);
-        setDirTotalPages(1);
+        setDirTotalCount(allItems.length);
+        setDirTotalPages(Math.ceil(allItems.length / dirLimit) || 1);
+        rawList = allItems.slice((dirPage - 1) * dirLimit, dirPage * dirLimit);
       }
 
       // Fallback: If publication dashboard returned 0 exams, fetch from completed exams service
@@ -112,7 +114,7 @@ export const CompletedExamReportsPage: React.FC = () => {
         try {
           const completed = await completedExamReportsService.getCompletedLiveExams();
           if (Array.isArray(completed) && completed.length > 0) {
-            rawList = completed.map((c) => ({
+            const allItems = completed.map((c) => ({
               examId: c.id,
               examTitle: c.title,
               examTarget: c.examTarget?.name || 'LIVE',
@@ -134,8 +136,9 @@ export const CompletedExamReportsPage: React.FC = () => {
                 ? { startTime: c.startTime || '', endTime: c.endTime, status: 'COMPLETED' }
                 : null,
             }));
-            setDirTotalCount(rawList.length);
-            setDirTotalPages(1);
+            setDirTotalCount(allItems.length);
+            setDirTotalPages(Math.ceil(allItems.length / dirLimit) || 1);
+            rawList = allItems.slice((dirPage - 1) * dirLimit, dirPage * dirLimit);
           }
         } catch (completedErr) {
           console.warn('Completed exams directory fallback error:', completedErr);
@@ -744,7 +747,7 @@ export const CompletedExamReportsPage: React.FC = () => {
           </div>
 
           {/* Directory Pagination Footer */}
-          {dirTotalPages > 0 && (
+          {dirTotalCount > 0 && (
             <div className="p-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
               <div className="flex items-center gap-3">
                 <span>
@@ -759,8 +762,9 @@ export const CompletedExamReportsPage: React.FC = () => {
                       setDirLimit(Number(e.target.value));
                       setDirPage(1);
                     }}
-                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 outline-none focus:border-indigo-500"
+                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 outline-none focus:border-indigo-500 cursor-pointer"
                   >
+                    <option value={5}>5</option>
                     <option value={10}>10</option>
                     <option value={20}>20</option>
                     <option value={50}>50</option>
@@ -768,22 +772,22 @@ export const CompletedExamReportsPage: React.FC = () => {
                 </div>
               </div>
 
-              {dirTotalPages > 1 && (
+              {(dirTotalPages > 1 || Math.ceil(dirTotalCount / dirLimit) > 1) && (
                 <div className="flex items-center gap-2">
                   <button
                     disabled={dirPage <= 1}
                     onClick={() => setDirPage((p) => Math.max(1, p - 1))}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium disabled:opacity-50 flex items-center gap-1"
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 shadow-xs transition-all"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" /> Previous
                   </button>
                   <span className="px-2 font-bold text-slate-700">
-                    Page {dirPage} of {dirTotalPages}
+                    Page {dirPage} of {dirTotalPages || Math.ceil(dirTotalCount / dirLimit) || 1}
                   </span>
                   <button
-                    disabled={dirPage >= dirTotalPages}
+                    disabled={dirPage >= (dirTotalPages || Math.ceil(dirTotalCount / dirLimit) || 1)}
                     onClick={() => setDirPage((p) => p + 1)}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium disabled:opacity-50 flex items-center gap-1"
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1 shadow-xs transition-all"
                   >
                     Next <ChevronRight className="w-3.5 h-3.5" />
                   </button>

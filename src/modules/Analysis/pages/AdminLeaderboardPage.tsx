@@ -62,6 +62,7 @@ export const AdminLeaderboardPage: React.FC = () => {
   const [dirSearchInput, setDirSearchInput] = useState('');
   const [dirStatus, setDirStatus] = useState<'ALL' | 'COMPLETED' | 'READY_TO_PUBLISH' | 'PUBLISHED' | 'LIVE'>('COMPLETED');
   const [dirPage, setDirPage] = useState(1);
+  const [totalDirectoryExams, setTotalDirectoryExams] = useState(0);
   const dirPageSize = 9;
 
   // Selected Exam for Detailed View
@@ -85,17 +86,20 @@ export const AdminLeaderboardPage: React.FC = () => {
   const loadDirectoryExams = useCallback(async () => {
     try {
       const res = await getPublicationDashboardAPI({
-        page: 1,
-        limit: 100,
+        page: dirPage,
+        limit: dirPageSize,
         status: dirStatus !== 'ALL' ? dirStatus : undefined,
+        search: dirSearchInput.trim() || undefined,
       });
 
       let rawList: PublicationDashboardItem[] = [];
       const payload = res.data;
       if (payload && (payload as any).items) {
         rawList = (payload as any).items;
+        setTotalDirectoryExams((payload as any).pagination?.total || rawList.length);
       } else if (Array.isArray(res.data)) {
         rawList = res.data as any;
+        setTotalDirectoryExams(rawList.length);
       }
 
       // Fallback 1: completedExamReportsService
@@ -159,19 +163,19 @@ export const AdminLeaderboardPage: React.FC = () => {
     } catch (err) {
       console.error('Failed loading leaderboard exam directory:', err);
     }
-  }, [getPublicationDashboardAPI, getAvailableExamsAPI, dirStatus]);
+  }, [getPublicationDashboardAPI, getAvailableExamsAPI, dirStatus, dirPage, dirPageSize, dirSearchInput]);
 
   useEffect(() => {
-    loadDirectoryExams();
+    const handler = setTimeout(() => {
+      loadDirectoryExams();
+    }, 300);
+    return () => clearTimeout(handler);
   }, [loadDirectoryExams]);
 
   // Sort exams by latest completed date descending
   const sortedDirectoryExams = useMemo(() => {
     let list = [...directoryExams];
-    if (dirSearchInput.trim()) {
-      const q = dirSearchInput.trim().toLowerCase();
-      list = list.filter((e) => e.examTitle.toLowerCase().includes(q));
-    }
+    // Filtering by search is now done server-side, but we keep sorting here for the current page
     return list.sort((a, b) => {
       const timeA = a.lastSchedule?.endTime
         ? new Date(a.lastSchedule.endTime).getTime()
@@ -186,7 +190,7 @@ export const AdminLeaderboardPage: React.FC = () => {
       if (timeA !== timeB) return timeB - timeA;
       return (b.evaluatedAttempts || 0) - (a.evaluatedAttempts || 0);
     });
-  }, [directoryExams, dirSearchInput]);
+  }, [directoryExams]);
 
   // Handle Exam Selection Change
   const handleSelectExam = (id: string) => {
@@ -347,103 +351,104 @@ export const AdminLeaderboardPage: React.FC = () => {
         {/* Exam Cards Grid (Sorted by latest completed) */}
         {isDashboardLoading ? (
           <div className="py-20 text-center">
-            <Loader label="Loading exam leaderboards directory..." />
+            <RotateCw className="w-8 h-8 mx-auto animate-spin text-indigo-500 mb-3" />
+            <p className="text-sm font-semibold text-slate-500">Loading exams directory...</p>
           </div>
         ) : sortedDirectoryExams.length === 0 ? (
-          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-12 text-center">
-            <Trophy className="mx-auto text-slate-300 mb-3" size={44} />
-            <h3 className="text-base font-bold text-slate-800 dark:text-white">No Exam Leaderboards Found</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              There are no examination leaderboards matching your search or filter criteria.
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-12 text-center shadow-xs">
+            <Trophy className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">No exams found</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+              {dirSearchInput ? 'Try adjusting your search terms.' : 'No completed or published exams match the selected filter.'}
             </p>
           </div>
         ) : (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {sortedDirectoryExams.slice((dirPage - 1) * dirPageSize, dirPage * dirPageSize).map((exam) => {
+              {sortedDirectoryExams.map((exam) => {
                 const compDate = formatDate(exam.lastSchedule?.endTime || exam.publishedAt);
                 const isPublished = exam.publicationStatus === 'PUBLISHED';
-              const isReady = exam.publicationStatus === 'READY_TO_PUBLISH';
+                const isReady = exam.publicationStatus === 'READY_TO_PUBLISH';
 
-              return (
-                <div
-                  key={exam.examId}
-                  onClick={() => handleSelectExam(exam.examId)}
-                  className="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                        {exam.examTarget || 'EXAM'}
-                      </span>
+                return (
+                  <div
+                    key={exam.examId}
+                    onClick={() => handleSelectExam(exam.examId)}
+                    className="group bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                          {exam.examTarget || 'EXAM'}
+                        </span>
 
-                      <span
-                        className={cn(
-                          'px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase',
-                          isPublished
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : isReady
-                            ? 'bg-amber-50 text-amber-800 border-amber-200'
-                            : 'bg-blue-50 text-blue-700 border-blue-200',
-                        )}
-                      >
-                        {isPublished ? 'Published' : isReady ? 'Ready' : exam.examStatus || 'Completed'}
-                      </span>
+                        <span
+                          className={cn(
+                            'px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase',
+                            isPublished
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : isReady
+                              ? 'bg-amber-50 text-amber-800 border-amber-200'
+                              : 'bg-blue-50 text-blue-700 border-blue-200',
+                          )}
+                        >
+                          {isPublished ? 'Published' : isReady ? 'Ready' : exam.examStatus || 'Completed'}
+                        </span>
+                      </div>
+
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
+                        {exam.examTitle}
+                      </h3>
                     </div>
 
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
-                      {exam.examTitle}
-                    </h3>
+                    <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-700/60">
+                      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar size={13} className="text-slate-400" />
+                          {compDate ? `Ended ${compDate}` : 'Recent Exam'}
+                        </span>
+
+                        <span className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+                          <Users size={13} className="text-indigo-500" />
+                          {exam.evaluatedAttempts || exam.totalCandidates || 0} Evaluated
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                          Inspect Leaderboard <ArrowRight size={13} />
+                        </span>
+                        <Trophy size={16} className="text-amber-500 opacity-80" />
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-700/60">
-                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                      <span className="flex items-center gap-1.5">
-                        <Calendar size={13} className="text-slate-400" />
-                        {compDate ? `Ended ${compDate}` : 'Recent Exam'}
-                      </span>
-
-                      <span className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
-                        <Users size={13} className="text-indigo-500" />
-                        {exam.evaluatedAttempts || exam.totalCandidates || 0} Evaluated
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                        Inspect Leaderboard <ArrowRight size={13} />
-                      </span>
-                      <Trophy size={16} className="text-amber-500 opacity-80" />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
             </div>
             
             {/* Directory Pagination Controls */}
-            {Math.ceil(sortedDirectoryExams.length / dirPageSize) > 1 && (
+            {Math.ceil(totalDirectoryExams / dirPageSize) > 0 && (
               <div className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-2xl shadow-sm">
                 <div className="text-xs text-slate-500 dark:text-slate-400">
                   Showing <strong className="text-slate-900 dark:text-white">{(dirPage - 1) * dirPageSize + 1}</strong> to{' '}
-                  <strong className="text-slate-900 dark:text-white">{Math.min(dirPage * dirPageSize, sortedDirectoryExams.length)}</strong> of{' '}
-                  <strong className="text-slate-900 dark:text-white">{sortedDirectoryExams.length}</strong> exams
+                  <strong className="text-slate-900 dark:text-white">{Math.min(dirPage * dirPageSize, totalDirectoryExams)}</strong> of{' '}
+                  <strong className="text-slate-900 dark:text-white">{totalDirectoryExams}</strong> exams
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     disabled={dirPage === 1}
                     onClick={() => setDirPage((p) => Math.max(1, p - 1))}
-                    className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
+                    className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer disabled:cursor-not-allowed"
                   >
                     <ChevronLeft size={16} />
                   </button>
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300 px-2">
-                    Page {dirPage} of {Math.ceil(sortedDirectoryExams.length / dirPageSize)}
+                    Page {dirPage} of {Math.ceil(totalDirectoryExams / dirPageSize) || 1}
                   </span>
                   <button
-                    disabled={dirPage >= Math.ceil(sortedDirectoryExams.length / dirPageSize)}
+                    disabled={dirPage >= Math.ceil(totalDirectoryExams / dirPageSize)}
                     onClick={() => setDirPage((p) => p + 1)}
-                    className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
+                    className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer disabled:cursor-not-allowed"
                   >
                     <ChevronRight size={16} />
                   </button>

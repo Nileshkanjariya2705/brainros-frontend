@@ -15,6 +15,7 @@ export interface ExamSection {
   totalQuestions: number;
   displayOrder: number;
   subject?: { id: string; name: string };
+  chapters?: string[];
   _count?: { examQuestions: number };
 }
 

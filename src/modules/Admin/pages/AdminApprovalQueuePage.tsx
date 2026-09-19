@@ -501,20 +501,18 @@ export const AdminApprovalQueuePage: React.FC = () => {
                 key={q.key}
                 type="button"
                 onClick={() => setSelectedQueue(q.key)}
-                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
-                  isSelected
+                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${isSelected
                     ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-200'
                     : 'bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100'
-                }`}
+                  }`}
               >
                 <span>{q.label}</span>
                 {q.pendingCount > 0 && (
                   <span
-                    className={`inline-flex items-center justify-center rounded-full px-2 py-0.2 text-[10px] font-black ${
-                      isSelected
+                    className={`inline-flex items-center justify-center rounded-full px-2 py-0.2 text-[10px] font-black ${isSelected
                         ? 'bg-white/20 text-white'
                         : 'bg-indigo-100 text-indigo-800'
-                    }`}
+                      }`}
                   >
                     {q.pendingCount}
                   </span>
@@ -751,15 +749,14 @@ export const AdminApprovalQueuePage: React.FC = () => {
                       {/* Status */}
                       <td className="py-4 align-top">
                         <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                            item.status === 'APPROVED'
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${item.status === 'APPROVED'
                               ? 'bg-emerald-100 text-emerald-800'
                               : item.status === 'REJECTED'
                                 ? 'bg-rose-100 text-rose-800'
                                 : item.status === 'PENDING'
                                   ? 'bg-amber-100 text-amber-800'
                                   : 'bg-slate-100 text-slate-800'
-                          }`}
+                            }`}
                         >
                           {item.status}
                         </span>

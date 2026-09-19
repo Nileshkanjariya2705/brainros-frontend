@@ -188,6 +188,12 @@ export const ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         icon: Award,
       },
       {
+        key: 'admin-exam-history',
+        label: ' Exam History',
+        to: PRIVATE_NAVIGATION.adminExamHistory,
+        icon: History,
+      },
+      {
         key: 'completed-live-exams',
         label: 'Completed Live Exam Reports',
         to: PRIVATE_NAVIGATION.adminCompletedExams,
@@ -377,6 +383,12 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Exam Result Processing',
         to: PRIVATE_NAVIGATION.superAdminExamResultProcessing,
         icon: Activity,
+      },
+      {
+        key: 'super-admin-exam-history',
+        label: ' Exam History',
+        to: PRIVATE_NAVIGATION.superAdminExamHistory,
+        icon: History,
       },
       {
         key: 'super-admin-completed-live-exams',

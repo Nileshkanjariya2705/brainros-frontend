@@ -11,6 +11,7 @@ import {
   Layers,
   ArrowLeft,
   TrendingUp,
+  BookOpen,
 } from 'lucide-react';
 import cn from 'classnames';
 import { useGetExamDetailsAPI, useStartAttemptAPI } from '../services';
@@ -279,40 +280,72 @@ export const StudentExamDetailsPage: React.FC = () => {
       </div>
 
       {/* ── Section & Subject Blueprint Breakdown ─────────────────── */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
-        <h3 className="text-base font-bold text-slate-900 mb-2 flex items-center gap-2">
-          <Layers size={18} className="text-indigo-600" />
-          Subject & Section Structure
-        </h3>
-        <p className="text-xs text-slate-500 mb-6">
-          The test contains {exam.sections?.length || 1} section(s) with dedicated timing and
-          questions.
-        </p>
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8 shadow-sm space-y-6">
+        <div>
+          <h3 className="text-base font-bold text-slate-900 mb-1 flex items-center gap-2">
+            <Layers size={18} className="text-indigo-600" />
+            Subjects & Chapters
+          </h3>
+          <p className="text-xs text-slate-500">
+            Syllabus and list of chapters included for each subject in this examination.
+          </p>
+        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {(exam.sections || []).map((sec, idx) => (
-            <div
-              key={sec.id}
-              className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 space-y-2"
-            >
-              <div className="flex items-center justify-between">
-                <span className="rounded-md bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-0.5">
-                  Section {idx + 1}
-                </span>
-                <span className="text-xs font-black text-slate-900">
-                  {sec.totalQuestions} Questions
-                </span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+          {(exam.sections || []).map((sec, idx) => {
+            const subjectName = (sec as any).subject?.name || `Subject ${idx + 1}`;
+            const sectionTitle =
+              sec.name && (sec as any).subject?.name && sec.name !== (sec as any).subject?.name
+                ? sec.name
+                : subjectName;
+
+            return (
+              <div
+                key={sec.id}
+                className="rounded-2xl border border-slate-200/90 bg-slate-50/60 p-5 flex flex-col justify-between space-y-4 hover:border-indigo-200 transition-colors"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1">
+                      <BookOpen size={13} className="text-indigo-600" />
+                      {subjectName}
+                    </span>
+                  </div>
+
+                  <h4 className="text-sm font-bold text-slate-900">
+                    {sectionTitle}
+                  </h4>
+
+                  <div className="mt-3.5 pt-3 border-t border-slate-200/70">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
+                      Chapters Covered:
+                    </span>
+
+                    {sec.chapters && sec.chapters.length > 0 ? (
+                      <ul className="space-y-1.5">
+                        {sec.chapters.map((ch, cIdx) => (
+                          <li
+                            key={cIdx}
+                            className="flex items-start gap-2 text-xs font-medium text-slate-700 bg-white border border-slate-200/80 rounded-lg px-2.5 py-1.5 shadow-2xs"
+                          >
+                            <span className="h-4 w-4 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                              {cIdx + 1}
+                            </span>
+                            <span className="leading-snug">{ch}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="text-xs text-slate-500 bg-white border border-slate-200/80 rounded-lg px-3 py-2 flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />
+                        <span>All syllabus chapters for {subjectName}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-              <h4 className="text-sm font-bold text-slate-900">
-                {sec.name || (sec as any).subject?.name || `Section ${idx + 1}`}
-              </h4>
-              <p className="text-[11px] text-slate-500">
-                {(sec as any).subject?.name
-                  ? `Subject: ${(sec as any).subject.name}`
-                  : 'Core Exam Section'}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
