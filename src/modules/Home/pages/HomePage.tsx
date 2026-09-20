@@ -1,23 +1,17 @@
 // ** Packages **
-import React, { useState, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   BookOpen,
   Clock,
-  Search,
   Languages,
   CheckCircle2,
   Sparkles,
   ArrowRight,
-  TrendingUp,
   ShieldCheck,
-  Globe2,
-  Play,
-  Filter,
   BarChart3,
   Users,
   School,
-  FileSpreadsheet,
   BellRing,
   Receipt,
   ChevronDown,
@@ -27,23 +21,13 @@ import {
   XCircle,
 } from 'lucide-react';
 
-// ** Services & Hooks **
-import { useAuth } from '@/hooks/useAuth';
-
 // ** Constants **
-import { PUBLIC_NAVIGATION, PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
-import { DUMMY_EXAMS } from '@/modules/Exams/constants/dummyExams.constant';
+import { PUBLIC_NAVIGATION } from '@/constants/navigation.constant';
 
 // ** Components **
 import SeoHead from '@/components/seo/SeoHead';
 
 export const HomePage: React.FC = () => {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTarget, setSelectedTarget] = useState<string>('ALL');
-
   // Interactive Simulator State for Hero
   const [simulatorLang, setSimulatorLang] = useState<'en' | 'hi' | 'mr'>('en');
   const [simulatorSelectedOption, setSimulatorSelectedOption] = useState<number | null>(1);
@@ -51,38 +35,6 @@ export const HomePage: React.FC = () => {
 
   // FAQ Accordion open item
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-
-  // Active workflow step
-  const [activeWorkflowStep, setActiveWorkflowStep] = useState<number>(0);
-
-  const targetCategories = ['ALL', 'JEE', 'NEET', 'CET', 'FOUNDATION'];
-
-  const filteredExams = useMemo(() => {
-    return DUMMY_EXAMS.filter((ex) => {
-      const matchesSearch =
-        searchQuery.trim() === '' ||
-        ex.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ex.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ex.target.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ex.subjects.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
-
-      const matchesTarget =
-        selectedTarget === 'ALL' || ex.target.toUpperCase() === selectedTarget.toUpperCase();
-
-      return matchesSearch && matchesTarget;
-    });
-  }, [searchQuery, selectedTarget]);
-
-  // Handle Start Test Click
-  const handleStartTestClick = (_examId: string) => {
-    if (!isAuthenticated) {
-      navigate(
-        `${PUBLIC_NAVIGATION.login}?redirect=${encodeURIComponent(PRIVATE_NAVIGATION.availableExams)}`,
-      );
-    } else {
-      navigate(PRIVATE_NAVIGATION.availableExams);
-    }
-  };
 
   const faqs = [
     {
@@ -181,50 +133,7 @@ export const HomePage: React.FC = () => {
     },
   };
 
-  const workflowSteps = [
-    {
-      title: '1. Institution Setup & Batch Creation',
-      desc: 'Set up your coaching center or school account, create custom batches, and define target exam streams (JEE, NEET, CET).',
-      badge: 'Institution Admin',
-      icon: <School className="text-indigo-600" size={20} />,
-    },
-    {
-      title: '2. Student Registration & Target Enrollment',
-      desc: 'Enrol students individually or in bulk. Students select their target exams and are automatically verified for relevant test series.',
-      badge: 'Students & Staff',
-      icon: <Users className="text-indigo-600" size={20} />,
-    },
-    {
-      title: '3. Question Paper Authoring',
-      desc: 'Create questions with Single Correct, Multiple Correct, Numerical, Assertion-Reason, and Match the Following across 4 difficulty tiers.',
-      badge: 'Exam Manager',
-      icon: <FileSpreadsheet className="text-indigo-600" size={20} />,
-    },
-    {
-      title: '4. AI Multilingual Translation',
-      desc: 'One-click automated translation into Hindi, Marathi, Gujarati, Tamil, Telugu, and 4 other regional languages while preserving mathematical formulas.',
-      badge: 'AI Engine',
-      icon: <Languages className="text-indigo-600" size={20} />,
-    },
-    {
-      title: '5. Distraction-Free Exam Attempt',
-      desc: 'Students attempt tests under an authentic NTA-standard full-screen test console with live question palette, timers, and in-flight language switching.',
-      badge: 'Student Portal',
-      icon: <Play className="text-indigo-600" size={20} />,
-    },
-    {
-      title: '6. Instant Scoring & Rank Analytics',
-      desc: 'Automated evaluation instantly calculates overall score, negative marking, percentile ranking, and speed-vs-accuracy diagnostics.',
-      badge: 'Rank Engine',
-      icon: <TrendingUp className="text-indigo-600" size={20} />,
-    },
-    {
-      title: '7. Reports, Invoicing & Parent Visibility',
-      desc: 'Generate PDF performance scorecards, dispatch WhatsApp/SMS notifications, monitor weak subjects, and manage itemized school invoices.',
-      badge: 'All Stakeholders',
-      icon: <BarChart3 className="text-indigo-600" size={20} />,
-    },
-  ];
+
 
   return (
     <div className="w-full bg-white text-slate-900">

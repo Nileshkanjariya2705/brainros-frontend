@@ -1,76 +1,14 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import {
-  BookOpen,
-  Search,
-  Filter,
   Sparkles,
   CheckCircle2,
-  Play,
-  Star,
   Users,
   Languages,
-  Check,
 } from 'lucide-react';
 import SeoHead from '@/components/seo/SeoHead';
-import { useAuth } from '@/hooks/useAuth';
-import { PUBLIC_NAVIGATION, PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
-import { DUMMY_EXAMS } from '../constants/dummyExams.constant';
 
 export const ExamsDirectoryPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTarget, setSelectedTarget] = useState<string>('ALL');
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('ALL');
-
-  const targetCategories = ['ALL', 'JEE', 'NEET', 'CET', 'FOUNDATION'];
-  const difficultyFilters = ['ALL', 'Standard NTA', 'Moderate', 'Advanced', 'Mastery'];
-
-  const filteredExams = useMemo(() => {
-    return DUMMY_EXAMS.filter((ex) => {
-      const matchesSearch =
-        searchQuery.trim() === '' ||
-        ex.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ex.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ex.target.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ex.subjects.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
-
-      const matchesTarget =
-        selectedTarget === 'ALL' || ex.target.toUpperCase() === selectedTarget.toUpperCase();
-
-      const matchesDifficulty =
-        selectedDifficulty === 'ALL' || ex.difficulty === selectedDifficulty;
-
-      return matchesSearch && matchesTarget && matchesDifficulty;
-    });
-  }, [searchQuery, selectedTarget, selectedDifficulty]);
-
-  const handleStartExam = (_examId: string) => {
-    if (!isAuthenticated) {
-      navigate(
-        `${PUBLIC_NAVIGATION.login}?redirect=${encodeURIComponent(PRIVATE_NAVIGATION.availableExams)}`,
-      );
-    } else {
-      navigate(PRIVATE_NAVIGATION.availableExams);
-    }
-  };
-
-  const getTargetBadgeStyle = (target: string) => {
-    switch (target) {
-      case 'JEE':
-        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
-      case 'NEET':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'CET':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'FOUNDATION':
-        return 'bg-purple-50 text-purple-700 border-purple-200';
-      default:
-        return 'bg-slate-50 text-slate-700 border-slate-200';
-    }
-  };
 
   const jsonLd = [
     {
