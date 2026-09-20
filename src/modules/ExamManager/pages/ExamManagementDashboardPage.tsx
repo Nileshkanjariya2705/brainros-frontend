@@ -282,7 +282,7 @@ export const ExamManagementDashboardPage: React.FC = () => {
             </div>
 
             <p className="text-xs text-slate-500">
-              Upload CSV/Excel question paper files processed asynchronously by BullMQ workers.
+              Upload CSV/Excel question paper files processed automatically in the background.
             </p>
 
             <Button

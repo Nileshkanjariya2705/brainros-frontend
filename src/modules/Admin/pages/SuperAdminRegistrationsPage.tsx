@@ -10,10 +10,6 @@ import {
   Search,
   RotateCw,
   X,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -33,6 +29,8 @@ import {
   type RegistrationFilterParams,
 } from '../services/superAdminRegistrations.service';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
+import Pagination from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 
 export const SuperAdminRegistrationsPage: React.FC = () => {
   // ── State for Filters ──────────────────────────────────────────────────────
@@ -47,7 +45,7 @@ export const SuperAdminRegistrationsPage: React.FC = () => {
 
   // Pagination & Sorting state
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(5);
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -795,13 +793,20 @@ export const SuperAdminRegistrationsPage: React.FC = () => {
             </thead>
 
             <tbody className="divide-y divide-slate-100">
-              {isLoadingList ? (
+              {(isLoadingList || isFetchingList) ? (
                 // Loading Skeleton Rows
-                Array.from({ length: 6 }).map((_, index) => (
+                Array.from({ length: 5 }).map((_, index) => (
                   <tr key={index} className="animate-pulse">
-                    <td className="px-4 py-4" colSpan={10}>
-                      <div className="h-7 bg-slate-100 rounded-xl w-full" />
-                    </td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-32 rounded" /><Skeleton className="h-3 w-20 rounded mt-1.5" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-24 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-28 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-28 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-16 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
                   </tr>
                 ))
               ) : table.getRowModel().rows.length === 0 ? (
@@ -849,84 +854,24 @@ export const SuperAdminRegistrationsPage: React.FC = () => {
         </div>
 
         {/* ── 6. Server-Side Pagination Footer ────────────────────────────────── */}
-        <div className="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/50">
-          <div className="text-xs text-slate-500 font-medium">
-            Page <span className="font-bold text-slate-900">{page}</span> of{' '}
-            <span className="font-bold text-slate-900">{totalPages}</span>
+        {totalRecords > 0 && (
+          <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+            <Pagination
+              page={page}
+              totalPages={totalPages || 1}
+              total={totalRecords}
+              limit={pageSize}
+              onPageChange={setPage}
+              onLimitChange={(newLimit) => {
+                setPageSize(newLimit);
+                setPage(1);
+              }}
+              limitOptions={[5, 10, 20, 50]}
+              isFetching={isFetchingList}
+              itemName="registrations"
+            />
           </div>
-
-          <div className="flex items-center gap-1 self-end sm:self-auto">
-            {/* First Page */}
-            <button
-              type="button"
-              onClick={() => setPage(1)}
-              disabled={page <= 1 || isLoadingList}
-              className="p-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none transition"
-              title="First Page"
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </button>
-
-            {/* Previous Page */}
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1 || isLoadingList}
-              className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none text-xs font-bold transition"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span>Previous</span>
-            </button>
-
-            {/* Page number indicators */}
-            <div className="flex items-center gap-1 px-2">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, idx) => {
-                let pNum = page - 2 + idx;
-                if (page <= 3) pNum = idx + 1;
-                else if (page >= totalPages - 2) pNum = totalPages - 4 + idx;
-                if (pNum < 1 || pNum > totalPages) return null;
-
-                const isCurrent = pNum === page;
-                return (
-                  <button
-                    key={pNum}
-                    type="button"
-                    onClick={() => setPage(pNum)}
-                    className={`h-8 w-8 rounded-xl text-xs font-bold transition ${
-                      isCurrent
-                        ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    {pNum}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Next Page */}
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages || isLoadingList}
-              className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none text-xs font-bold transition"
-            >
-              <span>Next</span>
-              <ChevronRight className="h-4 w-4" />
-            </button>
-
-            {/* Last Page */}
-            <button
-              type="button"
-              onClick={() => setPage(totalPages)}
-              disabled={page >= totalPages || isLoadingList}
-              className="p-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none transition"
-              title="Last Page"
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

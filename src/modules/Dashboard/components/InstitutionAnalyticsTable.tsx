@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Building2,
   Search,
@@ -12,6 +12,7 @@ import {
   Table as TableIcon,
 } from 'lucide-react';
 import type { InstitutionRegistrationItem } from '../services/superAdminDashboard.service';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface InstitutionAnalyticsTableProps {
   data?: {
@@ -37,13 +38,18 @@ export const InstitutionAnalyticsTable: React.FC<InstitutionAnalyticsTableProps>
   onPageChange,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 350);
   const [viewMode, setViewMode] = useState<'BAR_CHART' | 'PILLAR_CHART' | 'TABLE'>('BAR_CHART');
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
+  useEffect(() => {
+    if (onSearchChange) {
+      onSearchChange(debouncedSearch);
+    }
+  }, [debouncedSearch, onSearchChange]);
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setSearchTerm(val);
-    if (onSearchChange) onSearchChange(val);
+    setSearchTerm(e.target.value);
   };
 
   const rawInstitutions: InstitutionRegistrationItem[] = Array.isArray(data)

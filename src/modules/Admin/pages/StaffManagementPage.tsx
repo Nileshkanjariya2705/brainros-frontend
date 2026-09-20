@@ -20,7 +20,8 @@ import {
   type UpdateStaffPayload,
 } from '../services/admin-staff.service';
 import Button from '@/components/ui/Button';
-import Loader from '@/components/feedback/Loader';
+import Pagination from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import { toast } from '@/utils/toast';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
 
@@ -43,7 +44,7 @@ export const StaffManagementPage: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(5);
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -265,9 +266,34 @@ export const StaffManagementPage: React.FC = () => {
 
       {/* ── Staff Table (Section-level loader) ── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        {isLoading ? (
-          <div className="py-16 flex flex-col items-center justify-center">
-            <Loader label="Loading staff records..." />
+        {(isLoading || isFetching) ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/75 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="py-3.5 px-4 sm:px-6">Staff Member</th>
+                  <th className="py-3.5 px-4">Contact</th>
+                  <th className="py-3.5 px-4">Role</th>
+                  <th className="py-3.5 px-4">Institution Scope</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4">Created At</th>
+                  <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-4 px-4 sm:px-6"><Skeleton className="h-4 w-32 rounded" /><Skeleton className="h-3 w-20 rounded mt-1.5" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-28 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-24 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="py-4 px-4 sm:px-6 text-right"><Skeleton className="h-8 w-16 rounded ml-auto" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : staffList.length === 0 ? (
           <div className="py-16 text-center">
@@ -419,57 +445,21 @@ export const StaffManagementPage: React.FC = () => {
 
         {/* Pagination Footer */}
         {pagination.total > 0 && (
-          <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 bg-slate-50/50">
-            <div className="flex flex-wrap items-center gap-3">
-              <span>
-                Showing {(page - 1) * limit + 1} to{' '}
-                {Math.min(page * limit, pagination.total)} of{' '}
-                <span className="font-bold text-slate-800">{pagination.total}</span> staff members
-              </span>
-              <div className="flex items-center gap-1.5">
-                <span>•</span>
-                <label htmlFor="staff-limit-select" className="font-medium text-slate-500">
-                  Per page:
-                </label>
-                <select
-                  id="staff-limit-select"
-                  value={limit}
-                  onChange={(e) => {
-                    setLimit(Number(e.target.value));
-                    setPage(1);
-                  }}
-                  className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer shadow-2xs"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="rounded-xl text-xs font-bold"
-              >
-                Previous
-              </Button>
-              <span className="text-xs font-bold text-slate-700 px-2">
-                Page {page} of {Math.max(1, pagination.totalPages)}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= pagination.totalPages}
-                onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-                className="rounded-xl text-xs font-bold"
-              >
-                Next
-              </Button>
-            </div>
+          <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+            <Pagination
+              page={page}
+              totalPages={pagination.totalPages}
+              total={pagination.total}
+              limit={limit}
+              onPageChange={setPage}
+              onLimitChange={(newLimit) => {
+                setLimit(newLimit);
+                setPage(1);
+              }}
+              limitOptions={[5, 10, 20, 50]}
+              isFetching={isLoading}
+              itemName="staff members"
+            />
           </div>
         )}
       </div>

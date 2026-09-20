@@ -1,25 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Filter, RotateCw } from 'lucide-react';
-import cn from 'classnames';
+import { TrendingUp, RotateCw } from 'lucide-react';
 import { useGetPerformanceTrendsAPI, useCompareMocksAPI } from '@/modules/Exams/services';
 import type { PerformanceTrendsResponse, DirectComparisonResponse } from '@/types/exam.types';
 import PerformanceTrendsView from '../components/PerformanceTrendsView';
 import Loader from '@/components/feedback/Loader';
 import Button from '@/components/ui/Button';
 
-const EXAM_TYPES = ['All Types', 'JEE', 'NEET'];
-
 export const PerformanceTrendsPage: React.FC = () => {
   const { getPerformanceTrendsAPI, isLoading } = useGetPerformanceTrendsAPI();
   const { compareMocksAPI, isLoading: isLoadingComparison } = useCompareMocksAPI();
 
-  const [selectedType, setSelectedType] = useState<string>('All Types');
   const [trendsData, setTrendsData] = useState<PerformanceTrendsResponse | null>(null);
   const [comparisonData, setComparisonData] = useState<DirectComparisonResponse | null>(null);
 
   const loadTrends = async () => {
     const res = await getPerformanceTrendsAPI({
-      examType: selectedType !== 'All Types' ? selectedType : undefined,
       limit: 10,
     });
     if (res.data) {
@@ -30,7 +25,7 @@ export const PerformanceTrendsPage: React.FC = () => {
 
   useEffect(() => {
     loadTrends();
-  }, [selectedType]);
+  }, []);
 
   const handleCompareMocks = async (attemptA: string, attemptB: string) => {
     const res = await compareMocksAPI(attemptA, attemptB);
@@ -68,29 +63,6 @@ export const PerformanceTrendsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Filter Bar ─────────────────────────────────────────────── */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-3.5 shadow-sm flex items-center justify-between overflow-x-auto gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-500 flex items-center gap-1.5 pl-2">
-            <Filter size={14} />
-            Exam Target:
-          </span>
-          {EXAM_TYPES.map((t) => (
-            <button
-              key={t}
-              onClick={() => setSelectedType(t)}
-              className={cn(
-                'px-3 py-1.5 rounded-xl text-xs font-bold border transition-all whitespace-nowrap',
-                selectedType === t
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50',
-              )}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* ── Content View ────────────────────────────────────────────── */}
       {isLoading ? (

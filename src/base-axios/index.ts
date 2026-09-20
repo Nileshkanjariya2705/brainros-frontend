@@ -4,6 +4,7 @@ import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig 
 // ** Config / Utils **
 import { API_URL, API_TIMEOUT } from '@config';
 import { toast } from '@/utils/toast';
+import { getUserFriendlyErrorMessage } from '@/utils/errorHandler';
 import { clearUserSessionCache } from '@/queryClient';
 import { hasTabSession } from '@/utils/tabSession';
 
@@ -174,32 +175,7 @@ Axios.interceptors.response.use(
       status === 504;
 
     if (originalConfig && !isPublicAuthUrl(originalConfig.url) && !isSilent) {
-      let errorMsg: string | undefined;
-
-      // Check for network offline / connection failure
-      if (!error.response && (error.code === 'ERR_NETWORK' || (typeof navigator !== 'undefined' && !navigator.onLine))) {
-        errorMsg = 'Unable to connect to the server. Please check your internet connection and try again.';
-      } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-        errorMsg = 'The request took too long to complete. Please try again.';
-      } else {
-        const rawMsg = error.response?.data?.message || (error.response?.data as any)?.error;
-        if (Array.isArray(rawMsg)) {
-          errorMsg = rawMsg.filter(Boolean).join('. ');
-        } else if (typeof rawMsg === 'string' && rawMsg.trim().length > 0) {
-          errorMsg = rawMsg;
-        } else if (status === 403) {
-          errorMsg = 'You do not have permission to perform this action.';
-        } else if (status === 404) {
-          errorMsg = 'The requested resource could not be found.';
-        } else if (status === 409) {
-          errorMsg = 'A conflict occurred with an existing record.';
-        } else if (status && status >= 500) {
-          errorMsg = 'An unexpected server error occurred. Please try again later.';
-        } else if (error.message && error.message !== 'canceled') {
-          errorMsg = error.message;
-        }
-      }
-
+      const errorMsg = getUserFriendlyErrorMessage(error, 'Something went wrong. Please try again.');
       if (errorMsg) {
         toast.error(errorMsg);
       }

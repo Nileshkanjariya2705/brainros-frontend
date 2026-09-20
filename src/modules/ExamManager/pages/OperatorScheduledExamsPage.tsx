@@ -13,10 +13,10 @@ import {
   Sparkles,
   AlertCircle,
   FileCheck,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import { Pagination } from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import { toast } from '@/utils/toast';
 import {
   useGetExamsListAPI,
@@ -45,7 +45,7 @@ export const OperatorScheduledExamsPage: React.FC = () => {
   const [selectedTarget, setSelectedTarget] = useState<string>('ALL');
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(5);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -208,7 +208,7 @@ export const OperatorScheduledExamsPage: React.FC = () => {
       return;
     }
 
-    toast.success('Question paper submitted for background BullMQ processing!');
+    toast.success('Question paper submitted for processing successfully.');
     setProgressMap((prev) => ({
       ...prev,
       [uploadTargetExam.id]: {
@@ -328,9 +328,33 @@ export const OperatorScheduledExamsPage: React.FC = () => {
       {/* Scheduled Exams Table / List */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         {isLoading ? (
-          <div className="p-12 text-center">
-            <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-4" />
-            <p className="text-slate-600 font-medium">Loading scheduled exams...</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr className="bg-slate-50/75 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="py-3.5 px-4">Exam Name & Code</th>
+                  <th className="py-3.5 px-4">Target & Type</th>
+                  <th className="py-3.5 px-4">Subject / Chapter</th>
+                  <th className="py-3.5 px-4">Schedule Window</th>
+                  <th className="py-3.5 px-4">Questions</th>
+                  <th className="py-3.5 px-4">Paper Status</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-36 rounded" /><Skeleton className="h-3 w-20 rounded mt-1.5" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-5 w-16 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-28 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-32 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                    <td className="py-4 px-4 text-right"><Skeleton className="h-8 w-20 rounded ml-auto" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : filteredExams.length === 0 ? (
           <div className="p-12 text-center">
@@ -485,48 +509,24 @@ export const OperatorScheduledExamsPage: React.FC = () => {
         )}
 
         {/* ─── Pagination Footer ───────────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 bg-slate-50/50 px-4 py-3 text-xs text-slate-500 gap-3">
-          <div className="flex items-center gap-3">
-            <span>
-              Showing <strong>{exams.length}</strong> of <strong>{total}</strong> exams
-            </span>
-            <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-              <span className="text-slate-400">Rows:</span>
-              <select
-                value={limit}
-                onChange={(e) => {
-                  setLimit(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:border-blue-600 focus:outline-none"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
+        {total > 0 && (
+          <div className="p-4 border-t border-slate-200 bg-slate-50/50">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              limit={limit}
+              onPageChange={setPage}
+              onLimitChange={(newLimit) => {
+                setLimit(newLimit);
+                setPage(1);
+              }}
+              limitOptions={[5, 10, 20, 50]}
+              isFetching={isLoading}
+              itemName="exams"
+            />
           </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="px-3 font-semibold text-slate-700">
-              Page {page} of {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Upload Question Paper Modal */}
@@ -693,7 +693,7 @@ export const OperatorScheduledExamsPage: React.FC = () => {
                 {isSubmitting ? (
                   <>
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Submitting to BullMQ...
+                    Submitting question paper...
                   </>
                 ) : (
                   <>

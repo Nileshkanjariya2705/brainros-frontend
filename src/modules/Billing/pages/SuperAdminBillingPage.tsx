@@ -28,8 +28,10 @@ import {
   BillingApi,
   type BillItem,
 } from '../services/billing.service';
+import { billingKeys } from '@/services/queryKeys';
 import Button from '@/components/ui/Button';
-import Loader from '@/components/feedback/Loader';
+import { Pagination } from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import { toast } from '@/utils/toast';
 import { useJobProgress } from '@/hooks/useJobProgress';
 import { useRole } from '@/modules/Auth/auth-access/useRole';
@@ -52,7 +54,7 @@ const GenerateAllInvoicesButton: React.FC<GenerateAllInvoicesButtonProps> = ({
     queue: 'bulk-invoices',
     jobId: activeJobId || '',
     enabled: Boolean(activeJobId),
-    queryKeyToInvalidate: ['superadmin-invoices'],
+    queryKeyToInvalidate: [...billingKeys.all],
   });
 
   useEffect(() => {
@@ -141,7 +143,7 @@ const SendAllInvoicesButton: React.FC<SendAllInvoicesButtonProps> = ({
     queue: 'bulk-bill-email',
     jobId: activeJobId || '',
     enabled: Boolean(activeJobId),
-    queryKeyToInvalidate: ['superadmin-invoices'],
+    queryKeyToInvalidate: [...billingKeys.all],
   });
 
   useEffect(() => {
@@ -234,7 +236,9 @@ export const SuperAdminBillingPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [search, setSearch] = useState<string>('');
   const [page, setPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(5);
+  const [schoolPage, setSchoolPage] = useState<number>(1);
+  const [schoolPageSize, setSchoolPageSize] = useState<number>(5);
 
   // Single school row generation loading state
   const [generatingSchoolId, setGeneratingSchoolId] = useState<string | null>(null);
@@ -254,8 +258,8 @@ export const SuperAdminBillingPage: React.FC = () => {
   const [rejectionReason, setRejectionReason] = useState('');
 
   // 1. Dynamic Filter Options & Pricing Data
-  const { data: filterOptionsRes, refetch: refetchFilterOptions } = useQuery({
-    queryKey: ['billing-filter-options'],
+  const { data: filterOptionsRes, refetch: refetchFilterOptions, isLoading: isFilterOptionsLoading } = useQuery({
+    queryKey: billingKeys.filterOptions(),
     queryFn: BillingApi.getFilterOptions,
   });
 
@@ -291,6 +295,11 @@ export const SuperAdminBillingPage: React.FC = () => {
         s.email?.toLowerCase().includes(query),
     );
   }, [filterOptions.schools, schoolSearch]);
+
+  const paginatedSchoolsList = useMemo(() => {
+    const startIndex = (schoolPage - 1) * schoolPageSize;
+    return filteredSchoolsList.slice(startIndex, startIndex + schoolPageSize);
+  }, [filteredSchoolsList, schoolPage, schoolPageSize]);
 
   const openGenerateInvoiceForSchool = (schoolId: string) => {
     setGenSchoolId(schoolId);
@@ -339,7 +348,7 @@ export const SuperAdminBillingPage: React.FC = () => {
     isFetching: isInvoicesFetching,
     refetch: refetchInvoices,
   } = useQuery({
-    queryKey: ['superadmin-invoices', queryParams],
+    queryKey: billingKeys.invoices(queryParams),
     queryFn: () => BillingApi.getBills(queryParams),
   });
 
@@ -351,12 +360,12 @@ export const SuperAdminBillingPage: React.FC = () => {
   const updatePricingMutation = useMutation({
     mutationFn: (price: number) => BillingApi.updatePricing(price),
     onSuccess: (res) => {
-      toast.success(res.message || 'Pricing setting updated successfully!');
-      queryClient.invalidateQueries({ queryKey: ['billing-filter-options'] });
+      toast.success(res.message || 'Pricing setting updated successfully.');
+      queryClient.invalidateQueries({ queryKey: billingKeys.filterOptions() });
       setIsPricingModalOpen(false);
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message || 'Failed to update pricing setting.';
+      const msg = err.response?.data?.message || 'Unable to update pricing setting. Please try again.';
       toast.error(msg);
     },
   });
@@ -374,12 +383,12 @@ export const SuperAdminBillingPage: React.FC = () => {
         billingYear: selectedYear ? Number(selectedYear) : undefined,
       }),
     onSuccess: (res, variables) => {
-      toast.success(res.message || 'School pricing updated successfully!');
+      toast.success(res.message || 'School pricing updated successfully.');
       setEditingSchoolId(null);
       setEditingPriceValue('');
 
       // Targeted cache update using setQueryData on superadmin-invoices
-      queryClient.setQueryData(['superadmin-invoices', queryParams], (oldData: any) => {
+      queryClient.setQueryData(billingKeys.invoices(queryParams), (oldData: any) => {
         if (!oldData || !oldData.data) return oldData;
         return {
           ...oldData,
@@ -401,12 +410,12 @@ export const SuperAdminBillingPage: React.FC = () => {
         };
       });
 
-      queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['billing-filter-options'] });
-      queryClient.invalidateQueries({ queryKey: ['school-pricings'] });
+      queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
+      queryClient.invalidateQueries({ queryKey: billingKeys.schoolPricings() });
+      queryClient.invalidateQueries({ queryKey: billingKeys.filterOptions() });
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message || 'Unable to update price. Please try again.';
+      const msg = err.response?.data?.message || 'Unable to update school pricing. Please try again.';
       toast.error(msg);
     },
   });
@@ -441,10 +450,10 @@ export const SuperAdminBillingPage: React.FC = () => {
     mutationFn: ({ billId, status }: { billId: string; status: string }) =>
       BillingApi.updateBillStatus(billId, status),
     onSuccess: (res, variables) => {
-      toast.success(res.message || `Status updated to ${variables.status === 'PAID' ? 'Paid' : 'Unpaid'}`);
+      toast.success(res.message || `Status updated to ${variables.status === 'PAID' ? 'Paid' : 'Unpaid'} successfully.`);
       setUpdatingStatusBillId(null);
       // Optimistic cache update
-      queryClient.setQueryData(['superadmin-invoices', queryParams], (oldData: any) => {
+      queryClient.setQueryData(billingKeys.invoices(queryParams), (oldData: any) => {
         if (!oldData || !oldData.data) return oldData;
         return {
           ...oldData,
@@ -455,10 +464,11 @@ export const SuperAdminBillingPage: React.FC = () => {
           ),
         };
       });
-      queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+      queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
+      queryClient.invalidateQueries({ queryKey: ['super-admin', 'revenue'] });
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Failed to update payment status.');
+      toast.error(err.response?.data?.message || 'Unable to update payment status. Please try again.');
       setUpdatingStatusBillId(null);
     },
   });
@@ -470,7 +480,7 @@ export const SuperAdminBillingPage: React.FC = () => {
 
   // Live Preview Query for Single School Generation
   const { data: previewData, isFetching: isPreviewFetching } = useQuery({
-    queryKey: ['invoice-preview', genSchoolId, genMonth, genYear],
+    queryKey: billingKeys.invoicePreview(genSchoolId, genMonth, genYear),
     queryFn: () => BillingApi.getInvoicePreview(genSchoolId, genMonth, genYear),
     enabled: isGenerateModalOpen && genSchoolId !== 'ALL' && Boolean(genSchoolId),
   });
@@ -486,9 +496,9 @@ export const SuperAdminBillingPage: React.FC = () => {
       generateAll?: boolean;
     }) => BillingApi.generateInvoice(payload),
     onSuccess: (res) => {
-      toast.success(res.message || 'Invoice generation initiated successfully!');
-      queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
-      queryClient.invalidateQueries({ queryKey: ['billing-filter-options'] });
+      toast.success(res.message || 'Invoice generation started successfully.');
+      queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
+      queryClient.invalidateQueries({ queryKey: billingKeys.filterOptions() });
       queryClient.invalidateQueries({ queryKey: ['super-admin', 'revenue'] });
       setIsGenerateModalOpen(false);
 
@@ -497,7 +507,7 @@ export const SuperAdminBillingPage: React.FC = () => {
       }
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message || 'Unable to generate invoice for this school.';
+      const msg = err.response?.data?.message || 'Unable to generate invoice. Please try again.';
       toast.error(msg);
     },
   });
@@ -506,11 +516,11 @@ export const SuperAdminBillingPage: React.FC = () => {
   const sendEmailMutation = useMutation({
     mutationFn: (id: string) => BillingApi.sendBillEmail(id),
     onSuccess: (res) => {
-      toast.success(res.message || 'Invoice email queued for delivery!');
-      queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+      toast.success(res.message || 'Invoice email sent successfully.');
+      queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message || 'Failed to dispatch invoice email.';
+      const msg = err.response?.data?.message || 'Unable to send invoice email. Please try again.';
       toast.error(msg);
     },
   });
@@ -524,15 +534,15 @@ export const SuperAdminBillingPage: React.FC = () => {
     mutationFn: (payload: { billingMonth: number; billingYear: number; forceRetryFailed?: boolean }) =>
       BillingApi.sendBulkInvoices(payload),
     onSuccess: (res) => {
-      toast.success(res.message || 'Bulk invoice email dispatch initiated!');
-      queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+      toast.success(res.message || 'Bulk invoice dispatch started successfully.');
+      queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
       setIsSendAllModalOpen(false);
       if (res.data?.jobId) {
         setActiveBulkSendJobId(res.data.jobId);
       }
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message || 'Failed to dispatch bulk invoice emails.';
+      const msg = err.response?.data?.message || 'Unable to dispatch bulk invoice emails. Please try again.';
       toast.error(msg);
     },
   });
@@ -544,7 +554,7 @@ export const SuperAdminBillingPage: React.FC = () => {
   const [schoolEffectiveFromInput, setSchoolEffectiveFromInput] = useState<string>('');
 
   const { data: schoolPricingsData, refetch: refetchSchoolPricings } = useQuery({
-    queryKey: ['school-pricings'],
+    queryKey: billingKeys.schoolPricings(),
     queryFn: BillingApi.getSchoolPricings,
     enabled: mainTab === 'SCHOOLS',
   });
@@ -558,15 +568,15 @@ export const SuperAdminBillingPage: React.FC = () => {
         effectiveFrom: payload.effectiveFrom || undefined,
       }),
     onSuccess: (res) => {
-      toast.success(res.message || 'School pricing updated successfully!');
-      queryClient.invalidateQueries({ queryKey: ['school-pricings'] });
-      queryClient.invalidateQueries({ queryKey: ['billing-filter-options'] });
-      queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+      toast.success(res.message || 'School pricing updated successfully.');
+      queryClient.invalidateQueries({ queryKey: billingKeys.schoolPricings() });
+      queryClient.invalidateQueries({ queryKey: billingKeys.filterOptions() });
+      queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
       setIsSchoolPricingModalOpen(false);
       setSelectedSchoolForPricing(null);
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message || 'Failed to update school pricing.';
+      const msg = err.response?.data?.message || 'Unable to update school pricing. Please try again.';
       toast.error(msg);
     },
   });
@@ -583,11 +593,11 @@ export const SuperAdminBillingPage: React.FC = () => {
   const retryEmailMutation = useMutation({
     mutationFn: (id: string) => BillingApi.retryBillEmail(id),
     onSuccess: (res) => {
-      toast.success(res.message || 'Email delivery retry initiated!');
-      queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+      toast.success(res.message || 'Invoice email resent successfully.');
+      queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message || 'Failed to retry email delivery.';
+      const msg = err.response?.data?.message || 'Unable to resend invoice email. Please try again.';
       toast.error(msg);
     },
   });
@@ -597,9 +607,9 @@ export const SuperAdminBillingPage: React.FC = () => {
     try {
       toast.info('Compiling official invoice PDF...');
       await BillingApi.downloadBillPdf(bill.id, bill.billNumber || 'Invoice');
-      toast.success('Invoice PDF downloaded!');
+      toast.success('Invoice downloaded successfully.');
     } catch {
-      toast.error('Failed to download invoice PDF.');
+      toast.error('Unable to download invoice PDF. Please try again.');
     }
   };
 
@@ -607,11 +617,11 @@ export const SuperAdminBillingPage: React.FC = () => {
   const approveMutation = useMutation({
     mutationFn: (id: string) => BillingApi.approveBill(id),
     onSuccess: (res) => {
-      toast.success(res.message || 'Bill approved successfully!');
-      queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+      toast.success(res.message || 'Invoice approved successfully.');
+      queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Failed to approve bill.');
+      toast.error(err.response?.data?.message || 'Unable to approve invoice. Please try again.');
     },
   });
 
@@ -619,13 +629,13 @@ export const SuperAdminBillingPage: React.FC = () => {
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       BillingApi.rejectBill(id, reason),
     onSuccess: (res) => {
-      toast.success(res.message || 'Bill rejected.');
-      queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+      toast.success(res.message || 'Invoice rejected successfully.');
+      queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
       setRejectingBill(null);
       setRejectionReason('');
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.message || 'Failed to reject bill.');
+      toast.error(err.response?.data?.message || 'Unable to reject invoice. Please try again.');
     },
   });
 
@@ -667,8 +677,8 @@ export const SuperAdminBillingPage: React.FC = () => {
             activeJobId={activeBulkJobId}
             onJobComplete={() => {
               setActiveBulkJobId(null);
-              queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
-              queryClient.invalidateQueries({ queryKey: ['billing-filter-options'] });
+              queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
+              queryClient.invalidateQueries({ queryKey: billingKeys.filterOptions() });
             }}
             onGenerate={handleGenerateAllInvoices}
             isPending={generateMutation.isPending && !generatingSchoolId}
@@ -679,7 +689,7 @@ export const SuperAdminBillingPage: React.FC = () => {
             activeJobId={activeBulkSendJobId}
             onJobComplete={() => {
               setActiveBulkSendJobId(null);
-              queryClient.invalidateQueries({ queryKey: ['superadmin-invoices'] });
+              queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
             }}
             onOpenModal={() => setIsSendAllModalOpen(true)}
             isPending={sendBulkMutation.isPending}
@@ -776,14 +786,33 @@ export const SuperAdminBillingPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
-                {filteredSchoolsList.length === 0 ? (
+                {isFilterOptionsLoading ? (
+                  Array.from({ length: 5 }).map((_, idx) => (
+                    <tr key={idx} className="animate-pulse">
+                      <td className="py-4 px-4 sm:px-6">
+                        <div className="flex items-center gap-2.5">
+                          <Skeleton className="h-9 w-9 rounded-xl" />
+                          <div className="space-y-1">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-24" />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4"><Skeleton className="h-4 w-16" /></td>
+                      <td className="py-4 px-4"><Skeleton className="h-4 w-20 ml-auto" /></td>
+                      <td className="py-4 px-4"><Skeleton className="h-5 w-24 rounded-full" /></td>
+                      <td className="py-4 px-4"><Skeleton className="h-4 w-32" /></td>
+                      <td className="py-4 px-4"><Skeleton className="h-8 w-24 rounded-lg ml-auto" /></td>
+                    </tr>
+                  ))
+                ) : filteredSchoolsList.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-slate-400">
                       No schools found matching search criteria.
                     </td>
                   </tr>
                 ) : (
-                  filteredSchoolsList.map((school: any) => {
+                  paginatedSchoolsList.map((school: any) => {
                     const pricingDetail = schoolPricingsList.find((p) => p.institutionId === school.id);
                     const rate = pricingDetail ? pricingDetail.pricePerStudent : (school.pricePerStudent ?? currentPricing);
                     const isCustom = pricingDetail ? pricingDetail.isCustom : Boolean(school.isCustomPrice);
@@ -920,6 +949,23 @@ export const SuperAdminBillingPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {filteredSchoolsList.length > 0 && (
+            <div className="pt-4 border-t border-slate-100">
+              <Pagination
+                page={schoolPage}
+                totalPages={Math.ceil(filteredSchoolsList.length / schoolPageSize) || 1}
+                total={filteredSchoolsList.length}
+                limit={schoolPageSize}
+                onPageChange={setSchoolPage}
+                onLimitChange={(newLimit) => {
+                  setSchoolPageSize(newLimit);
+                  setSchoolPage(1);
+                }}
+                itemName="schools"
+              />
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -1153,11 +1199,7 @@ export const SuperAdminBillingPage: React.FC = () => {
 
       {/* ── 3. Invoices Table ── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        {isInvoicesLoading ? (
-          <div className="py-20 flex flex-col items-center justify-center">
-            <Loader label="Loading invoices..." />
-          </div>
-        ) : invoices.length === 0 ? (
+        {!isInvoicesLoading && invoices.length === 0 ? (
           <div className="py-20 text-center">
             <Receipt size={48} className="mx-auto text-slate-300 mb-3" />
             <p className="text-base font-semibold text-slate-700">
@@ -1210,7 +1252,34 @@ export const SuperAdminBillingPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
-                {invoices.map((bill) => {
+                {isInvoicesLoading ? (
+                  Array.from({ length: 5 }).map((_, idx) => (
+                    <tr key={idx} className="animate-pulse">
+                      <td className="py-4 px-4 sm:px-6">
+                        <div className="space-y-1">
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-8 w-8 rounded-lg" />
+                          <div className="space-y-1">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-16" />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4"><Skeleton className="h-4 w-20" /></td>
+                      <td className="py-4 px-4"><Skeleton className="h-4 w-12 ml-auto" /></td>
+                      <td className="py-4 px-4"><Skeleton className="h-4 w-16 ml-auto" /></td>
+                      <td className="py-4 px-4"><Skeleton className="h-4 w-24 ml-auto" /></td>
+                      <td className="py-4 px-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                      <td className="py-4 px-4"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                      <td className="py-4 px-4"><Skeleton className="h-8 w-24 rounded-lg ml-auto" /></td>
+                    </tr>
+                  ))
+                ) : invoices.map((bill) => {
                   const isGeneratedOrApproved =
                     bill.status === 'GENERATED' || bill.status === 'APPROVED' || bill.status === 'SENT';
                   const isPending =
@@ -1546,48 +1615,20 @@ export const SuperAdminBillingPage: React.FC = () => {
         )}
 
         {/* Pagination Footer */}
-        {meta.total > 0 && (
-          <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 bg-white">
-            <div className="flex items-center gap-3">
-              <span>
-                Showing page {page} of {meta.pages || 1} ({meta.total} total records)
-              </span>
-              <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-                <span className="text-slate-400">Rows:</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setPage(1);
-                  }}
-                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:outline-none"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= (meta.pages || 1)}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        )}
+        <div className="border-t border-slate-100">
+          <Pagination
+            page={page}
+            totalPages={meta.pages || 1}
+            total={meta.total || 0}
+            limit={pageSize}
+            onPageChange={setPage}
+            onLimitChange={(newLimit) => {
+              setPageSize(newLimit);
+              setPage(1);
+            }}
+            itemName="invoices"
+          />
+        </div>
       </div>
       </>
       )}
@@ -2281,7 +2322,7 @@ export const SuperAdminBillingPage: React.FC = () => {
                   Automated Idempotent Delivery System
                 </div>
                 <ul className="list-disc list-inside space-y-0.5 text-slate-600 pl-1">
-                  <li>Invoices are queued through BullMQ background workers and dispatched via Resend.</li>
+                  <li>Invoices are queued for automated processing and dispatched via secure email.</li>
                   <li>Each school's invoice is sent to its authorized registered billing email.</li>
                   <li>Invoices already successfully sent are skipped to prevent duplicate delivery.</li>
                   <li>Missing email addresses are flagged without halting the rest of the batch.</li>

@@ -1,17 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Calendar, MapPin, Building2, Target, Globe, RotateCcw, Search, Loader2 } from 'lucide-react';
 import type {
   AnalyticsFilterParams,
   FiltersMetadata,
 } from '../services/superAdminDashboard.service';
 import {
-  fetchAllStatesAPI,
-  fetchDistrictsByStateSlugAPI,
   getStateSlug,
   formatLocationName,
   type ApiStateItem,
   type ApiDistrictItem,
 } from '@/modules/Auth/services/location.service';
+import { useStatesQuery, useDistrictsQuery } from '@/services/location.queries';
 
 interface DashboardFilterBarProps {
   filters: AnalyticsFilterParams;
@@ -27,64 +26,16 @@ export const DashboardFilterBar: React.FC<DashboardFilterBarProps> = ({
   onReset,
   metadata,
 }) => {
-  // ─── Live State & City (Registration API) State ─────────────────
-  const [liveStates, setLiveStates] = useState<ApiStateItem[]>([]);
-  const [liveDistricts, setLiveDistricts] = useState<ApiDistrictItem[]>([]);
-  const [isLoadingStates, setIsLoadingStates] = useState(false);
-  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
-
-  // Fetch states from registration API on mount
-  useEffect(() => {
-    let isMounted = true;
-    setIsLoadingStates(true);
-    fetchAllStatesAPI()
-      .then(({ data }) => {
-        if (isMounted && data && data.length > 0) {
-          setLiveStates(data);
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (isMounted) setIsLoadingStates(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  // Fetch cities/districts when selected state changes
+  // ─── Live State & City (Registration API) State Cached via React Query ──
   const selectedStateName = filters.state || '';
   const selectedStateId = filters.stateId || '';
+  const stateSlug = getStateSlug(selectedStateName || selectedStateId || '');
 
-  useEffect(() => {
-    const currentState = selectedStateName || '';
-    if (!currentState) {
-      setLiveDistricts([]);
-      return;
-    }
+  const { data: statesData, isLoading: isLoadingStates } = useStatesQuery();
+  const { data: districtsData, isLoading: isLoadingDistricts } = useDistrictsQuery(stateSlug);
 
-    let isMounted = true;
-    setIsLoadingDistricts(true);
-
-    const slug = getStateSlug(currentState);
-    fetchDistrictsByStateSlugAPI(slug)
-      .then(({ data }) => {
-        if (isMounted && data) {
-          setLiveDistricts(data);
-        }
-      })
-      .catch(() => {
-        if (isMounted) setLiveDistricts([]);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoadingDistricts(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedStateName]);
+  const liveStates: ApiStateItem[] = statesData || [];
+  const liveDistricts: ApiDistrictItem[] = districtsData || [];
 
   // Merge live registration states with any metadata DB states
   const availableStates = React.useMemo(() => {

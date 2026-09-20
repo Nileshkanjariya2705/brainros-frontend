@@ -4,11 +4,9 @@ import {
   Search,
   Calendar,
   Layers,
-  ChevronRight,
   RefreshCw,
   AlertCircle,
   X,
-  ChevronLeft,
   Upload,
   FileSpreadsheet,
   AlertTriangle,
@@ -16,6 +14,8 @@ import {
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
+import { Pagination } from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import Loader from '@/components/feedback/Loader';
 import { toast } from '@/utils/toast';
 import ExamTranslationManager, {
@@ -80,7 +80,7 @@ export const AdminTranslationManagementPage: React.FC = () => {
   const [items, setItems] = useState<TranslationTargetItem[]>([]);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 15,
+    limit: 5,
     total: 0,
     totalPages: 1,
   });
@@ -509,8 +509,25 @@ export const AdminTranslationManagementPage: React.FC = () => {
 
       {/* ─── Target Items Listing ─────────────────────────────────────── */}
       {isLoading ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center space-y-3">
-          <Loader label="Loading translation targets..." />
+        <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden p-6 space-y-4">
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 border-b border-slate-100 last:border-0 animate-pulse">
+                <div className="flex items-center gap-4 flex-1">
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton className="h-4 w-48 rounded" />
+                    <Skeleton className="h-3 w-32 rounded" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-6">
+                  <Skeleton className="h-4 w-20 rounded" />
+                  <Skeleton className="h-4 w-28 rounded" />
+                  <Skeleton className="h-8 w-24 rounded-xl" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : isError ? (
         <div className="rounded-3xl border border-rose-200 bg-rose-50/50 p-8 text-center space-y-3">
@@ -813,60 +830,21 @@ export const AdminTranslationManagementPage: React.FC = () => {
           </div>
 
           {/* ─── Pagination Controls ──────────────────────────────────── */}
-          {pagination.totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs text-slate-500">
-              <span>
-                Showing {(pagination.page - 1) * pagination.limit + 1}–
-                {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-                <strong>{pagination.total}</strong> targets
-              </span>
-
-              <div className="flex items-center gap-1.5">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={pagination.page <= 1}
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  className="flex items-center gap-1 px-2.5"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  <span>Prev</span>
-                </Button>
-
-                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                  let pageNum = i + 1;
-                  if (pagination.totalPages > 5 && pagination.page > 3) {
-                    pageNum = pagination.page - 2 + i;
-                    if (pageNum > pagination.totalPages) {
-                      pageNum = pagination.totalPages - 4 + i;
-                    }
-                  }
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => handlePageChange(pageNum)}
-                      className={`h-8 w-8 rounded-xl text-xs font-bold transition-all ${
-                        pagination.page === pageNum
-                          ? 'bg-indigo-600 text-white shadow-xs'
-                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={pagination.page >= pagination.totalPages}
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  className="flex items-center gap-1 px-2.5"
-                >
-                  <span>Next</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+          {pagination.total > 0 && (
+            <div className="pt-2">
+              <Pagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                total={pagination.total}
+                limit={pagination.limit}
+                onPageChange={handlePageChange}
+                onLimitChange={(newLimit) => {
+                  setPagination((prev) => ({ ...prev, limit: newLimit, page: 1 }));
+                }}
+                limitOptions={[5, 10, 20, 50]}
+                isFetching={isLoading}
+                itemName="targets"
+              />
             </div>
           )}
         </div>

@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { Axios } from '@/base-axios';
 import Button from '@/components/ui/Button';
+import { Pagination } from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import { academicCalendarKeys } from '@/services/queryKeys';
 
 export interface CalendarExamItem {
@@ -262,7 +264,7 @@ export const ExamCalendarPage: React.FC = () => {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(5);
 
   // ─── Filter Logic: Date-wise & Search Filtered Exams ───────────────────────
   const filteredExams = useMemo(() => {
@@ -614,20 +616,34 @@ export const ExamCalendarPage: React.FC = () => {
       )}
 
       {/* ── Loading State ── */}
-      {loading && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-16 flex flex-col items-center justify-center text-slate-500 shadow-xs">
-          <RefreshCw size={32} className="animate-spin text-indigo-600 mb-3" />
-          <span className="text-sm font-bold text-slate-800">
-            Loading scheduled exams...
-          </span>
-          <span className="text-xs text-slate-400 mt-1">
-            Fetching latest examination dates, test windows, and subjects
-          </span>
+      {(loading || isFetching) && (
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5 animate-pulse"
+            >
+              <div className="flex items-start sm:items-center gap-4">
+                <div className="w-14 h-16 sm:w-16 sm:h-18 rounded-2xl bg-slate-100 shrink-0" />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-5 w-40 rounded" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-4 w-60 rounded" />
+                  <Skeleton className="h-3 w-44 rounded" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3 pt-2 md:pt-0">
+                <Skeleton className="h-9 w-28 rounded-xl" />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       {/* ── Empty State ── */}
-      {!loading && filteredExams.length === 0 && (
+      {!loading && !isFetching && filteredExams.length === 0 && (
         <div className="bg-white rounded-3xl border border-dashed border-slate-200 p-16 text-center shadow-xs space-y-3">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mx-auto">
             <Calendar size={28} />
@@ -654,7 +670,7 @@ export const ExamCalendarPage: React.FC = () => {
       )}
 
       {/* ── All List of Exams (Sorted by Latest) ── */}
-      {!loading && filteredExams.length > 0 && (
+      {!loading && !isFetching && filteredExams.length > 0 && (
         <div className="space-y-3.5">
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-bold text-slate-500">
@@ -835,57 +851,21 @@ export const ExamCalendarPage: React.FC = () => {
 
           {/* Pagination Footer Controls */}
           {totalItems > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-200 bg-white px-5 py-4 rounded-3xl shadow-xs mt-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <p className="text-xs font-semibold text-slate-500">
-                  Showing {(currentPage - 1) * pageSize + 1} to{' '}
-                  {Math.min(currentPage * pageSize, totalItems)} of{' '}
-                  <span className="font-bold text-slate-700">{totalItems}</span> examinations
-                </p>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <span>•</span>
-                  <label htmlFor="student-calendar-limit-select" className="font-medium text-slate-500">
-                    Per page:
-                  </label>
-                  <select
-                    id="student-calendar-limit-select"
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(Number(e.target.value));
-                      setCurrentPage(1);
-                    }}
-                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer shadow-2xs"
-                  >
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage <= 1}
-                  className="rounded-xl text-xs font-bold"
-                >
-                  Previous
-                </Button>
-                <span className="text-xs font-bold text-slate-700 px-2">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage >= totalPages}
-                  className="rounded-xl text-xs font-bold"
-                >
-                  Next
-                </Button>
-              </div>
+            <div className="mt-4">
+              <Pagination
+                page={currentPage}
+                totalPages={totalPages}
+                total={totalItems}
+                limit={pageSize}
+                onPageChange={setCurrentPage}
+                onLimitChange={(newLimit) => {
+                  setPageSize(newLimit);
+                  setCurrentPage(1);
+                }}
+                limitOptions={[5, 10, 20, 50]}
+                isFetching={isFetching}
+                itemName="examinations"
+              />
             </div>
           )}
         </div>

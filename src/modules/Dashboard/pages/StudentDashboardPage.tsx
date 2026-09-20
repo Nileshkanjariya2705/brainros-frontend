@@ -1128,10 +1128,10 @@ export const StudentDashboardPage: React.FC = () => {
               <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                 <span
                   className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${predRank.confidence === 'HIGH'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : predRank.confidence === 'MEDIUM'
-                        ? 'bg-amber-100 text-amber-800'
-                        : 'bg-slate-100 text-slate-700'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : predRank.confidence === 'MEDIUM'
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-slate-100 text-slate-700'
                     }`}
                 >
                   {predRank.confidence || 'Medium'} Confidence
@@ -1168,10 +1168,25 @@ export const StudentDashboardPage: React.FC = () => {
       </div>
 
       {/* ── 8. Recent Results Table ─────────────────────────────────── */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8 shadow-sm space-y-4">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8 shadow-sm space-y-4 relative overflow-hidden">
+        {/* Top Loading Progress Shimmer Bar */}
+        {isFetching && (
+          <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-50 overflow-hidden">
+            <div className="h-full w-full bg-gradient-to-r from-transparent via-indigo-600 to-transparent animate-pulse" />
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Completed Exams</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold text-slate-900">Completed Exams</h3>
+              {isFetching && (
+                <span className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                  <RotateCw size={11} className="animate-spin" />
+                  Updating...
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-500">Detailed records of your evaluated sessions.</p>
           </div>
           <div className="flex items-center gap-3">
@@ -1198,35 +1213,65 @@ export const StudentDashboardPage: React.FC = () => {
                   <th className="py-3 px-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
-                {recentResults.map((row) => (
-                  <tr key={row.attemptId} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3.5 px-3 font-bold text-slate-900">{row.examTitle}</td>
-                    <td className="py-3.5 px-3 text-slate-500">{row.date}</td>
-                    <td className="py-3.5 px-3 text-right font-mono font-bold text-slate-900">
-                      {row.score} / {row.maxScore}
-                    </td>
-                    <td className="py-3.5 px-3 text-right text-emerald-600 font-bold">
-                      {round2(row.accuracy)}%
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono">
-                      {row.rank ? `#${row.rank.toLocaleString('en-IN')}` : '—'}
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono font-bold text-indigo-600">
-                      {typeof row.percentile === 'number' ? round2(row.percentile) : row.percentile ?? '—'}
-                    </td>
-                    <td className="py-3.5 px-3 text-right">
-                      <button
-                        onClick={() => navigate(`/exam/result/${row.attemptId}`)}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800"
-                      >
-                        <span>Result</span>
-                        <ChevronRight size={13} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+              {isFetching ? (
+                <tbody className="divide-y divide-slate-100">
+                  {Array.from({ length: recentResults.length || 5 }).map((_, i) => (
+                    <tr key={`skel-row-${i}`} className="animate-pulse">
+                      <td className="py-3.5 px-3">
+                        <Skeleton className="h-4 w-36" />
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <Skeleton className="h-4 w-20" />
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <Skeleton className="h-4 w-14 ml-auto" />
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <Skeleton className="h-4 w-10 ml-auto" />
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <Skeleton className="h-4 w-10 ml-auto" />
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <Skeleton className="h-4 w-10 ml-auto" />
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <Skeleton className="h-4 w-12 ml-auto" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              ) : (
+                <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                  {recentResults.map((row) => (
+                    <tr key={row.attemptId} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3.5 px-3 font-bold text-slate-900">{row.examTitle}</td>
+                      <td className="py-3.5 px-3 text-slate-500">{row.date}</td>
+                      <td className="py-3.5 px-3 text-right font-mono font-bold text-slate-900">
+                        {row.score} / {row.maxScore}
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-emerald-600 font-bold">
+                        {round2(row.accuracy)}%
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-mono">
+                        {row.rank ? `#${row.rank.toLocaleString('en-IN')}` : '—'}
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-mono font-bold text-indigo-600">
+                        {typeof row.percentile === 'number' ? round2(row.percentile) : row.percentile ?? '—'}
+                      </td>
+                      <td className="py-3.5 px-3 text-right">
+                        <button
+                          onClick={() => navigate(`/exam/result/${row.attemptId}`)}
+                          className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800"
+                        >
+                          <span>Result</span>
+                          <ChevronRight size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              )}
             </table>
           </div>
         ) : (
@@ -1245,28 +1290,37 @@ export const StudentDashboardPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setExamPage((p) => Math.max(1, p - 1))}
-                disabled={recentMeta.page === 1}
+                disabled={recentMeta.page === 1 || isFetching}
                 className={cn(
                   'flex h-8 w-8 items-center justify-center rounded-xl border transition-all',
-                  recentMeta.page > 1
+                  recentMeta.page > 1 && !isFetching
                     ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm'
                     : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed',
                 )}
+                aria-label="Previous page"
               >
                 <ChevronLeft size={14} />
               </button>
-              <span className="text-xs font-bold text-slate-700 px-2">
-                Page {recentMeta.page} of {recentMeta.totalPages}
+              <span className="text-xs font-bold text-slate-700 px-2 flex items-center gap-1.5">
+                {isFetching ? (
+                  <>
+                    <RotateCw size={12} className="animate-spin text-indigo-600" />
+                    <span>Loading...</span>
+                  </>
+                ) : (
+                  `Page ${recentMeta.page} of ${recentMeta.totalPages}`
+                )}
               </span>
               <button
                 onClick={() => setExamPage((p) => Math.min(recentMeta.totalPages, p + 1))}
-                disabled={recentMeta.page === recentMeta.totalPages}
+                disabled={recentMeta.page === recentMeta.totalPages || isFetching}
                 className={cn(
                   'flex h-8 w-8 items-center justify-center rounded-xl border transition-all',
-                  recentMeta.page < recentMeta.totalPages
+                  recentMeta.page < recentMeta.totalPages && !isFetching
                     ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm'
                     : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed',
                 )}
+                aria-label="Next page"
               >
                 <ChevronRight size={14} />
               </button>

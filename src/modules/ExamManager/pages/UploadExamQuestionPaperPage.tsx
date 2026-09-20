@@ -203,7 +203,7 @@ export const UploadExamQuestionPaperPage: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs font-semibold text-slate-500 mt-0.5">
-                Upload CSV or Excel • Review Preview & Validation • Asynchronous BullMQ Queue
+                Upload CSV or Excel • Review Preview & Validation • Automated Background Processing
               </p>
             </div>
           </div>
@@ -527,7 +527,7 @@ export const UploadExamQuestionPaperPage: React.FC = () => {
             {/* ── Step 3: Final Submit ── */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-100">
               <div className="text-xs text-slate-500">
-                Submitting queues the paper for background BullMQ processing. You will see real-time
+                Submitting queues the paper for automated processing. You will see real-time
                 progress in the exam list.
               </div>
 

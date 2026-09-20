@@ -4,8 +4,6 @@ import {
   BookOpen,
   Filter,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
   Sparkles,
   Award,
 } from 'lucide-react';
@@ -17,13 +15,14 @@ import {
 } from '../services/institutionDashboard.service';
 import { SectionError } from '@/components/feedback/SectionError';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Pagination } from '@/components/ui/Pagination';
 
 export const InstitutionRankListPage: React.FC = () => {
   // ── Rank List State ──
   const [selectedExamId, setSelectedExamId] = useState<string>('');
   const [rankBatchId, setRankBatchId] = useState<string>('');
   const [rankPage, setRankPage] = useState(1);
-  const [rankLimit, setRankLimit] = useState(10);
+  const [rankLimit, setRankLimit] = useState(5);
 
   // ── Queries ──
   const { data: batchesData = [] } = useInstitutionBatchesQuery();
@@ -159,7 +158,7 @@ export const InstitutionRankListPage: React.FC = () => {
                 onRetry={() => refetchRankings()}
               />
             </div>
-          ) : isRankingsLoading && rankList.length === 0 ? (
+          ) : (isRankingsLoading || isRankingsFetching) ? (
             <table className="w-full text-left text-xs sm:text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-semibold">
@@ -273,56 +272,22 @@ export const InstitutionRankListPage: React.FC = () => {
         </div>
 
         {/* Rank List Pagination */}
-        {rankMeta.totalPages > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 bg-slate-50/50 px-5 py-3.5 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="text-xs text-slate-500">
-                Showing rank{' '}
-                <span className="font-bold text-slate-800">
-                  {(rankPage - 1) * rankLimit + (rankList.length > 0 ? 1 : 0)}
-                </span>{' '}
-                to{' '}
-                <span className="font-bold text-slate-800">
-                  {Math.min(rankPage * rankLimit, rankMeta.total)}
-                </span>{' '}
-                of <span className="font-bold text-slate-800">{rankMeta.total}</span> ranked students
-              </div>
-              <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-                <span className="text-slate-400 text-xs">Rows:</span>
-                <select
-                  value={rankLimit}
-                  onChange={(e) => {
-                    setRankLimit(Number(e.target.value));
-                    setRankPage(1);
-                  }}
-                  className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:outline-none"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setRankPage((p) => Math.max(1, p - 1))}
-                disabled={rankPage === 1}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <span className="px-2 text-xs font-semibold text-slate-700">
-                {rankPage} / {rankMeta.totalPages}
-              </span>
-              <button
-                onClick={() => setRankPage((p) => Math.min(rankMeta.totalPages, p + 1))}
-                disabled={rankPage >= rankMeta.totalPages}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+        {!isRankingsLoading && rankList.length > 0 && (
+          <div className="p-4 border-t border-slate-200">
+            <Pagination
+              page={rankPage}
+              totalPages={rankMeta.totalPages}
+              total={rankMeta.total}
+              limit={rankLimit}
+              onPageChange={setRankPage}
+              onLimitChange={(newLimit) => {
+                setRankLimit(newLimit);
+                setRankPage(1);
+              }}
+              limitOptions={[5, 10, 20, 50]}
+              isFetching={isRankingsFetching}
+              itemName="ranked students"
+            />
           </div>
         )}
       </div>

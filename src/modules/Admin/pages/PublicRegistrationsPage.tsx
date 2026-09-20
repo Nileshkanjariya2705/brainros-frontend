@@ -4,10 +4,6 @@ import {
   RotateCw,
   X,
   User,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   ArrowUpDown,
   ShieldCheck,
   Eye,
@@ -37,6 +33,8 @@ import {
 import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
+import { Pagination } from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import { toast } from '@/utils/toast';
 
 /* ── View Public Student Details Modal ────────────────────────────────────── */
@@ -325,7 +323,7 @@ const DeactivateModal: React.FC<DeactivateModalProps> = ({
 export const PublicRegistrationsPage: React.FC = () => {
   // Query Filter State
   const [page, setPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(5);
   const [search, setSearch] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('createdAt');
@@ -403,21 +401,21 @@ export const PublicRegistrationsPage: React.FC = () => {
         studentId: studentToDeactivate.id,
         reason,
       });
-      toast.success(`Student '${studentToDeactivate.name}' deactivated successfully.`);
+      toast.success('Student deactivated successfully.');
       setStudentToDeactivate(null);
       if (selectedStudentForView) setSelectedStudentForView(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || 'Unable to deactivate this student.');
+      toast.error(err?.response?.data?.message || err?.message || 'Unable to deactivate student.');
     }
   };
 
   const handleActivate = async (student: PublicStudentItem) => {
     try {
       await activateMutation.mutateAsync(student.id);
-      toast.success(`Student '${student.name}' reactivated successfully.`);
+      toast.success('Student activated successfully.');
       if (selectedStudentForView) setSelectedStudentForView(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || 'Unable to reactivate student.');
+      toast.error(err?.response?.data?.message || err?.message || 'Unable to activate student.');
     }
   };
 
@@ -714,12 +712,21 @@ export const PublicRegistrationsPage: React.FC = () => {
             </thead>
 
             <tbody className="divide-y divide-slate-100 text-slate-800">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={10} className="py-20 text-center">
-                    <Loader label="Loading public registration students..." />
-                  </td>
-                </tr>
+              {(isLoading || isFetching) ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-3 px-4 text-center"><Skeleton className="h-4 w-4 rounded mx-auto" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-4 w-32 rounded" /><Skeleton className="h-3 w-20 rounded mt-1.5" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-4 w-28 rounded" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-4 w-24 rounded" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-4 w-28 rounded" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-5 w-16 rounded" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="py-3 px-4 text-center"><Skeleton className="h-5 w-16 rounded-full mx-auto" /></td>
+                    <td className="py-3 px-4 text-right"><Skeleton className="h-8 w-16 rounded ml-auto" /></td>
+                  </tr>
+                ))
               ) : !data?.items || data.items.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="py-16 text-center text-slate-500">
@@ -853,77 +860,21 @@ export const PublicRegistrationsPage: React.FC = () => {
 
         {/* ── Server-Side Pagination Bar ── */}
         {data?.pagination && data.pagination.total > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200 text-xs text-slate-600">
-            <div className="flex items-center gap-2">
-              <span>
-                Showing <b>{(page - 1) * pageSize + 1}</b> to{' '}
-                <b>{Math.min(page * pageSize, data.pagination.total)}</b> of{' '}
-                <b>{data.pagination.total.toLocaleString()}</b> students
-              </span>
-
-              <span className="text-slate-300">|</span>
-
-              <div className="flex items-center gap-1.5">
-                <span>Per page:</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setPage(1);
-                  }}
-                  className="rounded-lg border border-slate-200 py-1 px-2 text-xs font-bold text-slate-700 bg-white"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(1)}
-                disabled={page <= 1}
-                className="h-8 w-8 p-0 rounded-lg"
-              >
-                <ChevronsLeft size={14} />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="h-8 w-8 p-0 rounded-lg"
-              >
-                <ChevronLeft size={14} />
-              </Button>
-
-              <span className="px-3 py-1 font-bold text-slate-800">
-                Page {page} of {data.pagination.totalPages}
-              </span>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
-                disabled={page >= data.pagination.totalPages}
-                className="h-8 w-8 p-0 rounded-lg"
-              >
-                <ChevronRight size={14} />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(data.pagination.totalPages)}
-                disabled={page >= data.pagination.totalPages}
-                className="h-8 w-8 p-0 rounded-lg"
-              >
-                <ChevronsRight size={14} />
-              </Button>
-            </div>
+          <div className="p-4 bg-slate-50 border-t border-slate-200">
+            <Pagination
+              page={page}
+              totalPages={data.pagination.totalPages}
+              total={data.pagination.total}
+              limit={pageSize}
+              onPageChange={setPage}
+              onLimitChange={(newLimit) => {
+                setPageSize(newLimit);
+                setPage(1);
+              }}
+              limitOptions={[5, 10, 20, 50]}
+              isFetching={isFetching}
+              itemName="public students"
+            />
           </div>
         )}
       </div>

@@ -5,8 +5,6 @@ import {
   Download,
   Filter,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -21,6 +19,7 @@ import {
 } from '../services/institutionDashboard.service';
 import { SectionError } from '@/components/feedback/SectionError';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Pagination } from '@/components/ui/Pagination';
 import { useDebounce } from '@/hooks/useDebounce';
 
 export const InstitutionStudentsPage: React.FC = () => {
@@ -30,7 +29,7 @@ export const InstitutionStudentsPage: React.FC = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [selectedAdmissionYear, setSelectedAdmissionYear] = useState<number | ''>('');
   const [studentPage, setStudentPage] = useState(1);
-  const [studentLimit, setStudentLimit] = useState(10);
+  const [studentLimit, setStudentLimit] = useState(5);
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [isExporting, setIsExporting] = useState(false);
@@ -243,7 +242,7 @@ export const InstitutionStudentsPage: React.FC = () => {
                 onRetry={() => refetchStudents()}
               />
             </div>
-          ) : isStudentsLoading && studentList.length === 0 ? (
+          ) : (isStudentsLoading || isStudentsFetching) ? (
             <table className="w-full text-left text-xs sm:text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-600 font-semibold">
@@ -424,57 +423,22 @@ export const InstitutionStudentsPage: React.FC = () => {
         </div>
 
         {/* Pagination Footer */}
-        {studentMeta.totalPages > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-200 bg-slate-50/50 px-5 py-3.5 gap-4">
-            <div className="text-xs text-slate-500">
-              Showing{' '}
-              <span className="font-bold text-slate-800">
-                {(studentPage - 1) * studentLimit + (studentList.length > 0 ? 1 : 0)}
-              </span>{' '}
-              to{' '}
-              <span className="font-bold text-slate-800">
-                {Math.min(studentPage * studentLimit, studentMeta.total)}
-              </span>{' '}
-              of <span className="font-bold text-slate-800">{studentMeta.total}</span> students
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                <span>Rows:</span>
-                <select
-                  value={studentLimit}
-                  onChange={(e) => {
-                    setStudentLimit(Number(e.target.value));
-                    setStudentPage(1);
-                  }}
-                  className="rounded-lg border border-slate-300 bg-white py-1 px-2 text-xs focus:border-indigo-600 focus:outline-none"
-                >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setStudentPage((p) => Math.max(1, p - 1))}
-                  disabled={studentPage === 1}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <span className="px-2 text-xs font-semibold text-slate-700">
-                  {studentPage} / {studentMeta.totalPages}
-                </span>
-                <button
-                  onClick={() => setStudentPage((p) => Math.min(studentMeta.totalPages, p + 1))}
-                  disabled={studentPage >= studentMeta.totalPages}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+        {!isStudentsLoading && studentList.length > 0 && (
+          <div className="p-4 border-t border-slate-200">
+            <Pagination
+              page={studentPage}
+              totalPages={studentMeta.totalPages}
+              total={studentMeta.total}
+              limit={studentLimit}
+              onPageChange={setStudentPage}
+              onLimitChange={(newLimit) => {
+                setStudentLimit(newLimit);
+                setStudentPage(1);
+              }}
+              limitOptions={[5, 10, 25, 50]}
+              isFetching={isStudentsFetching}
+              itemName="students"
+            />
           </div>
         )}
       </div>

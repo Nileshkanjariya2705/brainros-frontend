@@ -17,20 +17,15 @@ import {
   CheckCircle2,
   Calendar,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
   Check,
   X,
   Download,
-  Mail,
 } from 'lucide-react';
 import { Axios } from '@/base-axios';
 import { toast } from '@/utils/toast';
+import { Pagination } from '@/components/ui/Pagination';
 
-// ** Services **
-import {
-  useRecalculateStrategyAPI,
-} from '../services';
+
 import {
   useResultStatusQuery,
   useFullAnalysisQuery,
@@ -42,6 +37,7 @@ import {
 // ** Components **
 import Loader from '@/components/feedback/Loader';
 import Button from '@/components/ui/Button';
+import Skeleton from '@/components/ui/Skeleton';
 
 // ** Analysis Modular Components **
 import { OverallPerformanceCard } from '@/modules/Analysis/components/OverallPerformanceCard';
@@ -90,30 +86,15 @@ const ExamResultPage = () => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('Exam analysis PDF report downloaded successfully!');
+      toast.success('Exam analysis report downloaded successfully.');
     } catch (err) {
       console.error('Failed to download PDF report', err);
-      toast.error('Failed to download PDF report. Please try again.');
+      toast.error('Unable to download report. Please try again.');
     } finally {
       setIsDownloadingPdf(false);
     }
   };
 
-  const [isSendingEmail, setIsSendingEmail] = useState(false);
-
-  const handleSendEmail = async () => {
-    if (!attemptId) return;
-    try {
-      setIsSendingEmail(true);
-      const res = await Axios.post(`/results/${attemptId}/send-email`);
-      toast.success(res.data?.message || 'Detailed exam report emailed successfully!');
-    } catch (err: any) {
-      console.error('Failed to send report email', err);
-      toast.error(err?.response?.data?.message || 'Failed to send report email. Please try again.');
-    } finally {
-      setIsSendingEmail(false);
-    }
-  };
 
   // TanStack Query for Result Status with auto-polling (polls every 3s, terminates on terminal state)
   const {
@@ -153,7 +134,6 @@ const ExamResultPage = () => {
   // Lazy-loaded section queries
   const {
     data: detailedStrategy,
-    refetch: refetchStrategy,
   } = useAttemptStrategyQuery(
     attemptId,
     isReady && (activeTab === 'strategy' || activeTab === 'overview'),
@@ -170,11 +150,11 @@ const ExamResultPage = () => {
 
   const {
     data: reviewData,
+    isLoading: isReviewLoading,
+    isFetching: isReviewFetching,
   } = useAnswerReviewQuery(attemptId, isReady && activeTab === 'review');
   const reviewItems: QuestionReviewItem[] = reviewData || [];
 
-  const { recalculateStrategyAPI, isLoading: isRecalculatingStrategy } =
-    useRecalculateStrategyAPI();
 
   // Question review pagination and filtering
   const [reviewFilter, setReviewFilter] = useState<
@@ -196,11 +176,6 @@ const ExamResultPage = () => {
     refetchStatus();
   };
 
-  const handleRecalculateStrategy = async () => {
-    if (!attemptId) return;
-    await recalculateStrategyAPI(attemptId, 1);
-    refetchStrategy();
-  };
 
   const handleRefreshRanks = async () => {
     refetchRanks();
@@ -424,21 +399,6 @@ const ExamResultPage = () => {
             <span>{isDownloadingPdf ? 'Generating PDF...' : 'Download PDF Report'}</span>
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSendEmail}
-            disabled={isSendingEmail}
-            className="flex items-center gap-1.5 text-xs font-bold border-teal-300 text-teal-800 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800 shadow-2xs"
-            title="Send detailed report PDF to registered email"
-          >
-            {isSendingEmail ? (
-              <RefreshCw size={14} className="animate-spin text-teal-600" />
-            ) : (
-              <Mail size={14} className="text-teal-600" />
-            )}
-            <span>{isSendingEmail ? 'Sending Email...' : 'Send to Mail'}</span>
-          </Button>
 
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
             Exam Target:{' '}
@@ -533,8 +493,6 @@ const ExamResultPage = () => {
         <AttemptStrategyView
           attemptStrategy={attemptStrategy}
           detailedStrategy={detailedStrategy}
-          onRecalculate={handleRecalculateStrategy}
-          isRecalculating={isRecalculatingStrategy}
         />
       )}
 
@@ -543,6 +501,68 @@ const ExamResultPage = () => {
       )}
 
       {activeTab === 'review' && (() => {
+        if (isReviewLoading || (isReviewFetching && !reviewData)) {
+          return (
+            <div className="space-y-4">
+              {/* Review Header Skeleton */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-pulse">
+                <div className="space-y-1.5">
+                  <Skeleton className="h-4 w-64" />
+                  <Skeleton className="h-3 w-80 max-w-full" />
+                </div>
+                <div className="flex flex-wrap gap-1.5 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
+                  <Skeleton className="h-7 w-16" />
+                  <Skeleton className="h-7 w-20" />
+                  <Skeleton className="h-7 w-20" />
+                  <Skeleton className="h-7 w-24" />
+                </div>
+              </div>
+
+              {/* Question Cards Skeleton */}
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm space-y-4 animate-pulse"
+                >
+                  {/* Question Card Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-6 w-6 rounded-full" />
+                      <Skeleton className="h-4 w-28" />
+                    </div>
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                  </div>
+
+                  {/* Question Statement */}
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-4/5" />
+                  </div>
+
+                  {/* Answer Comparison Strip */}
+                  <div className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-4 w-48" />
+                  </div>
+
+                  {/* Options Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    {Array.from({ length: 4 }).map((_, optIdx) => (
+                      <div
+                        key={optIdx}
+                        className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30"
+                      >
+                        <Skeleton className="h-5 w-5 rounded-md shrink-0" />
+                        <Skeleton className="h-4 flex-1" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        }
+
         const filteredReviewItems = reviewItems.filter((item) => {
           if (reviewFilter === 'CORRECT') return item.isCorrect;
           if (reviewFilter === 'INCORRECT') return item.isAttempted && !item.isCorrect;
@@ -604,7 +624,32 @@ const ExamResultPage = () => {
             </div>
 
             {/* Questions List */}
-            {filteredReviewItems.length === 0 ? (
+            {isReviewLoading || isReviewFetching ? (
+              <div className="space-y-4">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm space-y-4 animate-pulse"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-6 w-6 rounded-full" />
+                        <Skeleton className="h-4 w-28" />
+                      </div>
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-10 w-full rounded-xl" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                      <Skeleton className="h-12 w-full rounded-xl" />
+                      <Skeleton className="h-12 w-full rounded-xl" />
+                      <Skeleton className="h-12 w-full rounded-xl" />
+                      <Skeleton className="h-12 w-full rounded-xl" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredReviewItems.length === 0 ? (
               <div className="p-8 text-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800">
                 <p className="text-xs font-bold text-slate-500">
                   No questions match the selected filter.
@@ -790,52 +835,17 @@ const ExamResultPage = () => {
             )}
 
             {/* Review Pagination Controls */}
-            {totalReviewPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
-                <p className="text-xs text-slate-500 font-medium">
-                  Showing {(reviewPage - 1) * reviewPageSize + 1} to{' '}
-                  {Math.min(reviewPage * reviewPageSize, filteredReviewItems.length)} of{' '}
-                  {filteredReviewItems.length} questions
-                </p>
-
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={reviewPage <= 1}
-                    onClick={() => setReviewPage((p) => Math.max(1, p - 1))}
-                    className="rounded-xl text-xs flex items-center gap-1 py-1 px-2.5"
-                  >
-                    <ChevronLeft size={13} /> Previous
-                  </Button>
-
-                  {Array.from({ length: totalReviewPages }, (_, i) => i + 1).map(
-                    (pageNum) => (
-                      <button
-                        key={pageNum}
-                        onClick={() => setReviewPage(pageNum)}
-                        className={cn(
-                          'h-7 w-7 rounded-lg text-xs font-bold transition-all',
-                          reviewPage === pageNum
-                            ? 'bg-indigo-600 text-white shadow-sm'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200',
-                        )}
-                      >
-                        {pageNum}
-                      </button>
-                    ),
-                  )}
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={reviewPage >= totalReviewPages}
-                    onClick={() => setReviewPage((p) => Math.min(totalReviewPages, p + 1))}
-                    className="rounded-xl text-xs flex items-center gap-1 py-1 px-2.5"
-                  >
-                    Next <ChevronRight size={13} />
-                  </Button>
-                </div>
+            {filteredReviewItems.length > 0 && (
+              <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
+                <Pagination
+                  page={reviewPage}
+                  totalPages={totalReviewPages}
+                  total={filteredReviewItems.length}
+                  limit={reviewPageSize}
+                  onPageChange={setReviewPage}
+                  limitOptions={[5, 10, 20, 50]}
+                  itemName="questions"
+                />
               </div>
             )}
           </div>

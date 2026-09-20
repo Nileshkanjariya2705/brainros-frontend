@@ -22,7 +22,8 @@ import {
   type BillStatus,
 } from '../services/billing.service';
 import Button from '@/components/ui/Button';
-import Loader from '@/components/feedback/Loader';
+import Pagination from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import { toast } from '@/utils/toast';
 import { billingKeys } from '@/services/queryKeys';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -88,6 +89,7 @@ export const StaffBillsPage: React.FC = () => {
   const queryClient = useQueryClient();
 
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 350);
   const [statusFilter, setStatusFilter] = useState('');
@@ -149,12 +151,12 @@ export const StaffBillsPage: React.FC = () => {
   const staffBillsParams = useMemo(
     () => ({
       page,
-      limit: 10,
+      limit,
       search: debouncedSearch.trim() || undefined,
       status: statusFilter || undefined,
       institutionId: schoolFilter || undefined,
     }),
-    [page, debouncedSearch, statusFilter, schoolFilter],
+    [page, limit, debouncedSearch, statusFilter, schoolFilter],
   );
 
   const {
@@ -176,7 +178,7 @@ export const StaffBillsPage: React.FC = () => {
   const createMutation = useMutation({
     mutationFn: (payload: CreateBillPayload) => BillingApi.createBill(payload),
     onSuccess: (res) => {
-      toast.success(res.message || 'Bill created successfully!');
+      toast.success(res.message || 'Invoice generated successfully.');
       queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
       queryClient.invalidateQueries({ queryKey: ['super-admin', 'revenue'] });
       setIsCreateModalOpen(false);
@@ -190,7 +192,7 @@ export const StaffBillsPage: React.FC = () => {
       });
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message || 'Failed to create bill.';
+      const msg = err.response?.data?.message || 'Unable to create invoice. Please try again.';
       toast.error(msg);
     },
   });
@@ -199,12 +201,12 @@ export const StaffBillsPage: React.FC = () => {
   const submitMutation = useMutation({
     mutationFn: (id: string) => BillingApi.submitBill(id),
     onSuccess: (res) => {
-      toast.success(res.message || 'Bill submitted to Super Admin for approval!');
+      toast.success(res.message || 'Invoice submitted for approval successfully.');
       queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
       queryClient.invalidateQueries({ queryKey: ['super-admin', 'revenue'] });
     },
     onError: (err: any) => {
-      const msg = err.response?.data?.message || 'Failed to submit bill.';
+      const msg = err.response?.data?.message || 'Unable to submit invoice. Please try again.';
       toast.error(msg);
     },
   });
@@ -214,9 +216,9 @@ export const StaffBillsPage: React.FC = () => {
     try {
       toast.info('Preparing invoice PDF...');
       await BillingApi.downloadBillPdf(bill.id, bill.billNumber || 'Invoice');
-      toast.success('Invoice PDF downloaded!');
+      toast.success('Invoice downloaded successfully.');
     } catch {
-      toast.error('Failed to download invoice PDF.');
+      toast.error('Unable to download invoice PDF. Please try again.');
     }
   };
 
@@ -447,9 +449,32 @@ export const StaffBillsPage: React.FC = () => {
 
       {/* ── Bills Table ── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        {isLoading ? (
-          <div className="py-16 flex flex-col items-center justify-center">
-            <Loader label="Loading invoices..." />
+        {(isLoading || isFetching) ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/75 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="py-3.5 px-4 sm:px-6">Bill Number</th>
+                  <th className="py-3.5 px-4">School / Institution</th>
+                  <th className="py-3.5 px-4">Date</th>
+                  <th className="py-3.5 px-4">Amount</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-4 px-4 sm:px-6"><Skeleton className="h-4 w-28 rounded" /><Skeleton className="h-3 w-40 rounded mt-1.5" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-32 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-24 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                    <td className="py-4 px-4 sm:px-6 text-right"><Skeleton className="h-8 w-20 rounded ml-auto" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : bills.length === 0 ? (
           <div className="py-16 text-center">
@@ -591,29 +616,22 @@ export const StaffBillsPage: React.FC = () => {
         )}
 
         {/* Pagination Footer */}
-        {pagination.totalPages > 1 && (
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between text-sm text-slate-500">
-            <span>
-              Showing page {page} of {pagination.totalPages} ({pagination.total} total invoices)
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-              </Button>
-            </div>
+        {pagination.total > 0 && (
+          <div className="p-4 border-t border-slate-100">
+            <Pagination
+              page={page}
+              totalPages={pagination.totalPages}
+              total={pagination.total}
+              limit={limit}
+              onPageChange={setPage}
+              onLimitChange={(newLimit) => {
+                setLimit(newLimit);
+                setPage(1);
+              }}
+              limitOptions={[5, 10, 20, 50]}
+              isFetching={isFetching}
+              itemName="invoices"
+            />
           </div>
         )}
       </div>

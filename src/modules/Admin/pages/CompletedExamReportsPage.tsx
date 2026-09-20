@@ -42,7 +42,9 @@ import {
 } from '../services/completedExamReports.queries';
 import { useGetPublicationDashboardAPI } from '@/modules/Exams/services';
 import type { PublicationDashboardItem } from '@/types/exam.types';
+import Skeleton from '@/components/ui/Skeleton';
 import { useJobProgress } from '@/hooks/useJobProgress';
+import Pagination from '@/components/ui/Pagination';
 
 export const CompletedExamReportsPage: React.FC = () => {
   // ── URL Search Params ──
@@ -200,7 +202,7 @@ export const CompletedExamReportsPage: React.FC = () => {
 
   // ── Detailed View State (when urlExamId is set) ──
   const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(10);
+  const [limit, setLimit] = useState<number>(5);
 
   // Filters & Sorting for attendees
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -593,10 +595,30 @@ export const CompletedExamReportsPage: React.FC = () => {
           {/* Directory Table */}
           <div className="overflow-x-auto">
             {isDashboardLoading ? (
-              <div className="py-20 flex flex-col items-center justify-center gap-2 text-slate-500">
-                <RefreshCw className="w-6 h-6 animate-spin text-indigo-600" />
-                <span className="text-sm font-medium">Loading completed live exams...</span>
-              </div>
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-3.5 px-6">Exam Title & Target</th>
+                    <th className="py-3.5 px-6">Completed / Schedule</th>
+                    <th className="py-3.5 px-6">Attempts</th>
+                    <th className="py-3.5 px-6 w-48">Evaluated Progress</th>
+                    <th className="py-3.5 px-6">Result Status</th>
+                    <th className="py-3.5 px-6 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <tr key={idx} className="animate-pulse">
+                      <td className="py-4 px-6"><Skeleton className="h-4 w-40 rounded" /><Skeleton className="h-3 w-20 rounded mt-1.5" /></td>
+                      <td className="py-4 px-6"><Skeleton className="h-4 w-28 rounded" /></td>
+                      <td className="py-4 px-6"><Skeleton className="h-4 w-24 rounded" /></td>
+                      <td className="py-4 px-6"><Skeleton className="h-3 w-36 rounded" /></td>
+                      <td className="py-4 px-6"><Skeleton className="h-5 w-24 rounded-full" /></td>
+                      <td className="py-4 px-6 text-right"><Skeleton className="h-8 w-24 rounded ml-auto" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             ) : sortedDirectoryExams.length === 0 ? (
               <div className="py-16 text-center text-slate-500">
                 <HelpCircle className="w-10 h-10 mx-auto text-slate-300 mb-2" />
@@ -1416,49 +1438,24 @@ export const CompletedExamReportsPage: React.FC = () => {
         </div>
 
         {/* Pagination Bar */}
-        <div className="bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
-          <div className="flex items-center gap-3">
-            <div>
-              Showing <span className="font-semibold text-slate-900">{attendees.length}</span> of{' '}
-              <span className="font-semibold text-slate-900">{totalAttendees.toLocaleString()}</span> attendees
-            </div>
-            <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-              <span className="text-slate-400">Rows:</span>
-              <select
-                value={limit}
-                onChange={(e) => {
-                  setLimit(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:outline-none"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
+        {totalAttendees > 0 && (
+          <div className="p-4 border-t border-slate-200">
+            <Pagination
+              page={page}
+              totalPages={totalPages || 1}
+              total={totalAttendees}
+              limit={limit}
+              onPageChange={setPage}
+              onLimitChange={(newLimit) => {
+                setLimit(newLimit);
+                setPage(1);
+              }}
+              limitOptions={[5, 10, 20, 50]}
+              isFetching={loadingAttendees}
+              itemName="attendees"
+            />
           </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1 || loadingAttendees}
-              className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 disabled:opacity-40 disabled:hover:border-slate-200 text-slate-700 font-medium transition-all"
-            >
-              Previous
-            </button>
-            <span className="px-2">
-              Page {page} of {totalPages || 1}
-            </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages || loadingAttendees}
-              className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 disabled:opacity-40 disabled:hover:border-slate-200 text-slate-700 font-medium transition-all"
-            >
-              Next
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════

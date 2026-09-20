@@ -12,11 +12,11 @@ import {
   Loader2,
   AlertTriangle,
   ArrowRight,
-  ChevronLeft,
-  ChevronRight,
   UploadCloud,
 } from 'lucide-react';
 import type { ScheduledExam } from '../types/ai-translation.types';
+import { Pagination } from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 
 interface ScheduledExamsListProps {
   exams: ScheduledExam[];
@@ -49,7 +49,7 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(10);
+  const [limit, setLimit] = useState<number>(5);
 
   // Sort all exams by latest startTime first
   const sortedExams = useMemo(() => {
@@ -314,11 +314,25 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
 
         {/* Content Body */}
         {isLoading ? (
-          <div className="p-12 text-center space-y-3">
-            <Loader2 className="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto" />
-            <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-              Loading scheduled exams...
-            </p>
+          <div className="p-6 space-y-3">
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <div
+                key={idx}
+                className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between gap-4 animate-pulse"
+              >
+                <div className="flex items-center gap-3.5 flex-1">
+                  <Skeleton className="w-10 h-10 rounded-xl" />
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton className="h-4 w-48 rounded" />
+                    <Skeleton className="h-3 w-64 rounded" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-6 w-24 rounded-full" />
+                  <Skeleton className="h-8 w-28 rounded-lg" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : filteredExams.length === 0 ? (
           <div className="p-12 text-center">
@@ -473,69 +487,24 @@ export const ScheduledExamsList: React.FC<ScheduledExamsListProps> = ({
             </div>
 
             {/* Pagination Controls */}
-            <div className="px-5 py-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-900/50">
-              <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                <span>
-                  Showing{' '}
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">
-                    {(page - 1) * limit + 1}
-                  </span>{' '}
-                  to{' '}
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">
-                    {Math.min(page * limit, totalCount)}
-                  </span>{' '}
-                  of{' '}
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">
-                    {totalCount}
-                  </span>{' '}
-                  exams
-                </span>
-
-                <div className="flex items-center gap-1.5 ml-2">
-                  <span>Per page:</span>
-                  <select
-                    value={limit}
-                    onChange={(e) => {
-                      setLimit(Number(e.target.value));
-                      setPage(1);
-                    }}
-                    className="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
-                </div>
+            {totalCount > 0 && (
+              <div className="p-4 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800">
+                <Pagination
+                  page={page}
+                  totalPages={totalPages}
+                  total={totalCount}
+                  limit={limit}
+                  onPageChange={setPage}
+                  onLimitChange={(newLimit) => {
+                    setLimit(newLimit);
+                    setPage(1);
+                  }}
+                  limitOptions={[5, 10, 20, 50]}
+                  isFetching={isLoading}
+                  itemName="exams"
+                />
               </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Previous
-                </button>
-
-                <span className="text-xs font-medium text-slate-600 dark:text-slate-400 px-2">
-                  Page <span className="font-semibold text-slate-900 dark:text-white">{page}</span> of{' '}
-                  <span className="font-semibold text-slate-900 dark:text-white">{totalPages}</span>
-                </span>
-
-                <button
-                  type="button"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+            )}
           </>
         )}
       </div>

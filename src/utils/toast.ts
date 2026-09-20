@@ -1,3 +1,5 @@
+import { sanitizeUserFacingMessage, getUserFriendlyErrorMessage } from './errorHandler';
+
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 export interface ToastItem {
@@ -26,21 +28,30 @@ class ToastManager {
     this.listeners.forEach((listener) => listener([...this.toasts]));
   }
 
-  private normalizeMessage(input: unknown): string {
+  private normalizeMessage(input: unknown, type: ToastType = 'info'): string {
     if (!input) return '';
-    if (typeof input === 'string') return input.trim();
-    if (Array.isArray(input)) return input.filter(Boolean).map((item) => this.normalizeMessage(item)).join('. ');
-    if (typeof input === 'object') {
-      const obj = input as any;
-      if (typeof obj.message === 'string') return obj.message.trim();
-      if (Array.isArray(obj.message)) return obj.message.filter(Boolean).join('. ');
-      if (typeof obj.error === 'string') return obj.error.trim();
+    if (type === 'error') {
+      return getUserFriendlyErrorMessage(input, 'Something went wrong. Please try again.');
     }
-    return String(input);
+    let rawStr = '';
+    if (typeof input === 'string') {
+      rawStr = input.trim();
+    } else if (Array.isArray(input)) {
+      rawStr = input.filter(Boolean).map((item) => this.normalizeMessage(item, type)).join('. ');
+    } else if (typeof input === 'object' && input !== null) {
+      const obj = input as any;
+      if (typeof obj.message === 'string') rawStr = obj.message.trim();
+      else if (Array.isArray(obj.message)) rawStr = obj.message.filter(Boolean).join('. ');
+      else if (typeof obj.error === 'string') rawStr = obj.error.trim();
+      else rawStr = String(input);
+    } else {
+      rawStr = String(input);
+    }
+    return sanitizeUserFacingMessage(rawStr, 'Action completed successfully.');
   }
 
   show(rawMessage: unknown, type: ToastType = 'info', duration: number = 4000) {
-    const message = this.normalizeMessage(rawMessage);
+    const message = this.normalizeMessage(rawMessage, type);
     if (!message) return;
 
     // Deduplicate identical error/warning/info messages within a 2-second window

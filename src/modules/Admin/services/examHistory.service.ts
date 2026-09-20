@@ -136,6 +136,41 @@ export const examHistoryService = {
   },
 };
 
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { adminKeys } from '@/services/queryKeys';
+
+export const useCompletedExamsHistoryQuery = (params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  examTargetId?: string;
+  startDate?: string;
+  endDate?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+} = {}) =>
+  useQuery<ExamHistoryResponse['data']>({
+    queryKey: adminKeys.completedExams(params),
+    queryFn: async () => {
+      const res = await examHistoryService.getExamHistory(params);
+      return res.data;
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  });
+
+export const useCompletedExamHistoryDetailsQuery = (examId?: string | null) =>
+  useQuery<ExamFullDetailsResponse['data']>({
+    queryKey: adminKeys.completedExamSummary(examId || ''),
+    queryFn: async () => {
+      if (!examId) throw new Error('Exam ID required');
+      const res = await examHistoryService.getExamDetails(examId);
+      return res.data;
+    },
+    enabled: Boolean(examId),
+    staleTime: 60_000,
+  });
+
 export const useGetExamHistoryAPI = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);

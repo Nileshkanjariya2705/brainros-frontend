@@ -29,15 +29,15 @@ import SeoHead from '@/components/seo/SeoHead';
 import { useRegisterStudent } from '../hooks/useRegisterStudent';
 import { loadRazorpayScript } from '@/utils/payment';
 import {
-  useGetRegisterOptionsAPI,
   useCheckAvailabilityAPI,
-  fetchAllStatesAPI,
   fetchDistrictsByStateSlugAPI,
   getStateSlug,
   formatLocationName,
   type ApiStateItem,
   type ApiDistrictItem,
 } from '../services';
+import { useAuthOptionsQuery } from '@/services/options.queries';
+import { useStatesQuery } from '@/services/location.queries';
 import { useAuth } from '@/hooks/useAuth';
 
 // ** Validation **
@@ -121,19 +121,23 @@ const RegisterPage = () => {
     }
   };
 
-  const { getRegisterOptionsAPI, isLoading: isLoadingOptions } = useGetRegisterOptionsAPI();
+  const { data: authOptionsData, isLoading: isLoadingOptions, error: authOptionsError } = useAuthOptionsQuery();
+  const { data: statesQueryData, isLoading: isLoadingStates, error: statesQueryError, refetch: refetchStates } = useStatesQuery();
 
-  const [classes, setClasses] = useState<OptionItem[]>([]);
-  const [languages, setLanguages] = useState<OptionItem[]>([]);
-  const [examTargets, setExamTargets] = useState<OptionItem[]>([]);
-  const [optionsError, setOptionsError] = useState<string | null>(null);
+  const classes: OptionItem[] = useMemo(
+    () => (authOptionsData?.classes || []).filter((c: any) => !c.name?.toLowerCase().includes('foundation')),
+    [authOptionsData?.classes],
+  );
+  const languages: OptionItem[] = authOptionsData?.languages || [];
+  const examTargets: OptionItem[] = authOptionsData?.examTargets || [];
+  const optionsError = authOptionsError ? 'Failed to load academic options.' : null;
+
+  const statesList: ApiStateItem[] = statesQueryData || [];
+  const statesError = statesQueryError ? 'Failed to load states list.' : null;
 
   // Dynamic Location API states
-  const [statesList, setStatesList] = useState<ApiStateItem[]>([]);
   const [districtsList, setDistrictsList] = useState<ApiDistrictItem[]>([]);
-  const [isLoadingStates, setIsLoadingStates] = useState<boolean>(true);
   const [isLoadingDistricts, setIsLoadingDistricts] = useState<boolean>(false);
-  const [statesError, setStatesError] = useState<string | null>(null);
   const [districtsError, setDistrictsError] = useState<string | null>(null);
 
   // Form setup
@@ -164,61 +168,6 @@ const RegisterPage = () => {
   });
 
   const watchedValues = watch();
-
-  // 1. Fetch registration options (classes, targets, languages)
-  useEffect(() => {
-    let isMounted = true;
-    const fetchOptions = async () => {
-      const { data, error } = await getRegisterOptionsAPI();
-      if (!isMounted) return;
-      if (!error && data) {
-        setClasses((data.classes || []).filter((c: any) => !c.name?.toLowerCase().includes('foundation')));
-        setLanguages(data.languages || []);
-        setExamTargets(data.examTargets || []);
-      } else {
-        setOptionsError(error ?? 'Failed to load academic options.');
-      }
-    };
-    fetchOptions();
-    return () => {
-      isMounted = false;
-    };
-  }, [getRegisterOptionsAPI]);
-
-  // 2. Fetch States list from India Pincode API on mount
-  const loadStates = async () => {
-    setIsLoadingStates(true);
-    setStatesError(null);
-    const { data, error } = await fetchAllStatesAPI();
-    setIsLoadingStates(false);
-    if (data && data.length > 0) {
-      setStatesList(data);
-    }
-    if (error) {
-      setStatesError(error);
-    }
-  };
-
-  useEffect(() => {
-    let isMounted = true;
-    const initStates = async () => {
-      setIsLoadingStates(true);
-      setStatesError(null);
-      const { data, error } = await fetchAllStatesAPI();
-      if (!isMounted) return;
-      setIsLoadingStates(false);
-      if (data && data.length > 0) {
-        setStatesList(data);
-      }
-      if (error) {
-        setStatesError(error);
-      }
-    };
-    initStates();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   // Sync cooldown timer on pending registration
   useEffect(() => {
@@ -745,7 +694,7 @@ const RegisterPage = () => {
                         <span>{statesError}</span>
                         <button
                           type="button"
-                          onClick={loadStates}
+                          onClick={() => refetchStates()}
                           className="font-bold underline text-amber-900 hover:text-amber-700 ml-2"
                         >
                           Retry

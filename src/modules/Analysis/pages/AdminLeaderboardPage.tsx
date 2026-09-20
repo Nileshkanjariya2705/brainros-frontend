@@ -8,9 +8,6 @@ import {
   Building2,
   GraduationCap,
   RotateCw,
-  ChevronLeft,
-  ChevronRight,
-  CheckCircle2,
   ArrowLeft,
   Calendar,
   ArrowRight,
@@ -18,7 +15,6 @@ import {
 import cn from 'classnames';
 import {
   useGetAdminLeaderboardAPI,
-  useGenerateRanksAPI,
   useGetRankStatusAPI,
   useGetAvailableExamsAPI,
   useGetPublicationDashboardAPI,
@@ -32,9 +28,9 @@ import type {
   PublicationDashboardItem,
 } from '@/types/exam.types';
 import Button from '@/components/ui/Button';
-import Loader from '@/components/feedback/Loader';
+import { Pagination } from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import { useAuth } from '@/hooks/useAuth';
-import { ROLES } from '@/modules/Auth/auth-access/roles.constants';
 
 const SCOPES: { label: string; value: RankTypeEnum; icon: any }[] = [
   { label: 'Overall National', value: 'OVERALL', icon: Trophy },
@@ -47,12 +43,11 @@ const SCOPES: { label: string; value: RankTypeEnum; icon: any }[] = [
 export const AdminLeaderboardPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
-  const isAdmin = user?.roles?.includes(ROLES.ADMIN) || user?.roles?.includes(ROLES.SUPER_ADMIN);
 
   const examIdParam = searchParams.get('examId') || '';
 
   const { getAdminLeaderboardAPI, isLoading: isLeaderboardLoading } = useGetAdminLeaderboardAPI();
-  const { generateRanksAPI, isLoading: isGenerating } = useGenerateRanksAPI();
+
   const { getRankStatusAPI } = useGetRankStatusAPI();
   const { getAvailableExamsAPI } = useGetAvailableExamsAPI();
   const { getPublicationDashboardAPI, isLoading: isDashboardLoading } = useGetPublicationDashboardAPI();
@@ -63,7 +58,7 @@ export const AdminLeaderboardPage: React.FC = () => {
   const [dirStatus, setDirStatus] = useState<'ALL' | 'COMPLETED' | 'READY_TO_PUBLISH' | 'PUBLISHED' | 'LIVE'>('COMPLETED');
   const [dirPage, setDirPage] = useState(1);
   const [totalDirectoryExams, setTotalDirectoryExams] = useState(0);
-  const dirPageSize = 9;
+  const [dirPageSize, setDirPageSize] = useState(5);
 
   // Selected Exam for Detailed View
   const [selectedExamId, setSelectedExamId] = useState<string>(examIdParam);
@@ -71,11 +66,11 @@ export const AdminLeaderboardPage: React.FC = () => {
   const [scopeFilter, setScopeFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [page, setPage] = useState<number>(1);
-  const [limit] = useState<number>(20);
+  const [limit, setLimit] = useState<number>(5);
 
   const [leaderboardData, setLeaderboardData] = useState<AdminLeaderboardResponse | null>(null);
   const [snapshotStatus, setSnapshotStatus] = useState<SnapshotStatusResponse | null>(null);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
+
 
   // Sync selectedExamId when URL search param changes
   useEffect(() => {
@@ -240,16 +235,6 @@ export const AdminLeaderboardPage: React.FC = () => {
     loadLeaderboard();
   };
 
-  const handleTriggerBatchGeneration = async () => {
-    if (!selectedExamId) return;
-    setActionMessage('Generating batch rankings across candidate population...');
-    const res = await generateRanksAPI(selectedExamId, { forceRegenerate: true });
-    if (res.data || res.isSuccess) {
-      setActionMessage('Batch rankings successfully generated and verified!');
-      setTimeout(() => setActionMessage(null), 5000);
-      loadLeaderboard();
-    }
-  };
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -350,9 +335,20 @@ export const AdminLeaderboardPage: React.FC = () => {
 
         {/* Exam Cards Grid (Sorted by latest completed) */}
         {isDashboardLoading ? (
-          <div className="py-20 text-center">
-            <RotateCw className="w-8 h-8 mx-auto animate-spin text-indigo-500 mb-3" />
-            <p className="text-sm font-semibold text-slate-500">Loading exams directory...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-xs space-y-4 animate-pulse">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-5 w-24 rounded-full" />
+                </div>
+                <Skeleton className="h-5 w-48 rounded" />
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                  <Skeleton className="h-4 w-28 rounded" />
+                  <Skeleton className="h-4 w-24 rounded" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : sortedDirectoryExams.length === 0 ? (
           <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-12 text-center shadow-xs">
@@ -427,32 +423,22 @@ export const AdminLeaderboardPage: React.FC = () => {
             </div>
             
             {/* Directory Pagination Controls */}
-            {Math.ceil(totalDirectoryExams / dirPageSize) > 0 && (
-              <div className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-2xl shadow-sm">
-                <div className="text-xs text-slate-500 dark:text-slate-400">
-                  Showing <strong className="text-slate-900 dark:text-white">{(dirPage - 1) * dirPageSize + 1}</strong> to{' '}
-                  <strong className="text-slate-900 dark:text-white">{Math.min(dirPage * dirPageSize, totalDirectoryExams)}</strong> of{' '}
-                  <strong className="text-slate-900 dark:text-white">{totalDirectoryExams}</strong> exams
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    disabled={dirPage === 1}
-                    onClick={() => setDirPage((p) => Math.max(1, p - 1))}
-                    className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 px-2">
-                    Page {dirPage} of {Math.ceil(totalDirectoryExams / dirPageSize) || 1}
-                  </span>
-                  <button
-                    disabled={dirPage >= Math.ceil(totalDirectoryExams / dirPageSize)}
-                    onClick={() => setDirPage((p) => p + 1)}
-                    className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
+            {totalDirectoryExams > 0 && (
+              <div className="p-4 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-2xl shadow-xs">
+                <Pagination
+                  page={dirPage}
+                  totalPages={Math.ceil(totalDirectoryExams / dirPageSize) || 1}
+                  total={totalDirectoryExams}
+                  limit={dirPageSize}
+                  onPageChange={setDirPage}
+                  onLimitChange={(newLimit) => {
+                    setDirPageSize(newLimit);
+                    setDirPage(1);
+                  }}
+                  limitOptions={[5, 10, 20, 50]}
+                  isFetching={isDashboardLoading}
+                  itemName="exams"
+                />
               </div>
             )}
           </div>
@@ -495,26 +481,10 @@ export const AdminLeaderboardPage: React.FC = () => {
           </p>
         </div>
 
-        {isAdmin && (
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={handleTriggerBatchGeneration}
-              disabled={isGenerating || !selectedExamId}
-              className="gap-2 shadow-sm"
-            >
-              <RotateCw size={16} className={cn(isGenerating && 'animate-spin')} />
-              <span>{isGenerating ? 'Generating...' : 'Recalculate Batch Rankings'}</span>
-            </Button>
-          </div>
-        )}
+
       </div>
 
-      {actionMessage && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
-          <CheckCircle2 size={16} />
-          <span>{actionMessage}</span>
-        </div>
-      )}
+
 
       {/* ── Exam Selector Dropdown & Aggregate Summary Strip ─────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -718,8 +688,33 @@ export const AdminLeaderboardPage: React.FC = () => {
       {/* ── Leaderboard Table ───────────────────────────────────────── */}
       <div className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
         {isLeaderboardLoading ? (
-          <div className="py-20">
-            <Loader label="Loading official leaderboard rankings..." />
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-50/80 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px]">
+                  <th className="py-3.5 px-4 text-center w-20">Rank</th>
+                  <th className="py-3.5 px-4">Candidate</th>
+                  <th className="py-3.5 px-4">Score</th>
+                  <th className="py-3.5 px-4">Accuracy</th>
+                  <th className="py-3.5 px-4">Time Used</th>
+                  <th className="py-3.5 px-4">Percentile</th>
+                  <th className="py-3.5 px-4">Affiliation / Region</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-3 px-4 text-center"><Skeleton className="h-7 w-7 rounded-full mx-auto" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-4 w-32 rounded" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-4 w-14 rounded" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-4 w-12 rounded" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-4 w-16 rounded" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-4 w-12 rounded" /></td>
+                    <td className="py-3 px-4"><Skeleton className="h-4 w-28 rounded" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : !leaderboardData || leaderboardData.items.length === 0 ? (
           <div className="p-12 text-center">
@@ -728,11 +723,7 @@ export const AdminLeaderboardPage: React.FC = () => {
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">
               Rankings have not been generated yet for this exam or no attempts match the search filter.
             </p>
-            {isAdmin && (
-              <Button onClick={handleTriggerBatchGeneration} size="sm">
-                Generate Rankings Now
-              </Button>
-            )}
+
           </div>
         ) : (
           <div>
@@ -854,29 +845,21 @@ export const AdminLeaderboardPage: React.FC = () => {
             </div>
 
             {/* Pagination Bar */}
-            <div className="p-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-              <div>
-                Showing page <strong className="text-slate-800 dark:text-white">{page}</strong> of{' '}
-                <strong className="text-slate-800 dark:text-white">{leaderboardData.totalPages || 1}</strong> (
-                {leaderboardData.totalCandidates} total candidates)
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <button
-                  disabled={page >= leaderboardData.totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
+            <div className="p-4 border-t border-slate-100 dark:border-slate-700">
+              <Pagination
+                page={page}
+                totalPages={leaderboardData.totalPages || 1}
+                total={leaderboardData.totalCandidates || 0}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit);
+                  setPage(1);
+                }}
+                limitOptions={[5, 10, 20, 50]}
+                isFetching={isLeaderboardLoading}
+                itemName="candidates"
+              />
             </div>
           </div>
         )}

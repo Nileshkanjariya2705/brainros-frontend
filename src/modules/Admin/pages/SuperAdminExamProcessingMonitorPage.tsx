@@ -39,14 +39,17 @@ import {
 import { useGetPublicationDashboardAPI } from '@/modules/Exams/services';
 import { completedExamReportsService } from '@/modules/Admin/services/completedExamReports.service';
 import type { PublicationDashboardItem } from '@/types/exam.types';
+import { getUserFriendlyErrorMessage } from '@/utils/errorHandler';
 
 // ** Hooks **
 import { useExamProcessingMonitor } from '@/hooks/useExamProcessingMonitor';
 
 // ** Components **
 import Button from '@/components/ui/Button';
+import Pagination from '@/components/ui/Pagination';
 import Loader from '@/components/feedback/Loader';
 import Modal from '@/components/ui/Modal';
+import Skeleton from '@/components/ui/Skeleton';
 
 export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -198,7 +201,7 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
   }, [searchInput]);
 
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(5);
   const sortBy = 'updatedAt';
   const sortOrder: 'asc' | 'desc' = 'desc';
 
@@ -234,6 +237,7 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
   const {
     data: jobsData,
     isLoading: isJobsLoading,
+    isFetching: isJobsFetching,
     refetch: refetchJobs,
   } = useExamProcessingJobsQuery(selectedExamId, jobsQueryParams);
 
@@ -307,7 +311,7 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
       }, 2500);
     } catch (err: any) {
       setPublishErrorMsg(
-        err?.response?.data?.message || 'Failed to publish results. Please verify readiness criteria.',
+        getUserFriendlyErrorMessage(err, 'Failed to publish results. Please verify readiness criteria.'),
       );
     }
   };
@@ -485,9 +489,46 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
           {/* Directory Table */}
           <div className="overflow-x-auto">
             {isDashboardLoading ? (
-              <div className="py-20 flex flex-col items-center justify-center gap-2">
-                <Loader label="Loading completed exams directory..." />
-              </div>
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    <th className="py-3.5 px-4">Exam Name & Target</th>
+                    <th className="py-3.5 px-4">Completed / Schedule</th>
+                    <th className="py-3.5 px-4">Attempts</th>
+                    <th className="py-3.5 px-4 w-44">Evaluation Progress</th>
+                    <th className="py-3.5 px-4">Status</th>
+                    <th className="py-3.5 px-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <tr key={idx} className="animate-pulse">
+                      <td className="py-3.5 px-4">
+                        <Skeleton className="h-4 w-48 mb-1.5" />
+                        <Skeleton className="h-3 w-28" />
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <Skeleton className="h-4 w-32 mb-1" />
+                        <Skeleton className="h-3 w-20" />
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <Skeleton className="h-4 w-20 mb-1" />
+                        <Skeleton className="h-3 w-24" />
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <Skeleton className="h-2 w-full rounded-full mb-1" />
+                        <Skeleton className="h-3 w-16" />
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <Skeleton className="h-6 w-24 rounded-full" />
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <Skeleton className="h-8 w-24 rounded-lg ml-auto" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             ) : sortedDirectoryExams.length === 0 ? (
               <div className="py-16 text-center text-slate-500 dark:text-slate-400">
                 <HelpCircle className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
@@ -1087,10 +1128,45 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
 
         {/* Table Content */}
         <div className="overflow-x-auto">
-          {isJobsLoading && liveJobs.length === 0 ? (
-            <div className="py-20 flex flex-col items-center justify-center gap-2">
-              <Loader label="Loading candidate processing jobs..." />
-            </div>
+          {isJobsLoading || isJobsFetching ? (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <th className="py-3 px-4">Student</th>
+                  <th className="py-3 px-4">Job ID</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 w-48">Progress</th>
+                  <th className="py-3 px-4">Stage</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-3 px-4">
+                      <Skeleton className="h-4 w-36 mb-1" />
+                      <Skeleton className="h-3 w-28" />
+                    </td>
+                    <td className="py-3 px-4">
+                      <Skeleton className="h-4 w-28" />
+                    </td>
+                    <td className="py-3 px-4">
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </td>
+                    <td className="py-3 px-4">
+                      <Skeleton className="h-2 w-full rounded-full mb-1" />
+                      <Skeleton className="h-3 w-16" />
+                    </td>
+                    <td className="py-3 px-4">
+                      <Skeleton className="h-4 w-24" />
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <Skeleton className="h-7 w-20 rounded ml-auto" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           ) : liveJobs.length === 0 ? (
             <div className="py-16 text-center text-slate-500 dark:text-slate-400">
               <HelpCircle className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
@@ -1224,56 +1300,22 @@ export const SuperAdminExamProcessingMonitorPage: React.FC = () => {
         </div>
 
         {/* Server-Side Pagination Bar */}
-        {jobsData?.pagination && (
-          <div className="p-4 border-t border-slate-100 dark:border-slate-700/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-            <div className="flex items-center gap-3">
-              <span>
-                Showing <b>{jobsData.pagination.total === 0 ? 0 : (page - 1) * limit + 1}</b>–
-                <b>{Math.min(page * limit, jobsData.pagination.total)}</b> of{' '}
-                <b>{jobsData.pagination.total}</b> candidate jobs
-              </span>
-              <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 border-l border-slate-200 dark:border-slate-700 pl-3">
-                <span>Per page:</span>
-                <select
-                  value={limit}
-                  onChange={(e) => {
-                    setLimit(Number(e.target.value));
-                    setPage(1);
-                  }}
-                  className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-              </div>
-            </div>
-
-            {jobsData.pagination.totalPages > 1 && (
-              <div className="flex items-center gap-2">
-                <Button
-                  size="xs"
-                  variant="outline"
-                  disabled={jobsData.pagination.page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="flex items-center gap-1"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Previous
-                </Button>
-                <span className="px-2 font-bold text-slate-700 dark:text-slate-200">
-                  Page {jobsData.pagination.page} of {jobsData.pagination.totalPages}
-                </span>
-                <Button
-                  size="xs"
-                  variant="outline"
-                  disabled={jobsData.pagination.page >= jobsData.pagination.totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="flex items-center gap-1"
-                >
-                  Next <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                </Button>
-              </div>
-            )}
+        {jobsData?.pagination && jobsData.pagination.total > 0 && (
+          <div className="p-4 border-t border-slate-100 dark:border-slate-700/60">
+            <Pagination
+              page={page}
+              totalPages={jobsData.pagination.totalPages || 1}
+              total={jobsData.pagination.total}
+              limit={limit}
+              onPageChange={setPage}
+              onLimitChange={(newLimit) => {
+                setLimit(newLimit);
+                setPage(1);
+              }}
+              limitOptions={[5, 10, 20, 50]}
+              isFetching={isJobsLoading}
+              itemName="candidate jobs"
+            />
           </div>
         )}
       </div>

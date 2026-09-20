@@ -5,7 +5,6 @@ import {
   Send,
   ShieldCheck,
   Zap,
-  RotateCcw,
   XCircle,
   Clock,
   Layers,
@@ -21,11 +20,12 @@ import {
 } from '../services/examScheduling.queries';
 import { toast } from '@/utils/toast';
 import { ScheduleExamModal } from '../components/ScheduleExamModal';
-import { RescheduleExamModal } from '../components/RescheduleExamModal';
 import { ExamLifecycleTimelineModal } from '../components/ExamLifecycleTimelineModal';
 import { ExamAccessCheckModal } from '../components/ExamAccessCheckModal';
 import type { ExamScheduleItem } from '../types/examScheduling.types';
 import Button from '@/components/ui/Button';
+import Pagination from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import { WorkflowStepIndicator, type WorkflowStep } from '@/components/ui/WorkflowStepIndicator';
 
 const LIFECYCLE_STEPS = [
@@ -35,18 +35,16 @@ const LIFECYCLE_STEPS = [
   'SCHEDULED',
   'ACTIVE',
   'ENDED',
-  'COMPLETED',
-  'CANCELLED',
-  'REJECTED',
 ];
 
 export const ExamSchedulingManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const firstSegment = location.pathname.split('/')[1];
+  // Determine dynamic dashboard route prefix based on active URL
+  const pathname = location.pathname;
+  const firstSegment = pathname.split('/')[1] || 'admin';
   const routePrefix = [
-    'super-admin',
     'admin',
     'general-manager',
     'manager',
@@ -60,7 +58,7 @@ export const ExamSchedulingManagementPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(10);
+  const [limit, setLimit] = useState<number>(5);
 
   const workflowSteps: WorkflowStep[] = [
     {
@@ -79,27 +77,30 @@ export const ExamSchedulingManagementPage: React.FC = () => {
       status: 'pending',
       to: `${routePrefix}/exam-manager/upload`,
     },
-    {
-      id: 'exam-results',
-      stepNumber: 3,
-      title: 'Automated Evaluation & Results',
-      subtitle: 'Automatic evaluation & Super Admin publication',
-      status: 'pending',
-      to: `${routePrefix}/reports`,
-    },
+    // {
+    //   id: 'exam-results',
+    //   stepNumber: 3,
+    //   title: 'Automated Evaluation & Results',
+    //   subtitle: 'Automatic evaluation & Super Admin publication',
+    //   status: 'pending',
+    //   to: `${routePrefix}/reports`,
+    // },
   ];
 
   // Modals
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
-  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
   const [isAccessCheckOpen, setIsAccessCheckOpen] = useState(false);
 
   const [activeExam, setActiveExam] = useState<any | null>(null);
-  const [activeSchedule, setActiveSchedule] = useState<ExamScheduleItem | null>(null);
 
   // TanStack Query & Mutations
-  const { data: examData, isLoading: isLoadingExams, refetch: refetchExams } = useExamManagerExamsQuery({
+  const {
+    data: examData,
+    isLoading: isLoadingExams,
+    isFetching: isFetchingExams,
+    refetch: refetchExams,
+  } = useExamManagerExamsQuery({
     page,
     limit,
     status: statusFilter !== 'ALL' ? statusFilter : undefined,
@@ -112,7 +113,7 @@ export const ExamSchedulingManagementPage: React.FC = () => {
   const pagination = examData?.pagination || {
     total: 0,
     page: 1,
-    limit: 10,
+    limit: 5,
     totalPages: 1,
   };
 
@@ -315,10 +316,27 @@ export const ExamSchedulingManagementPage: React.FC = () => {
       </div>
 
       {/* Exams Grid */}
-      {isLoadingExams ? (
-        <div className="space-y-4 animate-pulse">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-44 rounded-3xl bg-slate-200" />
+      {(isLoadingExams || isFetchingExams) ? (
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm space-y-4 animate-pulse">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <Skeleton className="h-6 w-48 rounded-lg" />
+                    <Skeleton className="h-5 w-20 rounded-lg" />
+                    <Skeleton className="h-5 w-24 rounded-lg" />
+                  </div>
+                  <Skeleton className="h-4 w-72 rounded" />
+                </div>
+                <Skeleton className="h-8 w-8 rounded-xl shrink-0" />
+              </div>
+              <Skeleton className="h-14 w-full rounded-2xl" />
+              <div className="flex items-center justify-between pt-2">
+                <Skeleton className="h-9 w-32 rounded-xl" />
+                <Skeleton className="h-9 w-28 rounded-xl" />
+              </div>
+            </div>
           ))}
         </div>
       ) : filteredExams.length > 0 ? (
@@ -457,20 +475,7 @@ export const ExamSchedulingManagementPage: React.FC = () => {
                         Version #{schedule.examVersion?.versionNumber || 1}
                       </span>
 
-                      {stName === 'SCHEDULED' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setActiveSchedule(schedule);
-                            setIsRescheduleOpen(true);
-                          }}
-                          className="flex items-center gap-1 text-xs border-amber-200 text-amber-800 bg-amber-50 hover:bg-amber-100"
-                        >
-                          <RotateCcw size={12} />
-                          <span>Reschedule</span>
-                        </Button>
-                      )}
+
                     </div>
                   </div>
                 )}
@@ -541,57 +546,21 @@ export const ExamSchedulingManagementPage: React.FC = () => {
 
           {/* Pagination Controls */}
           {pagination.total > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-200 bg-white px-5 py-4 rounded-2xl shadow-xs mt-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <p className="text-xs font-semibold text-slate-500">
-                  Showing {(page - 1) * limit + 1} to{' '}
-                  {Math.min(page * limit, pagination.total)} of{' '}
-                  <span className="font-bold text-slate-800">{pagination.total}</span> examinations
-                </p>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <span>•</span>
-                  <label htmlFor="scheduling-limit-select" className="font-medium text-slate-500">
-                    Per page:
-                  </label>
-                  <select
-                    id="scheduling-limit-select"
-                    value={limit}
-                    onChange={(e) => {
-                      setLimit(Number(e.target.value));
-                      setPage(1);
-                    }}
-                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer shadow-2xs"
-                  >
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                  className="rounded-xl text-xs font-bold"
-                >
-                  Previous
-                </Button>
-                <span className="text-xs font-bold text-slate-700 px-2">
-                  Page {page} of {Math.max(1, pagination.totalPages)}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-                  disabled={page >= pagination.totalPages}
-                  className="rounded-xl text-xs font-bold"
-                >
-                  Next
-                </Button>
-              </div>
+            <div className="mt-4">
+              <Pagination
+                page={page}
+                totalPages={pagination.totalPages}
+                total={pagination.total}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit);
+                  setPage(1);
+                }}
+                limitOptions={[5, 10, 20, 50]}
+                isFetching={isFetchingExams}
+                itemName="examinations"
+              />
             </div>
           )}
         </div>
@@ -623,13 +592,6 @@ export const ExamSchedulingManagementPage: React.FC = () => {
           onScheduled={refetchExams}
         />
       )}
-
-      <RescheduleExamModal
-        schedule={activeSchedule}
-        isOpen={isRescheduleOpen}
-        onClose={() => setIsRescheduleOpen(false)}
-        onRescheduled={refetchExams}
-      />
 
       {activeExam && (
         <ExamLifecycleTimelineModal

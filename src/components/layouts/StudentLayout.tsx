@@ -7,7 +7,7 @@ import RoleLayoutShell, {
 import { STUDENT_MENU_GROUPS } from '@/modules/Auth/auth-access/role-menu-config';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 
-const StudentCTA = () => {
+const StudentCTA = ({ onClose }: { onClose?: () => void }) => {
   const navigate = useNavigate();
   return (
     <div className="mt-8 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 p-4 text-white shadow-md shadow-indigo-100">
@@ -17,7 +17,11 @@ const StudentCTA = () => {
         Consistent practice boosts exam accuracy & scores.
       </p>
       <button
-        onClick={() => navigate(PRIVATE_NAVIGATION.studentExams)}
+        type="button"
+        onClick={() => {
+          navigate(PRIVATE_NAVIGATION.studentExams);
+          onClose?.();
+        }}
         className="mt-3 flex items-center gap-1 rounded-xl bg-white/20 px-3 py-1.5 text-xs font-bold hover:bg-white/30 transition-colors"
       >
         Start Test <ChevronRight size={14} />
@@ -33,7 +37,7 @@ const StudentLayout = () => {
     dashboardPath: PRIVATE_NAVIGATION.studentDashboard,
     notificationsPath: PRIVATE_NAVIGATION.studentNotifications,
     profilePath: PRIVATE_NAVIGATION.studentProfile,
-    ctaWidget: <StudentCTA />,
+    ctaWidget: ({ closeSidebar }) => <StudentCTA onClose={closeSidebar} />,
   };
 
   return <RoleLayoutShell config={config} />;

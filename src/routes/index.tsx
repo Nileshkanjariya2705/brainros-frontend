@@ -7,16 +7,6 @@ import ProtectedRoute from './ProtectedRoute';
 import PublicRoute from './PublicRoute';
 import AuthLayout from '@/components/layout/AuthLayout';
 import PublicLayout from '@/components/layout/PublicLayout';
-import StudentLayout from '@/components/layouts/StudentLayout';
-import AdminLayout from '@/components/layouts/AdminLayout';
-import SuperAdminLayout from '@/components/layouts/SuperAdminLayout';
-import StaffLayout from '@/components/layouts/StaffLayout';
-import GeneralManagerLayout from '@/components/layouts/GeneralManagerLayout';
-import OperatorLayout from '@/components/layouts/OperatorLayout';
-import AccountantLayout from '@/components/layouts/AccountantLayout';
-import SalesAgentLayout from '@/components/layouts/SalesAgentLayout';
-import ParentLayout from '@/components/layouts/ParentLayout';
-import InstitutionLayout from '@/components/layouts/InstitutionLayout';
 import PageLoader from '@/components/feedback/PageLoader';
 import RouteErrorBoundary from '@/components/feedback/RouteErrorBoundary';
 
@@ -31,6 +21,18 @@ import { ENABLE_AUTH_ROUTES } from '@/config';
 
 // ** Utils **
 import { lazyRoute } from '@/utils/lazyRoute';
+
+// ** Authenticated Role Layouts (lazy-loaded to keep public entry bundle minimal) **
+const StudentLayout = lazyRoute(() => import('@/components/layouts/StudentLayout'));
+const AdminLayout = lazyRoute(() => import('@/components/layouts/AdminLayout'));
+const SuperAdminLayout = lazyRoute(() => import('@/components/layouts/SuperAdminLayout'));
+const StaffLayout = lazyRoute(() => import('@/components/layouts/StaffLayout'));
+const GeneralManagerLayout = lazyRoute(() => import('@/components/layouts/GeneralManagerLayout'));
+const OperatorLayout = lazyRoute(() => import('@/components/layouts/OperatorLayout'));
+const AccountantLayout = lazyRoute(() => import('@/components/layouts/AccountantLayout'));
+const SalesAgentLayout = lazyRoute(() => import('@/components/layouts/SalesAgentLayout'));
+const ParentLayout = lazyRoute(() => import('@/components/layouts/ParentLayout'));
+const InstitutionLayout = lazyRoute(() => import('@/components/layouts/InstitutionLayout'));
 
 // ** Pages (lazy — one chunk each) **
 const HomePage = lazyRoute(() => import('@/modules/Home/pages/HomePage'));

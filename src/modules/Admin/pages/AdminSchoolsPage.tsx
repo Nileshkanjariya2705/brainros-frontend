@@ -15,8 +15,6 @@ import {
   MapPin,
   Mail,
   Phone,
-  ChevronLeft,
-  ChevronRight,
   ShieldCheck,
   Eye,
   FileSpreadsheet,
@@ -30,8 +28,11 @@ import {
 import {
   useAdminSchoolsQuery,
   useAdminSchoolFiltersQuery,
+  useCreateSchoolMutation,
 } from '../services/admin-schools.queries';
 import Button from '@/components/ui/Button';
+import Pagination from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import Loader from '@/components/feedback/Loader';
 import { useJobProgress } from '@/hooks/useJobProgress';
 import { WorkflowStepIndicator, type WorkflowStep } from '@/components/ui/WorkflowStepIndicator';
@@ -173,7 +174,7 @@ export const AdminSchoolsPage: React.FC = () => {
 
   // State
   const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(10);
+  const [limit, setLimit] = useState<number>(5);
   const [search, setSearch] = useState<string>('');
   const [searchInput, setSearchInput] = useState<string>('');
   const [stateFilter, setStateFilter] = useState<string>('');
@@ -231,6 +232,7 @@ export const AdminSchoolsPage: React.FC = () => {
   const {
     data: schoolsData,
     isLoading,
+    isFetching,
     refetch: fetchSchools,
   } = useAdminSchoolsQuery({
     page,
@@ -255,6 +257,8 @@ export const AdminSchoolsPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  const createSchoolMutation = useCreateSchoolMutation();
+
   // Handle single school creation
   const handleAddSchool = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -266,7 +270,7 @@ export const AdminSchoolsPage: React.FC = () => {
     setIsSubmittingAdd(true);
     setAddError(null);
     try {
-      await AdminSchoolsApi.createSchool(addForm);
+      await createSchoolMutation.mutateAsync(addForm);
       setIsAddModalOpen(false);
       setAddForm({
         name: '',
@@ -277,7 +281,6 @@ export const AdminSchoolsPage: React.FC = () => {
         city: '',
         address: '',
       });
-      fetchSchools();
     } catch (err: any) {
       setAddError(err.response?.data?.message || 'Failed to create school');
     } finally {
@@ -568,12 +571,18 @@ export const AdminSchoolsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center">
-                    <Loader label="Loading schools directory..." />
-                  </td>
-                </tr>
+              {isLoading || isFetching ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-3.5 px-4"><Skeleton className="h-4 w-36 rounded" /><Skeleton className="h-3 w-20 rounded mt-1.5" /></td>
+                    <td className="py-3.5 px-4"><Skeleton className="h-4 w-28 rounded" /></td>
+                    <td className="py-3.5 px-4"><Skeleton className="h-4 w-32 rounded" /></td>
+                    <td className="py-3.5 px-4 text-center"><Skeleton className="h-4 w-12 rounded mx-auto" /></td>
+                    <td className="py-3.5 px-4 text-center"><Skeleton className="h-4 w-12 rounded mx-auto" /></td>
+                    <td className="py-3.5 px-4 text-center"><Skeleton className="h-5 w-16 rounded-full mx-auto" /></td>
+                    <td className="py-3.5 px-4 text-right"><Skeleton className="h-8 w-20 rounded ml-auto" /></td>
+                  </tr>
+                ))
               ) : schools.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-500">
@@ -677,48 +686,24 @@ export const AdminSchoolsPage: React.FC = () => {
         </div>
 
         {/* ─── Pagination Footer ───────────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 text-xs text-slate-500 gap-3">
-          <div className="flex items-center gap-3">
-            <span>
-              Showing <strong>{schools.length}</strong> of <strong>{total}</strong> schools
-            </span>
-            <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-              <span className="text-slate-400">Rows:</span>
-              <select
-                value={limit}
-                onChange={(e) => {
-                  setLimit(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:outline-none"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
+        {total > 0 && (
+          <div className="p-4 border-t border-slate-200/80 bg-slate-50/50">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              limit={limit}
+              onPageChange={setPage}
+              onLimitChange={(newLimit) => {
+                setLimit(newLimit);
+                setPage(1);
+              }}
+              limitOptions={[5, 10, 20, 50]}
+              isFetching={isLoading}
+              itemName="schools"
+            />
           </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="px-3 font-semibold text-slate-700">
-              Page {page} of {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════ */}

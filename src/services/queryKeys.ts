@@ -9,8 +9,9 @@ export const studentKeys = {
   all: ['student'] as const,
   dashboard: () => [...studentKeys.all, 'dashboard'] as const,
   exams: (filters: Record<string, any> = {}) => [...studentKeys.all, 'exams', filters] as const,
+  examHistoryAll: () => [...studentKeys.all, 'exam-history'] as const,
   examHistory: (params: Record<string, any> = {}) =>
-    ['exam-history', params] as const,
+    [...studentKeys.all, 'exam-history', params] as const,
   profile: () => [...studentKeys.all, 'profile'] as const,
   trends: (params: Record<string, any> = {}) => [...studentKeys.all, 'trends', params] as const,
   comparison: (params: Record<string, any> = {}) =>

@@ -75,7 +75,10 @@ export async function loginViaUI(page: Page, userKey: keyof typeof TEST_USERS | 
  * Logs in via direct backend API call and injects access/refresh tokens into localStorage/cookies for rapid test setups.
  */
 export async function loginViaAPI(page: Page, mobileNumber: string, otp: string = '123456') {
-  const backendBase = process.env.VITE_API_URL || 'http://127.0.0.1:3000';
+  const backendBase =
+    process.env.VITE_API_BASE_URL ||
+    process.env.VITE_API_URL ||
+    (process.env.PLAYWRIGHT_BASE_URL ? `${process.env.PLAYWRIGHT_BASE_URL.replace(/\/+$/, '')}/api` : 'http://127.0.0.1:3000');
 
   // 1. Send OTP
   const sendRes = await page.request.post(`${backendBase}/auth/login/request-otp`, {

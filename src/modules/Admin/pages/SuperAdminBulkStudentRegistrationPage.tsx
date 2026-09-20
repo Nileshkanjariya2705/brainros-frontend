@@ -11,8 +11,6 @@ import {
   RefreshCw,
   FileText,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   ShieldCheck,
   Check,
   X,
@@ -34,6 +32,8 @@ import {
   SchoolItem,
 } from '../services/admin-schools.service';
 import { WorkflowStepIndicator, type WorkflowStep } from '@/components/ui/WorkflowStepIndicator';
+import { Pagination } from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 
 export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
   const location = useLocation();
@@ -87,6 +87,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
   const [previewData, setPreviewData] = useState<BulkStudentPreviewResponse | null>(null);
   const [previewFilter, setPreviewFilter] = useState<'ALL' | 'VALID' | 'INVALID'>('ALL');
   const [previewPage, setPreviewPage] = useState<number>(1);
+  const [previewLimit, setPreviewLimit] = useState<number>(5);
   const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
 
   // Inline Row Edit State
@@ -109,6 +110,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
   // History State
   const [historyList, setHistoryList] = useState<BulkStudentHistoryItem[]>([]);
   const [historyPage, setHistoryPage] = useState<number>(1);
+  const [historyLimit, setHistoryLimit] = useState<number>(5);
   const [historyTotalPages, setHistoryTotalPages] = useState<number>(1);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
 
@@ -134,21 +136,21 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
   // Load History on tab switch
   useEffect(() => {
     if (activeTab === 'history') {
-      loadHistory(historyPage);
+      loadHistory(historyPage, historyLimit);
     }
-  }, [activeTab, historyPage]);
+  }, [activeTab, historyPage, historyLimit]);
 
   // Load Preview when uploadId or filter changes
   useEffect(() => {
     if (activeUploadId && currentStep === 'PREVIEW') {
-      loadPreview(activeUploadId, previewPage, previewFilter);
+      loadPreview(activeUploadId, previewPage, previewLimit, previewFilter);
     }
-  }, [activeUploadId, previewPage, previewFilter, currentStep]);
+  }, [activeUploadId, previewPage, previewLimit, previewFilter, currentStep]);
 
-  const loadHistory = async (page: number) => {
+  const loadHistory = async (page: number, limit = historyLimit) => {
     setIsLoadingHistory(true);
     try {
-      const res = await studentBulkService.getUploadHistory({ page, limit: 10 });
+      const res = await studentBulkService.getUploadHistory({ page, limit });
       setHistoryList(res.uploads || []);
       setHistoryTotalPages(res.pagination?.totalPages || 1);
     } catch (err: any) {
@@ -161,13 +163,14 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
   const loadPreview = async (
     uploadId: string,
     page: number,
+    limit: number,
     filter: 'ALL' | 'VALID' | 'INVALID',
   ) => {
     setIsLoadingPreview(true);
     try {
       const res = await studentBulkService.getUploadPreview(uploadId, {
         page,
-        limit: 15,
+        limit,
         filterStatus: filter,
       });
       setPreviewData(res);
@@ -828,12 +831,17 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
                       {isLoadingPreview ? (
-                        <tr>
-                          <td colSpan={7} className="py-12 text-center text-slate-500">
-                            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
-                            Loading preview rows...
-                          </td>
-                        </tr>
+                        Array.from({ length: 5 }).map((_, idx) => (
+                          <tr key={idx} className="animate-pulse">
+                            <td className="px-4 py-3 text-center"><Skeleton className="h-4 w-6 rounded mx-auto" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-4 w-32 rounded" /><Skeleton className="h-3 w-20 rounded mt-1" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-4 w-24 rounded" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-4 w-28 rounded" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-4 w-36 rounded" /></td>
+                            <td className="px-4 py-3 text-right"><Skeleton className="h-6 w-12 rounded ml-auto" /></td>
+                          </tr>
+                        ))
                       ) : previewData.rows.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="py-12 text-center text-slate-500">
@@ -936,32 +944,22 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                 </div>
 
                 {/* Pagination */}
-                {previewData.pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-between p-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-600">
-                    <div>
-                      Showing {(previewPage - 1) * previewData.pagination.limit + 1} to{' '}
-                      {Math.min(previewPage * previewData.pagination.limit, previewData.pagination.total)} of{' '}
-                      {previewData.pagination.total} entries
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        disabled={previewPage <= 1}
-                        onClick={() => setPreviewPage((p) => Math.max(1, p - 1))}
-                        className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <span>
-                        Page {previewPage} of {previewData.pagination.totalPages}
-                      </span>
-                      <button
-                        disabled={previewPage >= previewData.pagination.totalPages}
-                        onClick={() => setPreviewPage((p) => Math.min(previewData.pagination.totalPages, p + 1))}
-                        className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
+                {previewData.pagination.total > 0 && (
+                  <div className="p-4 border-t border-slate-200 bg-slate-50">
+                    <Pagination
+                      page={previewPage}
+                      totalPages={previewData.pagination.totalPages}
+                      total={previewData.pagination.total}
+                      limit={previewLimit}
+                      onPageChange={setPreviewPage}
+                      onLimitChange={(newLimit) => {
+                        setPreviewLimit(newLimit);
+                        setPreviewPage(1);
+                      }}
+                      limitOptions={[5, 10, 20, 50]}
+                      isFetching={isLoadingPreview}
+                      itemName="entries"
+                    />
                   </div>
                 )}
               </div>
@@ -1072,12 +1070,18 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {isLoadingHistory ? (
-                    <tr>
-                      <td colSpan={8} className="py-12 text-center text-slate-500">
-                        <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-600" />
-                        Loading upload history...
-                      </td>
-                    </tr>
+                    Array.from({ length: 5 }).map((_, idx) => (
+                      <tr key={idx} className="animate-pulse">
+                        <td className="px-4 py-3"><Skeleton className="h-4 w-36 rounded" /></td>
+                        <td className="px-4 py-3"><Skeleton className="h-4 w-24 rounded" /></td>
+                        <td className="px-4 py-3 text-center"><Skeleton className="h-4 w-12 rounded mx-auto" /></td>
+                        <td className="px-4 py-3 text-center"><Skeleton className="h-4 w-12 rounded mx-auto" /></td>
+                        <td className="px-4 py-3 text-center"><Skeleton className="h-4 w-12 rounded mx-auto" /></td>
+                        <td className="px-4 py-3 text-center"><Skeleton className="h-4 w-12 rounded mx-auto" /></td>
+                        <td className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                        <td className="px-4 py-3 text-right"><Skeleton className="h-6 w-16 rounded ml-auto" /></td>
+                      </tr>
+                    ))
                   ) : historyList.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="py-12 text-center text-slate-500">
@@ -1147,25 +1151,22 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
             </div>
 
             {/* Pagination */}
-            {historyTotalPages > 1 && (
-              <div className="flex items-center justify-between p-4 border-t border-slate-200 bg-slate-50 text-xs text-slate-600">
-                <div>Page {historyPage} of {historyTotalPages}</div>
-                <div className="flex items-center gap-2">
-                  <button
-                    disabled={historyPage <= 1}
-                    onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
-                    className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    disabled={historyPage >= historyTotalPages}
-                    onClick={() => setHistoryPage((p) => Math.min(historyTotalPages, p + 1))}
-                    className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
+            {historyList.length > 0 && (
+              <div className="p-4 border-t border-slate-200 bg-slate-50">
+                <Pagination
+                  page={historyPage}
+                  totalPages={historyTotalPages}
+                  total={historyTotalPages * historyLimit}
+                  limit={historyLimit}
+                  onPageChange={setHistoryPage}
+                  onLimitChange={(newLimit) => {
+                    setHistoryLimit(newLimit);
+                    setHistoryPage(1);
+                  }}
+                  limitOptions={[5, 10, 20, 50]}
+                  isFetching={isLoadingHistory}
+                  itemName="batches"
+                />
               </div>
             )}
           </div>

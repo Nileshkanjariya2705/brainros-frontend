@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { RefreshCw, Code, ChevronLeft, ChevronRight } from 'lucide-react';
+import { RefreshCw, Code } from 'lucide-react';
 import { Axios } from '@/base-axios';
 import { adminKeys } from '@/services/queryKeys';
 import { AuditLogItem } from '@/types/exam.types';
+import { Pagination } from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 
 export const AdminAuditLogsPage: React.FC = () => {
   const [actionFilter, setActionFilter] = useState<string>('');
   const [entityFilter, setEntityFilter] = useState<string>('');
   const [inspectLog, setInspectLog] = useState<AuditLogItem | null>(null);
   const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(10);
+  const [limit, setLimit] = useState<number>(5);
 
   const getArrayData = (response: any): any[] => {
     if (!response) return [];
@@ -23,6 +25,7 @@ export const AdminAuditLogsPage: React.FC = () => {
   const {
     data: auditData,
     isLoading: loading,
+    isFetching,
     refetch: fetchAuditLogs,
   } = useQuery({
     queryKey: adminKeys.auditLogs({
@@ -103,8 +106,33 @@ export const AdminAuditLogsPage: React.FC = () => {
       {/* Table */}
       <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs">
         <div className="overflow-x-auto">
-          {loading ? (
-            <div className="py-12 text-center text-sm text-slate-400">Loading audit ledger...</div>
+          {(loading || isFetching) ? (
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 text-xs uppercase text-slate-400">
+                  <th className="pb-3 font-semibold">Timestamp</th>
+                  <th className="pb-3 font-semibold">Action</th>
+                  <th className="pb-3 font-semibold">Entity Type</th>
+                  <th className="pb-3 font-semibold">Entity ID</th>
+                  <th className="pb-3 font-semibold">Actor User</th>
+                  <th className="pb-3 font-semibold">Reason / Notes</th>
+                  <th className="pb-3 font-semibold text-right">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-3"><Skeleton className="h-4 w-32 rounded" /></td>
+                    <td className="py-3"><Skeleton className="h-5 w-20 rounded" /></td>
+                    <td className="py-3"><Skeleton className="h-4 w-24 rounded" /></td>
+                    <td className="py-3"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="py-3"><Skeleton className="h-4 w-20 rounded" /></td>
+                    <td className="py-3"><Skeleton className="h-4 w-32 rounded" /></td>
+                    <td className="py-3 text-right"><Skeleton className="h-6 w-16 rounded ml-auto" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           ) : logs.length === 0 ? (
             <div className="py-12 text-center text-sm text-slate-400">
               No audit records match criteria.
@@ -165,48 +193,24 @@ export const AdminAuditLogsPage: React.FC = () => {
         </div>
 
         {/* ─── Pagination Footer ───────────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-200/80 bg-slate-50/50 px-4 py-3 text-xs text-slate-500 gap-3">
-          <div className="flex items-center gap-3">
-            <span>
-              Showing <strong>{logs.length}</strong> of <strong>{total}</strong> audit records
-            </span>
-            <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-              <span className="text-slate-400">Rows:</span>
-              <select
-                value={limit}
-                onChange={(e) => {
-                  setLimit(Number(e.target.value));
-                  setPage(1);
-                }}
-                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:outline-none"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
+        {total > 0 && (
+          <div className="p-4 bg-slate-50 border-t border-slate-200">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              limit={limit}
+              onPageChange={setPage}
+              onLimitChange={(newLimit) => {
+                setLimit(newLimit);
+                setPage(1);
+              }}
+              limitOptions={[5, 10, 20, 50]}
+              isFetching={isFetching}
+              itemName="audit records"
+            />
           </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1 || loading}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="px-3 font-semibold text-slate-700">
-              Page {page} of {totalPages}
-            </span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages || loading}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Inspect State Modal */}

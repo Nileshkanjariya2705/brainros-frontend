@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   X,
   Calendar,
@@ -13,7 +13,7 @@ import {
   BarChart2,
   FileSpreadsheet,
 } from 'lucide-react';
-import { useGetExamHistoryDetailsAPI, ExamFullDetailsResponse } from '../services/examHistory.service';
+import { useCompletedExamHistoryDetailsQuery } from '../services/examHistory.service';
 import Loader from '@/components/feedback/Loader';
 import { useNavigate } from 'react-router-dom';
 import { useRole } from '@/modules/Auth/auth-access';
@@ -29,19 +29,10 @@ export const CompletedExamDetailModal: React.FC<CompletedExamDetailModalProps> =
 }) => {
   const navigate = useNavigate();
   const { isSuperAdmin, isAdmin } = useRole();
-  const { getExamDetailsAPI, isLoading, error } = useGetExamHistoryDetailsAPI();
-  const [details, setDetails] = useState<ExamFullDetailsResponse['data'] | null>(null);
+  const { data: details, isLoading, error: queryError } = useCompletedExamHistoryDetailsQuery(examId);
+  const error = queryError ? ((queryError as any)?.response?.data?.message || queryError.message || 'Failed to load exam details') : null;
 
   const rolePrefix = isSuperAdmin ? '/super-admin' : isAdmin ? '/admin' : '/general-manager';
-
-  useEffect(() => {
-    if (!examId) return;
-    getExamDetailsAPI(examId).then((res) => {
-      if (res?.data) {
-        setDetails(res.data);
-      }
-    });
-  }, [examId, getExamDetailsAPI]);
 
   if (!examId) return null;
 

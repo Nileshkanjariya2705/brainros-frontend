@@ -17,6 +17,7 @@ import { NavLink } from 'react-router-dom';
 import { Axios } from '@/base-axios';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 import { AdminDashboardOverview } from '@/types/exam.types';
+import Skeleton from '@/components/ui/Skeleton';
 
 export const AdminControlCenterPage: React.FC = () => {
   const [data, setData] = useState<AdminDashboardOverview | null>(null);
@@ -45,8 +46,26 @@ export const AdminControlCenterPage: React.FC = () => {
 
   if (loading && !data) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
+      <div className="space-y-8 pb-12 animate-in fade-in duration-500">
+        {/* Top Banner Skeleton */}
+        <Skeleton className="h-32 w-full rounded-3xl" />
+        
+        {/* Review Requests Skeleton */}
+        <Skeleton className="h-20 w-full rounded-2xl" />
+
+        {/* Top KPI Cards Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+          ))}
+        </div>
+
+        {/* Bottom Detailed Sections Skeleton */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-80 w-full rounded-3xl" />
+          ))}
+        </div>
       </div>
     );
   }

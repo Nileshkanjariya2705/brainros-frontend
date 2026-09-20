@@ -13,7 +13,6 @@ import {
   TrendingUp,
   Percent,
   RotateCcw,
-  Zap,
   Trophy,
 } from 'lucide-react';
 import cn from 'classnames';
@@ -24,14 +23,15 @@ import { useAuthOptionsQuery } from '@/services/options.queries';
 import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
 
 // ** Components **
-import Loader from '@/components/feedback/Loader';
+import Skeleton from '@/components/ui/Skeleton';
 import Button from '@/components/ui/Button';
+import Pagination from '@/components/ui/Pagination';
 
 const HistoryPage = () => {
   const navigate = useNavigate();
 
   const [page, setPage] = useState(1);
-  const limit = 20;
+  const [limit, setLimit] = useState(5);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -64,7 +64,7 @@ const HistoryPage = () => {
     return p;
   }, [page, limit, debouncedSearch, statusFilter, targetFilter, sortBy, sortOrder]);
 
-  const { data: historyResult, isLoading } = useStudentExamHistoryQuery(queryParams);
+  const { data: historyResult, isLoading, isFetching } = useStudentExamHistoryQuery(queryParams);
   const attempts = historyResult?.data || [];
   const pagination = historyResult?.meta || {
     page,
@@ -108,23 +108,11 @@ const HistoryPage = () => {
   return (
     <div className="space-y-6 pb-12">
       {/* Navigation Tabs Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Exam History</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Review your past test attempts, overall scores, and in-depth performance analytics.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <Link
-            to={PRIVATE_NAVIGATION.availableExams}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-indigo-700 transition-all"
-          >
-            <Zap size={16} />
-            Take a New Test
-          </Link>
-        </div>
+      <div>
+        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Exam History</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Review your past test attempts, overall scores, and in-depth performance analytics.
+        </p>
       </div>
 
       {/* Summary KPI Cards */}
@@ -221,8 +209,47 @@ const HistoryPage = () => {
       </div>
 
       {/* History List */}
-      {isLoading ? (
-        <Loader label="Loading your exam history..." />
+      {isLoading || isFetching ? (
+        <div className="space-y-3">
+          {Array.from({ length: attempts.length || 5 }).map((_, i) => (
+            <div
+              key={`skel-attempt-${i}`}
+              className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between animate-pulse"
+            >
+              <div className="flex items-start sm:items-center gap-3.5 sm:gap-4 min-w-0">
+                <Skeleton className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl shrink-0" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-5 w-48 sm:w-64" />
+                    <Skeleton className="h-4 w-12 rounded-md" />
+                    <Skeleton className="h-4 w-20 rounded-md" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-3.5 w-20" />
+                    <Skeleton className="h-3.5 w-16" />
+                    <Skeleton className="h-3.5 w-20" />
+                    <Skeleton className="h-3.5 w-24" />
+                  </div>
+                  <div className="flex items-center gap-1.5 pt-0.5">
+                    <Skeleton className="h-4 w-24 rounded-md" />
+                    <Skeleton className="h-4 w-24 rounded-md" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-4 border-t border-slate-100 pt-3 lg:border-0 lg:pt-0">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-7 w-28" />
+                  <Skeleton className="h-6 w-20 rounded-xl" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-8 w-24 rounded-xl" />
+                  <Skeleton className="h-8 w-24 rounded-xl" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : attempts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
           <BookOpen className="mx-auto text-slate-300 mb-3" size={44} />
@@ -257,7 +284,7 @@ const HistoryPage = () => {
               <div
                 key={attempt.id}
                 className={cn(
-                  'group flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all sm:flex-row sm:items-center sm:justify-between',
+                  'group flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm transition-all lg:flex-row lg:items-center lg:justify-between',
                   isCompleted && 'hover:border-indigo-300 hover:shadow-md cursor-pointer',
                 )}
                 onClick={() => {
@@ -266,31 +293,31 @@ const HistoryPage = () => {
                   }
                 }}
               >
-                <div className="flex items-start sm:items-center gap-4">
+                <div className="flex items-start sm:items-center gap-3.5 sm:gap-4 min-w-0">
                   {/* Score pill */}
                   <div
                     className={cn(
-                      'flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl font-extrabold text-white shadow-sm',
+                      'flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 flex-col items-center justify-center rounded-2xl font-black text-white shadow-sm select-none p-1',
                       isCompleted
                         ? scorePerc >= 80
-                          ? 'bg-emerald-500'
+                          ? 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-100'
                           : scorePerc >= 50
-                            ? 'bg-amber-500'
-                            : 'bg-rose-500'
-                        : 'bg-amber-500',
+                            ? 'bg-gradient-to-br from-amber-500 to-orange-500 shadow-amber-100'
+                            : 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-100'
+                        : 'bg-gradient-to-br from-amber-500 to-orange-500 shadow-amber-100',
                     )}
                   >
-                    <span className="text-base leading-none">
-                      {isCompleted ? `${scorePerc.toFixed(0)}%` : 'LIVE'}
+                    <span className="text-base sm:text-lg font-black tracking-tight leading-none">
+                      {isCompleted ? `${Math.round(scorePerc)}%` : 'LIVE'}
                     </span>
-                    <span className="text-[9px] font-semibold tracking-wider uppercase opacity-80 mt-0.5">
+                    <span className="text-[10px] font-bold tracking-wider uppercase opacity-90 mt-1 leading-none">
                       {isCompleted ? 'Score' : 'Active'}
                     </span>
                   </div>
 
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
                         {attempt.exam?.title ?? 'Exam'}
                       </h3>
 
@@ -310,7 +337,7 @@ const HistoryPage = () => {
                       )}
                     </div>
 
-                    <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
                       <span className="flex items-center gap-1">
                         <Calendar size={13} />
                         {attempt.startedAt ? new Date(attempt.startedAt).toLocaleDateString() : '—'}
@@ -347,38 +374,40 @@ const HistoryPage = () => {
                 </div>
 
                 {/* Score Summary Metrics & Action Button */}
-                <div className="flex items-center justify-between sm:justify-end gap-4 border-t border-slate-100 pt-3 sm:border-0 sm:pt-0">
-                  {isCompleted && attempt.result && (
-                    <div className="flex items-center gap-3.5 text-xs font-semibold">
-                      <div className="text-center">
-                        <span className="block text-emerald-600">
-                          {attempt.result.correctAnswers}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-normal">Correct</span>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-4 border-t border-slate-100 pt-3 lg:border-0 lg:pt-0">
+                  <div className="flex items-center justify-between sm:justify-end gap-3.5">
+                    {isCompleted && attempt.result && (
+                      <div className="flex items-center gap-3 text-xs font-semibold">
+                        <div className="text-center">
+                          <span className="block text-emerald-600">
+                            {attempt.result.correctAnswers}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-normal">Correct</span>
+                        </div>
+                        <div className="text-center">
+                          <span className="block text-rose-500">{attempt.result.wrongAnswers}</span>
+                          <span className="text-[10px] text-slate-400 font-normal">Wrong</span>
+                        </div>
+                        <div className="text-center">
+                          <span className="block text-slate-700 font-bold">
+                            {attempt.result.totalScore}/{attempt.result.maxScore}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-normal">Marks</span>
+                        </div>
                       </div>
-                      <div className="text-center">
-                        <span className="block text-rose-500">{attempt.result.wrongAnswers}</span>
-                        <span className="text-[10px] text-slate-400 font-normal">Wrong</span>
-                      </div>
-                      <div className="text-center">
-                        <span className="block text-slate-700 font-bold">
-                          {attempt.result.totalScore}/{attempt.result.maxScore}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-normal">Marks</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <span
-                    className={cn(
-                      'rounded-xl px-3 py-1.5 text-xs font-bold uppercase tracking-wider',
-                      isCompleted
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-amber-50 text-amber-700 border border-amber-200',
                     )}
-                  >
-                    {attempt.status?.name?.replace('_', ' ')}
-                  </span>
+
+                    <span
+                      className={cn(
+                        'rounded-xl px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider shrink-0',
+                        isCompleted
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border border-amber-200',
+                      )}
+                    >
+                      {attempt.status?.name?.replace('_', ' ')}
+                    </span>
+                  </div>
 
                   {isInProgress ? (
                     <Button
@@ -391,13 +420,13 @@ const HistoryPage = () => {
                             .replace(':attemptId', attempt.id),
                         );
                       }}
-                      className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                      className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-bold"
                     >
                       <RotateCcw size={14} className="mr-1" />
                       Resume
                     </Button>
                   ) : isCompleted ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                       {attempt.exam?.id && (
                         <Button
                           variant="outline"
@@ -408,9 +437,9 @@ const HistoryPage = () => {
                               `${PRIVATE_NAVIGATION.studentLeaderboard}?examId=${attempt.exam.id}`,
                             );
                           }}
-                          className="border-amber-200 bg-amber-50/60 text-amber-800 hover:bg-amber-100 hover:border-amber-300 font-bold transition-all shadow-2xs"
+                          className="flex-1 sm:flex-initial border-amber-200 bg-amber-50/60 text-amber-800 hover:bg-amber-100 hover:border-amber-300 font-bold transition-all shadow-2xs text-xs px-2.5"
                         >
-                          <Trophy size={13} className="mr-1 text-amber-600" />
+                          <Trophy size={13} className="mr-1 text-amber-600 shrink-0" />
                           Leaderboard
                         </Button>
                       )}
@@ -423,10 +452,10 @@ const HistoryPage = () => {
                             PRIVATE_NAVIGATION.examResult.replace(':attemptId', attempt.id),
                           );
                         }}
-                        className="border-indigo-200 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors font-bold"
+                        className="flex-1 sm:flex-initial border-indigo-200 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors font-bold text-xs px-2.5"
                       >
                         View Report
-                        <ArrowRight size={14} className="ml-1" />
+                        <ArrowRight size={14} className="ml-1 shrink-0" />
                       </Button>
                     </div>
                   ) : null}
@@ -438,38 +467,21 @@ const HistoryPage = () => {
       )}
 
       {/* Server-Side Pagination Controls */}
-      {pagination.totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 bg-white px-5 py-4 rounded-2xl shadow-xs">
-          <p className="text-xs font-semibold text-slate-500">
-            Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-            {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-            {pagination.total} test attempts
-          </p>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={pagination.page <= 1}
-              className="rounded-xl text-xs font-bold"
-            >
-              Previous
-            </Button>
-            <span className="text-xs font-bold text-slate-700 px-2">
-              Page {pagination.page} of {pagination.totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-              disabled={pagination.page >= pagination.totalPages}
-              className="rounded-xl text-xs font-bold"
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+      {!isLoading && attempts.length > 0 && (
+        <Pagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          limit={pagination.limit}
+          onPageChange={setPage}
+          onLimitChange={(newLimit) => {
+            setLimit(newLimit);
+            setPage(1);
+          }}
+          limitOptions={[5, 10, 20, 50]}
+          isFetching={isFetching}
+          itemName="test attempts"
+        />
       )}
     </div>
   );

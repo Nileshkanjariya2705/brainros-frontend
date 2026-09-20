@@ -129,13 +129,13 @@ export function useRescheduleExamMutation() {
       return res.data?.data ?? res.data;
     },
     onSuccess: () => {
-      toast.success('Exam schedule updated successfully!');
+      toast.success('Exam schedule updated successfully.');
       qc.invalidateQueries({ queryKey: scheduleKeys.all });
       qc.invalidateQueries({ queryKey: examKeys.all });
       qc.invalidateQueries({ queryKey: academicCalendarKeys.all });
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || err?.message || 'Failed to update exam schedule.');
+      toast.error(err?.response?.data?.message || err?.message || 'Unable to update exam schedule.');
     },
   });
 }
@@ -192,10 +192,10 @@ export function useApproveExamMutation() {
     onSuccess: (_data, { examId }) => {
       qc.invalidateQueries({ queryKey: ['exams', examId] });
       qc.invalidateQueries({ queryKey: examKeys.all });
-      toast.success('Exam approved successfully!');
+      toast.success('Exam approved successfully.');
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Failed to approve exam.');
+      toast.error(err?.response?.data?.message || 'Unable to approve exam.');
     },
   });
 }

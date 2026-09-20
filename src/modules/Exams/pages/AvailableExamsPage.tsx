@@ -1,6 +1,7 @@
 // ** Packages **
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import cn from 'classnames';
 import {
   FileText,
   Search,
@@ -8,8 +9,6 @@ import {
   CheckCircle2,
   PlayCircle,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   TrendingUp,
   Target,
   RotateCcw,
@@ -26,6 +25,7 @@ import { useAuthOptionsQuery } from '@/services/options.queries';
 
 // ** Components **
 import Button from '@/components/ui/Button';
+import Pagination from '@/components/ui/Pagination';
 import { ExamStartLanguageModal } from '../components/ExamStartLanguageModal';
 
 // ─── Format Schedule Date/Time (Asia/Kolkata) ────────────────
@@ -54,7 +54,7 @@ export const AvailableExamsPage = () => {
   const { startAttemptAPI } = useStartAttemptAPI();
 
   const [page, setPage] = useState<number>(1);
-  const limit = 12;
+  const [limit, setLimit] = useState<number>(5);
 
   const [statusTab, setStatusTab] = useState<'ALL' | 'UPCOMING' | 'LIVE' | 'COMPLETED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -94,7 +94,7 @@ export const AvailableExamsPage = () => {
     return params;
   }, [statusTab, page, limit, sortOption, debouncedSearch, selectedTarget]);
 
-  const { data: examsResult, isLoading } = useStudentExamsQuery(queryParams);
+  const { data: examsResult, isLoading, isFetching } = useStudentExamsQuery(queryParams);
   const exams = examsResult?.data || [];
   const pagination = examsResult?.meta || {
     page,
@@ -135,7 +135,14 @@ export const AvailableExamsPage = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-200">
+    <div className="relative space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-200">
+      {/* Background Fetch Progress Bar */}
+      {isFetching && !isLoading && (
+        <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-500/20 overflow-hidden rounded-t-xl z-10">
+          <div className="h-full bg-indigo-600 animate-pulse w-full" />
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-700 via-indigo-800 to-purple-900 p-6 md:p-8 text-white shadow-xl">
         <div className="relative z-10">
@@ -253,9 +260,9 @@ export const AvailableExamsPage = () => {
       </div>
 
       {/* Exam Cards Grid */}
-      {isLoading ? (
+      {isLoading || isFetching ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {[1, 2, 3, 4, 5, 6].map((n) => (
+          {[1, 2, 3, 4, 5].map((n) => (
             <div
               key={n}
               className="h-64 rounded-3xl bg-slate-100 dark:bg-slate-800 animate-pulse border border-slate-200 dark:border-slate-700 p-6 space-y-4"
@@ -302,7 +309,7 @@ export const AvailableExamsPage = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className={cn("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 transition-opacity", isFetching && "opacity-75")}>
           {exams.map((exam) => {
             const hasCompletedAttempt =
               exam.status === 'COMPLETED' &&
@@ -328,30 +335,33 @@ export const AvailableExamsPage = () => {
 
                     {/* Status Badge */}
                     {exam.status === 'LIVE' ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-700 dark:text-emerald-400">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-3 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 animate-pulse">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                         LIVE NOW
                       </span>
-                    ) : exam.status === 'UPCOMING' ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/40 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400">
-                        <Clock size={11} />
-                        Upcoming
+                    ) : exam.status === 'COMPLETED' ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700 px-3 py-1 text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                        <CheckCircle2 size={12} className="text-emerald-500" />
+                        Completed
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                        <CheckCircle2 size={11} className="text-emerald-500" />
-                        Completed
+                      <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 px-3 py-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
+                        Upcoming
                       </span>
                     )}
                   </div>
 
-                  {/* Title & Description */}
-                  <h3 className="text-base font-black text-slate-900 dark:text-white line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  {/* Exam Title */}
+                  <h3 className="font-black text-slate-900 dark:text-white text-base group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
                     {exam.title}
                   </h3>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                    {exam.description || 'Comprehensive exam paper designed according to standard examination syllabus.'}
-                  </p>
+
+                  {/* Description / Subtitle */}
+                  {exam.description && (
+                    <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                      {exam.description}
+                    </p>
+                  )}
 
                   {/* Subject Pills */}
                   {exam.subjects && exam.subjects.length > 0 && (
@@ -498,38 +508,21 @@ export const AvailableExamsPage = () => {
       )}
 
       {/* Pagination Controls */}
-      {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-5 mt-6">
-          <p className="text-xs text-slate-500 font-medium">
-            Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-            {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-            {pagination.total} exams
-          </p>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={pagination.page <= 1}
-              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              className="rounded-xl text-xs flex items-center gap-1"
-            >
-              <ChevronLeft size={14} /> Previous
-            </Button>
-            <span className="text-xs font-bold px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
-              {pagination.page} / {pagination.totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={pagination.page >= pagination.totalPages}
-              onClick={() => setPage((prev) => prev + 1)}
-              className="rounded-xl text-xs flex items-center gap-1"
-            >
-              Next <ChevronRight size={14} />
-            </Button>
-          </div>
-        </div>
+      {!isLoading && exams.length > 0 && (
+        <Pagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          limit={pagination.limit}
+          onPageChange={setPage}
+          onLimitChange={(newLimit) => {
+            setLimit(newLimit);
+            setPage(1);
+          }}
+          limitOptions={[5, 10, 20, 50]}
+          isFetching={isFetching}
+          itemName="exams"
+        />
       )}
 
       {/* Language Selection Modal */}

@@ -60,7 +60,7 @@ export interface RoleLayoutConfig {
   /** Profile path for this role */
   profilePath: string;
   /** Optional sidebar CTA widget */
-  ctaWidget?: ReactNode;
+  ctaWidget?: ReactNode | ((helpers: { closeSidebar: () => void }) => ReactNode);
   /** Role label override for header */
   roleLabel?: string;
 }
@@ -377,7 +377,11 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
         </div>
 
         {/* Optional CTA Widget */}
-        {ctaWidget && <div className="p-4 border-t border-slate-100 shrink-0">{ctaWidget}</div>}
+        {ctaWidget && (
+          <div className="p-4 border-t border-slate-100 shrink-0">
+            {typeof ctaWidget === 'function' ? ctaWidget({ closeSidebar: () => {} }) : ctaWidget}
+          </div>
+        )}
       </aside>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -433,7 +437,21 @@ const RoleLayoutShell = ({ config }: RoleLayoutShellProps) => {
         </div>
 
         {/* Optional CTA Widget */}
-        {ctaWidget && <div className="p-4 border-t border-slate-100 shrink-0">{ctaWidget}</div>}
+        {ctaWidget && (
+          <div
+            className="p-4 border-t border-slate-100 shrink-0"
+            onClick={(e) => {
+              const target = e.target as HTMLElement;
+              if (target.closest('button') || target.closest('a')) {
+                setIsSidebarOpen(false);
+              }
+            }}
+          >
+            {typeof ctaWidget === 'function'
+              ? ctaWidget({ closeSidebar: () => setIsSidebarOpen(false) })
+              : ctaWidget}
+          </div>
+        )}
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════

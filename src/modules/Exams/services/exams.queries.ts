@@ -37,13 +37,14 @@ export const useStudentExamsQuery = (params: Record<string, any> = {}) =>
             : [];
       const meta = raw?.meta || raw?.data?.meta || {
         page: params.page || 1,
-        limit: params.limit || 10,
+        limit: params.limit || 5,
         total: data.length,
         totalPages: 1,
       };
       return { data, meta };
     },
     staleTime: 60_000,
+    placeholderData: (prev) => prev,
   });
 
 /**
@@ -162,6 +163,8 @@ export const useStartAttemptMutation = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: studentKeys.exams() });
+      qc.invalidateQueries({ queryKey: studentKeys.examHistoryAll() });
+      qc.invalidateQueries({ queryKey: studentKeys.dashboard() });
     },
   });
 };
@@ -176,8 +179,9 @@ export const useSubmitAttemptMutation = () => {
     onSuccess: (_data, { attemptId }) => {
       qc.invalidateQueries({ queryKey: attemptKeys.status(attemptId) });
       qc.invalidateQueries({ queryKey: resultKeys.status(attemptId) });
-      qc.invalidateQueries({ queryKey: ['all-exams'] });
-      qc.invalidateQueries({ queryKey: ['exam-history'] });
+      qc.invalidateQueries({ queryKey: studentKeys.exams() });
+      qc.invalidateQueries({ queryKey: studentKeys.examHistoryAll() });
+      qc.invalidateQueries({ queryKey: studentKeys.dashboard() });
     },
   });
 };
@@ -191,7 +195,9 @@ export const useLeaveAttemptMutation = () => {
     },
     onSuccess: (_data, { attemptId }) => {
       qc.invalidateQueries({ queryKey: attemptKeys.status(attemptId) });
-      qc.invalidateQueries({ queryKey: ['all-exams'] });
+      qc.invalidateQueries({ queryKey: studentKeys.exams() });
+      qc.invalidateQueries({ queryKey: studentKeys.examHistoryAll() });
+      qc.invalidateQueries({ queryKey: studentKeys.dashboard() });
     },
   });
 };
@@ -223,4 +229,5 @@ export const useStudentExamHistoryQuery = (params: Record<string, any> = {}) =>
       return { data, meta };
     },
     staleTime: 30_000,
+    placeholderData: (previousData) => previousData,
   });

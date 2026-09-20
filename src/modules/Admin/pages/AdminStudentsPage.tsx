@@ -40,15 +40,15 @@ import {
   useAdminStudentFilterOptionsQuery,
 } from '../services/admin.queries';
 import {
-  fetchAllStatesAPI,
   fetchDistrictsByStateSlugAPI,
   getStateSlug,
   formatLocationName,
   type StateItem,
   type DistrictItem,
 } from '@/modules/Auth/services';
+import { useStatesQuery, useDistrictsQuery } from '@/services/location.queries';
 import Button from '@/components/ui/Button';
-import Loader from '@/components/feedback/Loader';
+import Skeleton from '@/components/ui/Skeleton';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
 
 /* ── Edit Student Modal Component ────────────────────────────────────────── */
@@ -380,11 +380,6 @@ export const AdminStudentsPage: React.FC = () => {
     statuses: [],
   };
 
-  // Public Location API State & District lists
-  const [publicStates, setPublicStates] = useState<StateItem[]>([]);
-  const [publicDistricts, setPublicDistricts] = useState<DistrictItem[]>([]);
-  const [isLoadingPublicDistricts, setIsLoadingPublicDistricts] = useState(false);
-
   // Search Debounce State
   const urlSearch = searchParams.get('search') || '';
   const [searchInput, setSearchInput] = useState<string>(urlSearch);
@@ -405,42 +400,13 @@ export const AdminStudentsPage: React.FC = () => {
   const districtFilter = searchParams.get('districtId') || '';
   const institutionFilter = searchParams.get('institutionId') || '';
 
-  // 1. Fetch Public States from India Pincode API on mount
-  useEffect(() => {
-    let isMounted = true;
-    fetchAllStatesAPI().then(({ data }) => {
-      if (!isMounted) return;
-      if (data && data.length > 0) {
-        setPublicStates(data);
-      }
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  // Public Location API State & District lists cached via TanStack Query
+  const { data: publicStatesData } = useStatesQuery();
+  const stateSlug = getStateSlug(stateFilter || '');
+  const { data: publicDistrictsData, isLoading: isLoadingPublicDistricts } = useDistrictsQuery(stateSlug);
 
-  // 2. Fetch Public Districts whenever stateFilter changes
-  useEffect(() => {
-    if (!stateFilter) {
-      setPublicDistricts([]);
-      return;
-    }
-    let isMounted = true;
-    setIsLoadingPublicDistricts(true);
-    const slug = getStateSlug(stateFilter);
-    fetchDistrictsByStateSlugAPI(slug).then(({ data }) => {
-      if (!isMounted) return;
-      setIsLoadingPublicDistricts(false);
-      if (data && data.length > 0) {
-        setPublicDistricts(data);
-      } else {
-        setPublicDistricts([]);
-      }
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, [stateFilter]);
+  const publicStates: StateItem[] = (publicStatesData as any) || [];
+  const publicDistricts: DistrictItem[] = (publicDistrictsData as any) || [];
 
   // Server-side cached table query with keepPreviousData to prevent blank loading flash
   const queryParams = useMemo(
@@ -475,9 +441,12 @@ export const AdminStudentsPage: React.FC = () => {
   const {
     data: studentsData,
     isLoading: isLoadingStudents,
+    isFetching: isFetchingStudents,
     isError: isLoadError,
     refetch: fetchStudents,
   } = useAdminStudentsQuery(queryParams);
+
+  const isStudentsLoadingState = isLoadingStudents || isFetchingStudents;
 
   const students = studentsData?.items || [];
   const totalCount = studentsData?.pagination?.total || 0;
@@ -986,34 +955,34 @@ export const AdminStudentsPage: React.FC = () => {
                 </thead>
 
                 <tbody className="divide-y divide-slate-100">
-                  {isLoadingStudents ? (
-                    Array.from({ length: Math.min(pageSize, 8) }).map((_, idx) => (
+                  {isStudentsLoadingState ? (
+                    Array.from({ length: 5 }).map((_, idx) => (
                       <tr key={`skeleton-${idx}`} className="animate-pulse">
                         <td className="px-5 py-4">
-                          <div className="h-4 w-20 rounded-md bg-slate-200" />
+                          <Skeleton className="h-4 w-20" />
                         </td>
                         <td className="px-5 py-4">
-                          <div className="h-4 w-32 rounded-md bg-slate-200 mb-1" />
-                          <div className="h-3 w-24 rounded-md bg-slate-100" />
+                          <Skeleton className="h-4 w-32 mb-1" />
+                          <Skeleton className="h-3 w-24" />
                         </td>
                         <td className="px-5 py-4">
-                          <div className="h-4 w-28 rounded-md bg-slate-200 mb-1" />
-                          <div className="h-3 w-20 rounded-md bg-slate-100" />
+                          <Skeleton className="h-4 w-28 mb-1" />
+                          <Skeleton className="h-3 w-20" />
                         </td>
                         <td className="px-5 py-4">
-                          <div className="h-5 w-24 rounded-md bg-slate-200" />
+                          <Skeleton className="h-5 w-24" />
                         </td>
                         <td className="px-5 py-4">
-                          <div className="h-4 w-20 rounded-md bg-slate-200" />
+                          <Skeleton className="h-4 w-20" />
                         </td>
                         <td className="px-5 py-4">
-                          <div className="h-5 w-16 rounded-full bg-slate-200" />
+                          <Skeleton className="h-5 w-16 rounded-full" />
                         </td>
                         <td className="px-5 py-4">
-                          <div className="h-4 w-20 rounded-md bg-slate-200" />
+                          <Skeleton className="h-4 w-20" />
                         </td>
                         <td className="px-5 py-4 text-right">
-                          <div className="h-7 w-20 rounded-xl bg-slate-200 ml-auto" />
+                          <Skeleton className="h-7 w-20 rounded-xl ml-auto" />
                         </td>
                       </tr>
                     ))
@@ -1060,10 +1029,23 @@ export const AdminStudentsPage: React.FC = () => {
 
             {/* Mobile Cards View */}
             <div className="block md:hidden divide-y divide-slate-100">
-              {isLoadingStudents ? (
-                <div className="p-8 text-center">
-                  <Loader label="Loading students..." />
-                </div>
+              {isStudentsLoadingState ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <div key={idx} className="p-4 space-y-3 animate-pulse">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-1.5 flex-1">
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-4 w-40" />
+                        <Skeleton className="h-3 w-28" />
+                      </div>
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-2xl">
+                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                ))
               ) : students.length === 0 ? (
                 <div className="p-8 text-center space-y-2">
                   <Users className="mx-auto h-8 w-8 text-slate-300" />

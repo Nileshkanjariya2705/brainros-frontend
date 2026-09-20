@@ -16,8 +16,6 @@ import {
   Users,
   Layers,
   ArrowRight,
-  ChevronLeft,
-  ChevronRight,
   ShieldCheck,
   DollarSign,
   UserCheck,
@@ -32,6 +30,8 @@ import {
 import { Axios } from '@/base-axios';
 import { API_URL } from '@config';
 import { io, Socket } from 'socket.io-client';
+import Pagination from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import {
   approvalQueueKeys,
   adminKeys,
@@ -53,18 +53,25 @@ export interface QueueTypeOption {
 
 export interface ApprovalRequestItem {
   id: string;
-  resourceType: string;
+  resourceType: 'INSTITUTION' | 'STAFF' | 'EXAM' | 'BILL' | 'MOCK_TEST' | 'TRANSLATION' | string;
   resourceId: string;
-  requestedById: string;
-  requestedByName?: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
-  metadata?: Record<string, any>;
-  entitySummary?: any;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requestedBy: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  reviewedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  };
   rejectionReason?: string;
-  reviewComment?: string;
-  submittedAt?: string;
-  createdAt: string;
   reviewedAt?: string;
+  createdAt: string;
+  metadata?: Record<string, any>;
+  entitySummary?: Record<string, any>;
 }
 
 export const AdminApprovalQueuePage: React.FC = () => {
@@ -72,10 +79,11 @@ export const AdminApprovalQueuePage: React.FC = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
 
-  const firstSegment = location.pathname.split('/')[1];
+  const pathname = location.pathname;
+  const firstSegment = pathname.split('/')[1] || 'admin';
   const routePrefix = [
-    'super-admin',
     'admin',
+    'super_admin',
     'general-manager',
     'manager',
     'operator',
@@ -92,7 +100,7 @@ export const AdminApprovalQueuePage: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [page, setPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(5);
 
   // Selection & Modals
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -602,16 +610,23 @@ export const AdminApprovalQueuePage: React.FC = () => {
       )}
 
       {/* ── 5. Main Queue List Section (Section-Level Loading) ─────────────── */}
-      <div className="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-6 shadow-xs min-h-[300px]">
-        {isLoadingItems ? (
-          <div className="space-y-4 py-8">
-            <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-400">
-              <RefreshCw className="h-4 w-4 animate-spin text-indigo-600" />
-              <span>Loading approval records for selected queue...</span>
-            </div>
-            {/* Skeleton rows */}
-            {[1, 2, 3, 4].map((n) => (
-              <div key={n} className="h-16 w-full rounded-2xl bg-slate-50 animate-pulse border border-slate-100" />
+      <div className="rounded-3xl bg-white p-6 border border-slate-200/80 shadow-xs">
+        {(isLoadingItems || isFetchingItems) ? (
+          <div className="space-y-3 py-4">
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <div key={idx} className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 flex items-center justify-between gap-4 animate-pulse">
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-20 rounded-full" />
+                    <Skeleton className="h-4 w-40 rounded" />
+                  </div>
+                  <Skeleton className="h-3 w-64 rounded" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-8 w-20 rounded-xl" />
+                  <Skeleton className="h-8 w-20 rounded-xl" />
+                </div>
+              </div>
             ))}
           </div>
         ) : requests.length === 0 ? (
@@ -743,7 +758,7 @@ export const AdminApprovalQueuePage: React.FC = () => {
 
                       {/* Submitted By */}
                       <td className="py-4 align-top text-xs font-semibold text-slate-700">
-                        {item.requestedByName || 'Staff Member'}
+                        {item.requestedBy?.name || (item as any).requestedByName || 'Staff Member'}
                       </td>
 
                       {/* Status */}
@@ -764,7 +779,7 @@ export const AdminApprovalQueuePage: React.FC = () => {
 
                       {/* Submitted At */}
                       <td className="py-4 align-top text-xs font-semibold text-slate-400">
-                        {new Date(item.submittedAt || item.createdAt).toLocaleDateString('en-GB', {
+                        {new Date(item.createdAt).toLocaleDateString('en-GB', {
                           day: '2-digit',
                           month: 'short',
                           year: 'numeric',
@@ -824,45 +839,21 @@ export const AdminApprovalQueuePage: React.FC = () => {
 
         {/* ── 6. Server-Side Pagination Controls ─────────────────────────── */}
         {meta.total > 0 && (
-          <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100 pt-4 text-xs font-bold text-slate-600">
-            <div className="flex items-center gap-3">
-              <div>
-                Showing page {meta.page} of {meta.pages} ({meta.total} total items)
-              </div>
-              <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-                <span className="text-slate-400 font-normal">Rows:</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setPage(1);
-                  }}
-                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 focus:border-indigo-600 focus:outline-none"
-                >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1 || isLoadingItems}
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 shadow-xs hover:bg-slate-50 disabled:opacity-40"
-              >
-                <ChevronLeft className="h-4 w-4" /> Previous
-              </button>
-              <span className="px-2">{page} / {meta.pages || 1}</span>
-              <button
-                onClick={() => setPage((p) => Math.min(meta.pages || 1, p + 1))}
-                disabled={page >= (meta.pages || 1) || isLoadingItems}
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 shadow-xs hover:bg-slate-50 disabled:opacity-40"
-              >
-                Next <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+          <div className="mt-6 border-t border-slate-100 pt-4">
+            <Pagination
+              page={page}
+              totalPages={meta.pages || 1}
+              total={meta.total}
+              limit={pageSize}
+              onPageChange={setPage}
+              onLimitChange={(newLimit) => {
+                setPageSize(newLimit);
+                setPage(1);
+              }}
+              limitOptions={[5, 10, 20, 50]}
+              isFetching={isLoadingItems}
+              itemName="items"
+            />
           </div>
         )}
       </div>
@@ -902,12 +893,12 @@ export const AdminApprovalQueuePage: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400 font-bold">Submitted By:</span>
-                <span className="font-bold text-slate-800">{viewingItem.requestedByName || 'Staff'}</span>
+                <span className="font-bold text-slate-800">{viewingItem.requestedBy?.name || (viewingItem as any).requestedByName || 'Staff'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400 font-bold">Submitted Date:</span>
                 <span className="text-slate-700">
-                  {new Date(viewingItem.submittedAt || viewingItem.createdAt).toLocaleString()}
+                  {new Date(viewingItem.createdAt).toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between">

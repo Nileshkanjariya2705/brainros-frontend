@@ -2,26 +2,22 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
   UploadCloud,
-  Download,
   AlertTriangle,
   CheckCircle2,
   XCircle,
   Search,
   Clock,
-  ArrowLeft,
   RefreshCw,
-  Eye,
   Plus,
-  ChevronLeft,
-  ChevronRight,
   Languages,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import { Pagination } from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import { toast } from '@/utils/toast';
 import {
   useGetExamsListAPI,
   useRetryQuestionPaperUploadAPI,
-  downloadQuestionPaperTemplate,
 } from '../services/examManager.service';
 import type { ExamItem } from '../types/examManager.types';
 import { useQueryClient } from '@tanstack/react-query';
@@ -75,14 +71,6 @@ export const UploadQuestionPaperPage: React.FC = () => {
       subtitle: 'Upload CSV/Excel paper with correct answers',
       status: 'current',
       to: `${routePrefix}/exam-manager/upload`,
-    },
-    {
-      id: 'exam-results',
-      stepNumber: 3,
-      title: 'Automated Evaluation & Results',
-      subtitle: 'Automatic evaluation & Super Admin publication',
-      status: 'pending',
-      to: `${routePrefix}/reports`,
     },
   ];
 
@@ -346,7 +334,7 @@ export const UploadQuestionPaperPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          {/* <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
             <Button
               variant="outline"
               onClick={() => downloadQuestionPaperTemplate('xlsx')}
@@ -368,7 +356,7 @@ export const UploadQuestionPaperPage: React.FC = () => {
             >
               <ArrowLeft size={14} /> Back
             </Button>
-          </div>
+          </div> */}
         </div>
 
         {/* ── Search & Filter Bar ── */}
@@ -420,9 +408,33 @@ export const UploadQuestionPaperPage: React.FC = () => {
 
         {/* ── Scheduled Exams Table (Section-level Loading) ── */}
         {isLoadingExams ? (
-          <div className="bg-white rounded-3xl border border-slate-200 p-12 flex flex-col items-center justify-center text-slate-500 shadow-xs">
-            <RefreshCw size={28} className="animate-spin text-indigo-600 mb-3" />
-            <span className="text-xs font-bold">Loading scheduled examinations...</span>
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/80 text-[11px] uppercase tracking-wider font-bold text-slate-500">
+                    <th className="p-4 pl-6">Exam Name</th>
+                    <th className="p-4">Target / Type</th>
+                    <th className="p-4">Subject & Sections</th>
+                    <th className="p-4">Schedule Window</th>
+                    <th className="p-4">Question Paper</th>
+                    <th className="p-4 pr-6 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <tr key={idx} className="animate-pulse bg-white">
+                      <td className="p-4 pl-6"><Skeleton className="h-4 w-40 rounded" /></td>
+                      <td className="p-4"><Skeleton className="h-5 w-20 rounded" /></td>
+                      <td className="p-4"><Skeleton className="h-4 w-28 rounded" /></td>
+                      <td className="p-4"><Skeleton className="h-4 w-32 rounded" /></td>
+                      <td className="p-4"><Skeleton className="h-5 w-24 rounded-full" /></td>
+                      <td className="p-4 pr-6 text-right"><Skeleton className="h-8 w-24 rounded ml-auto" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : filteredScheduledExams.length === 0 ? (
           <div className="bg-white rounded-3xl border border-dashed border-slate-200 p-12 text-center shadow-xs">
@@ -607,16 +619,7 @@ export const UploadQuestionPaperPage: React.FC = () => {
                             </Button>
                           ) : hasQuestions ? (
                             <div className="flex items-center justify-end gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  navigate(`${routePrefix}/exams/${exam.id}/question-paper/view`)
-                                }
-                                className="inline-flex items-center gap-1 text-slate-700 border-slate-200 hover:bg-slate-50 text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xs"
-                              >
-                                <Eye size={12} /> View Question Paper
-                              </Button>
+                              {/* Removed View Question Paper button */}
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -681,57 +684,19 @@ export const UploadQuestionPaperPage: React.FC = () => {
             </div>
 
             {/* ── Pagination Controls ── */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 p-4 text-xs font-semibold">
-              <div className="flex items-center gap-3">
-                <span className="text-slate-500">
-                  Showing <b>{totalCount === 0 ? 0 : (page - 1) * limit + 1}</b>–<b>{Math.min(page * limit, totalCount)}</b> of{' '}
-                  <b>{totalCount}</b> scheduled exams
-                </span>
-                <div className="flex items-center gap-1.5 text-slate-500 border-l border-slate-200 pl-3">
-                  <span>Per page:</span>
-                  <select
-                    value={limit}
-                    onChange={(e) => {
-                      setLimit(Number(e.target.value));
-                      setPage(1);
-                    }}
-                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 outline-none focus:border-indigo-500 cursor-pointer"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
-                </div>
-              </div>
-
-              {(totalPages > 1 || Math.ceil(totalCount / limit) > 1) && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    className="flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft size={14} />
-                    <span>Previous</span>
-                  </Button>
-                  <span className="px-2 text-slate-700 font-bold">
-                    Page {page} of {totalPages || Math.ceil(totalCount / limit) || 1}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page >= (totalPages || Math.ceil(totalCount / limit) || 1)}
-                    onClick={() => setPage((p) => Math.min(totalPages || Math.ceil(totalCount / limit) || 1, p + 1))}
-                    className="flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    <span>Next</span>
-                    <ChevronRight size={14} />
-                  </Button>
-                </div>
-              )}
+            <div className="border-t border-slate-100">
+              <Pagination
+                page={page}
+                totalPages={totalPages || Math.ceil(totalCount / limit) || 1}
+                total={totalCount}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(newLimit: number) => {
+                  setLimit(newLimit);
+                  setPage(1);
+                }}
+                itemName="scheduled exams"
+              />
             </div>
           </div>
         )}

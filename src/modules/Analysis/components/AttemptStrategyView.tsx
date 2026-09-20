@@ -11,7 +11,6 @@ import {
   Sparkles,
   Info,
   BarChart3,
-  RotateCw,
   HelpCircle,
   ChevronDown,
   ChevronUp,
@@ -34,8 +33,6 @@ interface Props {
   attemptStrategy?: AttemptStrategyReport;
   overall?: OverallPerformanceMetrics;
   detailedStrategy?: DetailedStrategyAnalysis | null;
-  onRecalculate?: () => void;
-  isRecalculating?: boolean;
 }
 
 // ── Classification Styling & Descriptions ───────────────────────
@@ -172,8 +169,6 @@ export const AttemptStrategyView: React.FC<Props> = ({
   attemptStrategy,
   overall: propOverall,
   detailedStrategy,
-  onRecalculate,
-  isRecalculating,
 }) => {
   const navigate = useNavigate();
   const strategy = propStrategy || attemptStrategy;
@@ -303,34 +298,7 @@ export const AttemptStrategyView: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Recalculate & Action Links */}
-          <div className="flex items-center gap-2 shrink-0 self-start md:self-auto">
-            {detailedStrategy?.actionRecommendation && (
-              <button
-                onClick={() =>
-                  navigate(detailedStrategy.actionRecommendation!.targetUrl)
-                }
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 active:scale-95 transition-all"
-              >
-                <span>{detailedStrategy.actionRecommendation.label}</span>
-                <ArrowRight size={13} />
-              </button>
-            )}
 
-            {onRecalculate && (
-              <button
-                onClick={onRecalculate}
-                disabled={isRecalculating}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 shadow-sm hover:bg-slate-50 active:scale-95 transition-all"
-              >
-                <RotateCw
-                  size={14}
-                  className={cn({ 'animate-spin': isRecalculating })}
-                />
-                <span>{isRecalculating ? 'Recalculating...' : 'Recalculate'}</span>
-              </button>
-            )}
-          </div>
         </div>
 
         {/* Expandable "Why am I seeing this?" Section */}

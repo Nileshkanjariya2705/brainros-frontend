@@ -39,10 +39,8 @@ export const useStudentDashboardQuery = (params?: { page?: number; limit?: numbe
       );
       return (res.data as any).data || res.data;
     },
-    staleTime: 0,
+    staleTime: 30_000,
     placeholderData: keepPreviousData,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
   });
 
 /**

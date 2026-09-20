@@ -17,8 +17,6 @@ import {
   FileCheck2,
   HelpCircle,
   Activity,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 
 // ** Services **
@@ -29,7 +27,8 @@ import {
 
 // ** Components **
 import Button from '@/components/ui/Button';
-import Loader from '@/components/feedback/Loader';
+import { Pagination } from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 
 // ** Types **
 import type { PublicationDashboardItem } from '@/types/exam.types';
@@ -308,9 +307,30 @@ export const SuperAdminExamResultsPage: React.FC = () => {
 
       {/* ─── Exams Table / List ────────────────────────────────────── */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
-        {isDashboardLoading && exams.length === 0 ? (
-          <div className="py-20 flex flex-col items-center justify-center gap-3">
-            <Loader label="Loading publication queues and readiness statuses..." />
+        {isDashboardLoading ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <th className="py-3.5 px-4">Exam Details</th>
+                  <th className="py-3.5 px-4">Candidates & Finalization</th>
+                  <th className="py-3.5 px-4">Evaluation & Analytics</th>
+                  <th className="py-3.5 px-4">Rank Snapshot</th>
+                  <th className="py-3.5 px-4">Status & Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-40 rounded" /><Skeleton className="h-3 w-20 rounded mt-1.5" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-32 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-3 w-36 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-24 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-8 w-24 rounded-lg" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : filteredExams.length === 0 ? (
           <div className="py-16 text-center text-slate-500 dark:text-slate-400">
@@ -545,58 +565,24 @@ export const SuperAdminExamResultsPage: React.FC = () => {
             </table>
 
             {/* ── Pagination Controls ── */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30 p-4 text-xs font-semibold">
-              <div className="flex items-center gap-3">
-                <span className="text-slate-500 dark:text-slate-400">
-                  Showing <b>{totalCount === 0 ? 0 : (page - 1) * limit + 1}</b>–<b>{Math.min(page * limit, totalCount)}</b> of{' '}
-                  <b>{totalCount}</b> exams
-                </span>
-                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 border-l border-slate-200 dark:border-slate-700 pl-3">
-                  <span>Per page:</span>
-                  <select
-                    value={limit}
-                    onChange={(e) => {
-                      setLimit(Number(e.target.value));
-                      setPage(1);
-                    }}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500 cursor-pointer"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
-                </div>
+            {totalCount > 0 && (
+              <div className="p-4 border-t border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30">
+                <Pagination
+                  page={page}
+                  totalPages={totalPages || Math.ceil(totalCount / limit) || 1}
+                  total={totalCount}
+                  limit={limit}
+                  onPageChange={setPage}
+                  onLimitChange={(newLimit) => {
+                    setLimit(newLimit);
+                    setPage(1);
+                  }}
+                  limitOptions={[5, 10, 20, 50]}
+                  isFetching={isDashboardLoading}
+                  itemName="exams"
+                />
               </div>
-
-              {(totalPages > 1 || Math.ceil(totalCount / limit) > 1) && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    className="flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft size={14} />
-                    <span>Previous</span>
-                  </Button>
-                  <span className="px-2 text-slate-700 dark:text-slate-200 font-bold">
-                    Page {page} of {totalPages || Math.ceil(totalCount / limit) || 1}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page >= (totalPages || Math.ceil(totalCount / limit) || 1)}
-                    onClick={() => setPage((p) => Math.min(totalPages || Math.ceil(totalCount / limit) || 1, p + 1))}
-                    className="flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    <span>Next</span>
-                    <ChevronRight size={14} />
-                  </Button>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         )}
       </div>

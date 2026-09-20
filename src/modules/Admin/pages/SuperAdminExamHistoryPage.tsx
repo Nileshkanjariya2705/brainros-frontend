@@ -1,35 +1,25 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   History,
   Search,
   Users,
   Eye,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
   Layers,
   CheckCircle2,
   TrendingUp,
 } from 'lucide-react';
 import {
-  useGetExamHistoryAPI,
+  useCompletedExamsHistoryQuery,
   CompletedExamItem,
 } from '../services/examHistory.service';
 import { CompletedExamDetailModal } from '../components/CompletedExamDetailModal';
-import Loader from '@/components/feedback/Loader';
+import { Pagination } from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 
 export const SuperAdminExamHistoryPage: React.FC = () => {
-  const { getExamHistoryAPI, isLoading, error } = useGetExamHistoryAPI();
-
-  const [exams, setExams] = useState<CompletedExamItem[]>([]);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 1,
-    hasMore: false,
-  });
-
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(5);
   const [search, setSearch] = useState<string>('');
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [selectedTarget, setSelectedTarget] = useState<string>('ALL');
@@ -42,36 +32,34 @@ export const SuperAdminExamHistoryPage: React.FC = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
+      setPage(1);
     }, 400);
     return () => clearTimeout(timer);
   }, [search]);
 
-  const loadData = useCallback(
-    async (pageNumber = 1) => {
-      try {
-        const res = await getExamHistoryAPI({
-          page: pageNumber,
-          limit: pagination.limit,
-          search: debouncedSearch || undefined,
-          examTargetId: selectedTarget !== 'ALL' ? selectedTarget : undefined,
-          startDate: startDate || undefined,
-          endDate: endDate || undefined,
-        });
-
-        if (res?.data) {
-          setExams(res.data.exams || []);
-          setPagination(res.data.pagination);
-        }
-      } catch {
-        // Handled in hook
-      }
-    },
-    [getExamHistoryAPI, pagination.limit, debouncedSearch, selectedTarget, startDate, endDate],
+  const queryParams = useMemo(
+    () => ({
+      page,
+      limit,
+      search: debouncedSearch || undefined,
+      examTargetId: selectedTarget !== 'ALL' ? selectedTarget : undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined,
+    }),
+    [page, limit, debouncedSearch, selectedTarget, startDate, endDate],
   );
 
-  useEffect(() => {
-    loadData(1);
-  }, [loadData]);
+  const { data: historyData, isLoading, isFetching, error: queryError, refetch } = useCompletedExamsHistoryQuery(queryParams);
+
+  const exams: CompletedExamItem[] = historyData?.exams || [];
+  const pagination = historyData?.pagination || {
+    page,
+    limit,
+    total: 0,
+    totalPages: 1,
+    hasMore: false,
+  };
+  const error = queryError ? ((queryError as any)?.response?.data?.message || queryError.message || 'Failed to load exam history') : null;
 
   const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return '—';
@@ -122,7 +110,7 @@ export const SuperAdminExamHistoryPage: React.FC = () => {
         </div>
 
         <button
-          onClick={() => loadData(pagination.page)}
+          onClick={() => refetch()}
           disabled={isLoading}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50 active:scale-98 transition-all shadow-2xs self-start md:self-auto"
         >
@@ -255,9 +243,20 @@ export const SuperAdminExamHistoryPage: React.FC = () => {
 
       {/* ── Main Data Table / List ──────────────────────────────────── */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-        {isLoading ? (
-          <div className="py-20 text-center">
-            <Loader label="Loading completed examination history..." />
+        {(isLoading || isFetching) ? (
+          <div className="p-6 space-y-3">
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <div key={idx} className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 flex items-center justify-between gap-4 animate-pulse">
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-5 w-48 rounded" />
+                    <Skeleton className="h-4 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-3 w-64 rounded" />
+                </div>
+                <Skeleton className="h-8 w-24 rounded-xl" />
+              </div>
+            ))}
           </div>
         ) : exams.length === 0 ? (
           <div className="py-20 text-center px-4 space-y-3">
@@ -413,65 +412,23 @@ export const SuperAdminExamHistoryPage: React.FC = () => {
           </div>
         )}
 
-        {/* ── Pagination Bar ────────────────────────────────────────── */}
+        {/* ── Pagination Controls ───────────────────────────────────── */}
         {!isLoading && exams.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
-            <span className="text-xs text-slate-500 font-medium">
-              Showing{' '}
-              <strong className="text-slate-800">
-                {(pagination.page - 1) * pagination.limit + 1}
-              </strong>{' '}
-              to{' '}
-              <strong className="text-slate-800">
-                {Math.min(pagination.page * pagination.limit, pagination.total)}
-              </strong>{' '}
-              of <strong className="text-slate-800">{pagination.total}</strong> completed exams
-            </span>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => loadData(pagination.page - 1)}
-                disabled={pagination.page <= 1}
-                className="p-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                aria-label="Previous page"
-              >
-                <ChevronLeft size={16} />
-              </button>
-
-              <div className="flex items-center gap-1">
-                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-                  .filter((p) => {
-                    const curr = pagination.page;
-                    return p === 1 || p === pagination.totalPages || Math.abs(p - curr) <= 1;
-                  })
-                  .map((p, idx, arr) => (
-                    <React.Fragment key={p}>
-                      {idx > 0 && arr[idx - 1] !== p - 1 && (
-                        <span className="px-1 text-slate-400 text-xs">...</span>
-                      )}
-                      <button
-                        onClick={() => loadData(p)}
-                        className={`h-8 min-w-[32px] px-2.5 rounded-xl text-xs font-bold transition-all ${
-                          pagination.page === p
-                            ? 'bg-indigo-600 text-white shadow-xs'
-                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    </React.Fragment>
-                  ))}
-              </div>
-
-              <button
-                onClick={() => loadData(pagination.page + 1)}
-                disabled={pagination.page >= pagination.totalPages}
-                className="p-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                aria-label="Next page"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
+          <div className="p-4 border-t border-slate-200">
+            <Pagination
+              page={page}
+              totalPages={pagination.totalPages || 1}
+              total={pagination.total}
+              limit={limit}
+              onPageChange={setPage}
+              onLimitChange={(newLimit) => {
+                setLimit(newLimit);
+                setPage(1);
+              }}
+              limitOptions={[5, 10, 20, 50]}
+              isFetching={isLoading}
+              itemName="completed exams"
+            />
           </div>
         )}
       </div>

@@ -95,19 +95,14 @@ test.describe('Public Marketing Pages SEO Verification', () => {
       const response = await page.goto(pageItem.path, { waitUntil: 'domcontentloaded' });
       expect(response?.status()).toBe(200);
 
-      // Wait for React to render and SeoHead effect to fire
-      await page.waitForTimeout(500);
-
-      // 1. Verify Page Title
-      const title = await page.title();
-      expect(title).toContain(pageItem.expectedTitleContains);
-      expect(title).toContain('Brainros');
+      // 1. Verify Page Title (auto-waiting for SeoHead client-side update)
+      await expect(page).toHaveTitle(new RegExp(pageItem.expectedTitleContains, 'i'));
+      await expect(page).toHaveTitle(/Brainros/);
 
       // 2. Verify Exactly One H1
       const h1Elements = page.locator('h1');
       await expect(h1Elements).toHaveCount(1);
-      const h1Text = await h1Elements.first().innerText();
-      expect(h1Text).toContain(pageItem.expectedH1Contains);
+      await expect(h1Elements.first()).toContainText(pageItem.expectedH1Contains);
 
       // 3. Verify Meta Description
       const metaDescription = page.locator('meta[name="description"]');

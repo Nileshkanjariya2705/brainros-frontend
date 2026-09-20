@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { Axios } from '@/base-axios';
 import Button from '@/components/ui/Button';
+import Pagination from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import { ScheduleExamModal } from '@/modules/ExamScheduling/components/ScheduleExamModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -503,7 +505,7 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
   // ── State ───────────────────────────────────────────────────────────────────
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(10);
+  const [limit, setLimit] = useState<number>(5);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -531,6 +533,7 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
   const {
     data: eventsData,
     isLoading: eventsLoading,
+    isFetching: eventsFetching,
     isError: eventsError,
     refetch: refetchEvents,
   } = useQuery<CalendarListResponse>({
@@ -755,16 +758,28 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
       )}
 
       {/* ── Loading ── */}
-      {eventsLoading && (
-        <div className="bg-white rounded-3xl border border-slate-200 p-16 flex flex-col items-center justify-center text-slate-400 shadow-xs">
-          <RefreshCw size={32} className="animate-spin text-indigo-600 mb-3" />
-          <span className="text-sm font-bold text-slate-700">Loading calendar...</span>
-          <span className="text-xs text-slate-400 mt-1">Fetching {selectedYear} academic schedule</span>
+      {(eventsLoading || eventsFetching) && (
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-xs flex items-center justify-between gap-4 animate-pulse"
+            >
+              <div className="space-y-2 flex-1">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-40 rounded" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </div>
+                <Skeleton className="h-4 w-60 rounded" />
+              </div>
+              <Skeleton className="h-8 w-24 rounded-xl" />
+            </div>
+          ))}
         </div>
       )}
 
       {/* ── Empty State ── */}
-      {!eventsLoading && !eventsError && events.length === 0 && (
+      {!eventsLoading && !eventsFetching && !eventsError && events.length === 0 && (
         <div className="bg-white rounded-3xl border border-dashed border-slate-200 p-16 text-center shadow-xs">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mx-auto mb-4">
             <CalendarClock size={28} />
@@ -781,10 +796,7 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
           </p>
           {!debouncedSearch && (
             <Button
-              onClick={() => {
-                setModalError(null);
-                setShowCreateModal(true);
-              }}
+              onClick={() => navigate(`${routePrefix}/exams/schedule`)}
               className="text-xs font-bold px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
             >
               <Plus size={13} className="mr-1.5 inline" />
@@ -910,59 +922,23 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
             Ordered chronologically
           </div>
 
-          {/* Server-Side Pagination Controls */}
-          {eventsData?.meta && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border border-slate-200 bg-white px-5 py-4 rounded-2xl shadow-xs">
-              <div className="flex flex-wrap items-center gap-3">
-                <p className="text-xs font-semibold text-slate-500">
-                  Showing {events.length === 0 ? 0 : (eventsData.meta.page - 1) * eventsData.meta.limit + 1} to{' '}
-                  {Math.min(eventsData.meta.page * eventsData.meta.limit, eventsData.meta.total)} of{' '}
-                  <span className="font-bold text-slate-700">{eventsData.meta.total}</span> entries
-                </p>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <span>•</span>
-                  <label htmlFor="calendar-limit-select" className="font-medium text-slate-500">
-                    Per page:
-                  </label>
-                  <select
-                    id="calendar-limit-select"
-                    value={limit}
-                    onChange={(e) => {
-                      setLimit(Number(e.target.value));
-                      setPage(1);
-                    }}
-                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer shadow-2xs"
-                  >
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={eventsData.meta.page <= 1}
-                  className="rounded-xl text-xs font-bold"
-                >
-                  Previous
-                </Button>
-                <span className="text-xs font-bold text-slate-700 px-2">
-                  Page {eventsData.meta.page} of {Math.max(1, eventsData.meta.pages || 1)}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.min(eventsData.meta.pages || 1, p + 1))}
-                  disabled={eventsData.meta.page >= (eventsData.meta.pages || 1)}
-                  className="rounded-xl text-xs font-bold"
-                >
-                  Next
-                </Button>
-              </div>
+          {/* Pagination Controls */}
+          {eventsData?.meta && eventsData.meta.total > 0 && (
+            <div className="mt-4">
+              <Pagination
+                page={page}
+                totalPages={eventsData.meta.pages || 1}
+                total={eventsData.meta.total}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit);
+                  setPage(1);
+                }}
+                limitOptions={[5, 10, 20, 50]}
+                isFetching={eventsLoading}
+                itemName="entries"
+              />
             </div>
           )}
         </div>

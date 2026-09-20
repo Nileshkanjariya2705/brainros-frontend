@@ -31,6 +31,7 @@ export const useNotificationsQuery = (
       return { items, meta };
     },
     staleTime: 30_000,
+    placeholderData: (prev) => prev,
   });
 
 /**

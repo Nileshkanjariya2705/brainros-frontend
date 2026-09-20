@@ -5,8 +5,6 @@ import {
   CheckCheck,
   DollarSign,
   AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
   Trash2,
   Inbox,
   Search,
@@ -22,7 +20,8 @@ import {
 } from '../services/notification.queries';
 import { handleNotificationClick } from '../utils/handleNotificationClick';
 import type { InAppNotification, NotificationType } from '@/types/exam.types';
-import Loader from '@/components/feedback/Loader';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { Pagination } from '@/components/ui/Pagination';
 
 const formatRelativeTime = (dateStr: string) => {
   try {
@@ -84,17 +83,18 @@ export const AccountantNotificationsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'ALL' | 'UNREAD' | 'BILLING'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(5);
 
   const queryParams = useMemo(
     () => ({
       page: currentPage,
-      limit: 15,
+      limit,
       unreadOnly: activeTab === 'UNREAD' ? true : undefined,
     }),
-    [currentPage, activeTab],
+    [currentPage, limit, activeTab],
   );
 
-  const { data: notificationData, isLoading } = useNotificationsQuery(queryParams);
+  const { data: notificationData, isLoading, isFetching } = useNotificationsQuery(queryParams);
   const rawNotifications: InAppNotification[] = notificationData?.items || [];
   const totalPages = notificationData?.meta?.totalPages || 1;
   const totalCount = notificationData?.meta?.total || 0;
@@ -262,9 +262,27 @@ export const AccountantNotificationsPage: React.FC = () => {
       </div>
 
       {/* ── Notification Feed ─────────────────────────────────────── */}
-      {isLoading && rawNotifications.length === 0 ? (
-        <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-          <Loader label="Loading notifications feed..." />
+      {isLoading || isFetching ? (
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={`skel-notif-${i}`}
+              className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-pulse"
+            >
+              <div className="flex items-start gap-4 flex-1">
+                <Skeleton className="h-12 w-12 rounded-2xl shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-4 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-3.5 w-3/4" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              </div>
+              <Skeleton className="h-8 w-24 rounded-xl shrink-0 self-end sm:self-center" />
+            </div>
+          ))}
         </div>
       ) : filteredNotifications.length === 0 ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-sm">
@@ -378,31 +396,21 @@ export const AccountantNotificationsPage: React.FC = () => {
       )}
 
       {/* ── Pagination Controls ───────────────────────────────────── */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
-          <span className="text-xs font-semibold text-slate-500">
-            Page <strong className="text-slate-900">{currentPage}</strong> of {totalPages}
-          </span>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage <= 1}
-              className="flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-            >
-              <ChevronLeft size={14} />
-              Previous
-            </button>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages}
-              className="flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-            >
-              Next
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
+      {!isLoading && rawNotifications.length > 0 && (
+        <Pagination
+          page={currentPage}
+          totalPages={totalPages}
+          total={totalCount}
+          limit={limit}
+          onPageChange={setCurrentPage}
+          onLimitChange={(newLimit) => {
+            setLimit(newLimit);
+            setCurrentPage(1);
+          }}
+          limitOptions={[5, 10, 20, 50]}
+          isFetching={isFetching}
+          itemName="alerts"
+        />
       )}
     </div>
   );

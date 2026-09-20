@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -21,12 +21,16 @@ import { QuestionPreviewTable } from '../components/QuestionPreviewTable';
 import { TranslationProgressPanel } from '../components/TranslationProgressPanel';
 import { LanguageQuestionPapersList } from '../components/LanguageQuestionPapersList';
 import { QuestionPaperViewPanel } from '../components/QuestionPaperViewPanel';
-import type { ScheduledExam, UploadValidationResponse } from '../types/ai-translation.types';
+import type {
+  ScheduledExam,
+  UploadValidationResponse,
+  AiTranslationJobDetails,
+} from '../types/ai-translation.types';
 
 export const AiQuestionPaperTranslationPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedExam, setSelectedExam] = useState<ScheduledExam | null>(null);
-  const [activeTab, setActiveTab] = useState<'upload' | 'translations'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'translations'>('translations');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [validationData, setValidationData] = useState<UploadValidationResponse | null>(null);
@@ -73,6 +77,41 @@ export const AiQuestionPaperTranslationPage: React.FC = () => {
     },
   });
 
+  // Effective job details (uses server job details if active, or synthesizes from selectedExam metadata)
+  const effectiveJobDetails: AiTranslationJobDetails | null = useMemo(() => {
+    if (jobDetails) return jobDetails;
+    if (!selectedExam) return null;
+    return {
+      id: selectedExam.translationJob?.id || `draft-${selectedExam.examId}`,
+      examId: selectedExam.examId,
+      examTitle: selectedExam.examTitle || 'Examination Question Paper',
+      examCode: selectedExam.examCode || 'EXAM',
+      examVersionId: selectedExam.latestVersionId || '',
+      totalQuestions: selectedExam.totalQuestionsConfigured || selectedExam.currentQuestionsCount || 0,
+      totalLanguages: selectedExam.targetLanguages?.length || 0,
+      batchSize: 5,
+      status: (selectedExam.translationJob?.status as any) || 'QUEUED',
+      overallProgress: selectedExam.translationJob?.overallProgress ?? 0,
+      dbSaveProgress: (selectedExam.currentQuestionsCount && selectedExam.currentQuestionsCount > 0) || selectedExam.translationJob ? 100 : 0,
+      languageStatuses: (selectedExam.targetLanguages || []).map((l) => ({
+        languageId: l.id,
+        languageName: l.name,
+        languageCode: l.code,
+        status: 'QUEUED' as const,
+        totalQuestions: selectedExam.totalQuestionsConfigured || selectedExam.currentQuestionsCount || 0,
+        completedQuestions: 0,
+        failedBatches: 0,
+        errorMessage: undefined,
+      })),
+      startedAt: null,
+      completedAt: selectedExam.translationJob?.completedAt || null,
+      failedAt: null,
+      errorMessage: null,
+      createdAt: selectedExam.translationJob?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }, [jobDetails, selectedExam]);
+
   // Direct Job / Exam activation from URL query parameters (supports redirect after save & notifications)
   useEffect(() => {
     const targetJobId = searchParams.get('jobId') || searchParams.get('translationJobId');
@@ -92,10 +131,10 @@ export const AiQuestionPaperTranslationPage: React.FC = () => {
       );
       if (match) {
         setSelectedExam(match);
-        if (match.translationJob?.id && !targetJobId) {
+        if (match.translationJob?.id) {
           setActiveJobId(match.translationJob.id);
-          setActiveTab('translations');
         }
+        setActiveTab('translations');
       }
     }
   }, [searchParams, scheduledExams, selectedExam, activeJobId]);
@@ -154,7 +193,7 @@ export const AiQuestionPaperTranslationPage: React.FC = () => {
   }, [jobDetails, scheduledExams, selectedExam]);
 
   // 3. Handlers
-  const handleSelectExam = (exam: ScheduledExam, mode: 'upload' | 'view' = 'upload') => {
+  const handleSelectExam = (exam: ScheduledExam, mode: 'upload' | 'view' = 'view') => {
     setSelectedExam(exam);
     setSelectedFile(null);
     setValidationData(null);
@@ -170,13 +209,13 @@ export const AiQuestionPaperTranslationPage: React.FC = () => {
 
     if (exam.translationJob?.id) {
       setActiveJobId(exam.translationJob.id);
-      setActiveTab(mode === 'upload' ? 'upload' : 'translations');
       newParams.set('jobId', exam.translationJob.id);
     } else {
       setActiveJobId(null);
-      setActiveTab('upload');
       newParams.delete('jobId');
     }
+
+    setActiveTab(mode === 'upload' ? 'upload' : 'translations');
     setSearchParams(newParams, { replace: true });
   };
 
@@ -369,8 +408,8 @@ export const AiQuestionPaperTranslationPage: React.FC = () => {
                 </h2>
               </div>
 
-              {/* View/Upload Tabs if a job exists */}
-              {activeJobId && !viewingPaper && (
+              {/* View/Upload Tabs - Always available for any selected exam */}
+              {!viewingPaper && (
                 <div className="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
                   <button
                     type="button"
@@ -382,7 +421,7 @@ export const AiQuestionPaperTranslationPage: React.FC = () => {
                     }`}
                   >
                     <Globe2 className="w-3.5 h-3.5" />
-                    Translation Papers ({jobDetails?.totalLanguages ? jobDetails.totalLanguages + 1 : selectedExam.targetLanguages.length + 1})
+                    AI Translation Pipeline ({effectiveJobDetails?.totalLanguages ? effectiveJobDetails.totalLanguages + 1 : selectedExam.targetLanguages.length + 1})
                   </button>
 
                   <button
@@ -433,7 +472,7 @@ export const AiQuestionPaperTranslationPage: React.FC = () => {
                   Questions Configured
                 </div>
                 <p className="text-xs font-bold text-slate-800 dark:text-slate-100 mt-1">
-                  {selectedExam.totalQuestionsConfigured || 0} Questions
+                  {selectedExam.totalQuestionsConfigured || selectedExam.currentQuestionsCount || 0} Questions
                 </p>
               </div>
 
@@ -461,66 +500,90 @@ export const AiQuestionPaperTranslationPage: React.FC = () => {
           </div>
 
           {/* Flow Level 3: View Full Question Paper Mode */}
-          {viewingPaper && activeJobId ? (
+          {viewingPaper && (activeJobId || effectiveJobDetails?.id) ? (
             <QuestionPaperViewPanel
-              jobId={activeJobId}
+              jobId={activeJobId || effectiveJobDetails!.id}
               initialLanguageId={selectedLanguageForView}
               onBack={() => setViewingPaper(false)}
             />
           ) : (
             <>
               {/* Flow Level 2A: Translations View (Progress + Regional Papers) */}
-              {activeJobId && activeTab === 'translations' && (
+              {activeTab === 'translations' && effectiveJobDetails && (
                 <div className="space-y-6">
                   {/* Real-time Progress Tracking Panel */}
                   <TranslationProgressPanel
-                    jobDetails={jobDetails || null}
-                    progressPercentage={progressPercentage}
-                    currentStage={currentStage}
-                    status={jobStatus}
+                    jobDetails={effectiveJobDetails}
+                    progressPercentage={jobDetails ? progressPercentage : (selectedExam.translationJob?.overallProgress ?? 0)}
+                    currentStage={jobDetails ? currentStage : (selectedExam.translationJob ? 'Step 2: AI Translation — Queued' : 'Step 1: Upload English Question Paper to Start Pipeline')}
+                    status={jobDetails ? jobStatus : ((selectedExam.translationJob?.status as any) || 'QUEUED')}
                     isTerminal={isTerminal}
                     onViewQuestions={() => handleOpenLanguagePaper('en')}
                     onJobUpdated={() => {
-                      refetchJob();
+                      if (activeJobId) refetchJob();
                       refetchExams();
                     }}
                   />
 
-                  {/* Regional Languages Question Papers List */}
-                  {jobDetails && (
-                    <LanguageQuestionPapersList
-                      jobDetails={jobDetails}
-                      onViewLanguagePaper={handleOpenLanguagePaper}
-                      onJobUpdated={() => {
-                        refetchJob();
-                        refetchExams();
-                      }}
-                    />
+                  {/* If no question paper has been uploaded yet, show quick upload action banner */}
+                  {!selectedExam.translationJob?.id && (!selectedExam.currentQuestionsCount || selectedExam.currentQuestionsCount === 0) && (
+                    <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 dark:from-indigo-950/40 dark:via-purple-950/40 dark:to-indigo-950/40 border border-indigo-200/60 dark:border-indigo-800/60 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shrink-0 shadow-sm shadow-indigo-600/20">
+                          <UploadCloud className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-100">
+                            Upload English Master Question Paper
+                          </h3>
+                          <p className="text-xs text-indigo-600/80 dark:text-indigo-400/80 mt-0.5">
+                            Upload your CSV/Excel question paper to immediately start AI translations across all {selectedExam.targetLanguages?.length || 8} regional languages.
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('upload')}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all shrink-0 cursor-pointer"
+                      >
+                        <UploadCloud className="w-4 h-4" />
+                        Upload Question Paper
+                      </button>
+                    </div>
                   )}
+
+                  {/* Regional Languages Question Papers List */}
+                  <LanguageQuestionPapersList
+                    jobDetails={effectiveJobDetails}
+                    onViewLanguagePaper={handleOpenLanguagePaper}
+                    onJobUpdated={() => {
+                      if (activeJobId) refetchJob();
+                      refetchExams();
+                    }}
+                  />
                 </div>
               )}
 
               {/* Flow Level 2B: Upload Flow (FileUploadZone + Validation & Preview Table) */}
-              {(!activeJobId || activeTab === 'upload') && (
+              {activeTab === 'upload' && (
                 <div className="space-y-6">
-                  {/* Step Indicator — shown when no translation job exists yet */}
-                  {!activeJobId && (
-                    <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 dark:from-indigo-950/40 dark:via-purple-950/40 dark:to-indigo-950/40 border border-indigo-200/60 dark:border-indigo-800/60 rounded-2xl p-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-sm font-black shadow-sm shadow-indigo-600/20 shrink-0">
-                          1
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-100">
-                            Upload Question Paper to Start AI Translation
-                          </h3>
-                          <p className="text-xs text-indigo-600/80 dark:text-indigo-400/80 mt-0.5">
-                            Upload the English question paper (Excel/CSV) below. Once validated and submitted, AI will automatically generate translations in all configured regional languages.
-                          </p>
-                        </div>
+                  {/* Step Indicator */}
+                  <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 dark:from-indigo-950/40 dark:via-purple-950/40 dark:to-indigo-950/40 border border-indigo-200/60 dark:border-indigo-800/60 rounded-2xl p-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-sm font-black shadow-sm shadow-indigo-600/20 shrink-0">
+                        1
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-100">
+                          Upload Question Paper to Start AI Translation
+                        </h3>
+                        <p className="text-xs text-indigo-600/80 dark:text-indigo-400/80 mt-0.5">
+                          Upload the English question paper (Excel/CSV) below. Once validated and submitted, AI will automatically generate translations in all configured regional languages.
+                        </p>
                       </div>
                     </div>
-                  )}
+                  </div>
 
                   <FileUploadZone
                     selectedFile={selectedFile}

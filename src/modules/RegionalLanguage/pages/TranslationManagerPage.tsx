@@ -51,8 +51,7 @@ export const TranslationManagerPage: React.FC = () => {
           <div>
             <h1 className="text-lg font-extrabold text-slate-900">Translation Manager</h1>
             <p className="text-xs text-slate-500">
-              Exam: {examTitle || examId.slice(0, 8)} • Supported Languages & Background BullMQ
-              Processing
+              Exam: {examTitle || 'Selected Exam'} • Supported Languages & Translation Processing
             </p>
           </div>
         </div>

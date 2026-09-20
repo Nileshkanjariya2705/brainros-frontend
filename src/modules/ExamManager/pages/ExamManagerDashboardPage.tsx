@@ -9,10 +9,10 @@ import {
   Clock,
   Send,
   Sparkles,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import { Pagination } from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import { useExamManagerExamsQuery } from '../services/examManager.queries';
 import { useSubmitExamMutation } from '@/modules/ExamScheduling/services/examScheduling.queries';
 import { toast } from '@/utils/toast';
@@ -41,7 +41,7 @@ export const ExamManagerDashboardPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
 
   // TanStack React Query
-  const { data: examData, isLoading } = useExamManagerExamsQuery({
+  const { data: examData, isLoading, isFetching } = useExamManagerExamsQuery({
     search: search.trim() || undefined,
     type: selectedType === 'ALL' ? undefined : selectedType,
     status: selectedStatus === 'ALL' ? undefined : selectedStatus,
@@ -231,13 +231,30 @@ export const ExamManagerDashboardPage: React.FC = () => {
       </div>
 
       {/* ── Exam List Table & Responsive Cards ───────────────────── */}
-      {isLoading && exams.length === 0 ? (
+      {(isLoading || isFetching) ? (
         <div className="space-y-4">
-          {[...Array(3)].map((_, i) => (
+          {Array.from({ length: 5 }).map((_, i) => (
             <div
               key={i}
-              className="h-28 rounded-3xl bg-slate-100 animate-pulse border border-slate-200"
-            />
+              className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5 animate-pulse"
+            >
+              <div className="space-y-2 flex-1">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="h-5 w-28 rounded-md" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+                <Skeleton className="h-5 w-48 rounded-md" />
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-24 rounded" />
+                  <Skeleton className="h-4 w-20 rounded" />
+                  <Skeleton className="h-4 w-32 rounded" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-24 rounded-xl" />
+              </div>
+            </div>
           ))}
         </div>
       ) : exams.length === 0 ? (
@@ -344,58 +361,24 @@ export const ExamManagerDashboardPage: React.FC = () => {
           </div>
 
           {/* ── Pagination Controls ──────────────────────────────── */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-xs font-semibold shadow-xs">
-            <div className="flex items-center gap-3">
-              <span className="text-slate-500">
-                Showing <b>{totalCount === 0 ? 0 : (page - 1) * limit + 1}</b>–<b>{Math.min(page * limit, totalCount)}</b> of{' '}
-                <b>{totalCount}</b> exams
-              </span>
-              <div className="flex items-center gap-1.5 text-slate-500 border-l border-slate-200 pl-3">
-                <span>Per page:</span>
-                <select
-                  value={limit}
-                  onChange={(e) => {
-                    setLimit(Number(e.target.value));
-                    setPage(1);
-                  }}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-700 outline-none focus:border-indigo-500 cursor-pointer"
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                </select>
-              </div>
+          {totalCount > 0 && (
+            <div className="mt-4">
+              <Pagination
+                page={page}
+                totalPages={totalPages || Math.ceil(totalCount / limit) || 1}
+                total={totalCount}
+                limit={limit}
+                onPageChange={setPage}
+                onLimitChange={(newLimit) => {
+                  setLimit(newLimit);
+                  setPage(1);
+                }}
+                limitOptions={[5, 10, 20, 50]}
+                isFetching={isFetching}
+                itemName="exams"
+              />
             </div>
-
-            {(totalPages > 1 || Math.ceil(totalCount / limit) > 1) && (
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft size={14} />
-                  <span>Previous</span>
-                </Button>
-                <span className="px-2 text-slate-700 font-bold">
-                  Page {page} of {totalPages || Math.ceil(totalCount / limit) || 1}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={page >= (totalPages || Math.ceil(totalCount / limit) || 1)}
-                  onClick={() => setPage((p) => Math.min(totalPages || Math.ceil(totalCount / limit) || 1, p + 1))}
-                  className="flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  <span>Next</span>
-                  <ChevronRight size={14} />
-                </Button>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       )}
     </div>

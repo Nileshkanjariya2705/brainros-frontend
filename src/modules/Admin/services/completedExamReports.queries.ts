@@ -98,10 +98,10 @@ export function useApproveReportMutation() {
     onSuccess: (_data, { examId }) => {
       qc.invalidateQueries({ queryKey: adminKeys.completedExamSummary(examId) });
       qc.invalidateQueries({ queryKey: adminKeys.completedExamAttendees(examId) });
-      toast.success('Attempt report approved successfully!');
+      toast.success('Report approved successfully.');
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Failed to approve report.');
+      toast.error(err?.response?.data?.message || 'Unable to approve report. Please try again.');
     },
   });
 }

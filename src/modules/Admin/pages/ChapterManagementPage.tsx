@@ -24,6 +24,8 @@ import {
 } from '@/modules/Academic/services/academic.queries';
 import type { ChapterItem, CreateChapterPayload, UpdateChapterPayload } from '@/modules/Academic/types/academic.types';
 import Button from '@/components/ui/Button';
+import { Pagination } from '@/components/ui/Pagination';
+import Skeleton from '@/components/ui/Skeleton';
 import { formatSubjectDisplayName, isAllowedSubject } from '@/constants/subjects.constant';
 
 export const ChapterManagementPage: React.FC = () => {
@@ -32,7 +34,7 @@ export const ChapterManagementPage: React.FC = () => {
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const [pageSize, setPageSize] = useState<number>(5);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Modals state
@@ -349,18 +351,18 @@ export const ChapterManagementPage: React.FC = () => {
       if (resData?.deactivated) {
         setFeedbackMsg({
           type: 'success',
-          text: resData.message || `Chapter "${deletingChapter.name}" has been deactivated to preserve references.`,
+          text: resData.message || 'Chapter deactivated successfully to preserve existing references.',
         });
       } else {
         setFeedbackMsg({
           type: 'success',
-          text: resData?.message || `Chapter "${deletingChapter.name}" was deleted successfully.`,
+          text: resData?.message || 'Chapter deleted successfully.',
         });
       }
     } catch (err: any) {
       setFeedbackMsg({
         type: 'error',
-        text: err?.response?.data?.message || err?.message || 'Operation failed.',
+        text: err?.response?.data?.message || err?.message || 'Unable to delete chapter. Please try again.',
       });
     } finally {
       setDeletingChapter(null);
@@ -555,10 +557,34 @@ export const ChapterManagementPage: React.FC = () => {
       {/* CHAPTERS TABLE & RESPONSIVE CARDS */}
       {/* ═══════════════════════════════════════════════════════════ */}
       <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        {isFetchingChapters && chapters.length === 0 ? (
-          <div className="p-12 text-center text-xs font-semibold text-slate-500 flex flex-col items-center gap-3">
-            <RefreshCw size={24} className="animate-spin text-indigo-600" />
-            <span>Loading chapters master data...</span>
+        {isFetchingChapters ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
+                  <th className="py-3.5 pl-6 pr-3">Order</th>
+                  <th className="py-3.5 px-4">Subject</th>
+                  <th className="py-3.5 px-4">Chapter Name & Code</th>
+                  <th className="py-3.5 px-4">Description</th>
+                  <th className="py-3.5 px-4 text-center">Dependencies</th>
+                  <th className="py-3.5 px-4 text-center">Status</th>
+                  <th className="py-3.5 pl-4 pr-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={idx} className="animate-pulse">
+                    <td className="py-3.5 pl-6 pr-3"><Skeleton className="h-6 w-8 rounded-lg" /></td>
+                    <td className="py-3.5 px-4"><Skeleton className="h-5 w-20 rounded-md" /></td>
+                    <td className="py-3.5 px-4"><Skeleton className="h-4 w-36 rounded" /><Skeleton className="h-3 w-16 rounded mt-1.5" /></td>
+                    <td className="py-3.5 px-4"><Skeleton className="h-3 w-48 rounded" /></td>
+                    <td className="py-3.5 px-4 text-center"><Skeleton className="h-5 w-16 rounded-md mx-auto" /></td>
+                    <td className="py-3.5 px-4 text-center"><Skeleton className="h-5 w-16 rounded-full mx-auto" /></td>
+                    <td className="py-3.5 pl-4 pr-6 text-right"><Skeleton className="h-8 w-16 rounded-xl ml-auto" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : filteredChapters.length === 0 ? (
           <div className="p-12 text-center space-y-3">
@@ -800,57 +826,21 @@ export const ChapterManagementPage: React.FC = () => {
 
             {/* Pagination Controls */}
             {totalItems > 0 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 bg-slate-50/60 px-6 py-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <p className="text-xs font-semibold text-slate-500">
-                    Showing {(currentPage - 1) * pageSize + 1} to{' '}
-                    {Math.min(currentPage * pageSize, totalItems)} of{' '}
-                    <span className="font-bold text-slate-800">{totalItems}</span> chapters
-                  </p>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <span>•</span>
-                    <label htmlFor="chapter-page-size" className="font-medium text-slate-500">
-                      Per page:
-                    </label>
-                    <select
-                      id="chapter-page-size"
-                      value={pageSize}
-                      onChange={(e) => {
-                        setPageSize(Number(e.target.value));
-                        setCurrentPage(1);
-                      }}
-                      className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer shadow-2xs"
-                    >
-                      <option value={10}>10</option>
-                      <option value={20}>20</option>
-                      <option value={50}>50</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage <= 1}
-                    className="rounded-xl text-xs font-bold"
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-xs font-bold text-slate-700 px-2">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage >= totalPages}
-                    className="rounded-xl text-xs font-bold"
-                  >
-                    Next
-                  </Button>
-                </div>
+              <div className="p-4 bg-slate-50/60 border-t border-slate-200">
+                <Pagination
+                  page={currentPage}
+                  totalPages={totalPages}
+                  total={totalItems}
+                  limit={pageSize}
+                  onPageChange={setCurrentPage}
+                  onLimitChange={(newLimit) => {
+                    setPageSize(newLimit);
+                    setCurrentPage(1);
+                  }}
+                  limitOptions={[5, 10, 20, 50]}
+                  isFetching={isFetchingChapters}
+                  itemName="chapters"
+                />
               </div>
             )}
           </div>

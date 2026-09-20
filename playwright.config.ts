@@ -29,11 +29,31 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+      },
+    },
+    {
       name: 'msedge',
       use: {
         ...devices['Desktop Chrome'],
         channel: 'msedge',
       },
     },
+    {
+      name: 'mobile-chrome',
+      use: {
+        ...devices['Pixel 5'],
+      },
+    },
   ],
+  webServer: process.env.PLAYWRIGHT_BASE_URL
+    ? undefined
+    : {
+        command: 'npm run dev -- --no-open',
+        port: 3001,
+        reuseExistingServer: true,
+        timeout: 120_000,
+      },
 });
