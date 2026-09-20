@@ -209,6 +209,11 @@ export const AdminSchoolsApi = {
     const res = await Axios.post(`/admin/schools/bulk-upload/${uploadId}/confirm`);
     return res.data?.data || res.data;
   },
+
+  getUploadHistory: async (params?: { page?: number; limit?: number; status?: string }) => {
+    const res = await Axios.get('/admin/schools/bulk-history', { params });
+    return res.data?.data || res.data;
+  },
 };
 
 export const adminSchoolsService = AdminSchoolsApi;

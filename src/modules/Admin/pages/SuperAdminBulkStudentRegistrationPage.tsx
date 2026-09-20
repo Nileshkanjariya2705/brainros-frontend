@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import {
   UploadCloud,
   FileSpreadsheet,
   Download,
   CheckCircle2,
   AlertCircle,
-  AlertTriangle,
   Users,
   RefreshCw,
   FileText,
@@ -20,7 +19,10 @@ import {
   Building2,
   Edit2,
   Save,
+  Radio,
+  Clock,
 } from 'lucide-react';
+import { useJobProgress } from '@/hooks/useJobProgress';
 import {
   studentBulkService,
   BulkStudentPreviewResponse,
@@ -96,9 +98,9 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
   const [isSavingRow, setIsSavingRow] = useState<boolean>(false);
   const [rowEditError, setRowEditError] = useState<string | null>(null);
 
-  // Confirmation & Registration State
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState<boolean>(false);
+  // Registration State
   const [isRegistering, setIsRegistering] = useState<boolean>(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [registrationResult, setRegistrationResult] = useState<{
     uploadId: string;
     totalValid: number;
@@ -106,6 +108,53 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
     failed: number;
     status: string;
   } | null>(null);
+
+  // Real-time WebSocket Progress Tracking
+  const {
+    current: jobCurrent,
+    total: jobTotal,
+    percentage: jobPercentage,
+    stage: jobStage,
+    message: jobMessage,
+    isConnected: isWsConnected,
+  } = useJobProgress({
+    queue: 'student-bulk-registration',
+    jobId: activeUploadId,
+    enabled: currentStep === 'REGISTERING' && !!activeUploadId,
+    onComplete: (event) => {
+      const summary = event.resultSummary || {};
+      setRegistrationResult({
+        uploadId: activeUploadId || '',
+        totalValid: summary.totalValid ?? (previewData?.upload.validRowCount || 0),
+        activated: summary.activated ?? (event.progress?.current || previewData?.upload.validRowCount || 0),
+        failed: summary.failed ?? 0,
+        status: summary.status || 'ACTIVATED',
+      });
+      setCurrentStep('COMPLETED');
+    },
+  });
+
+  // Elapsed timer during registration
+  useEffect(() => {
+    let timer: any;
+    if (currentStep === 'REGISTERING') {
+      setElapsedSeconds(0);
+      timer = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [currentStep]);
+
+  const effectiveTotal = jobTotal || previewData?.upload.validRowCount || 1;
+  const effectiveCurrent = Math.min(jobCurrent, effectiveTotal);
+  const computedPercentage = Math.round((effectiveCurrent / effectiveTotal) * 100);
+  const effectivePercentage =
+    jobPercentage > 0
+      ? jobPercentage
+      : currentStep === 'REGISTERING' && computedPercentage === 0
+        ? 15
+        : computedPercentage;
 
   // History State
   const [historyList, setHistoryList] = useState<BulkStudentHistoryItem[]>([]);
@@ -343,17 +392,19 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
     if (!activeUploadId) return;
 
     setIsRegistering(true);
-    setIsConfirmModalOpen(false);
     setCurrentStep('REGISTERING');
 
     try {
       const res = await studentBulkService.confirmRegistration(activeUploadId);
       setRegistrationResult(res);
-      setCurrentStep('COMPLETED');
+      // Allow user to visibly experience the progress bar completing
+      setTimeout(() => {
+        setCurrentStep('COMPLETED');
+        setIsRegistering(false);
+      }, 1200);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Registration failed.');
       setCurrentStep('PREVIEW');
-    } finally {
       setIsRegistering(false);
     }
   };
@@ -975,29 +1026,134 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
 
                 <div className="flex items-center gap-3">
                   <button
-                    disabled={previewData.upload.validRowCount === 0}
-                    onClick={() => setIsConfirmModalOpen(true)}
+                    disabled={previewData.upload.validRowCount === 0 || isRegistering}
+                    onClick={handleConfirmRegistration}
                     className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm transition-all shadow-md shadow-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <ShieldCheck className="w-4 h-4" />
-                    Register {previewData.upload.validRowCount} Valid Students
+                    {isRegistering
+                      ? 'Starting Registration...'
+                      : `Register ${previewData.upload.validRowCount} Valid Students`}
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── STEP 3: REGISTERING & COMPLETED ── */}
+          {/* ── STEP 3: REAL-TIME WEBSOCKET REGISTRATION PROGRESS ── */}
           {currentStep === 'REGISTERING' && (
-            <div className="p-12 text-center bg-white border border-slate-200 rounded-3xl space-y-4 max-w-lg mx-auto shadow-xs">
-              <RefreshCw className="w-12 h-12 animate-spin text-indigo-600 mx-auto" />
-              <h3 className="text-xl font-bold text-slate-900">Registering Students...</h3>
-              <p className="text-xs text-slate-500">
-                Creating User credentials, assigning Student roles, generating unique Student IDs, and storing profiles.
-              </p>
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 max-w-3xl mx-auto space-y-8 shadow-xs">
+              {/* Header with WebSocket Status */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
+                    <RefreshCw className="w-6 h-6 animate-spin" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Registering Candidates in Real-Time
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Creating user accounts, student profiles, target exam links & OTP credentials
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                      isWsConnected
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}
+                  >
+                    <Radio
+                      className={`w-3.5 h-3.5 ${
+                        isWsConnected ? 'text-emerald-600 animate-pulse' : 'text-amber-600'
+                      }`}
+                    />
+                    {isWsConnected ? 'Live WS Connected' : 'Syncing...'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar & Percentage */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Registration Progress
+                  </span>
+                  <span className="text-2xl font-black text-indigo-600 font-mono">
+                    {effectivePercentage}%
+                  </span>
+                </div>
+
+                {/* Animated Progress Bar */}
+                <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
+                  <div
+                    className="h-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-emerald-500 rounded-full transition-all duration-500 ease-out shadow-xs relative overflow-hidden"
+                    style={{ width: `${Math.max(5, Math.min(100, effectivePercentage))}%` }}
+                  >
+                    <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite] -skew-x-12" />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                  <span>
+                    Processed <strong className="text-slate-800">{effectiveCurrent}</strong> of{' '}
+                    <strong className="text-slate-800">{effectiveTotal}</strong> candidates
+                  </span>
+                  <span>{Math.max(0, effectiveTotal - effectiveCurrent)} remaining</span>
+                </div>
+              </div>
+
+              {/* Live Metric Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                    Total Valid
+                  </p>
+                  <p className="text-xl font-bold text-slate-900 mt-1">{effectiveTotal}</p>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-200 text-center">
+                  <p className="text-[11px] font-semibold text-indigo-600 uppercase tracking-wider">
+                    Processing
+                  </p>
+                  <p className="text-xl font-bold text-indigo-700 mt-1">{effectiveCurrent}</p>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                    Remaining
+                  </p>
+                  <p className="text-xl font-bold text-slate-700 mt-1">
+                    {Math.max(0, effectiveTotal - effectiveCurrent)}
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-center gap-1">
+                    <Clock className="w-3 h-3 text-slate-400" />
+                    Elapsed
+                  </p>
+                  <p className="text-xl font-bold text-slate-900 mt-1">
+                    {Math.floor(elapsedSeconds / 60)}m {elapsedSeconds % 60}s
+                  </p>
+                </div>
+              </div>
+
+              {/* Status Message / Activity Ticker */}
+              <div className="p-4 rounded-2xl bg-indigo-50/40 border border-indigo-100 flex items-center gap-3">
+                <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-ping shrink-0" />
+                <p className="text-xs font-medium text-slate-700 flex-1 truncate">
+                  {jobMessage || 'Registering student accounts, assigning roles and syncing candidate database...'}
+                </p>
+                <span className="text-[11px] px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 font-mono font-semibold">
+                  {jobStage || 'ACTIVATING_STUDENTS'}
+                </span>
+              </div>
             </div>
           )}
 
+          {/* ── STEP 4: COMPLETED ── */}
           {currentStep === 'COMPLETED' && registrationResult && (
             <div className="p-8 sm:p-12 bg-white border border-slate-200 rounded-3xl space-y-6 max-w-2xl mx-auto text-center shadow-xs">
               <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mx-auto">
@@ -1005,9 +1161,9 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-2xl font-bold text-slate-900">Bulk Registration Completed</h3>
+                <h3 className="text-2xl font-bold text-slate-900">Bulk Registration Completed!</h3>
                 <p className="text-sm text-slate-600 mt-1">
-                  Students have been registered and can now log in immediately via OTP.
+                  Candidates have been registered and can now log in immediately with their mobile number via OTP.
                 </p>
               </div>
 
@@ -1026,7 +1182,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                 {registrationResult.failed > 0 && (
                   <button
                     onClick={() => handleDownloadErrorReport(registrationResult.uploadId, 'xlsx')}
@@ -1036,6 +1192,14 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     Download Failed Rows Report
                   </button>
                 )}
+
+                <Link
+                  to={`${routePrefix}/students`}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold border border-slate-200 transition-all"
+                >
+                  <Users className="w-4 h-4 text-slate-600" />
+                  View All Students
+                </Link>
 
                 <button
                   onClick={resetFlow}
@@ -1374,49 +1538,6 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── Confirmation Modal ── */}
-      {isConfirmModalOpen && previewData && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">Confirm Bulk Registration</h3>
-              <p className="text-xs text-slate-600 mt-1">
-                You are about to register <strong className="text-emerald-700">{previewData.upload.validRowCount} students</strong> into the system.
-              </p>
-            </div>
-
-            {previewData.upload.invalidRowCount > 0 && (
-              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2.5">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600" />
-                <span>
-                  <strong>{previewData.upload.invalidRowCount} invalid rows</strong> will be skipped and can be reviewed in the error report.
-                </span>
-              </div>
-            )}
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <button
-                onClick={() => setIsConfirmModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 border border-slate-200 transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                disabled={isRegistering}
-                onClick={handleConfirmRegistration}
-                className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold text-white shadow-md shadow-emerald-200 transition-all cursor-pointer"
-              >
-                {isRegistering ? 'Processing...' : `Confirm & Register (${previewData.upload.validRowCount})`}
-              </button>
-            </div>
           </div>
         </div>
       )}

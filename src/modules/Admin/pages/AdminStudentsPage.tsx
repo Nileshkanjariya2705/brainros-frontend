@@ -46,7 +46,7 @@ import {
   type StateItem,
   type DistrictItem,
 } from '@/modules/Auth/services';
-import { useStatesQuery, useDistrictsQuery } from '@/services/location.queries';
+import { useStatesQuery } from '@/services/location.queries';
 import Button from '@/components/ui/Button';
 import Skeleton from '@/components/ui/Skeleton';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
@@ -396,17 +396,11 @@ export const AdminStudentsPage: React.FC = () => {
   const statusFilter = searchParams.get('status') || '';
   const classFilter = searchParams.get('classId') || '';
   const examTargetFilter = searchParams.get('examTargetId') || '';
-  const stateFilter = searchParams.get('stateId') || '';
-  const districtFilter = searchParams.get('districtId') || '';
   const institutionFilter = searchParams.get('institutionId') || '';
 
-  // Public Location API State & District lists cached via TanStack Query
+  // Public Location API State list cached via TanStack Query for modal editing
   const { data: publicStatesData } = useStatesQuery();
-  const stateSlug = getStateSlug(stateFilter || '');
-  const { data: publicDistrictsData, isLoading: isLoadingPublicDistricts } = useDistrictsQuery(stateSlug);
-
   const publicStates: StateItem[] = (publicStatesData as any) || [];
-  const publicDistricts: DistrictItem[] = (publicDistrictsData as any) || [];
 
   // Server-side cached table query with keepPreviousData to prevent blank loading flash
   const queryParams = useMemo(
@@ -419,8 +413,6 @@ export const AdminStudentsPage: React.FC = () => {
       status: statusFilter || undefined,
       classId: classFilter || undefined,
       examTargetId: examTargetFilter || undefined,
-      stateId: stateFilter || undefined,
-      districtId: districtFilter || undefined,
       institutionId: institutionFilter || undefined,
     }),
     [
@@ -432,8 +424,6 @@ export const AdminStudentsPage: React.FC = () => {
       statusFilter,
       classFilter,
       examTargetFilter,
-      stateFilter,
-      districtFilter,
       institutionFilter,
     ],
   );
@@ -499,8 +489,6 @@ export const AdminStudentsPage: React.FC = () => {
       statusFilter ||
       classFilter ||
       examTargetFilter ||
-      stateFilter ||
-      districtFilter ||
       institutionFilter,
   );
 
@@ -721,8 +709,6 @@ export const AdminStudentsPage: React.FC = () => {
               status: statusFilter,
               classId: classFilter,
               examTargetId: examTargetFilter,
-              stateId: stateFilter,
-              districtId: districtFilter,
               institutionId: institutionFilter,
             }}
             search={searchInput}
@@ -774,7 +760,7 @@ export const AdminStudentsPage: React.FC = () => {
         </div>
 
         {/* Filter Dropdowns Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-1 border-t border-slate-100">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 border-t border-slate-100">
           {/* Status Filter */}
           <div>
             <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
@@ -827,49 +813,6 @@ export const AdminStudentsPage: React.FC = () => {
               {filterOptions.examTargets.map((tgt) => (
                 <option key={tgt.id} value={tgt.id}>
                   {tgt.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* State Filter (Loaded from Public API) */}
-          <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-              State (Public API)
-            </label>
-            <select
-              value={stateFilter}
-              onChange={(e) => {
-                updateQueryParams({ stateId: e.target.value, districtId: undefined }, true);
-              }}
-              className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-teal-600 focus:outline-none"
-            >
-              <option value="">All States</option>
-              {(publicStates.length > 0 ? publicStates : filterOptions.states).map((st: any) => (
-                <option key={st.slug || st.id || st.name} value={formatLocationName(st.name)}>
-                  {formatLocationName(st.name)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* District / City Filter (Loaded from Public API) */}
-          <div>
-            <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">
-              District / City {isLoadingPublicDistricts && '(Loading...)'}
-            </label>
-            <select
-              value={districtFilter}
-              onChange={(e) => updateQueryParams({ districtId: e.target.value }, true)}
-              disabled={!stateFilter || isLoadingPublicDistricts}
-              className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-teal-600 focus:outline-none disabled:bg-slate-50"
-            >
-              <option value="">
-                {!stateFilter ? 'Select State first' : 'All Districts'}
-              </option>
-              {publicDistricts.map((dst) => (
-                <option key={dst.slug || dst.name} value={formatLocationName(dst.name)}>
-                  {formatLocationName(dst.name)}
                 </option>
               ))}
             </select>

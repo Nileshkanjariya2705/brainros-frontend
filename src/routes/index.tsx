@@ -184,6 +184,9 @@ const PublicRegistrationsPage = lazyRoute(
   () => import('@/modules/Admin/pages/PublicRegistrationsPage'),
 );
 const AdminSchoolsPage = lazyRoute(() => import('@/modules/Admin/pages/AdminSchoolsPage'));
+const AdminBulkSchoolUploadPage = lazyRoute(
+  () => import('@/modules/Admin/pages/AdminBulkSchoolUploadPage'),
+);
 const NotFoundPage = lazyRoute(() => import('@/components/feedback/NotFoundPage'));
 const SuperAdminAcademicCalendarPage = lazyRoute(
   () => import('@/modules/Admin/pages/SuperAdminAcademicCalendarPage'),
@@ -566,6 +569,22 @@ const adminRoutes: RouteObject[] = [
           </ProtectedRoute>
         ),
       },
+      {
+        path: 'schools/bulk-upload',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW, PERMISSIONS.STUDENT_VIEW, PERMISSIONS.INSTITUTION_VIEW]}>
+            <AdminBulkSchoolUploadPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'bulk-school-upload',
+        element: (
+          <ProtectedRoute permissions={[PERMISSIONS.USER_VIEW, PERMISSIONS.STUDENT_VIEW, PERMISSIONS.INSTITUTION_VIEW]}>
+            <AdminBulkSchoolUploadPage />
+          </ProtectedRoute>
+        ),
+      },
       { path: 'profile', element: <StudentProfilePage /> },
     ],
   },
@@ -648,6 +667,8 @@ const superAdminChildren: RouteObject[] = [
   { path: 'bulk-student-registration', element: <SuperAdminBulkStudentRegistrationPage /> },
   { path: 'bulk_student_registration', element: <SuperAdminBulkStudentRegistrationPage /> },
   { path: 'schools', element: <AdminSchoolsPage /> },
+  { path: 'schools/bulk-upload', element: <AdminBulkSchoolUploadPage /> },
+  { path: 'bulk-school-upload', element: <AdminBulkSchoolUploadPage /> },
   { path: 'staff', element: <StaffManagementPage /> },
   { path: 'staff-management', element: <StaffManagementPage /> },
   { path: 'staff_management', element: <StaffManagementPage /> },
@@ -697,6 +718,8 @@ const generalManagerRoutes: RouteObject[] = [
       { path: 'students', element: <AdminStudentsPage /> },
       { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
       { path: 'schools', element: <AdminSchoolsPage /> },
+      { path: 'schools/bulk-upload', element: <AdminBulkSchoolUploadPage /> },
+      { path: 'bulk-school-upload', element: <AdminBulkSchoolUploadPage /> },
       { path: 'chapters', element: <ChapterManagementPage /> },
       { path: 'chapter-management', element: <ChapterManagementPage /> },
       { path: 'chapter_management', element: <ChapterManagementPage /> },
@@ -752,6 +775,8 @@ const operatorRoutes: RouteObject[] = [
       { path: 'students', element: <AdminStudentsPage /> },
       { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
       { path: 'schools', element: <AdminSchoolsPage /> },
+      { path: 'schools/bulk-upload', element: <AdminBulkSchoolUploadPage /> },
+      { path: 'bulk-school-upload', element: <AdminBulkSchoolUploadPage /> },
       { path: 'chapters', element: <ChapterManagementPage /> },
       { path: 'languages', element: <LanguageManagementPage /> },
       { path: 'exam-scheduling', element: <ExamSchedulingManagementPage /> },
@@ -812,6 +837,7 @@ const salesAgentRoutes: RouteObject[] = [
       { path: '', element: <Navigate to="dashboard" replace /> },
       { path: 'dashboard', element: <InstitutionDashboardPage /> },
       { path: 'schools', element: <AdminSchoolsPage /> },
+      { path: 'schools/bulk-upload', element: <AdminBulkSchoolUploadPage /> },
       { path: 'reports', element: <ReportsPage /> },
       { path: 'notifications', element: <StaffNotificationsPage /> },
       { path: 'profile', element: <StudentProfilePage /> },
@@ -845,6 +871,8 @@ const staffRoutes: RouteObject[] = [
       { path: 'exams/pending-paper', element: <OperatorScheduledExamsPage /> },
       { path: 'billing', element: <SuperAdminBillingPage /> },
       { path: 'schools', element: <AdminSchoolsPage /> },
+      { path: 'schools/bulk-upload', element: <AdminBulkSchoolUploadPage /> },
+      { path: 'bulk-school-upload', element: <AdminBulkSchoolUploadPage /> },
       { path: 'students', element: <AdminStudentsPage /> },
       { path: 'students/bulk-register', element: <SuperAdminBulkStudentRegistrationPage /> },
       { path: 'reports', element: <CompletedExamReportsPage /> },

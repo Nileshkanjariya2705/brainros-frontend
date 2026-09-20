@@ -177,8 +177,6 @@ export const AdminSchoolsPage: React.FC = () => {
   const [limit, setLimit] = useState<number>(5);
   const [search, setSearch] = useState<string>('');
   const [searchInput, setSearchInput] = useState<string>('');
-  const [stateFilter, setStateFilter] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
 
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
@@ -213,10 +211,10 @@ export const AdminSchoolsPage: React.FC = () => {
     {
       id: 'bulk-school',
       stepNumber: 1,
-      title: 'Bulk School',
+      title: 'Bulk School Onboarding',
       subtitle: 'Onboard schools & examination centers',
       status: 'current',
-      to: `${routePrefix}/schools`,
+      to: `${routePrefix}/schools/bulk-upload`,
     },
     {
       id: 'bulk-student',
@@ -238,8 +236,6 @@ export const AdminSchoolsPage: React.FC = () => {
     page,
     limit,
     search: search || undefined,
-    stateId: stateFilter || undefined,
-    status: statusFilter || undefined,
   });
 
   const { data: filterOptionsData } = useAdminSchoolFiltersQuery();
@@ -397,16 +393,11 @@ export const AdminSchoolsPage: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              setSelectedFile(null);
-              setUploadResult(null);
-              setUploadError(null);
-              setIsBulkModalOpen(true);
-            }}
+            onClick={() => navigate(`${routePrefix}/schools/bulk-upload`)}
             className="flex items-center gap-1.5 text-xs font-bold border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100/60"
           >
             <Upload className="h-3.5 w-3.5 text-indigo-600" />
-            <span>Bulk Upload</span>
+            <span>Bulk Upload Schools</span>
           </Button>
 
           <Button
@@ -479,16 +470,16 @@ export const AdminSchoolsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ─── Search & Filters Toolbar ───────────────────────────────── */}
+      {/* ─── Search Toolbar ────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search by school name, code, or city..."
-            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-8 text-xs font-semibold text-slate-800 placeholder-slate-400 transition-all focus:border-indigo-500 focus:bg-white focus:outline-hidden"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pl-9 pr-8 text-xs font-semibold text-slate-800 placeholder-slate-400 transition-all focus:border-indigo-500 focus:bg-white focus:outline-hidden"
           />
           {searchInput && (
             <button
@@ -500,40 +491,7 @@ export const AdminSchoolsPage: React.FC = () => {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* State Filter */}
-          <select
-            value={stateFilter}
-            onChange={(e) => {
-              setStateFilter(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-all focus:border-indigo-500 focus:outline-hidden"
-          >
-            <option value="">All States</option>
-            {filterOptions.states.map((st) => (
-              <option key={st.id} value={st.id}>
-                {st.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-all focus:border-indigo-500 focus:outline-hidden"
-          >
-            <option value="">All Statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="DRAFT">Draft</option>
-            <option value="UNDER_REVIEW">Under Review</option>
-            <option value="SUSPENDED">Suspended</option>
-          </select>
-
+        <div className="flex items-center gap-2">
           {/* Refresh Button */}
           <button
             onClick={() => fetchSchools()}
@@ -546,7 +504,6 @@ export const AdminSchoolsPage: React.FC = () => {
           {/* Print / Download PDF */}
           <ExportPdfButton
             resource="schools"
-            filters={{ stateId: stateFilter, status: statusFilter }}
             search={search}
             page={page}
             pageSize={limit}
