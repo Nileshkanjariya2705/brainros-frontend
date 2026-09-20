@@ -265,17 +265,17 @@ export const HomePage: React.FC = () => {
                   to={PUBLIC_NAVIGATION.register}
                   className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-6 py-3.5 text-sm font-bold text-white shadow-md shadow-indigo-500/25 transition-all hover:scale-105 active:scale-95"
                 >
-                  <span>Get Started Free</span>
+                  <span>Get Started </span>
                   <ArrowRight size={16} />
                 </Link>
 
-                <Link
+                {/* <Link
                   to="/exams"
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-6 py-3.5 text-sm font-bold text-slate-700 hover:text-slate-900 shadow-xs transition-all"
                 >
                   <BookOpen size={16} className="text-slate-500" />
                   <span>Explore Supported Exams</span>
-                </Link>
+                </Link> */}
 
                 <Link
                   to="/contact"
@@ -650,114 +650,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* ══ SECTION 4: HOW BRAINROS WORKS (WORKFLOW) ════════════════ */}
-      <section className="py-16 sm:py-20 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-14">
-            <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest">
-              End-To-End Assessment Lifecycle
-            </span>
-            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-              How Brainros Works
-            </h2>
-            <p className="mt-3 text-sm sm:text-base text-slate-600">
-              From student enrollment to post-exam analytics, explore the seamless workflow designed for schools and coaching institutes.
-            </p>
-          </div>
-
-          {/* Interactive Workflow Diagram / Stepper */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Step Navigation Cards */}
-            <div className="lg:col-span-5 space-y-2">
-              {workflowSteps.map((step, idx) => {
-                const isActive = activeWorkflowStep === idx;
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setActiveWorkflowStep(idx)}
-                    className={`w-full text-left rounded-xl p-3.5 transition-all flex items-center gap-3 border ${
-                      isActive
-                        ? 'border-indigo-500 bg-indigo-50/70 shadow-xs'
-                        : 'border-slate-100 bg-white hover:bg-slate-50'
-                    }`}
-                  >
-                    <div
-                      className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 font-bold text-xs ${
-                        isActive
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-slate-100 text-slate-600'
-                      }`}
-                    >
-                      {idx + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span
-                          className={`text-xs font-bold truncate ${
-                            isActive ? 'text-indigo-950' : 'text-slate-800'
-                          }`}
-                        >
-                          {step.title}
-                        </span>
-                        <span className="text-[10px] text-indigo-600 font-semibold uppercase shrink-0 ml-2">
-                          {step.badge}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Active Step Preview Details */}
-            <div className="lg:col-span-7">
-              <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/30 p-8 shadow-md">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-12 w-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                    {workflowSteps[activeWorkflowStep].icon}
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
-                      Step {activeWorkflowStep + 1} of 7 • {workflowSteps[activeWorkflowStep].badge}
-                    </span>
-                    <h3 className="text-xl font-black text-slate-900">
-                      {workflowSteps[activeWorkflowStep].title}
-                    </h3>
-                  </div>
-                </div>
-
-                <p className="text-sm text-slate-600 leading-relaxed mt-4">
-                  {workflowSteps[activeWorkflowStep].desc}
-                </p>
-
-                <div className="mt-8 pt-6 border-t border-slate-200/80 flex items-center justify-between">
-                  <button
-                    type="button"
-                    disabled={activeWorkflowStep === 0}
-                    onClick={() => setActiveWorkflowStep((prev) => Math.max(0, prev - 1))}
-                    className="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40"
-                  >
-                    Previous Step
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={activeWorkflowStep === workflowSteps.length - 1}
-                    onClick={() =>
-                      setActiveWorkflowStep((prev) =>
-                        Math.min(workflowSteps.length - 1, prev + 1),
-                      )
-                    }
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40"
-                  >
-                    Next Step &rarr;
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+     
 
       {/* ══ SECTION 5: EXAM CAPABILITIES & QUESTION TYPES ═══════════ */}
       <section className="py-16 sm:py-20 bg-slate-50/60 border-t border-b border-slate-100">
@@ -853,187 +746,9 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* ══ SECTION 6: AI-POWERED MULTILINGUAL TRANSLATION ═══════════ */}
-      <section className="py-16 sm:py-20 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-            <div className="lg:col-span-6 space-y-4">
-              <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest">
-                Inclusive Testing Without Language Barriers
-              </span>
-              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                AI-Powered Multilingual Question Translation
-              </h2>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Create your question paper once in English or any base language, and make it accessible across 9 regional Indian languages with a single click.
-              </p>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Our AI translation preserves mathematical formulas, chemical structures, units of measurement, and scientific context without corrupting notation.
-              </p>
+    
 
-              <div className="pt-4 grid grid-cols-2 gap-3 text-xs">
-                <div className="rounded-xl border border-slate-200 p-3.5 bg-slate-50/50">
-                  <span className="block font-bold text-slate-900 mb-0.5">Zero Retyping</span>
-                  <span className="text-slate-500">Eliminate manual translation agency costs and delays.</span>
-                </div>
-                <div className="rounded-xl border border-slate-200 p-3.5 bg-slate-50/50">
-                  <span className="block font-bold text-slate-900 mb-0.5">In-Flight Toggle</span>
-                  <span className="text-slate-500">Students switch languages during exam without reloading.</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-6">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-6">
-                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <Globe2 size={16} className="text-indigo-600" />
-                  <span>9 Supported Indian Languages</span>
-                </h4>
-                <div className="grid grid-cols-3 gap-2.5">
-                  {[
-                    { code: 'hi', name: 'Hindi', script: 'हिंदी' },
-                    { code: 'mr', name: 'Marathi', script: 'मराठी' },
-                    { code: 'gu', name: 'Gujarati', script: 'ગુજરાતી' },
-                    { code: 'ta', name: 'Tamil', script: 'தமிழ்' },
-                    { code: 'te', name: 'Telugu', script: 'తెలుగు' },
-                    { code: 'kn', name: 'Kannada', script: 'ಕನ್ನಡ' },
-                    { code: 'bn', name: 'Bengali', script: 'বাংলা' },
-                    { code: 'pa', name: 'Punjabi', script: 'ਪੰਜਾਬੀ' },
-                    { code: 'en', name: 'English', script: 'English' },
-                  ].map((l) => (
-                    <div
-                      key={l.code}
-                      className="rounded-xl border border-slate-200 bg-white p-3 text-center shadow-2xs hover:border-indigo-300 transition-colors"
-                    >
-                      <span className="block text-xs font-bold text-slate-900">{l.name}</span>
-                      <span className="block text-[11px] text-indigo-600 font-medium">{l.script}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ══ SECTION 7: LIVE TEST SERIES CATALOG ═════════════════════ */}
-      <section id="test-series" className="py-16 sm:py-20 bg-slate-50/70 border-t border-b border-slate-100">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-            <div>
-              <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest">
-                Active Mock Exams
-              </span>
-              <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                Explore Available Mock Test Series
-              </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Preview active mock tests and experience official computer-based testing.
-              </p>
-            </div>
-
-            {/* Search Input */}
-            <div className="relative w-full md:w-72">
-              <Search
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-                size={16}
-              />
-              <input
-                type="text"
-                placeholder="Search mock exams..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-4 py-2 text-xs text-slate-900 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-2xs"
-              />
-            </div>
-          </div>
-
-          {/* Filter Pills */}
-          <div className="flex flex-wrap items-center gap-2 mb-8">
-            <span className="flex items-center gap-1 text-xs font-semibold text-slate-500 mr-2">
-              <Filter size={13} />
-              <span>Target:</span>
-            </span>
-            {targetCategories.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setSelectedTarget(cat)}
-                className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
-                  selectedTarget === cat
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          {/* Catalog Cards Grid */}
-          {filteredExams.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center max-w-md mx-auto my-8">
-              <BookOpen className="mx-auto text-slate-400 mb-3" size={32} />
-              <h4 className="text-sm font-bold text-slate-800">No mock tests found</h4>
-              <p className="text-xs text-slate-500 mt-1">
-                Try selecting a different target exam category or clearing your search term.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredExams.slice(0, 6).map((exam) => (
-                <div
-                  key={exam.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs hover:shadow-md hover:border-indigo-300 transition-all flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700">
-                        {exam.targetBadge}
-                      </span>
-                      <span className="flex items-center gap-1 text-[11px] text-slate-500 font-mono">
-                        <Clock size={12} />
-                        {exam.durationMinutes} mins
-                      </span>
-                    </div>
-
-                    <h3 className="text-sm font-bold text-slate-900 leading-snug line-clamp-2 mb-2">
-                      {exam.title}
-                    </h3>
-                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-4">
-                      {exam.description}
-                    </p>
-                  </div>
-
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-700">
-                      {exam.totalMarks} Marks &bull; {exam.totalQuestions} Qs
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => handleStartTestClick(exam.id)}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xs transition-all"
-                    >
-                      <Play size={12} />
-                      <span>Take Test</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-8 text-center">
-            <Link
-              to="/exams"
-              className="inline-flex items-center gap-2 text-xs font-bold text-indigo-600 hover:text-indigo-800"
-            >
-              <span>View All Supported Exams &amp; Blueprints &rarr;</span>
-            </Link>
-          </div>
-        </div>
-      </section>
+   
 
       {/* ══ SECTION 8: WHY BRAINROS? ═════════════════════════════════ */}
       <section className="py-16 sm:py-20 bg-white">
@@ -1164,7 +879,7 @@ export const HomePage: React.FC = () => {
               to={PUBLIC_NAVIGATION.register}
               className="inline-flex items-center gap-2 rounded-xl bg-white hover:bg-slate-100 text-indigo-950 px-6 py-3.5 text-xs sm:text-sm font-black shadow-lg transition-all hover:scale-105 active:scale-95"
             >
-              <span>Get Started Free</span>
+              <span>Get Started </span>
               <ArrowRight size={15} />
             </Link>
 
