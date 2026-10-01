@@ -33,7 +33,7 @@ export const PublicFooter: React.FC = () => {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3 shrink-0">
-              {ENABLE_AUTH_ROUTES && (
+              {/* {ENABLE_AUTH_ROUTES && (
                 <Link
                   to={PUBLIC_NAVIGATION.register}
                   className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95"
@@ -41,7 +41,7 @@ export const PublicFooter: React.FC = () => {
                   <span>Get Started Free</span>
                   <ArrowRight size={14} />
                 </Link>
-              )}
+              )} */}
               <Link
                 to="/contact"
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 px-5 py-2.5 text-xs font-bold text-slate-200 transition-all hover:text-white"

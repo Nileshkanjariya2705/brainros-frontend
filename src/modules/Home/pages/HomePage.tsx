@@ -674,7 +674,7 @@ export const HomePage: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-6">
               <div className="h-10 w-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4">
                 <ShieldCheck size={20} />
@@ -705,7 +705,7 @@ export const HomePage: React.FC = () => {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-6">
+            {/* <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-6">
               <div className="h-10 w-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center mb-4">
                 <Receipt size={20} />
               </div>
@@ -713,7 +713,7 @@ export const HomePage: React.FC = () => {
               <p className="mt-2 text-xs text-slate-600 leading-relaxed">
                 Custom billing models per school, automated PDF invoice generation, and transparent enrollment tracking.
               </p>
-            </div>
+            </div> */}
           </div>
         </div>
       </section>
@@ -784,13 +784,13 @@ export const HomePage: React.FC = () => {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <Link
+            {/* <Link
               to={PUBLIC_NAVIGATION.register}
               className="inline-flex items-center gap-2 rounded-xl bg-white hover:bg-slate-100 text-indigo-950 px-6 py-3.5 text-xs sm:text-sm font-black shadow-lg transition-all hover:scale-105 active:scale-95"
             >
               <span>Get Started </span>
               <ArrowRight size={15} />
-            </Link>
+            </Link> */}
 
             <Link
               to="/contact"

@@ -2,10 +2,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   BrainCircuit,
-  ArrowRight,
   CheckCircle2,
   Users,
   School,
+  User,
+  GraduationCap,
+  Linkedin,
+  Mail,
 } from 'lucide-react';
 import SeoHead from '@/components/seo/SeoHead';
 
@@ -278,8 +281,205 @@ export const AboutPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Leadership & Advisory Team Section */}
+      <section className="py-16 sm:py-24 bg-white border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest">
+              Leadership &amp; Advisory
+            </span>
+            <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              Meet Our Founder &amp; Advisors
+            </h2>
+            <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+              Guided by a vision for educational equality and technology innovation, our leadership and strategic advisors steer Brainros toward transforming competitive online assessments.
+            </p>
+          </div>
+
+          {/* Cards Grid: 1 Founder + 2 Advisors */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Founder Card */}
+            <div className="group relative rounded-2xl bg-white border border-slate-200 hover:border-indigo-300 p-6 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+              <div>
+                {/* Role Badge */}
+                <div className="flex items-center justify-between mb-4">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    <User size={14} />
+                    Founder
+                  </span>
+                </div>
+
+                {/* Photo Frame (Replace 'src' with your founder's photo URL or path) */}
+                <div className="relative w-full h-64 sm:h-72 rounded-xl bg-slate-100 overflow-hidden mb-6 border border-slate-200 group-hover:shadow-md transition-all">
+                  <img
+                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=600"
+                    alt="Founder"
+                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute bottom-2 left-2 bg-slate-900/70 backdrop-blur-xs text-white text-[10px] px-2 py-0.5 rounded font-medium">
+                    Photo Placeholder
+                  </div>
+                </div>
+
+                {/* Name & Title */}
+                <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                  Founder Name
+                </h3>
+                <p className="text-xs font-semibold text-indigo-600 mb-3">
+                  Founder &amp; Chief Executive Officer
+                </p>
+
+                {/* Introduction / Bio in Card */}
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Visionary leader behind Brainros, dedicated to democratizing NTA-pattern digital assessments and closing the digital divide for students and coaching institutions across India.
+                </p>
+              </div>
+
+              {/* Card Footer / Links */}
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span className="font-medium text-[11px]">Brainros Executive</span>
+                <div className="flex gap-2">
+                  <a
+                    href="#linkedin"
+                    className="p-1.5 rounded-lg bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                    title="LinkedIn Profile"
+                  >
+                    <Linkedin size={15} />
+                  </a>
+                  <a
+                    href="#contact"
+                    className="p-1.5 rounded-lg bg-slate-50 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                    title="Contact Email"
+                  >
+                    <Mail size={15} />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Advisor 1 Card */}
+            <div className="group relative rounded-2xl bg-white border border-slate-200 hover:border-purple-300 p-6 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+              <div>
+                {/* Role Badge */}
+                <div className="flex items-center justify-between mb-4">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                    <GraduationCap size={14} />
+                    Advisor 1
+                  </span>
+                </div>
+
+                {/* Photo Frame (Replace 'src' with Advisor 1's photo URL or path) */}
+                <div className="relative w-full h-64 sm:h-72 rounded-xl bg-slate-100 overflow-hidden mb-6 border border-slate-200 group-hover:shadow-md transition-all">
+                  <img
+                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=600"
+                    alt="Advisor 1"
+                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute bottom-2 left-2 bg-slate-900/70 backdrop-blur-xs text-white text-[10px] px-2 py-0.5 rounded font-medium">
+                    Photo Placeholder
+                  </div>
+                </div>
+
+                {/* Name & Title */}
+                <h3 className="text-lg font-bold text-slate-900 group-hover:text-purple-600 transition-colors">
+                  Advisor Name 1
+                </h3>
+                <p className="text-xs font-semibold text-purple-600 mb-3">
+                  Academic &amp; Pedagogy Advisor
+                </p>
+
+                {/* Introduction / Bio in Card */}
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Veteran educator with 15+ years of academic experience guiding competitive exam strategies, test series methodology, and question quality assurance standards.
+                </p>
+              </div>
+
+              {/* Card Footer / Links */}
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span className="font-medium text-[11px]">Academic Board</span>
+                <div className="flex gap-2">
+                  <a
+                    href="#linkedin"
+                    className="p-1.5 rounded-lg bg-slate-50 hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                    title="LinkedIn Profile"
+                  >
+                    <Linkedin size={15} />
+                  </a>
+                  <a
+                    href="#contact"
+                    className="p-1.5 rounded-lg bg-slate-50 hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                    title="Contact Email"
+                  >
+                    <Mail size={15} />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Advisor 2 Card */}
+            <div className="group relative rounded-2xl bg-white border border-slate-200 hover:border-purple-300 p-6 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between">
+              <div>
+                {/* Role Badge */}
+                <div className="flex items-center justify-between mb-4">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                    <GraduationCap size={14} />
+                    Advisor 2
+                  </span>
+                </div>
+
+                {/* Photo Frame (Replace 'src' with Advisor 2's photo URL or path) */}
+                <div className="relative w-full h-64 sm:h-72 rounded-xl bg-slate-100 overflow-hidden mb-6 border border-slate-200 group-hover:shadow-md transition-all">
+                  <img
+                    src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=600"
+                    alt="Advisor 2"
+                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute bottom-2 left-2 bg-slate-900/70 backdrop-blur-xs text-white text-[10px] px-2 py-0.5 rounded font-medium">
+                    Photo Placeholder
+                  </div>
+                </div>
+
+                {/* Name & Title */}
+                <h3 className="text-lg font-bold text-slate-900 group-hover:text-purple-600 transition-colors">
+                  Advisor Name 2
+                </h3>
+                <p className="text-xs font-semibold text-purple-600 mb-3">
+                  Technology &amp; Scale Advisor
+                </p>
+
+                {/* Introduction / Bio in Card */}
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Tech architect specializing in high-concurrency cloud infrastructure, AI model integration, and secure online examination delivery systems.
+                </p>
+              </div>
+
+              {/* Card Footer / Links */}
+              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <span className="font-medium text-[11px]">Technology Board</span>
+                <div className="flex gap-2">
+                  <a
+                    href="#linkedin"
+                    className="p-1.5 rounded-lg bg-slate-50 hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                    title="LinkedIn Profile"
+                  >
+                    <Linkedin size={15} />
+                  </a>
+                  <a
+                    href="#contact"
+                    className="p-1.5 rounded-lg bg-slate-50 hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                    title="Contact Email"
+                  >
+                    <Mail size={15} />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Call to Action Strip */}
-      <section className="py-16 bg-white text-center">
+      {/* <section className="py-16 bg-white text-center">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Ready to Explore Brainros?
@@ -305,7 +505,7 @@ export const AboutPage: React.FC = () => {
             </Link>
           </div>
         </div>
-      </section>
+      </section> */}
     </div>
   );
 };
