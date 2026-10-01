@@ -827,7 +827,11 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
               {/* Entries */}
               <div className="divide-y divide-slate-100">
                 {monthEvents.map((ev) => {
-                  const canEdit = !['COMPLETED', 'CANCELLED'].includes(ev.status);
+                  const isTimeExpired = Boolean(
+                    ev.plannedEndTime && new Date() > new Date(ev.plannedEndTime)
+                  );
+                  const isStatusEnded = ['COMPLETED', 'CANCELLED', 'ENDED', 'EXPIRED'].includes(ev.status);
+                  const canEdit = !isTimeExpired && !isStatusEnded;
                   return (
                     <div
                       key={ev.id}
@@ -858,6 +862,11 @@ const SuperAdminAcademicCalendarPage: React.FC = () => {
                             >
                               {ev.status}
                             </span>
+                            {isTimeExpired && !isStatusEnded && (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                WINDOW ENDED
+                              </span>
+                            )}
                             {ev.scheduleVersion > 1 && (
                               <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                                 v{ev.scheduleVersion}
