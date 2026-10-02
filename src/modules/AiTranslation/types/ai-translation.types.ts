@@ -88,9 +88,13 @@ export interface AiTranslationJobDetails {
 
 export interface QuestionPaperTranslationOption {
   A: string;
+  AContent?: any;
   B: string;
+  BContent?: any;
   C: string;
+  CContent?: any;
   D: string;
+  DContent?: any;
 }
 
 export interface QuestionPaperLanguageTranslation {
@@ -98,6 +102,13 @@ export interface QuestionPaperLanguageTranslation {
   languageName: string;
   languageCode: string;
   questionText: string;
+  questionContent?: any;
+  passageText?: string | null;
+  passageContent?: any;
+  assertionText?: string | null;
+  assertionContent?: any;
+  reasonText?: string | null;
+  reasonContent?: any;
   options: QuestionPaperTranslationOption;
 }
 
@@ -105,6 +116,13 @@ export interface QuestionPaperItem {
   id: string;
   sequenceNumber: number;
   questionText: string;
+  questionContent?: any;
+  passageText?: string | null;
+  passageContent?: any;
+  assertionText?: string | null;
+  assertionContent?: any;
+  reasonText?: string | null;
+  reasonContent?: any;
   options: QuestionPaperTranslationOption;
   translations: QuestionPaperLanguageTranslation[];
 }

@@ -47,8 +47,9 @@ export interface QuestionOption {
   id: string;
   optionLabel: string;
   optionText: string;
+  optionContent?: any;
   optionKey?: string;
-  translations?: Record<string, { optionText: string }>;
+  translations?: Record<string, { optionText: string; optionContent?: any }>;
   isCorrect?: boolean;
 }
 
@@ -62,16 +63,24 @@ export interface ExamQuestion {
   questionType: QuestionType;
   type?: string;
   questionText: string;
+  questionContent?: any;
   passage?: string | null;
+  passageContent?: any;
   assertion?: string | null;
+  assertionContent?: any;
   reason?: string | null;
+  reasonContent?: any;
   translations?: Record<
     string,
     {
       questionText: string;
+      questionContent?: any;
       passageText?: string | null;
+      passageContent?: any;
       assertionText?: string | null;
+      assertionContent?: any;
       reasonText?: string | null;
+      reasonContent?: any;
     }
   >;
   options: QuestionOption[];
@@ -209,11 +218,19 @@ export interface QuestionReviewItem {
   sectionName: string;
   questionType: QuestionType;
   questionText: string;
-  explanation: string;
+  questionContent?: any;
+  passageText?: string;
+  passageContent?: any;
+  assertionText?: string;
+  assertionContent?: any;
+  reasonText?: string;
+  reasonContent?: any;
+  explanation?: string;
   options: {
     id: string;
     optionLabel: string;
     optionText: string;
+    optionContent?: any;
     isCorrect: boolean;
   }[];
   studentAnswer: {
@@ -512,6 +529,172 @@ export interface StrategyRuleEntity {
   examId?: string;
 }
 
+export interface StudentDetailsSection {
+  studentName: string;
+  studentId: string;
+  examination: string;
+  className: string;
+  testNumber: string;
+  testDate: string;
+  testMode: string;
+  totalQuestions: number;
+  maximumMarks: number;
+}
+
+export interface OverallPerformanceSection {
+  totalMarks: number;
+  maximumMarks: number;
+  percentage: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  unattempted: number;
+  accuracy: number;
+  overallPercentile: number | null;
+  estimatedRank: number | null;
+  performanceLevel: string;
+}
+
+export interface SubjectWiseAnalysisRow {
+  subject: string;
+  max: number;
+  score: number;
+  percentage: number;
+  correct: number;
+  wrong: number;
+  unattempted: number;
+  accuracy: number;
+}
+
+export interface SubjectWiseAnalysisSection {
+  rows: SubjectWiseAnalysisRow[];
+  total: SubjectWiseAnalysisRow;
+}
+
+export interface SubjectPerformanceItem {
+  subjectName: string;
+  score: number;
+  maxScore: number;
+  performanceLevel: string;
+  strongAreas: string[];
+  areasRequiringImprovement: string[];
+  recommendation: string;
+}
+
+export interface TopicPerformanceRow {
+  topic: string;
+  subjectName: string;
+  accuracy: number;
+  status: 'Excellent' | 'Strong' | 'Needs Improvement' | 'Weak';
+  totalQuestions: number;
+  correct: number;
+  wrong: number;
+}
+
+export interface StrengthWeaknessSection {
+  topStrengths: string[];
+  priorityWeaknesses: string[];
+}
+
+export interface ErrorAnalysisCategory {
+  errorType: 'Conceptual Error' | 'Calculation Error' | 'Silly Mistake' | 'Misreading Question' | 'Guessing';
+  questionCount: number;
+  impact: 'High' | 'Medium' | 'Low';
+  description?: string;
+}
+
+export interface ErrorAnalysisSection {
+  categories: ErrorAnalysisCategory[];
+  totalWrong: number;
+  potentialRecoverableMarks: number;
+  narrative: string;
+}
+
+export interface TimeManagementRow {
+  section: string;
+  recommendedMinutes: number;
+  studentMinutes: number;
+  status: 'Optimal' | 'Slow' | 'Fast';
+}
+
+export interface TimeManagementStrategyRound {
+  round: string;
+  title: string;
+  description: string;
+}
+
+export interface TimeManagementSection {
+  rows: TimeManagementRow[];
+  reviewMinutes: {
+    recommended: number;
+    actual: number;
+  };
+  roundsStrategy: TimeManagementStrategyRound[];
+}
+
+export interface PerformanceTrendPoint {
+  testNumber: string;
+  testTitle: string;
+  date: string;
+  score: number;
+  maxScore: number;
+  percentile: number | null;
+  rank: number | null;
+}
+
+export interface PerformanceTrendSection {
+  history: PerformanceTrendPoint[];
+  trendSummary: string;
+  trajectory: 'UPWARD' | 'STABLE' | 'FLUCTUATING' | 'INSUFFICIENT_DATA';
+}
+
+export interface ExpectedPerformanceSection {
+  currentScore: number;
+  maxScore: number;
+  shortTermTarget: number;
+  strongTarget: number;
+  excellentTarget: number;
+  actionableMessage: string;
+}
+
+export interface FourteenDayPlanDayBlock {
+  period: string;
+  title: string;
+  subject?: string;
+  focusChapters: string[];
+  activities: string[];
+  practiceVolume?: string;
+}
+
+export interface FourteenDayImprovementPlanSection {
+  blocks: FourteenDayPlanDayBlock[];
+}
+
+export interface PersonalizedActionChecklistSection {
+  items: Array<{
+    id: string;
+    text: string;
+    category: string;
+    isKeyAction: boolean;
+  }>;
+}
+
+export interface ParentSummarySection {
+  summaryParagraph: string;
+  keyHighlights: string[];
+  potentialScoreRange: string;
+}
+
+export interface PerformanceIndexMetric {
+  dimension: string;
+  ratingStars: number;
+  ratingLabel: string;
+}
+
+export interface BrainrosPerformanceIndexSection {
+  metrics: PerformanceIndexMetric[];
+  overallRating: string;
+}
+
 export interface FullAnalysisReport {
   attemptId: string;
   examId: string;
@@ -534,6 +717,22 @@ export interface FullAnalysisReport {
   timeAnalysis: TimeAnalyticsReport;
   attemptStrategy: AttemptStrategyReport;
   recommendations: ActionableRecommendation[];
+
+  // 14 Canonical Sections
+  section1StudentDetails?: StudentDetailsSection;
+  section2OverallPerformance?: OverallPerformanceSection;
+  section3SubjectWiseAnalysis?: SubjectWiseAnalysisSection;
+  section4SubjectPerformance?: SubjectPerformanceItem[];
+  section5TopicWisePerformance?: TopicPerformanceRow[];
+  section6StrengthWeakness?: StrengthWeaknessSection;
+  section7ErrorAnalysis?: ErrorAnalysisSection;
+  section8TimeManagement?: TimeManagementSection;
+  section9PerformanceTrend?: PerformanceTrendSection;
+  section10ExpectedPerformance?: ExpectedPerformanceSection;
+  section11FourteenDayPlan?: FourteenDayImprovementPlanSection;
+  section12ActionChecklist?: PersonalizedActionChecklistSection;
+  section13ParentSummary?: ParentSummarySection;
+  section14PerformanceIndex?: BrainrosPerformanceIndexSection;
 }
 
 export type RankTypeEnum =

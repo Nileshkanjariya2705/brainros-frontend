@@ -222,6 +222,7 @@ export interface QuestionPaperOption {
   id: string;
   optionKey: string;
   optionText: string;
+  optionContent?: any;
   isCorrect: boolean;
   displayOrder: number;
 }
@@ -231,9 +232,13 @@ export interface QuestionPaperQuestion {
   questionNumber: number;
   displayOrder: number;
   questionText: string;
+  questionContent?: any;
   passageText?: string | null;
+  passageContent?: any;
   assertionText?: string | null;
+  assertionContent?: any;
   reasonText?: string | null;
+  reasonContent?: any;
   type: string;
   difficultyLevel?: string;
   subject: string;

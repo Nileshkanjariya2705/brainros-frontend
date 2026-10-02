@@ -39,6 +39,8 @@ import {
   getDefaultColumnB,
   getDefaultMatchPairs,
 } from '../utils/manualQuestionDraft';
+import { RichContentEditor } from '@/components/editor/RichContentEditor';
+import { RichContentRenderer } from '@/components/renderer/RichContentRenderer';
 
 const DIFFICULTY_OPTIONS: { value: QuestionDifficulty; label: string; color: string; badgeBg: string }[] = [
   { value: 'EASY', label: 'Easy', color: 'text-emerald-700 border-emerald-300 bg-emerald-50', badgeBg: 'bg-emerald-100 text-emerald-800' },
@@ -659,42 +661,62 @@ export const ManualQuestionEntryPage: React.FC = () => {
         questions: questions.map((q) => {
           const item: any = {
             questionText: q.questionText.trim(),
+            questionContent: q.questionContent || undefined,
             difficulty: q.difficulty,
             type: q.type,
             explanation: q.explanation?.trim() || undefined,
+            explanationContent: q.explanationContent || undefined,
           };
 
           if (q.type === 'SINGLE_CORRECT') {
             item.optionA = q.optionA.trim();
+            item.optionAContent = q.optionAContent || undefined;
             item.optionB = q.optionB.trim();
+            item.optionBContent = q.optionBContent || undefined;
             item.optionC = q.optionC.trim();
+            item.optionCContent = q.optionCContent || undefined;
             item.optionD = q.optionD.trim();
+            item.optionDContent = q.optionDContent || undefined;
             item.correctAnswer = q.correctAnswer;
           } else if (q.type === 'MULTIPLE_CORRECT') {
             item.optionA = q.optionA.trim();
+            item.optionAContent = q.optionAContent || undefined;
             item.optionB = q.optionB.trim();
+            item.optionBContent = q.optionBContent || undefined;
             item.optionC = q.optionC.trim();
+            item.optionCContent = q.optionCContent || undefined;
             item.optionD = q.optionD.trim();
+            item.optionDContent = q.optionDContent || undefined;
             item.correctAnswers = q.correctAnswers;
             item.correctAnswer = q.correctAnswers[0] || 'A';
           } else if (q.type === 'NUMERICAL') {
             item.numericalAnswer = parseFloat(q.numericalAnswer);
           } else if (q.type === 'ASSERTION_REASON') {
             item.assertion = q.assertion.trim();
+            item.assertionContent = q.assertionContent || undefined;
             item.reason = q.reason.trim();
+            item.reasonContent = q.reasonContent || undefined;
             item.optionA = q.optionA.trim();
+            item.optionAContent = q.optionAContent || undefined;
             item.optionB = q.optionB.trim();
+            item.optionBContent = q.optionBContent || undefined;
             item.optionC = q.optionC.trim();
+            item.optionCContent = q.optionCContent || undefined;
             item.optionD = q.optionD.trim();
+            item.optionDContent = q.optionDContent || undefined;
             item.correctAnswer = q.correctAnswer;
           } else if (q.type === 'MATCH_FOLLOWING') {
             item.columnA = q.columnA.map((c) => ({ key: c.key, text: c.text.trim() }));
             item.columnB = q.columnB.map((c) => ({ key: c.key, text: c.text.trim() }));
             item.matchPairs = q.matchPairs;
             item.optionA = q.optionA.trim();
+            item.optionAContent = q.optionAContent || undefined;
             item.optionB = q.optionB.trim();
+            item.optionBContent = q.optionBContent || undefined;
             item.optionC = q.optionC.trim();
+            item.optionCContent = q.optionCContent || undefined;
             item.optionD = q.optionD.trim();
+            item.optionDContent = q.optionDContent || undefined;
             item.correctAnswer = q.correctAnswer;
           }
 
@@ -998,11 +1020,23 @@ export const ManualQuestionEntryPage: React.FC = () => {
                   <div className="space-y-2 text-xs bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                     <div>
                       <span className="font-extrabold text-indigo-900">Assertion (A): </span>
-                      <span className="font-medium text-slate-800">{q.assertion || <span className="text-rose-400 italic">[Empty]</span>}</span>
+                      <span className="font-medium text-slate-800">
+                        {q.assertionContent || q.assertion ? (
+                          <RichContentRenderer content={q.assertionContent || q.assertion} />
+                        ) : (
+                          <span className="text-rose-400 italic">[Empty]</span>
+                        )}
+                      </span>
                     </div>
                     <div>
                       <span className="font-extrabold text-indigo-900">Reason (R): </span>
-                      <span className="font-medium text-slate-800">{q.reason || <span className="text-rose-400 italic">[Empty]</span>}</span>
+                      <span className="font-medium text-slate-800">
+                        {q.reasonContent || q.reason ? (
+                          <RichContentRenderer content={q.reasonContent || q.reason} />
+                        ) : (
+                          <span className="text-rose-400 italic">[Empty]</span>
+                        )}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -1031,9 +1065,13 @@ export const ManualQuestionEntryPage: React.FC = () => {
                   </div>
                 )}
 
-                <p className="text-sm font-bold text-slate-900 whitespace-pre-wrap">
-                  {q.questionText || <span className="text-rose-500 italic">[Empty question statement]</span>}
-                </p>
+                <div className="text-sm font-bold text-slate-900 leading-relaxed">
+                  {q.questionContent || q.questionText ? (
+                    <RichContentRenderer content={q.questionContent || q.questionText} />
+                  ) : (
+                    <span className="text-rose-500 italic">[Empty question statement]</span>
+                  )}
+                </div>
 
                 {/* Numerical Value Preview */}
                 {q.type === 'NUMERICAL' && (
@@ -1055,6 +1093,14 @@ export const ManualQuestionEntryPage: React.FC = () => {
                             : key === 'C'
                               ? q.optionC
                               : q.optionD;
+                      const optContent =
+                        key === 'A'
+                          ? q.optionAContent
+                          : key === 'B'
+                            ? q.optionBContent
+                            : key === 'C'
+                              ? q.optionCContent
+                              : q.optionDContent;
                       const isCorrect =
                         q.type === 'MULTIPLE_CORRECT'
                           ? (q.correctAnswers || []).includes(key)
@@ -1077,7 +1123,11 @@ export const ManualQuestionEntryPage: React.FC = () => {
                             {key}
                           </span>
                           <span className="flex-1 truncate">
-                            {optText || <span className="text-rose-400 italic">[Empty]</span>}
+                            {optContent || optText ? (
+                              <RichContentRenderer content={optContent || optText} inline />
+                            ) : (
+                              <span className="text-rose-400 italic">[Empty]</span>
+                            )}
                           </span>
                           {isCorrect && <Check size={13} className="text-emerald-600 shrink-0" />}
                         </div>
@@ -1193,12 +1243,15 @@ export const ManualQuestionEntryPage: React.FC = () => {
                   <label className="block text-xs font-extrabold text-purple-900 uppercase tracking-wider mb-1">
                     Assertion (A) Statement <span className="text-rose-500">*</span>
                   </label>
-                  <textarea
-                    rows={2}
+                  <RichContentEditor
+                    isCompact
+                    minHeight="60px"
+                    content={currentQ.assertionContent || currentQ.assertion}
+                    onChange={(json, plainText) => {
+                      handleUpdateField('assertionContent', json);
+                      handleUpdateField('assertion', plainText);
+                    }}
                     placeholder="Enter Assertion statement (A)..."
-                    value={currentQ.assertion}
-                    onChange={(e) => handleUpdateField('assertion', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs sm:text-sm font-medium text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
                   {validationErrors[`${currentQ.id}_assertion`] && (
                     <p className="text-xs text-rose-600 font-semibold mt-1">
@@ -1211,12 +1264,15 @@ export const ManualQuestionEntryPage: React.FC = () => {
                   <label className="block text-xs font-extrabold text-purple-900 uppercase tracking-wider mb-1">
                     Reason (R) Statement <span className="text-rose-500">*</span>
                   </label>
-                  <textarea
-                    rows={2}
+                  <RichContentEditor
+                    isCompact
+                    minHeight="60px"
+                    content={currentQ.reasonContent || currentQ.reason}
+                    onChange={(json, plainText) => {
+                      handleUpdateField('reasonContent', json);
+                      handleUpdateField('reason', plainText);
+                    }}
                     placeholder="Enter Reason statement (R)..."
-                    value={currentQ.reason}
-                    onChange={(e) => handleUpdateField('reason', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs sm:text-sm font-medium text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
                   {validationErrors[`${currentQ.id}_reason`] && (
                     <p className="text-xs text-rose-600 font-semibold mt-1">
@@ -1306,16 +1362,24 @@ export const ManualQuestionEntryPage: React.FC = () => {
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                 Question Statement / Instructions <span className="text-rose-500">*</span>
               </label>
-              <textarea
-                ref={questionInputRef}
-                rows={3}
-                placeholder={`Type or paste Question #${currentIndex + 1} statement here...`}
-                value={currentQ.questionText}
-                onChange={(e) => handleUpdateField('questionText', e.target.value)}
-                className={`w-full rounded-2xl border bg-white p-3.5 text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-100 transition-colors ${validationErrors[`${currentQ.id}_questionText`]
-                    ? 'border-rose-400 focus:border-rose-500'
-                    : 'border-slate-200 focus:border-indigo-500'
-                  }`}
+              <RichContentEditor
+                content={currentQ.questionContent || currentQ.questionText}
+                onChange={(json, plainText) => {
+                  setQuestions((prev) =>
+                    prev.map((q, idx) =>
+                      idx === currentIndex
+                        ? { ...q, questionContent: json, questionText: plainText }
+                        : q,
+                    ),
+                  );
+                  setValidationErrors((prev) => {
+                    const copy = { ...prev };
+                    delete copy[`${currentQ.id}_questionText`];
+                    return copy;
+                  });
+                }}
+                placeholder={`Type or paste Question #${currentIndex + 1} statement here — use toolbar for math equations and diagram images...`}
+                minHeight="110px"
               />
               {validationErrors[`${currentQ.id}_questionText`] && (
                 <p className="text-xs text-rose-600 font-semibold mt-1">
@@ -1383,6 +1447,14 @@ export const ManualQuestionEntryPage: React.FC = () => {
                           : key === 'C'
                             ? currentQ.optionC
                             : currentQ.optionD;
+                    const optContent =
+                      key === 'A'
+                        ? currentQ.optionAContent
+                        : key === 'B'
+                          ? currentQ.optionBContent
+                          : key === 'C'
+                            ? currentQ.optionCContent
+                            : currentQ.optionDContent;
                     const optField =
                       key === 'A'
                         ? 'optionA'
@@ -1407,7 +1479,7 @@ export const ManualQuestionEntryPage: React.FC = () => {
                             : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
                           }`}
                       >
-                        <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-black text-slate-700">
                             Option {key}
                           </span>
@@ -1435,15 +1507,15 @@ export const ManualQuestionEntryPage: React.FC = () => {
                           </button>
                         </div>
 
-                        <input
-                          type="text"
-                          placeholder={`Enter Option ${key} text...`}
-                          value={optVal}
-                          onChange={(e) => handleUpdateField(optField, e.target.value)}
-                          className={`w-full rounded-xl border bg-white px-3 py-2 text-xs sm:text-sm font-medium text-slate-800 focus:ring-2 focus:ring-indigo-100 transition-colors ${optErr
-                              ? 'border-rose-400 focus:border-rose-500'
-                              : 'border-slate-200 focus:border-indigo-500'
-                            }`}
+                        <RichContentEditor
+                          isCompact
+                          minHeight="42px"
+                          content={optContent || optVal}
+                          onChange={(json, plainText) => {
+                            handleUpdateField(`${optField}Content` as any, json);
+                            handleUpdateField(optField as any, plainText);
+                          }}
+                          placeholder={`Enter Option ${key} text or formula...`}
                         />
                         {optErr && (
                           <p className="text-xs text-rose-600 font-semibold mt-1">{optErr}</p>

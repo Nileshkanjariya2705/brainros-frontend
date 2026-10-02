@@ -4,12 +4,10 @@ import {
   BrainCircuit,
   Mail,
   ShieldCheck,
-  ArrowRight,
   Globe2,
   Sparkles,
 } from 'lucide-react';
-import { PUBLIC_NAVIGATION } from '@/constants/navigation.constant';
-import { ENABLE_AUTH_ROUTES, CONTACT_EMAIL } from '@/config';
+import { CONTACT_EMAIL } from '@/config';
 
 export const PublicFooter: React.FC = () => {
   const currentYear = new Date().getFullYear();

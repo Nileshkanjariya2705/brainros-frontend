@@ -17,6 +17,7 @@ import {
 import Button from '@/components/ui/Button';
 import { useQuestionPaperDetailQuery } from '../services/examManager.queries';
 import type { ExamQuestionPaperDetail, QuestionPaperQuestion } from '../types/examManager.types';
+import { RichContentRenderer } from '@/components/renderer/RichContentRenderer';
 
 export const ViewQuestionPaperPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
@@ -291,26 +292,26 @@ export const ViewQuestionPaperPage: React.FC = () => {
                       </div>
 
                       {/* Passage / Context (if available) */}
-                      {q.passageText && (
+                      {(q.passageContent || q.passageText) && (
                         <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/70 text-xs text-slate-800 leading-relaxed font-serif">
                           <span className="block font-bold text-amber-900 uppercase tracking-wider text-[10px] mb-1">
                             Passage / Context
                           </span>
-                          {q.passageText}
+                          <RichContentRenderer content={q.passageContent || q.passageText} />
                         </div>
                       )}
 
                       {/* Assertion & Reason (if applicable) */}
-                      {q.assertionText && (
+                      {(q.assertionContent || q.assertionText) && (
                         <div className="space-y-1.5 text-xs text-slate-800">
                           <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                             <span className="font-bold text-indigo-900">Assertion (A): </span>
-                            {q.assertionText}
+                            <RichContentRenderer content={q.assertionContent || q.assertionText} inline />
                           </div>
-                          {q.reasonText && (
+                          {(q.reasonContent || q.reasonText) && (
                             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                               <span className="font-bold text-indigo-900">Reason (R): </span>
-                              {q.reasonText}
+                              <RichContentRenderer content={q.reasonContent || q.reasonText} inline />
                             </div>
                           )}
                         </div>
@@ -318,7 +319,7 @@ export const ViewQuestionPaperPage: React.FC = () => {
 
                       {/* Question Text */}
                       <div className="text-sm font-semibold text-slate-900 leading-relaxed">
-                        {q.questionText}
+                        <RichContentRenderer content={(q as any).questionContent || q.questionText} />
                       </div>
 
                       {/* Options Grid */}
@@ -345,7 +346,7 @@ export const ViewQuestionPaperPage: React.FC = () => {
                                   {opt.optionKey}
                                 </span>
                                 <div className="flex-1 pt-0.5 leading-relaxed">
-                                  {opt.optionText}
+                                  <RichContentRenderer content={opt.optionContent || opt.optionText} inline />
                                 </div>
                                 {isCorrect && (
                                   <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 shrink-0 self-center">

@@ -309,35 +309,28 @@ export const AboutPage: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Photo Frame (Replace 'src' with your founder's photo URL or path) */}
-                <div className="relative w-full h-64 sm:h-72 rounded-xl bg-slate-100 overflow-hidden mb-6 border border-slate-200 group-hover:shadow-md transition-all">
-                  <img
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=600"
-                    alt="Founder"
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute bottom-2 left-2 bg-slate-900/70 backdrop-blur-xs text-white text-[10px] px-2 py-0.5 rounded font-medium">
-                    Photo Placeholder
+                {/* Default User Image Placeholder Frame */}
+                <div className="relative w-full h-64 sm:h-72 rounded-xl bg-gradient-to-b from-slate-100 to-slate-200 flex flex-col items-center justify-center mb-6 border border-slate-200 group-hover:border-indigo-200 transition-all overflow-hidden">
+                  <div className="w-24 h-24 rounded-full bg-white/80 shadow-sm flex items-center justify-center text-slate-400 group-hover:text-indigo-500 transition-colors">
+                    <User size={48} />
                   </div>
+                  <span className="mt-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Default User Image
+                  </span>
                 </div>
 
-                {/* Name & Title */}
+                {/* Name & Qualification */}
                 <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                  Founder Name
+                  Er. Umesh Biradar C
                 </h3>
-                <p className="text-xs font-semibold text-indigo-600 mb-3">
-                  Founder &amp; Chief Executive Officer
-                </p>
-
-                {/* Introduction / Bio in Card */}
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Visionary leader behind Brainros, dedicated to democratizing NTA-pattern digital assessments and closing the digital divide for students and coaching institutions across India.
+                <p className="text-sm font-semibold text-indigo-600 mt-1">
+                  B.E
                 </p>
               </div>
 
-              {/* Card Footer / Links */}
+              {/* Card Footer */}
               <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                <span className="font-medium text-[11px]">Brainros Executive</span>
+                <span className="font-medium text-[11px]">Brainros Leadership</span>
                 <div className="flex gap-2">
                   <a
                     href="#linkedin"
@@ -364,39 +357,32 @@ export const AboutPage: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
                     <GraduationCap size={14} />
-                    Advisor 1
+                    Advisor
                   </span>
                 </div>
 
-                {/* Photo Frame (Replace 'src' with Advisor 1's photo URL or path) */}
-                <div className="relative w-full h-64 sm:h-72 rounded-xl bg-slate-100 overflow-hidden mb-6 border border-slate-200 group-hover:shadow-md transition-all">
-                  <img
-                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=600"
-                    alt="Advisor 1"
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute bottom-2 left-2 bg-slate-900/70 backdrop-blur-xs text-white text-[10px] px-2 py-0.5 rounded font-medium">
-                    Photo Placeholder
+                {/* Default User Image Placeholder Frame */}
+                <div className="relative w-full h-64 sm:h-72 rounded-xl bg-gradient-to-b from-slate-100 to-slate-200 flex flex-col items-center justify-center mb-6 border border-slate-200 group-hover:border-purple-200 transition-all overflow-hidden">
+                  <div className="w-24 h-24 rounded-full bg-white/80 shadow-sm flex items-center justify-center text-slate-400 group-hover:text-purple-500 transition-colors">
+                    <User size={48} />
                   </div>
+                  <span className="mt-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Default User Image
+                  </span>
                 </div>
 
-                {/* Name & Title */}
+                {/* Name & Qualification */}
                 <h3 className="text-lg font-bold text-slate-900 group-hover:text-purple-600 transition-colors">
-                  Advisor Name 1
+                  Er. Chandrashekhar Biradar
                 </h3>
-                <p className="text-xs font-semibold text-purple-600 mb-3">
-                  Academic &amp; Pedagogy Advisor
-                </p>
-
-                {/* Introduction / Bio in Card */}
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Veteran educator with 15+ years of academic experience guiding competitive exam strategies, test series methodology, and question quality assurance standards.
+                <p className="text-sm font-semibold text-purple-600 mt-1">
+                  B.E, MTech
                 </p>
               </div>
 
-              {/* Card Footer / Links */}
+              {/* Card Footer */}
               <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                <span className="font-medium text-[11px]">Academic Board</span>
+                <span className="font-medium text-[11px]">Academic &amp; Strategy Advisory</span>
                 <div className="flex gap-2">
                   <a
                     href="#linkedin"
@@ -423,39 +409,32 @@ export const AboutPage: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
                     <GraduationCap size={14} />
-                    Advisor 2
+                    Advisor
                   </span>
                 </div>
 
-                {/* Photo Frame (Replace 'src' with Advisor 2's photo URL or path) */}
-                <div className="relative w-full h-64 sm:h-72 rounded-xl bg-slate-100 overflow-hidden mb-6 border border-slate-200 group-hover:shadow-md transition-all">
-                  <img
-                    src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=600"
-                    alt="Advisor 2"
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute bottom-2 left-2 bg-slate-900/70 backdrop-blur-xs text-white text-[10px] px-2 py-0.5 rounded font-medium">
-                    Photo Placeholder
+                {/* Default User Image Placeholder Frame */}
+                <div className="relative w-full h-64 sm:h-72 rounded-xl bg-gradient-to-b from-slate-100 to-slate-200 flex flex-col items-center justify-center mb-6 border border-slate-200 group-hover:border-purple-200 transition-all overflow-hidden">
+                  <div className="w-24 h-24 rounded-full bg-white/80 shadow-sm flex items-center justify-center text-slate-400 group-hover:text-purple-500 transition-colors">
+                    <User size={48} />
                   </div>
+                  <span className="mt-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Default User Image
+                  </span>
                 </div>
 
-                {/* Name & Title */}
+                {/* Name & Qualification */}
                 <h3 className="text-lg font-bold text-slate-900 group-hover:text-purple-600 transition-colors">
-                  Advisor Name 2
+                  Ms. Ganavi HS
                 </h3>
-                <p className="text-xs font-semibold text-purple-600 mb-3">
-                  Technology &amp; Scale Advisor
-                </p>
-
-                {/* Introduction / Bio in Card */}
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Tech architect specializing in high-concurrency cloud infrastructure, AI model integration, and secure online examination delivery systems.
+                <p className="text-sm font-semibold text-purple-600 mt-1">
+                  MSC
                 </p>
               </div>
 
-              {/* Card Footer / Links */}
+              {/* Card Footer */}
               <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                <span className="font-medium text-[11px]">Technology Board</span>
+                <span className="font-medium text-[11px]">Academic &amp; Science Advisory</span>
                 <div className="flex gap-2">
                   <a
                     href="#linkedin"

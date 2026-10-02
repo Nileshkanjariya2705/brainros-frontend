@@ -23,11 +23,16 @@ export interface QuestionDraft {
   difficulty: QuestionDifficulty;
   type: QuestionType;
   questionText: string;
+  questionContent?: any;
   // Options for Single Correct, Multiple Correct, Assertion & Reason, and Match the Following
   optionA: string;
+  optionAContent?: any;
   optionB: string;
+  optionBContent?: any;
   optionC: string;
+  optionCContent?: any;
   optionD: string;
+  optionDContent?: any;
   // Single choice answer
   correctAnswer: 'A' | 'B' | 'C' | 'D';
   // Multiple choice answers
@@ -36,12 +41,15 @@ export interface QuestionDraft {
   numericalAnswer: string;
   // Assertion & Reason
   assertion: string;
+  assertionContent?: any;
   reason: string;
+  reasonContent?: any;
   // Match the Following
   columnA: ColumnItem[];
   columnB: ColumnItem[];
   matchPairs: MatchPair[];
   explanation?: string;
+  explanationContent?: any;
 }
 
 export interface ManualQuestionPaperDraft {
@@ -193,10 +201,15 @@ export const loadManualQuestionDraft = (
           difficulty,
           type,
           questionText: typeof q.questionText === 'string' ? q.questionText : '',
+          questionContent: (q as any).questionContent || undefined,
           optionA: typeof q.optionA === 'string' ? q.optionA : '',
+          optionAContent: (q as any).optionAContent || undefined,
           optionB: typeof q.optionB === 'string' ? q.optionB : '',
+          optionBContent: (q as any).optionBContent || undefined,
           optionC: typeof q.optionC === 'string' ? q.optionC : '',
+          optionCContent: (q as any).optionCContent || undefined,
           optionD: typeof q.optionD === 'string' ? q.optionD : '',
+          optionDContent: (q as any).optionDContent || undefined,
           correctAnswer: (['A', 'B', 'C', 'D'].includes(q.correctAnswer)
             ? q.correctAnswer
             : 'A') as 'A' | 'B' | 'C' | 'D',
@@ -205,7 +218,9 @@ export const loadManualQuestionDraft = (
             ? String((q as any).numericalAnswer)
             : '',
           assertion: typeof (q as any).assertion === 'string' ? (q as any).assertion : '',
+          assertionContent: (q as any).assertionContent || undefined,
           reason: typeof (q as any).reason === 'string' ? (q as any).reason : '',
+          reasonContent: (q as any).reasonContent || undefined,
           columnA: Array.isArray((q as any).columnA) && (q as any).columnA.length > 0
             ? (q as any).columnA
             : getDefaultColumnA(),
@@ -216,6 +231,7 @@ export const loadManualQuestionDraft = (
             ? (q as any).matchPairs
             : getDefaultMatchPairs(),
           explanation: typeof q.explanation === 'string' ? q.explanation : '',
+          explanationContent: (q as any).explanationContent || undefined,
         };
       });
 

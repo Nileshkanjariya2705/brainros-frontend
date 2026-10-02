@@ -13,16 +13,12 @@ import {
   Users,
   School,
   BellRing,
-  Receipt,
   ChevronDown,
   Layers,
   Check,
   Zap,
   XCircle,
 } from 'lucide-react';
-
-// ** Constants **
-import { PUBLIC_NAVIGATION } from '@/constants/navigation.constant';
 
 // ** Components **
 import SeoHead from '@/components/seo/SeoHead';
@@ -170,13 +166,13 @@ export const HomePage: React.FC = () => {
 
               {/* Primary & Secondary CTAs */}
               <div className="mt-8 flex flex-wrap items-center justify-center lg:justify-start gap-3.5">
-                <Link
+                {/* <Link
                   to={PUBLIC_NAVIGATION.register}
                   className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-6 py-3.5 text-sm font-bold text-white shadow-md shadow-indigo-500/25 transition-all hover:scale-105 active:scale-95"
                 >
                   <span>Get Started </span>
                   <ArrowRight size={16} />
-                </Link>
+                </Link> */}
 
                 {/* <Link
                   to="/exams"

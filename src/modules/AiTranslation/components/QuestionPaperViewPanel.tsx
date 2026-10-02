@@ -13,6 +13,8 @@ import {
 import { aiTranslationApi } from '../services/ai-translation.service';
 import type { QuestionPaperDetails } from '../types/ai-translation.types';
 import { Pagination } from '@/components/ui/Pagination';
+import { RichContentRenderer } from '@/components/renderer/RichContentRenderer';
+import { mergeTranslationWithRichDoc } from '@/types/richContent.types';
 
 interface QuestionPaperViewPanelProps {
   jobId: string;
@@ -331,29 +333,92 @@ export const QuestionPaperViewPanel: React.FC<QuestionPaperViewPanelProps> = ({
                 )
               : null;
 
-            const qText = isEn ? q.questionText : tr?.questionText || q.questionText;
-            const options = isEn
-              ? q.options
-              : {
-                  A: tr?.options?.A || q.options.A,
-                  B: tr?.options?.B || q.options.B,
-                  C: tr?.options?.C || q.options.C,
-                  D: tr?.options?.D || q.options.D,
-                };
+            // Determine effective question content
+            const masterQContent = q.questionContent || q.questionText;
+            const trQContent =
+              tr?.questionContent ||
+              (tr?.questionText
+                ? q.questionContent
+                  ? mergeTranslationWithRichDoc(q.questionContent, tr.questionText)
+                  : tr.questionText
+                : masterQContent);
+            const effectiveQContent = isEn ? masterQContent : trQContent;
+
+            // Passage, Assertion, Reason
+            const passageContent = isEn
+              ? q.passageContent || q.passageText
+              : tr?.passageContent || tr?.passageText || q.passageContent || q.passageText;
+            const assertionContent = isEn
+              ? q.assertionContent || q.assertionText
+              : tr?.assertionContent || tr?.assertionText || q.assertionContent || q.assertionText;
+            const reasonContent = isEn
+              ? q.reasonContent || q.reasonText
+              : tr?.reasonContent || tr?.reasonText || q.reasonContent || q.reasonText;
+
+            // Determine effective options
+            const getOptContent = (key: 'A' | 'B' | 'C' | 'D') => {
+              const masterOptContent =
+                (q.options as any)?.[`${key}Content`] || q.options[key];
+              if (isEn) return masterOptContent;
+
+              const trOptContent = (tr?.options as any)?.[`${key}Content`];
+              const trOptText = tr?.options?.[key];
+
+              if (trOptContent) return trOptContent;
+              if (
+                trOptText &&
+                trOptText !== '[Image]' &&
+                !trOptText.includes('[Image]')
+              ) {
+                return trOptText;
+              }
+              // If translation is [Image] or empty or master option has content, use master option content (the diagram)
+              return masterOptContent;
+            };
 
             return (
               <div
                 key={q.id}
                 className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-800/30 space-y-3.5 transition-all hover:border-slate-300 dark:hover:border-slate-700"
               >
+                {/* Passage */}
+                {passageContent && (
+                  <div className="p-3.5 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-xs text-slate-800 dark:text-slate-200 leading-relaxed mb-3 [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg">
+                    <span className="font-bold text-indigo-700 dark:text-indigo-400 block mb-1">
+                      Passage / Comprehension:
+                    </span>
+                    <RichContentRenderer content={passageContent} />
+                  </div>
+                )}
+
+                {/* Assertion & Reason */}
+                {assertionContent && (
+                  <div className="p-3.5 rounded-xl bg-purple-50/50 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40 text-xs text-slate-800 dark:text-slate-200 leading-relaxed mb-3 [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg">
+                    <div>
+                      <span className="font-bold text-purple-800 dark:text-purple-300 mr-1.5">
+                        Assertion (A):
+                      </span>
+                      <RichContentRenderer content={assertionContent} />
+                    </div>
+                    {reasonContent && (
+                      <div className="mt-2 pt-2 border-t border-purple-100 dark:border-purple-900/40">
+                        <span className="font-bold text-purple-800 dark:text-purple-300 mr-1.5">
+                          Reason (R):
+                        </span>
+                        <RichContentRenderer content={reasonContent} />
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-start gap-3">
-                  <span className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center shrink-0">
+                  <span className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
                     {q.sequenceNumber}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 pt-0.5 leading-relaxed">
-                      {qText}
-                    </p>
+                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 pt-0.5 leading-relaxed [&_img]:max-w-full [&_img]:h-auto [&_img]:max-h-80 [&_img]:rounded-xl">
+                      <RichContentRenderer content={effectiveQContent} />
+                    </div>
                     {!isEn && !tr && (
                       <span className="inline-flex items-center gap-1 mt-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
                         <AlertCircle className="w-3 h-3" />
@@ -365,19 +430,22 @@ export const QuestionPaperViewPanel: React.FC<QuestionPaperViewPanelProps> = ({
 
                 {/* Options Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pl-10">
-                  {(['A', 'B', 'C', 'D'] as const).map((key) => (
-                    <div
-                      key={key}
-                      className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800/80 text-xs flex items-center gap-2.5"
-                    >
-                      <span className="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-[10px] flex items-center justify-center shrink-0">
-                        {key}
-                      </span>
-                      <span className="text-slate-800 dark:text-slate-200 font-medium">
-                        {options[key]}
-                      </span>
-                    </div>
-                  ))}
+                  {(['A', 'B', 'C', 'D'] as const).map((key) => {
+                    const optContent = getOptContent(key);
+                    return (
+                      <div
+                        key={key}
+                        className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white dark:bg-slate-800/80 text-xs flex items-start gap-2.5"
+                      >
+                        <span className="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                          {key}
+                        </span>
+                        <div className="text-slate-800 dark:text-slate-200 font-medium min-w-0 flex-1 [&_img]:max-w-full [&_img]:h-auto [&_img]:max-h-60 [&_img]:rounded-lg">
+                          <RichContentRenderer content={optContent} />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );

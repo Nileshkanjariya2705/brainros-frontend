@@ -38,6 +38,7 @@ import {
 import Loader from '@/components/feedback/Loader';
 import Button from '@/components/ui/Button';
 import Skeleton from '@/components/ui/Skeleton';
+import { RichContentRenderer } from '@/components/renderer/RichContentRenderer';
 
 // ** Analysis Modular Components **
 import { OverallPerformanceCard } from '@/modules/Analysis/components/OverallPerformanceCard';
@@ -47,6 +48,7 @@ import { TimeAnalyticsView } from '@/modules/Analysis/components/TimeAnalyticsVi
 import { AttemptStrategyView } from '@/modules/Analysis/components/AttemptStrategyView';
 import { SmartRecommendationsView } from '@/modules/Analysis/components/SmartRecommendationsView';
 import { RankPercentileView } from '@/modules/Analysis/components/RankPercentileView';
+import { PerformanceAnalysisReportView } from '@/modules/Analysis/components/PerformanceAnalysisReportView';
 
 // ** Types **
 import type { QuestionReviewItem } from '@/types/exam.types';
@@ -58,6 +60,7 @@ const ExamResultPage = () => {
 
   const [activeTab, setActiveTab] = useState<
     | 'overview'
+    | 'performance-report'
     | 'ranks'
     | 'subjects'
     | 'chapters'
@@ -420,6 +423,7 @@ const ExamResultPage = () => {
       <div className="flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1.5 shadow-sm scrollbar-none">
         {[
           { id: 'overview', label: 'Overall Overview', icon: Trophy },
+          { id: 'performance-report', label: '14-Section Full Report', icon: BrainCircuit, badge: 14 },
           { id: 'ranks', label: 'Ranks & Percentile', icon: Award },
           { id: 'subjects', label: 'Subject Analytics', icon: BarChart3 },
           { id: 'chapters', label: 'Chapter Diagnosis', icon: Target },
@@ -464,12 +468,50 @@ const ExamResultPage = () => {
       {/* ── Tab Content Views ─────────────────────────────────── */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Quick CTA to Full 14-Section Analysis Report */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border border-indigo-500/20">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
+                <BrainCircuit size={13} /> Official Student Performance Analysis Report
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold">14-Section Comprehensive Diagnostic Report</h3>
+              <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                Topic-wise accuracy, Strengths & Weaknesses, Error Classification, Time Management, 14-Day Study Plan, Parent Summary, and Brainros Performance Index.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <Button
+                onClick={() => setActiveTab('performance-report')}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-950/50 flex items-center gap-2"
+              >
+                <BrainCircuit size={15} /> View 14-Section Report
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleDownloadPdf}
+                disabled={isDownloadingPdf}
+                className="border-slate-700 text-slate-200 hover:bg-white/10 text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2"
+              >
+                <Download size={14} /> Download PDF
+              </Button>
+            </div>
+          </div>
+
           <SubjectAnalyticsView subjects={subjects} />
           <ChapterDiagnosisView chapters={chapters} />
           <TimeAnalyticsView timeAnalysis={timeAnalysis} />
           <AttemptStrategyView attemptStrategy={attemptStrategy} />
           <SmartRecommendationsView recommendations={recommendations} />
         </div>
+      )}
+
+      {activeTab === 'performance-report' && (
+        <PerformanceAnalysisReportView
+          analysis={analysis}
+          onBack={() => setActiveTab('overview')}
+          onDownloadPdf={handleDownloadPdf}
+          isDownloadingPdf={isDownloadingPdf}
+        />
       )}
 
       {activeTab === 'ranks' && (
@@ -706,10 +748,36 @@ const ExamResultPage = () => {
                         </span>
                       </div>
 
+                      {/* Optional Passage / Context */}
+                      {item.passageContent && (
+                        <div className="rounded-xl border border-indigo-100 dark:border-indigo-900/40 bg-indigo-50/40 dark:bg-indigo-950/20 p-3 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                          <div className="font-bold text-indigo-700 dark:text-indigo-400 text-xs mb-1 uppercase tracking-wider">
+                            Passage / Context:
+                          </div>
+                          <RichContentRenderer content={item.passageContent} />
+                        </div>
+                      )}
+
+                      {/* Optional Assertion & Reason */}
+                      {item.assertionContent && (
+                        <div className="space-y-1.5 rounded-xl border border-purple-100 dark:border-purple-900/40 bg-purple-50/40 dark:bg-purple-950/20 p-3 text-xs text-slate-700 dark:text-slate-300">
+                          <div>
+                            <span className="font-bold text-purple-800 dark:text-purple-300 mr-2">Assertion (A):</span>
+                            <RichContentRenderer content={item.assertionContent} />
+                          </div>
+                          {item.reasonContent && (
+                            <div className="mt-1.5 pt-1.5 border-t border-purple-100 dark:border-purple-900/40">
+                              <span className="font-bold text-purple-800 dark:text-purple-300 mr-2">Reason (R):</span>
+                              <RichContentRenderer content={item.reasonContent} />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Question Text */}
-                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 leading-relaxed">
-                        {item.questionText}
-                      </p>
+                      <div className="text-sm font-medium text-slate-900 dark:text-slate-100 leading-relaxed [&_img]:max-w-full [&_img]:h-auto">
+                        <RichContentRenderer content={item.questionContent || item.questionText} />
+                      </div>
 
                       {/* Quick Answer Summary Bar (shows BOTH user selected & correct answer) */}
                       <div className="flex flex-wrap items-center gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/60 text-xs">
@@ -729,8 +797,7 @@ const ExamResultPage = () => {
                             >
                               Option{' '}
                               {studentChosenOpt.optionLabel ||
-                                (studentChosenOpt as any).optionKey}{' '}
-                              ({studentChosenOpt.optionText})
+                                (studentChosenOpt as any).optionKey}
                               {item.isCorrect ? <Check size={11} /> : <X size={11} />}
                             </span>
                           ) : (
@@ -751,8 +818,7 @@ const ExamResultPage = () => {
                             <span className="font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 flex items-center gap-1">
                               <Check size={11} />
                               Option{' '}
-                              {correctOpt.optionLabel || (correctOpt as any).optionKey}{' '}
-                              ({correctOpt.optionText})
+                              {correctOpt.optionLabel || (correctOpt as any).optionKey}
                             </span>
                           ) : (
                             <span className="font-medium text-slate-400">N/A</span>
@@ -770,14 +836,14 @@ const ExamResultPage = () => {
                             opt.optionLabel ||
                             (opt as any).optionKey ||
                             String.fromCharCode(65 + oIdx);
-                          const text =
-                            opt.optionText || (opt as any).text || `Option ${label}`;
+                          const content =
+                            opt.optionContent || opt.optionText || (opt as any).text || `Option ${label}`;
 
                           return (
                             <div
                               key={opt.id || oIdx}
                               className={cn(
-                                'p-3 rounded-xl border text-xs font-medium flex items-center justify-between transition-all',
+                                'p-3 rounded-xl border text-xs font-medium flex items-center justify-between transition-all gap-2',
                                 isCorrectOpt && isStudentPick
                                   ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 ring-1 ring-emerald-500/20'
                                   : isStudentPick && !isCorrectOpt
@@ -787,7 +853,7 @@ const ExamResultPage = () => {
                                       : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-slate-700 dark:text-slate-300',
                               )}
                             >
-                              <div className="flex items-center gap-2.5 pr-2">
+                              <div className="flex items-center gap-2.5 pr-2 min-w-0 flex-1">
                                 <span
                                   className={cn(
                                     'h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0',
@@ -800,7 +866,9 @@ const ExamResultPage = () => {
                                 >
                                   {label}
                                 </span>
-                                <span className="font-semibold">{text}</span>
+                                <div className="font-semibold min-w-0 flex-1 break-words overflow-wrap-anywhere [&_img]:max-w-full [&_img]:h-auto">
+                                  <RichContentRenderer content={content} />
+                                </div>
                               </div>
 
                               {/* Badges on the right */}

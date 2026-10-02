@@ -49,6 +49,8 @@ import Loader from '@/components/feedback/Loader';
 import Button from '@/components/ui/Button';
 import { ExamLanguageSwitcher } from '../components/ExamLanguageSwitcher';
 import { QuestionPalette, type QuestionStatusType } from '../components/QuestionPalette';
+import { RichContentRenderer } from '@/components/renderer/RichContentRenderer';
+import { mergeTranslationWithRichDoc } from '@/types/richContent.types';
 
 // ** Utils & Types **
 import type { ExamQuestion, AttemptAnswer } from '@/types/exam.types';
@@ -983,15 +985,61 @@ const ExamInterfacePage = () => {
     ? currentQuestion?.translations?.[currentLanguageId] ||
       currentQuestion?.translations?.[currentLanguageId.toLowerCase()]
     : null;
-  const displayQuestionText =
-    activeQTrans?.questionText ||
-    currentQuestion?.questionText ||
+
+  const masterQContent = currentQuestion?.questionContent || currentQuestion?.questionText;
+  const transQContent =
+    activeQTrans?.questionContent ||
+    (activeQTrans?.questionText
+      ? currentQuestion?.questionContent
+        ? mergeTranslationWithRichDoc(currentQuestion.questionContent, activeQTrans.questionText)
+        : activeQTrans.questionText
+      : null);
+
+  const displayQuestionContent =
+    transQContent ||
+    masterQContent ||
     (currentQuestion as any)?.text ||
     'Question text';
-  const displayPassage = activeQTrans?.passageText || (currentQuestion as any)?.passage || null;
-  const displayAssertion =
-    activeQTrans?.assertionText || (currentQuestion as any)?.assertion || null;
-  const displayReason = activeQTrans?.reasonText || (currentQuestion as any)?.reason || null;
+
+  const masterPassage =
+    currentQuestion?.passageContent ||
+    currentQuestion?.passage ||
+    null;
+  const transPassage =
+    activeQTrans?.passageContent ||
+    (activeQTrans?.passageText
+      ? currentQuestion?.passageContent
+        ? mergeTranslationWithRichDoc(currentQuestion.passageContent, activeQTrans.passageText)
+        : activeQTrans.passageText
+      : null);
+  const displayPassageContent = transPassage || masterPassage;
+
+  const masterAssertion =
+    currentQuestion?.assertionContent ||
+    currentQuestion?.assertion ||
+    null;
+  const transAssertion =
+    activeQTrans?.assertionContent ||
+    (activeQTrans?.assertionText
+      ? currentQuestion?.assertionContent
+        ? mergeTranslationWithRichDoc(currentQuestion.assertionContent, activeQTrans.assertionText)
+        : activeQTrans.assertionText
+      : null);
+  const displayAssertionContent = transAssertion || masterAssertion;
+
+  const masterReason =
+    currentQuestion?.reasonContent ||
+    currentQuestion?.reason ||
+    null;
+  const transReason =
+    activeQTrans?.reasonContent ||
+    (activeQTrans?.reasonText
+      ? currentQuestion?.reasonContent
+        ? mergeTranslationWithRichDoc(currentQuestion.reasonContent, activeQTrans.reasonText)
+        : activeQTrans.reasonText
+      : null);
+  const displayReasonContent = transReason || masterReason;
+
 
   // ─── Loading & Error Screens ──────────────────────────────────
   if ((isStatusLoading || isQuestionsLoading) && questions.length === 0) {
@@ -1314,26 +1362,26 @@ const ExamInterfacePage = () => {
                 </div>
 
                 {/* Optional Passage / Context */}
-                {displayPassage && (
+                {displayPassageContent && (
                   <div className="mt-3.5 sm:mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-3 sm:p-4 text-xs sm:text-sm leading-relaxed text-slate-700 break-words overflow-wrap-anywhere">
                     <div className="font-bold text-indigo-700 text-xs mb-1 uppercase tracking-wider">
                       Passage / Comprehension Context:
                     </div>
-                    {displayPassage}
+                    <RichContentRenderer content={displayPassageContent} />
                   </div>
                 )}
 
                 {/* Optional Assertion & Reason */}
-                {displayAssertion && (
+                {displayAssertionContent && (
                   <div className="mt-3.5 sm:mt-4 space-y-2 rounded-2xl border border-purple-100 bg-purple-50/40 p-3 sm:p-4 text-xs sm:text-sm text-slate-700 break-words overflow-wrap-anywhere">
                     <div>
                       <span className="font-bold text-purple-800 mr-2">Assertion (A):</span>
-                      {displayAssertion}
+                      <RichContentRenderer content={displayAssertionContent} />
                     </div>
-                    {displayReason && (
+                    {displayReasonContent && (
                       <div className="mt-2 pt-2 border-t border-purple-100">
                         <span className="font-bold text-purple-800 mr-2">Reason (R):</span>
-                        {displayReason}
+                        <RichContentRenderer content={displayReasonContent} />
                       </div>
                     )}
                   </div>
@@ -1346,7 +1394,7 @@ const ExamInterfacePage = () => {
                     fontSizeClass,
                   )}
                 >
-                  {displayQuestionText}
+                  <RichContentRenderer content={displayQuestionContent} />
                 </div>
 
                 {/* ── Options / Inputs ────────────────────────────── */}
@@ -1386,12 +1434,26 @@ const ExamInterfacePage = () => {
                         ? opt.translations?.[currentLanguageId] ||
                           opt.translations?.[currentLanguageId.toLowerCase()]
                         : null;
-                      const optionText =
-                        activeOptTrans?.optionText ||
+
+                      const masterOptContent =
+                        opt.optionContent ||
                         opt.optionText ||
                         opt.optionLabel ||
                         (opt as any).optionKey ||
                         `Option ${label}`;
+
+
+                      const transOptContent =
+                        activeOptTrans?.optionContent ||
+                        (activeOptTrans?.optionText &&
+                        activeOptTrans.optionText !== '[Image]' &&
+                        !activeOptTrans.optionText.includes('[Image]')
+                          ? activeOptTrans.optionText
+                          : opt.optionContent
+                          ? opt.optionContent
+                          : activeOptTrans?.optionText);
+
+                      const optionContent = transOptContent || masterOptContent;
 
                       return (
                         <label
@@ -1414,9 +1476,9 @@ const ExamInterfacePage = () => {
                           >
                             {isSelected ? '✓' : label}
                           </div>
-                          <span className="text-xs sm:text-sm font-medium text-slate-800 leading-relaxed min-w-0 flex-1 break-words overflow-wrap-anywhere [&_img]:max-w-full [&_img]:h-auto">
-                            {optionText}
-                          </span>
+                          <div className="text-xs sm:text-sm font-medium text-slate-800 leading-relaxed min-w-0 flex-1 break-words overflow-wrap-anywhere [&_img]:max-w-full [&_img]:h-auto [&_img]:max-h-60 [&_img]:rounded-lg">
+                            <RichContentRenderer content={optionContent} />
+                          </div>
                         </label>
                       );
                     })
@@ -1433,12 +1495,25 @@ const ExamInterfacePage = () => {
                         ? opt.translations?.[currentLanguageId] ||
                           opt.translations?.[currentLanguageId.toLowerCase()]
                         : null;
-                      const optionText =
-                        activeOptTrans?.optionText ||
+
+                      const masterOptContent =
+                        opt.optionContent ||
                         opt.optionText ||
                         opt.optionLabel ||
                         (opt as any).optionKey ||
                         `Option ${label}`;
+
+                      const transOptContent =
+                        activeOptTrans?.optionContent ||
+                        (activeOptTrans?.optionText &&
+                        activeOptTrans.optionText !== '[Image]' &&
+                        !activeOptTrans.optionText.includes('[Image]')
+                          ? activeOptTrans.optionText
+                          : opt.optionContent
+                          ? opt.optionContent
+                          : activeOptTrans?.optionText);
+
+                      const optionContent = transOptContent || masterOptContent;
 
                       return (
                         <label
@@ -1461,14 +1536,14 @@ const ExamInterfacePage = () => {
                           >
                             {isSelected ? <CheckCircle2 size={15} /> : label}
                           </div>
-                          <span
+                          <div
                             className={cn(
                               'font-medium text-slate-800 leading-relaxed min-w-0 flex-1 break-words overflow-wrap-anywhere [&_img]:max-w-full [&_img]:h-auto',
                               fontSizeClass === 'text-lg' ? 'text-sm sm:text-base' : 'text-xs sm:text-sm',
                             )}
                           >
-                            {optionText}
-                          </span>
+                            <RichContentRenderer content={optionContent} />
+                          </div>
                         </label>
                       );
                     })
