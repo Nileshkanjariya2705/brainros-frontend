@@ -53,6 +53,11 @@ export const TEST_USERS: Record<string, UserRoleCredentials> = {
     role: 'ACCOUNTANT',
     expectedDashboardUrl: '/accountant/dashboard',
   },
+  salesAgent: {
+    mobileNumber: '9000000095',
+    role: 'SALES_AGENT',
+    expectedDashboardUrl: '/sales-agent/dashboard',
+  },
 };
 
 /**
@@ -78,7 +83,7 @@ export async function loginViaAPI(page: Page, mobileNumber: string, otp: string 
   const backendBase =
     process.env.VITE_API_BASE_URL ||
     process.env.VITE_API_URL ||
-    (process.env.PLAYWRIGHT_BASE_URL ? `${process.env.PLAYWRIGHT_BASE_URL.replace(/\/+$/, '')}/api` : 'http://127.0.0.1:3000');
+    'http://localhost:3000';
 
   // 1. Send OTP
   const sendRes = await page.request.post(`${backendBase}/auth/login/request-otp`, {

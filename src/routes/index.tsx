@@ -195,6 +195,58 @@ const OperatorScheduledExamsPage = lazyRoute(
   () => import('@/modules/ExamManager/pages/OperatorScheduledExamsPage'),
 );
 
+// ** Sales Agent Module Pages **
+const SalesAgentDashboardPage = lazyRoute(() =>
+  import('@/modules/SalesAgent/pages/SalesAgentDashboardPage').then((m) => ({
+    default: m.SalesAgentDashboardPage,
+  })),
+);
+const SalesVisitsPage = lazyRoute(() =>
+  import('@/modules/SalesAgent/pages/SalesVisitsPage').then((m) => ({
+    default: m.SalesVisitsPage,
+  })),
+);
+const SalesTerritoryPage = lazyRoute(() =>
+  import('@/modules/SalesAgent/pages/SalesTerritoryPage').then((m) => ({
+    default: m.SalesTerritoryPage,
+  })),
+);
+const SalesTargetsPage = lazyRoute(() =>
+  import('@/modules/SalesAgent/pages/SalesTargetsPage').then((m) => ({
+    default: m.SalesTargetsPage,
+  })),
+);
+const SalesReportsPage = lazyRoute(() =>
+  import('@/modules/SalesAgent/pages/SalesReportsPage').then((m) => ({
+    default: m.SalesReportsPage,
+  })),
+);
+const SalesProfilePage = lazyRoute(() =>
+  import('@/modules/SalesAgent/pages/SalesProfilePage').then((m) => ({
+    default: m.SalesProfilePage,
+  })),
+);
+const AddActivityPage = lazyRoute(() =>
+  import('@/modules/SalesAgent/pages/AddActivityPage').then((m) => ({
+    default: m.AddActivityPage,
+  })),
+);
+
+// ** Super Admin Sales Agent Management Pages **
+const SuperAdminSalesAgentsPage = lazyRoute(
+  () => import('@/modules/Admin/pages/SuperAdminSalesAgentsPage'),
+);
+const SuperAdminSalesAgentDetailPage = lazyRoute(
+  () => import('@/modules/Admin/pages/SuperAdminSalesAgentDetailPage'),
+);
+const SuperAdminSalesAgentActivitiesPage = lazyRoute(
+  () => import('@/modules/Admin/pages/SuperAdminSalesAgentActivitiesPage'),
+);
+const SuperAdminSalesAgentActivityDetailPage = lazyRoute(
+  () => import('@/modules/Admin/pages/SuperAdminSalesAgentActivityDetailPage'),
+);
+
+
 
 // ══════════════════════════════════════════════════════════════════════════
 // 1. PUBLIC ROUTES (Unauthenticated Only)
@@ -672,6 +724,18 @@ const superAdminChildren: RouteObject[] = [
   { path: 'staff', element: <StaffManagementPage /> },
   { path: 'staff-management', element: <StaffManagementPage /> },
   { path: 'staff_management', element: <StaffManagementPage /> },
+  { path: 'sales-agents', element: <SuperAdminSalesAgentsPage /> },
+  { path: 'sales-agents/:salesAgentId', element: <SuperAdminSalesAgentDetailPage /> },
+  { path: 'sales_agents', element: <SuperAdminSalesAgentsPage /> },
+  { path: 'sales_agents/:salesAgentId', element: <SuperAdminSalesAgentDetailPage /> },
+  { path: 'sales-agent-activities', element: <SuperAdminSalesAgentActivitiesPage /> },
+  { path: 'sales-agent-activities/:activityId', element: <SuperAdminSalesAgentActivityDetailPage /> },
+  { path: 'sales_agent_activities', element: <SuperAdminSalesAgentActivitiesPage /> },
+  { path: 'sales_agent_activities/:activityId', element: <SuperAdminSalesAgentActivityDetailPage /> },
+  { path: 'todays-activities', element: <SuperAdminSalesAgentActivitiesPage /> },
+  { path: 'todays-activities/:activityId', element: <SuperAdminSalesAgentActivityDetailPage /> },
+  { path: 'sales-activities', element: <SuperAdminSalesAgentActivitiesPage /> },
+  { path: 'sales-activities/:activityId', element: <SuperAdminSalesAgentActivityDetailPage /> },
   { path: 'billing', element: <SuperAdminBillingPage /> },
   { path: 'billing-approvals', element: <SuperAdminBillingPage /> },
   { path: 'billing_approvals', element: <SuperAdminBillingPage /> },
@@ -835,12 +899,16 @@ const salesAgentRoutes: RouteObject[] = [
     ),
     children: [
       { path: '', element: <Navigate to="dashboard" replace /> },
-      { path: 'dashboard', element: <InstitutionDashboardPage /> },
-      { path: 'schools', element: <AdminSchoolsPage /> },
-      { path: 'schools/bulk-upload', element: <AdminBulkSchoolUploadPage /> },
-      { path: 'reports', element: <ReportsPage /> },
+      { path: 'dashboard', element: <SalesAgentDashboardPage /> },
+      { path: 'add-activity', element: <AddActivityPage /> },
+      { path: 'activity/new', element: <AddActivityPage /> },
+      { path: 'visits', element: <SalesVisitsPage /> },
+      { path: 'history', element: <SalesVisitsPage /> },
+      { path: 'territory', element: <SalesTerritoryPage /> },
+      { path: 'targets', element: <SalesTargetsPage /> },
+      { path: 'reports', element: <SalesReportsPage /> },
       { path: 'notifications', element: <StaffNotificationsPage /> },
-      { path: 'profile', element: <StudentProfilePage /> },
+      { path: 'profile', element: <SalesProfilePage /> },
     ],
   },
 ];

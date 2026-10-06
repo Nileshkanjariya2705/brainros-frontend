@@ -47,7 +47,7 @@ import { useAuth } from '@/hooks/useAuth';
 // ** Components **
 import Loader from '@/components/feedback/Loader';
 import Button from '@/components/ui/Button';
-import { ExamLanguageSwitcher } from '../components/ExamLanguageSwitcher';
+// import { ExamLanguageSwitcher } from '../components/ExamLanguageSwitcher';
 import { QuestionPalette, type QuestionStatusType } from '../components/QuestionPalette';
 import { RichContentRenderer } from '@/components/renderer/RichContentRenderer';
 import { mergeTranslationWithRichDoc } from '@/types/richContent.types';
@@ -327,7 +327,7 @@ const ExamInterfacePage = () => {
 
     try {
       localStorage.removeItem('brainros_active_exam');
-    } catch {}
+    } catch { }
 
     const leaveUrl = `${API_URL}/attempts/${attemptId}/leave`;
     const payload = JSON.stringify({ reason: 'FORCE_CLOSE_TAB' });
@@ -340,8 +340,8 @@ const ExamInterfacePage = () => {
         credentials: 'include',
         keepalive: true,
         body: payload,
-      }).catch(() => {});
-    } catch {}
+      }).catch(() => { });
+    } catch { }
 
     // 2. Beacon fallback for maximum browser compatibility
     try {
@@ -349,7 +349,7 @@ const ExamInterfacePage = () => {
         const blob = new Blob([payload], { type: 'application/json' });
         navigator.sendBeacon(leaveUrl, blob);
       }
-    } catch {}
+    } catch { }
   }, [attemptId]);
 
   // ─── Native BeforeUnload Guard & Forceful Close Auto-Submit ────────
@@ -467,9 +467,9 @@ const ExamInterfacePage = () => {
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().catch(() => { });
     } else {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
     }
   };
 
@@ -519,9 +519,9 @@ const ExamInterfacePage = () => {
         if (!qData || qData.length === 0) {
           setErrorMessage(
             qRes.error ||
-              qRes.response?.data?.message ||
-              (qRes.data as any)?.message ||
-              'Failed to load exam questions',
+            qRes.response?.data?.message ||
+            (qRes.data as any)?.message ||
+            'Failed to load exam questions',
           );
           return;
         }
@@ -627,7 +627,7 @@ const ExamInterfacePage = () => {
         visitedQuestions: Array.from(visitedQuestions),
         currentQuestionId: payload.examQuestionId,
         sequence: sequenceCounterRef.current++,
-      }).catch(() => {});
+      }).catch(() => { });
 
       // 3. If offline, enqueue sync event
       if (!navigator.onLine) {
@@ -748,7 +748,7 @@ const ExamInterfacePage = () => {
     if (attemptId && currentQ.examQuestionId) {
       startQuestionTimingAPI(attemptId, currentQ.examQuestionId, {
         clientTimestamp: new Date().toISOString(),
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     // Populate active inputs from answer store
@@ -922,29 +922,6 @@ const ExamInterfacePage = () => {
     });
   };
 
-  // ─── In-Flight Language Switch Handler ────────────────────────
-  const handleLanguageChanged = async (newLangId: string) => {
-    setCurrentLanguageId(newLangId);
-    recordSecEvent('LANGUAGE_CHANGED', 0, { languageId: newLangId });
-    // Instantly renders translation from in-memory dictionary.
-    // Asynchronously persists chosen language to attempt on server.
-    if (attemptId) {
-      try {
-        await saveAnswerAPI(attemptId, {
-          examQuestionId: questions[currentIdx]?.examQuestionId || '',
-          selectedOptionId,
-          selectedOptions: selectedOptions.length > 0 ? selectedOptions : null,
-          numericalAnswer:
-            numericalAnswer !== '' && !isNaN(Number(numericalAnswer))
-              ? Number(numericalAnswer)
-              : null,
-          isMarkedForReview,
-        });
-      } catch {
-        // ignore
-      }
-    }
-  };
 
   // ─── Derived Question Status Helper ───────────────────────────
   const getQuestionStatus = useCallback(
@@ -983,7 +960,7 @@ const ExamInterfacePage = () => {
   // Multilingual active translation derivation
   const activeQTrans = currentLanguageId
     ? currentQuestion?.translations?.[currentLanguageId] ||
-      currentQuestion?.translations?.[currentLanguageId.toLowerCase()]
+    currentQuestion?.translations?.[currentLanguageId.toLowerCase()]
     : null;
 
   const masterQContent = currentQuestion?.questionContent || currentQuestion?.questionText;
@@ -1131,14 +1108,14 @@ const ExamInterfacePage = () => {
         {/* Right: Controls & Actions */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 ml-auto sm:ml-0">
           {/* Language Switcher */}
-          {attemptId && (
+          {/* {attemptId && (
             <ExamLanguageSwitcher
               examId={examId}
               attemptId={attemptId}
               currentLanguageId={currentLanguageId}
               onLanguageChanged={handleLanguageChanged}
             />
-          )}
+          )} */}
 
           {/* Network & Autosave State Indicator */}
           <div
@@ -1432,7 +1409,7 @@ const ExamInterfacePage = () => {
 
                       const activeOptTrans = currentLanguageId
                         ? opt.translations?.[currentLanguageId] ||
-                          opt.translations?.[currentLanguageId.toLowerCase()]
+                        opt.translations?.[currentLanguageId.toLowerCase()]
                         : null;
 
                       const masterOptContent =
@@ -1446,12 +1423,12 @@ const ExamInterfacePage = () => {
                       const transOptContent =
                         activeOptTrans?.optionContent ||
                         (activeOptTrans?.optionText &&
-                        activeOptTrans.optionText !== '[Image]' &&
-                        !activeOptTrans.optionText.includes('[Image]')
+                          activeOptTrans.optionText !== '[Image]' &&
+                          !activeOptTrans.optionText.includes('[Image]')
                           ? activeOptTrans.optionText
                           : opt.optionContent
-                          ? opt.optionContent
-                          : activeOptTrans?.optionText);
+                            ? opt.optionContent
+                            : activeOptTrans?.optionText);
 
                       const optionContent = transOptContent || masterOptContent;
 
@@ -1493,7 +1470,7 @@ const ExamInterfacePage = () => {
 
                       const activeOptTrans = currentLanguageId
                         ? opt.translations?.[currentLanguageId] ||
-                          opt.translations?.[currentLanguageId.toLowerCase()]
+                        opt.translations?.[currentLanguageId.toLowerCase()]
                         : null;
 
                       const masterOptContent =
@@ -1506,12 +1483,12 @@ const ExamInterfacePage = () => {
                       const transOptContent =
                         activeOptTrans?.optionContent ||
                         (activeOptTrans?.optionText &&
-                        activeOptTrans.optionText !== '[Image]' &&
-                        !activeOptTrans.optionText.includes('[Image]')
+                          activeOptTrans.optionText !== '[Image]' &&
+                          !activeOptTrans.optionText.includes('[Image]')
                           ? activeOptTrans.optionText
                           : opt.optionContent
-                          ? opt.optionContent
-                          : activeOptTrans?.optionText);
+                            ? opt.optionContent
+                            : activeOptTrans?.optionText);
 
                       const optionContent = transOptContent || masterOptContent;
 
@@ -1885,7 +1862,7 @@ const ExamInterfacePage = () => {
           localStorage.removeItem('brainros_active_exam');
           try {
             window.close();
-          } catch {}
+          } catch { }
           navigate('/student/dashboard', { replace: true });
         }}
       />

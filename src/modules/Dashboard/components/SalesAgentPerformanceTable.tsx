@@ -70,10 +70,8 @@ export const SalesAgentPerformanceTable: React.FC<SalesAgentPerformanceTableProp
           <thead>
             <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
               <th className="pb-3 px-3">Sales Agent</th>
-              <th className="pb-3 px-3 text-center">Assigned Leads</th>
-              <th className="pb-3 px-3 text-center">Converted</th>
-              <th className="pb-3 px-3 text-center">Conversion %</th>
               <th className="pb-3 px-3 text-center">Settled Deals</th>
+              <th className="pb-3 px-3 text-center">Total Orders</th>
               <th className="pb-3 px-3 text-right">Revenue Generated</th>
               <th className="pb-3 px-3 text-right">Avg. Order Value</th>
             </tr>
@@ -81,13 +79,13 @@ export const SalesAgentPerformanceTable: React.FC<SalesAgentPerformanceTableProp
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-slate-400">
+                <td colSpan={5} className="py-8 text-center text-slate-400">
                   Loading sales performance metrics...
                 </td>
               </tr>
             ) : agents.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-slate-400">
+                <td colSpan={5} className="py-8 text-center text-slate-400">
                   No sales agent accounts found.
                 </td>
               </tr>
@@ -118,19 +116,11 @@ export const SalesAgentPerformanceTable: React.FC<SalesAgentPerformanceTableProp
                       </div>
                     </div>
                   </td>
-                  <td className="py-3.5 px-3 text-center font-bold text-slate-700">
-                    {agent.assignedLeads}
-                  </td>
-                  <td className="py-3.5 px-3 text-center font-extrabold text-teal-700">
-                    {agent.convertedLeads}
-                  </td>
-                  <td className="py-3.5 px-3 text-center">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-teal-50 text-teal-800 border border-teal-200">
-                      {agent.conversionRate}%
-                    </span>
-                  </td>
                   <td className="py-3.5 px-3 text-center font-bold text-slate-800">
                     {agent.successfulSales}
+                  </td>
+                  <td className="py-3.5 px-3 text-center font-bold text-slate-600">
+                    {agent.totalOrders}
                   </td>
                   <td className="py-3.5 px-3 text-right">
                     <span className="font-black text-slate-900 text-xs">

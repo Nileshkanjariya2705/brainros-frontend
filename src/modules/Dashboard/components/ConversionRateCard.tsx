@@ -16,12 +16,6 @@ export const ConversionRateCard: React.FC<ConversionRateCardProps> = ({ data, is
     payingConversionRate: 0,
   };
 
-  const salesLeads = data?.salesLeads || {
-    totalLeads: 0,
-    convertedLeads: 0,
-    leadConversionRate: 0,
-  };
-
   if (isLoading) {
     return (
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs animate-pulse space-y-4">
@@ -106,7 +100,7 @@ export const ConversionRateCard: React.FC<ConversionRateCardProps> = ({ data, is
         </div>
       </div>
 
-      {/* Formula Documentation & Sales Funnel Footer */}
+      {/* Formula Documentation */}
       <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2 text-slate-500">
           <Info className="h-4 w-4 text-indigo-500 shrink-0" />
@@ -114,13 +108,6 @@ export const ConversionRateCard: React.FC<ConversionRateCardProps> = ({ data, is
             <strong className="text-slate-700">Calculation Method: </strong>
             {data?.formulaUsed ||
               'Paying Conversion Rate = (Paying Students / Total Registered Students) * 100'}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 text-slate-700 font-bold">
-          <span>Sales Team Leads:</span>
-          <span className="px-2 py-0.5 rounded-lg bg-indigo-100 text-indigo-800 text-[11px]">
-            {salesLeads.convertedLeads} / {salesLeads.totalLeads} ({salesLeads.leadConversionRate}%)
           </span>
         </div>
       </div>

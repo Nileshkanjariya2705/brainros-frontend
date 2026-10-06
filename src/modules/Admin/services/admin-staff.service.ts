@@ -18,7 +18,7 @@ export interface CreateStaffPayload {
   mobileNumber: string;
   phoneNumber?: string;
   email?: string;
-  role: 'OPERATOR' | 'MANAGER' | 'GENERAL_MANAGER' | 'ACCOUNTANT' | 'ADMIN';
+  role: 'OPERATOR' | 'MANAGER' | 'GENERAL_MANAGER' | 'ACCOUNTANT' | 'ADMIN' | 'SALES_AGENT';
 }
 
 export interface UpdateStaffPayload {
@@ -26,7 +26,7 @@ export interface UpdateStaffPayload {
   mobileNumber?: string;
   phoneNumber?: string;
   email?: string;
-  role?: 'OPERATOR' | 'MANAGER' | 'GENERAL_MANAGER' | 'ACCOUNTANT' | 'ADMIN';
+  role?: 'OPERATOR' | 'MANAGER' | 'GENERAL_MANAGER' | 'ACCOUNTANT' | 'ADMIN' | 'SALES_AGENT';
 }
 
 export const AdminStaffApi = {

@@ -35,6 +35,7 @@ const ROLE_BADGES: Record<string, { label: string; color: string }> = {
   MANAGER: { label: 'Manager', color: 'bg-blue-50 text-blue-700 border-blue-200' },
   OPERATOR: { label: 'Operator', color: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
   ACCOUNTANT: { label: 'Accountant', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  SALES_AGENT: { label: 'Sales Agent', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
 };
 
 export const StaffManagementPage: React.FC = () => {
@@ -244,6 +245,7 @@ export const StaffManagementPage: React.FC = () => {
             <option value="MANAGER">Manager</option>
             <option value="OPERATOR">Operator</option>
             <option value="ACCOUNTANT">Accountant</option>
+            <option value="SALES_AGENT">Sales Agent</option>
           </select>
         </div>
 
@@ -574,6 +576,7 @@ export const StaffManagementPage: React.FC = () => {
                   <option value="MANAGER">Manager (Operational + management tasks)</option>
                   <option value="GENERAL_MANAGER">General Manager (Broad management oversight)</option>
                   <option value="ACCOUNTANT">Accountant (Billing & institutional invoices)</option>
+                  <option value="SALES_AGENT">Sales Agent (Field visits, leads, institutional sales)</option>
                   <option value="ADMIN">Admin (Academic & system administration)</option>
                 </select>
               </div>
@@ -671,6 +674,7 @@ export const StaffManagementPage: React.FC = () => {
                   <option value="MANAGER">Manager</option>
                   <option value="GENERAL_MANAGER">General Manager</option>
                   <option value="ACCOUNTANT">Accountant</option>
+                  <option value="SALES_AGENT">Sales Agent</option>
                   <option value="ADMIN">Admin</option>
                 </select>
               </div>

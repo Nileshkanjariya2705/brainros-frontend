@@ -114,6 +114,9 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   superAdminInstitutionBulkUpload: '/super-admin/institution/bulk-upload',
   superAdminInstitutionReports: '/super-admin/institution/reports',
   superAdminStaff: '/super-admin/staff',
+  superAdminSalesAgents: '/super-admin/sales-agents',
+  superAdminSalesAgentActivities: '/super-admin/sales-agent-activities',
+  superAdminSalesAgentDetail: '/super-admin/sales-agents/:salesAgentId',
   superAdminBilling: '/super-admin/billing',
   superAdminAcademicCalendar: '/super-admin/academic-calendar',
   superAdminProfile: '/super-admin/profile',
@@ -193,7 +196,10 @@ export const PRIVATE_NAVIGATION = Object.freeze({
 
   // ── Sales Agent role-prefixed routes ──
   salesAgentDashboard: '/sales-agent/dashboard',
-  salesAgentSchools: '/sales-agent/schools',
+  salesAgentAddActivity: '/sales-agent/add-activity',
+  salesAgentVisits: '/sales-agent/visits',
+  salesAgentTerritory: '/sales-agent/territory',
+  salesAgentTargets: '/sales-agent/targets',
   salesAgentReports: '/sales-agent/reports',
   salesAgentNotifications: '/sales-agent/notifications',
   salesAgentProfile: '/sales-agent/profile',

@@ -233,3 +233,33 @@ export const scheduleKeys = {
   subjects: () => [...scheduleKeys.all, 'subjects'] as const,
   chapters: (subjectId: string) => [...scheduleKeys.all, 'chapters', subjectId] as const,
 };
+
+export const salesAgentKeys = {
+  all: ['sales-agent'] as const,
+  profile: () => [...salesAgentKeys.all, 'profile'] as const,
+  dashboard: () => [...salesAgentKeys.all, 'dashboard'] as const,
+  territory: () => [...salesAgentKeys.all, 'territory'] as const,
+  visits: (filters: Record<string, any> = {}) =>
+    [...salesAgentKeys.all, 'visits', filters] as const,
+  visitDetail: (visitId: string) =>
+    [...salesAgentKeys.all, 'visit-detail', visitId] as const,
+  targets: (filters: Record<string, any> = {}) =>
+    [...salesAgentKeys.all, 'targets', filters] as const,
+  currentTarget: (periodKey?: string) =>
+    [...salesAgentKeys.all, 'current-target', periodKey || 'current'] as const,
+  leaderboard: () => [...salesAgentKeys.all, 'leaderboard'] as const,
+};
+
+export const superAdminSalesAgentKeys = {
+  all: ['super-admin-sales-agents'] as const,
+  list: (params: Record<string, any> = {}) =>
+    [...superAdminSalesAgentKeys.all, 'list', params] as const,
+  detail: (id: string) =>
+    [...superAdminSalesAgentKeys.all, 'detail', id] as const,
+  activities: (id: string, params: Record<string, any> = {}) =>
+    [...superAdminSalesAgentKeys.all, 'activities', id, params] as const,
+  activityDetail: (id: string, activityId: string) =>
+    [...superAdminSalesAgentKeys.all, 'activity-detail', id, activityId] as const,
+};
+
+

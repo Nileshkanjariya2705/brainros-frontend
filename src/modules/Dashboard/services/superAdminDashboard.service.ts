@@ -131,11 +131,6 @@ export interface ConversionRateData {
     purchasedPackage: number;
     payingConversionRate: number;
   };
-  salesLeads: {
-    totalLeads: number;
-    convertedLeads: number;
-    leadConversionRate: number;
-  };
   formulaUsed: string;
 }
 
@@ -144,9 +139,6 @@ export interface SalesAgentPerformanceItem {
   name: string;
   email: string;
   phone: string;
-  assignedLeads: number;
-  convertedLeads: number;
-  conversionRate: number;
   totalOrders: number;
   successfulSales: number;
   revenueGenerated: number;

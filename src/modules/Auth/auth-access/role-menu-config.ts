@@ -18,7 +18,6 @@ import {
   Users,
   CheckCircle2,
   Bell,
-  BarChart3,
   User,
   FileSpreadsheet,
   UploadCloud,
@@ -317,6 +316,18 @@ export const SUPER_ADMIN_MENU_GROUPS: MenuGroupConfig[] = [
         label: 'Staff Management',
         to: PRIVATE_NAVIGATION.superAdminStaff,
         icon: UserCog,
+      },
+      {
+        key: 'sales-agents',
+        label: 'Sales Agents',
+        to: PRIVATE_NAVIGATION.superAdminSalesAgents,
+        icon: Users,
+      },
+      {
+        key: 'sales-agent-activities',
+        label: "Today's Field Activities",
+        to: PRIVATE_NAVIGATION.superAdminSalesAgentActivities,
+        icon: Activity,
       },
       {
         key: 'billing-management',
@@ -739,48 +750,33 @@ export const ACCOUNTANT_MENU_GROUPS: MenuGroupConfig[] = [
 // ─── SALES AGENT Menu Groups ───────────────────────────────────────────────
 export const SALES_AGENT_MENU_GROUPS: MenuGroupConfig[] = [
   {
-    categoryKey: 'OVERVIEW',
-    categoryLabel: 'Overview',
+    categoryKey: 'OPERATIONS',
+    categoryLabel: 'Sales Portal',
     items: [
       {
         key: 'sales-dashboard',
-        label: 'Dashboard',
+        label: "Today's Activity",
         to: PRIVATE_NAVIGATION.salesAgentDashboard,
         icon: LayoutDashboard,
         end: true,
       },
       {
-        key: 'sales-profile',
-        label: 'My Profile',
-        to: PRIVATE_NAVIGATION.salesAgentProfile,
-        icon: User,
+        key: 'sales-visits',
+        label: 'Activity History',
+        to: PRIVATE_NAVIGATION.salesAgentVisits,
+        icon: History,
       },
     ],
   },
   {
-    categoryKey: 'INSTITUTION_SALES',
-    categoryLabel: 'Institutional Sales',
+    categoryKey: 'ACCOUNT',
+    categoryLabel: 'Account',
     items: [
       {
-        key: 'sales-schools',
-        label: 'Schools & Colleges',
-        to: PRIVATE_NAVIGATION.salesAgentSchools,
-        icon: Building2,
-        permission: PERMISSIONS.INSTITUTION_VIEW,
-      },
-      {
-        key: 'sales-reports',
-        label: 'Sales Reports',
-        to: PRIVATE_NAVIGATION.salesAgentReports,
-        icon: BarChart3,
-        permission: PERMISSIONS.REPORT_VIEW,
-      },
-      {
-        key: 'sales-notifications',
-        label: 'Notification Center',
-        to: PRIVATE_NAVIGATION.salesAgentNotifications,
-        icon: Bell,
-        permission: PERMISSIONS.NOTIFICATION_VIEW,
+        key: 'sales-profile',
+        label: 'My Profile',
+        to: PRIVATE_NAVIGATION.salesAgentProfile,
+        icon: User,
       },
     ],
   },
