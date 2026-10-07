@@ -63,6 +63,8 @@ export interface SalesAgentActivityDetail {
   notes?: string | null;
   requirements?: string | null;
   photos?: string[];
+  slipPhoto?: string | null;
+  slipUrl?: string | null;
   institute?: {
     name?: string | null;
     address?: string | null;
@@ -92,6 +94,8 @@ export interface SalesAgentActivityDetail {
     keyDiscussionPoints?: string | null;
     checkInTime?: string | null;
     checkOutTime?: string | null;
+    slipPhoto?: string | null;
+    slipUrl?: string | null;
   };
   location?: {
     latitude?: number | null;
@@ -135,6 +139,8 @@ export interface SalesAgentActivityDetail {
     checkInTime?: string;
     checkOutTime?: string;
     photos?: string[];
+    slipPhoto?: string | null;
+    slipUrl?: string | null;
     followUpDate?: string;
     followUpNotes?: string;
     followUpStatus?: string;

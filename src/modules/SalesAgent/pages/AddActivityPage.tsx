@@ -20,6 +20,8 @@ import {
   Sparkles,
   Maximize2,
   X,
+  Receipt,
+  UploadCloud,
 } from 'lucide-react';
 import { SalesVisitService, type CreateSalesVisitPayload } from '@/services/salesVisit.service';
 import { GpsCameraCaptureModal } from '../components/GpsCameraCaptureModal';
@@ -49,6 +51,10 @@ export const AddActivityPage: React.FC = () => {
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<{ file: File; dataUrl: string } | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  // Activity Slip Photo state
+  const [slipPhoto, setSlipPhoto] = useState<{ file?: File; dataUrl: string; name?: string } | null>(null);
+  const [isSlipLightboxOpen, setIsSlipLightboxOpen] = useState(false);
 
   // Auto-detect GPS location immediately on mount
   const detectLocation = () => {
@@ -120,6 +126,32 @@ export const AddActivityPage: React.FC = () => {
     };
   };
 
+  const handleSlipFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file (JPG, PNG, WebP).');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Slip photo size must be less than 10MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSlipPhoto({
+        file,
+        dataUrl: reader.result as string,
+        name: file.name,
+      });
+      toast.success('Slip photo attached successfully.');
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!institutionName.trim()) {
@@ -130,8 +162,9 @@ export const AddActivityPage: React.FC = () => {
     setLoading(true);
     try {
       let photoUrls: string[] = [];
+      let uploadedSlipUrl: string | undefined = undefined;
 
-      // If photo proof was captured, upload it to storage
+      // 1. If GPS photo proof was captured, upload it to storage
       if (capturedPhoto?.file) {
         try {
           const uploadRes = await SalesVisitService.uploadPhoto(capturedPhoto.file);
@@ -146,6 +179,23 @@ export const AddActivityPage: React.FC = () => {
         }
       }
 
+      // 2. If Slip photo was attached, upload it to storage
+      if (slipPhoto?.file) {
+        try {
+          const slipRes = await SalesVisitService.uploadPhoto(slipPhoto.file);
+          if (slipRes?.url) {
+            uploadedSlipUrl = slipRes.url;
+          } else {
+            uploadedSlipUrl = slipPhoto.dataUrl;
+          }
+        } catch (slipErr) {
+          console.warn('Slip upload error, falling back to data URL:', slipErr);
+          uploadedSlipUrl = slipPhoto.dataUrl;
+        }
+      } else if (slipPhoto?.dataUrl) {
+        uploadedSlipUrl = slipPhoto.dataUrl;
+      }
+
       const payload: CreateSalesVisitPayload = {
         institutionName: institutionName.trim(),
         contactPerson: contactPerson.trim() || undefined,
@@ -157,6 +207,8 @@ export const AddActivityPage: React.FC = () => {
         latitude: gpsLocation?.lat,
         longitude: gpsLocation?.lng,
         photos: photoUrls.length > 0 ? photoUrls : undefined,
+        slipPhoto: uploadedSlipUrl,
+        slipUrl: uploadedSlipUrl,
       };
 
       await SalesVisitService.scheduleVisit(payload);
@@ -330,6 +382,106 @@ export const AddActivityPage: React.FC = () => {
             />
           </div>
 
+          {/* Add Slip / Activity Slip Photo Section */}
+          <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="block text-xs font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Add Slip / Activity Slip Photo</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">
+                    Slip Proof
+                  </span>
+                </label>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Upload a photo of the meeting slip, quotation acknowledgment, or visit confirmation slip.
+                </p>
+              </div>
+
+              {slipPhoto && (
+                <button
+                  type="button"
+                  onClick={() => setSlipPhoto(null)}
+                  className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Remove Slip</span>
+                </button>
+              )}
+            </div>
+
+            {slipPhoto ? (
+              /* Slip Photo Preview Card */
+              <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-500/40 bg-slate-900 group shadow-lg">
+                <img
+                  src={slipPhoto.dataUrl}
+                  alt="Activity Slip Preview"
+                  className="w-full max-h-[320px] object-contain mx-auto bg-black/40"
+                />
+
+                {/* Badge Overlay */}
+                <div className="absolute top-3 left-3 flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600/90 text-white text-xs font-extrabold shadow-md backdrop-blur">
+                    <Receipt className="w-3.5 h-3.5 text-yellow-300" />
+                    Activity Slip Attached
+                  </span>
+                </div>
+
+                <div className="absolute top-3 right-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsSlipLightboxOpen(true)}
+                    className="p-2 rounded-xl bg-black/60 text-white hover:bg-black/80 backdrop-blur transition-all"
+                    title="View Full Resolution Slip"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="p-3.5 bg-slate-900/90 backdrop-blur border-t border-slate-800 flex items-center justify-between text-xs text-slate-300">
+                  <span className="font-semibold text-emerald-400 flex items-center gap-1.5 truncate max-w-[220px] sm:max-w-md">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{slipPhoto.name || 'Slip Photo Attached'}</span>
+                  </span>
+                  <label className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer">
+                    <UploadCloud className="w-3.5 h-3.5" />
+                    <span>Change Slip</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleSlipFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+            ) : (
+              /* Slip Upload Drop-Zone */
+              <label className="w-full p-6 rounded-2xl border-2 border-dashed border-emerald-200 dark:border-emerald-800 hover:border-emerald-500 dark:hover:border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all flex flex-col items-center justify-center text-center gap-2.5 group cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleSlipFileChange}
+                  className="hidden"
+                />
+                <div className="p-3.5 rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-200 dark:shadow-none group-hover:scale-110 transition-transform">
+                  <Receipt className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center justify-center gap-1.5">
+                    <span>Upload Activity Slip Photo</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold">
+                      Add Slip
+                    </span>
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Click to select from device or take photo of the physical slip (JPG, PNG, WebP)
+                  </p>
+                </div>
+              </label>
+            )}
+          </div>
+
           {/* GPS Map Camera Photo Proof Section (LAST OPTION) */}
           <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between">
@@ -461,7 +613,7 @@ export const AddActivityPage: React.FC = () => {
         />
       )}
 
-      {/* Fullscreen Lightbox Preview */}
+      {/* Fullscreen Lightbox Preview for GPS Photo */}
       {isLightboxOpen && capturedPhoto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 animate-in fade-in">
           <button
@@ -473,6 +625,27 @@ export const AddActivityPage: React.FC = () => {
           <img
             src={capturedPhoto.dataUrl}
             alt="Full GPS Watermarked Photo"
+            className="max-h-[90vh] max-w-[95vw] object-contain rounded-2xl shadow-2xl"
+          />
+        </div>
+      )}
+
+      {/* Fullscreen Lightbox Preview for Slip Photo */}
+      {isSlipLightboxOpen && slipPhoto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 animate-in fade-in">
+          <div className="absolute top-5 left-5 text-white flex items-center gap-2">
+            <Receipt className="w-5 h-5 text-emerald-400" />
+            <span className="font-bold text-sm">{slipPhoto.name || 'Activity Slip Photo'}</span>
+          </div>
+          <button
+            onClick={() => setIsSlipLightboxOpen(false)}
+            className="absolute top-5 right-5 p-2.5 rounded-full bg-white/20 text-white hover:bg-white/30 backdrop-blur transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={slipPhoto.dataUrl}
+            alt="Full Slip Photo"
             className="max-h-[90vh] max-w-[95vw] object-contain rounded-2xl shadow-2xl"
           />
         </div>

@@ -10,6 +10,7 @@ import {
   Plus,
   History,
   X,
+  Receipt,
 } from 'lucide-react';
 import { SalesVisitService, type SalesVisit } from '@/services/salesVisit.service';
 import { salesAgentKeys } from '@/services/queryKeys';
@@ -154,11 +155,32 @@ export const SalesVisitsPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* GPS Map Camera Photo Proof Thumbnail */}
-                {(visit.photos && visit.photos.length > 0) || (visit.checkInPhotos && visit.checkInPhotos.length > 0) ? (
+                {/* Visual Proof Thumbnails: GPS Photos & Slip Proof */}
+                {(visit.slipPhoto || visit.slipUrl || (visit.photos && visit.photos.length > 0) || (visit.checkInPhotos && visit.checkInPhotos.length > 0)) ? (
                   <div className="pt-1">
-                    <div className="flex items-center gap-2">
-                      {((visit.photos || visit.checkInPhotos) as string[]).map((photoUrl, pIdx) => (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Slip Proof Thumbnail */}
+                      {(visit.slipPhoto || visit.slipUrl) && (
+                        <div
+                          onClick={() => setSelectedPhotoUrl(visit.slipPhoto || visit.slipUrl || null)}
+                          className="relative group w-20 h-14 rounded-xl overflow-hidden border-2 border-emerald-500/40 bg-slate-100 dark:bg-slate-800 cursor-pointer shadow-sm hover:shadow transition-all"
+                        >
+                          <img
+                            src={visit.slipPhoto || visit.slipUrl || ''}
+                            alt="Activity Slip Proof"
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform bg-black/40"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
+                            View
+                          </div>
+                          <span className="absolute bottom-1 right-1 px-1 py-0.5 rounded bg-emerald-700/90 text-white text-[8px] font-bold flex items-center gap-0.5">
+                            <Receipt className="w-2.5 h-2.5" /> Slip
+                          </span>
+                        </div>
+                      )}
+
+                      {/* GPS Map Camera Photos */}
+                      {((visit.photos || visit.checkInPhotos) as string[] || []).map((photoUrl, pIdx) => (
                         <div
                           key={pIdx}
                           onClick={() => setSelectedPhotoUrl(photoUrl)}

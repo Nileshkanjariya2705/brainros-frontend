@@ -32,23 +32,6 @@ export interface SalesDashboardData {
   }>;
 }
 
-export interface TerritoryData {
-  states: Array<{ id: string; name: string; code: string }>;
-  districts: Array<{ id: string; name: string; stateId: string }>;
-  institutions: Array<{
-    id: string;
-    name: string;
-    code: string;
-    address?: string;
-    city?: string;
-    state?: string;
-    districtId?: string;
-    email?: string;
-    phone?: string;
-    status: string;
-  }>;
-}
-
 export const SalesAgentService = {
   getProfile: async (): Promise<SalesAgentProfile> => {
     const res = await Axios.get('/sales-agent/profile');
@@ -62,11 +45,6 @@ export const SalesAgentService = {
 
   getDashboard: async (): Promise<SalesDashboardData> => {
     const res = await Axios.get('/sales-agent/dashboard');
-    return res.data.data;
-  },
-
-  getTerritory: async (): Promise<TerritoryData> => {
-    const res = await Axios.get('/sales-agent/territory');
     return res.data.data;
   },
 };

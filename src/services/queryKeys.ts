@@ -238,16 +238,10 @@ export const salesAgentKeys = {
   all: ['sales-agent'] as const,
   profile: () => [...salesAgentKeys.all, 'profile'] as const,
   dashboard: () => [...salesAgentKeys.all, 'dashboard'] as const,
-  territory: () => [...salesAgentKeys.all, 'territory'] as const,
   visits: (filters: Record<string, any> = {}) =>
     [...salesAgentKeys.all, 'visits', filters] as const,
   visitDetail: (visitId: string) =>
     [...salesAgentKeys.all, 'visit-detail', visitId] as const,
-  targets: (filters: Record<string, any> = {}) =>
-    [...salesAgentKeys.all, 'targets', filters] as const,
-  currentTarget: (periodKey?: string) =>
-    [...salesAgentKeys.all, 'current-target', periodKey || 'current'] as const,
-  leaderboard: () => [...salesAgentKeys.all, 'leaderboard'] as const,
 };
 
 export const superAdminSalesAgentKeys = {

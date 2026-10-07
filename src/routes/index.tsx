@@ -206,16 +206,6 @@ const SalesVisitsPage = lazyRoute(() =>
     default: m.SalesVisitsPage,
   })),
 );
-const SalesTerritoryPage = lazyRoute(() =>
-  import('@/modules/SalesAgent/pages/SalesTerritoryPage').then((m) => ({
-    default: m.SalesTerritoryPage,
-  })),
-);
-const SalesTargetsPage = lazyRoute(() =>
-  import('@/modules/SalesAgent/pages/SalesTargetsPage').then((m) => ({
-    default: m.SalesTargetsPage,
-  })),
-);
 const SalesReportsPage = lazyRoute(() =>
   import('@/modules/SalesAgent/pages/SalesReportsPage').then((m) => ({
     default: m.SalesReportsPage,
@@ -904,8 +894,6 @@ const salesAgentRoutes: RouteObject[] = [
       { path: 'activity/new', element: <AddActivityPage /> },
       { path: 'visits', element: <SalesVisitsPage /> },
       { path: 'history', element: <SalesVisitsPage /> },
-      { path: 'territory', element: <SalesTerritoryPage /> },
-      { path: 'targets', element: <SalesTargetsPage /> },
       { path: 'reports', element: <SalesReportsPage /> },
       { path: 'notifications', element: <StaffNotificationsPage /> },
       { path: 'profile', element: <SalesProfilePage /> },

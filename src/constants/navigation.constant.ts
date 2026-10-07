@@ -198,8 +198,6 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   salesAgentDashboard: '/sales-agent/dashboard',
   salesAgentAddActivity: '/sales-agent/add-activity',
   salesAgentVisits: '/sales-agent/visits',
-  salesAgentTerritory: '/sales-agent/territory',
-  salesAgentTargets: '/sales-agent/targets',
   salesAgentReports: '/sales-agent/reports',
   salesAgentNotifications: '/sales-agent/notifications',
   salesAgentProfile: '/sales-agent/profile',

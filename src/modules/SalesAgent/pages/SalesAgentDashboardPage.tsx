@@ -10,8 +10,6 @@ import {
   Award,
   Activity,
   X,
-  Compass,
-  Building2,
   TrendingUp,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -113,7 +111,7 @@ export const SalesAgentDashboardPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Field Visits</span>
             <div className="p-2.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-xl">
-              <Compass className="w-5 h-5" />
+              <MapPin className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
@@ -333,35 +331,19 @@ export const SalesAgentDashboardPage: React.FC = () => {
             </div>
 
             <div
-              onClick={() => navigate('/sales-agent/territory')}
+              onClick={() => navigate('/sales-agent/visits')}
               className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-blue-500 bg-slate-50/70 dark:bg-slate-800/40 cursor-pointer transition-all hover:shadow-md flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
-                  <Building2 className="w-5 h-5" />
+                  <Clock className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-slate-900 dark:text-white">My Territory</h4>
-                  <p className="text-xs text-slate-500">View assigned institutions</p>
+                  <h4 className="font-bold text-sm text-slate-900 dark:text-white">Activity History</h4>
+                  <p className="text-xs text-slate-500">View logged field visits & reports</p>
                 </div>
               </div>
-              <Compass className="w-4 h-4 text-blue-600" />
-            </div>
-
-            <div
-              onClick={() => navigate('/sales-agent/targets')}
-              className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-amber-500 dark:hover:border-amber-500 bg-slate-50/70 dark:bg-slate-800/40 cursor-pointer transition-all hover:shadow-md flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
-                  <Award className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-slate-900 dark:text-white">Performance & Targets</h4>
-                  <p className="text-xs text-slate-500">Live attainment & leaderboard</p>
-                </div>
-              </div>
-              <TrendingUp className="w-4 h-4 text-amber-600" />
+              <Activity className="w-4 h-4 text-blue-600" />
             </div>
           </div>
         </div>

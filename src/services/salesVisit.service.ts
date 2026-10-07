@@ -36,6 +36,8 @@ export interface SalesVisit {
   checkOutAddress?: string | null;
   checkOutPhotos?: string[];
   photos?: string[];
+  slipPhoto?: string | null;
+  slipUrl?: string | null;
   summary?: string | null;
   keyDiscussionPoints?: string | null;
   nextFollowUpDate?: string | null;
@@ -58,6 +60,8 @@ export interface CreateSalesVisitPayload {
   latitude?: number;
   longitude?: number;
   photos?: string[];
+  slipPhoto?: string;
+  slipUrl?: string;
 }
 
 export interface CheckInPayload {
