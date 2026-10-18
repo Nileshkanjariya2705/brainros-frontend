@@ -17,6 +17,7 @@ import {
   Layers,
   MapPin,
   GraduationCap,
+  Pencil,
 } from 'lucide-react';
 import {
   usePublicRegistrationsQuery,
@@ -30,6 +31,10 @@ import {
   type PublicStudentItem,
   type PublicRegistrationsQueryParams,
 } from '../services/public-registrations.service';
+import { useAdminStudentFilterOptionsQuery } from '../services/admin.queries';
+import { type AdminStudentItem, type AdminStudentFilterOptions } from '../services/admin-students.service';
+import { useStatesQuery } from '@/services/location.queries';
+import { EditStudentModal } from '../components/EditStudentModal';
 import Button from '@/components/ui/Button';
 import Loader from '@/components/feedback/Loader';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
@@ -43,6 +48,7 @@ interface ViewStudentModalProps {
   onClose: () => void;
   onDeactivate: (student: PublicStudentItem) => void;
   onActivate: (student: PublicStudentItem) => void;
+  onEdit?: (student: any) => void;
 }
 
 const ViewStudentModal: React.FC<ViewStudentModalProps> = ({
@@ -50,6 +56,7 @@ const ViewStudentModal: React.FC<ViewStudentModalProps> = ({
   onClose,
   onDeactivate,
   onActivate,
+  onEdit,
 }) => {
   const { data: student, isLoading } = usePublicStudentDetailQuery(studentId);
 
@@ -223,10 +230,24 @@ const ViewStudentModal: React.FC<ViewStudentModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end px-6 py-4 bg-slate-50 border-t border-slate-100 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-t border-slate-100 shrink-0">
           <Button variant="outline" size="sm" onClick={onClose} className="rounded-xl font-bold">
             Close
           </Button>
+
+          {student && onEdit && (
+            <Button
+              size="sm"
+              onClick={() => {
+                onClose();
+                onEdit(student);
+              }}
+              className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
+            >
+              <Pencil size={13} />
+              <span>Edit Details & Password</span>
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -383,6 +404,23 @@ export const PublicRegistrationsPage: React.FC = () => {
   // Modals state
   const [selectedStudentForView, setSelectedStudentForView] = useState<string | null>(null);
   const [studentToDeactivate, setStudentToDeactivate] = useState<PublicStudentItem | null>(null);
+  const [editingStudent, setEditingStudent] = useState<AdminStudentItem | null>(null);
+
+  const { data: rawStudentFilterOptions } = useAdminStudentFilterOptionsQuery();
+  const { data: statesData } = useStatesQuery();
+  const publicStates = useMemo(() => ((Array.isArray(statesData) ? statesData : (statesData as any)?.data) || []) as any[], [statesData]);
+
+  const studentFilterOptions: AdminStudentFilterOptions = useMemo(
+    () => rawStudentFilterOptions || {
+      states: [],
+      districts: [],
+      classes: [],
+      examTargets: [],
+      institutions: [],
+      statuses: [],
+    },
+    [rawStudentFilterOptions],
+  );
 
   // Handlers
   const handleSort = (field: string) => {
@@ -822,6 +860,34 @@ export const PublicRegistrationsPage: React.FC = () => {
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
+                            onClick={() => {
+                              const studentItem: AdminStudentItem = {
+                                id: student.id,
+                                studentId: student.studentId,
+                                studentCode: student.studentCode || student.studentId,
+                                name: student.name,
+                                email: student.email || '',
+                                mobile: student.mobile || '',
+                                schoolCollege: student.schoolCollege || '',
+                                state: student.state || { name: '' },
+                                district: student.district || { name: '' },
+                                class: student.class || null,
+                                examTarget: student.examTarget ? { id: student.examTarget.id, name: student.examTarget.name } : null,
+                                institutions: [],
+                                status: student.status,
+                                createdAt: student.createdAt,
+                                parentsCount: 0,
+                                hasParent: false,
+                              };
+                              setEditingStudent(studentItem);
+                            }}
+                            className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition shadow-2xs border border-indigo-200 cursor-pointer"
+                            title="Edit Student Details & Password"
+                          >
+                            <Pencil size={14} />
+                          </button>
+
+                          <button
                             onClick={() => setSelectedStudentForView(student.id)}
                             className="p-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition shadow-2xs"
                             title="View Profile"
@@ -889,6 +955,28 @@ export const PublicRegistrationsPage: React.FC = () => {
             setStudentToDeactivate(st);
           }}
           onActivate={handleActivate}
+          onEdit={(st: any) => {
+            setSelectedStudentForView(null);
+            const studentItem: AdminStudentItem = {
+              id: st.id,
+              studentId: st.studentId,
+              studentCode: st.studentCode || st.studentId,
+              name: st.name,
+              email: st.user?.email || st.email || '',
+              mobile: st.user?.mobileNumber || st.user?.phone || st.mobile || '',
+              schoolCollege: st.schoolCollege || '',
+              state: typeof st.state === 'object' && st.state ? st.state : { id: st.stateId, name: st.state || '' },
+              district: typeof st.district === 'object' && st.district ? st.district : { id: st.districtId, name: st.district || '' },
+              class: st.studentClass ? { id: st.studentClass.id, name: st.studentClass.name } : (st.class ? { id: st.class.id, name: st.class.name } : null),
+              examTarget: st.examTarget ? { id: st.examTarget.id, name: st.examTarget.name } : null,
+              institutions: [],
+              status: st.status,
+              createdAt: st.createdAt,
+              parentsCount: 0,
+              hasParent: false,
+            };
+            setEditingStudent(studentItem);
+          }}
         />
       )}
 
@@ -899,6 +987,17 @@ export const PublicRegistrationsPage: React.FC = () => {
           onClose={() => setStudentToDeactivate(null)}
           onConfirm={handleDeactivate}
           isLoading={deactivateMutation.isPending}
+        />
+      )}
+
+      {/* ── Edit Student & Password Modal ── */}
+      {editingStudent && (
+        <EditStudentModal
+          student={editingStudent}
+          filterOptions={studentFilterOptions}
+          publicStates={publicStates}
+          onClose={() => setEditingStudent(null)}
+          onSuccess={() => refetch()}
         />
       )}
     </div>

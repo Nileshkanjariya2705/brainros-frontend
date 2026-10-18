@@ -94,7 +94,7 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
 
   // Inline Row Edit State
   const [editingRow, setEditingRow] = useState<BulkStudentRow | null>(null);
-  const [editFormData, setEditFormData] = useState<Record<string, string>>({});
+  const [editFormData, setEditFormData] = useState<Record<string, any>>({});
   const [isSavingRow, setIsSavingRow] = useState<boolean>(false);
   const [rowEditError, setRowEditError] = useState<string | null>(null);
 
@@ -348,6 +348,10 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
       city: row.data.city || '',
       class: row.data.class || '',
       examTarget: row.data.examTarget || '',
+      jee: Boolean(row.data.jee),
+      cet: Boolean(row.data.cet),
+      neet: Boolean(row.data.neet),
+      password: '',
       preferredLanguage: row.data.preferredLanguage || '',
     });
   };
@@ -738,7 +742,11 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-1.5 flex-shrink-0" />
-                      <span><strong className="text-slate-900">Exam Target:</strong> NEET, JEE_MAIN, etc.</span>
+                      <span><strong className="text-slate-900">Exam Target:</strong> Dedicated boolean columns <code className="text-[11px] bg-slate-200 px-1 py-0.5 rounded font-mono">jee</code>, <code className="text-[11px] bg-slate-200 px-1 py-0.5 rounded font-mono">cet</code>, <code className="text-[11px] bg-slate-200 px-1 py-0.5 rounded font-mono">neet</code> (TRUE/FALSE). At least one must be TRUE.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-1.5 flex-shrink-0" />
+                      <span><strong className="text-slate-900">Password:</strong> Min 6 characters for Student ID login (securely hashed on import).</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-1.5 flex-shrink-0" />
@@ -924,7 +932,22 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                                 <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[11px] font-medium border border-slate-200">
                                   {row.data.class || 'N/A'}
                                 </span>
-                                {((row.data.examTarget || '')
+                                {row.data.jee && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-sky-50 text-sky-800 border-sky-200">
+                                    JEE
+                                  </span>
+                                )}
+                                {row.data.cet && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-purple-50 text-purple-800 border-purple-200">
+                                    CET
+                                  </span>
+                                )}
+                                {row.data.neet && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-emerald-50 text-emerald-800 border-emerald-200">
+                                    NEET
+                                  </span>
+                                )}
+                                {!row.data.jee && !row.data.cet && !row.data.neet && ((row.data.examTarget || '')
                                   .split(/[,/+]|\band\b/i)
                                   .map((t: string) => t.trim())
                                   .filter(Boolean)).map((target: string, idx: number) => {
@@ -1456,31 +1479,52 @@ export const SuperAdminBulkStudentRegistrationPage: React.FC = () => {
                   />
                 </div>
 
+                <div className="col-span-1 sm:col-span-2 space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Exam Eligibility Flags * (At least one must be checked)
+                  </label>
+                  <div className="flex flex-wrap items-center gap-4 pt-1">
+                    <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(editFormData.jee)}
+                        onChange={(e) => setEditFormData({ ...editFormData, jee: e.target.checked })}
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="px-2 py-0.5 rounded bg-sky-50 text-sky-800 border border-sky-200 text-xs font-bold">JEE</span>
+                    </label>
+                    <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(editFormData.cet)}
+                        onChange={(e) => setEditFormData({ ...editFormData, cet: e.target.checked })}
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200 text-xs font-bold">CET</span>
+                    </label>
+                    <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(editFormData.neet)}
+                        onChange={(e) => setEditFormData({ ...editFormData, neet: e.target.checked })}
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">NEET</span>
+                    </label>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Exam Target(s) *
+                    Password (Optional row update)
                   </label>
                   <input
-                    type="text"
-                    required
-                    value={editFormData.examTarget || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, examTarget: e.target.value })}
+                    type="password"
+                    value={editFormData.password || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500"
-                    placeholder="e.g. NEET, CET"
+                    placeholder="Min 6 characters if updating"
                   />
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <span className="text-[11px] text-slate-500">Quick set:</span>
-                    {['NEET', 'CET', 'JEE', 'NEET, CET', 'JEE, CET'].map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => setEditFormData({ ...editFormData, examTarget: t })}
-                        className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 <div>

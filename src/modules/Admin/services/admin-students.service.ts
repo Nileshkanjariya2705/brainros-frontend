@@ -13,11 +13,18 @@ export interface AdminStudentItem {
   district: { id?: string; name: string; code?: string };
   class: { id: string; name: string } | null;
   examTarget: { id: string; name: string } | null;
+  preferredLanguage?: { id: string; name: string; code?: string } | null;
+  institution?: { id: string; name: string; code: string } | null;
+  admissionYear?: number | null;
+  jee?: boolean;
+  cet?: boolean;
+  neet?: boolean;
   institutions: Array<{ id: string; name: string; code: string; batchName?: string }>;
   status: string;
   createdAt: string;
   parentsCount: number;
   hasParent: boolean;
+  isVerified?: boolean;
 }
 
 export interface AdminStudentsPagination {
@@ -38,6 +45,8 @@ export interface AdminStudentFilterOptions {
   classes: Array<{ id: string; name: string }>;
   examTargets: Array<{ id: string; name: string }>;
   institutions: Array<{ id: string; name: string; code: string }>;
+  languages?: Array<{ id: string; name: string; code?: string }>;
+  admissionYears?: number[];
   statuses: Array<{ label: string; value: string }>;
 }
 
@@ -162,4 +171,17 @@ export const useUpdateAdminStudentAPI = () => {
     [patch],
   );
   return { updateAdminStudentAPI, ...state };
+};
+
+export const useResetStudentPasswordAPI = () => {
+  const [post, state] = useAxiosPost();
+  const resetStudentPasswordAPI = useCallback(
+    (studentId: string, password: string) =>
+      post<{ success: boolean; message: string }>(
+        `/admin/students/${studentId}/reset-password`,
+        { password },
+      ),
+    [post],
+  );
+  return { resetStudentPasswordAPI, ...state };
 };

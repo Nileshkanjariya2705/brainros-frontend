@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import cn from 'classnames';
@@ -11,12 +12,19 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
+// ** Redux & Navigation **
+import { useAppDispatch } from '@/redux/store';
+import { setCredentials } from '@/redux/slices/authSlice';
+import { PRIVATE_NAVIGATION } from '@/constants/navigation.constant';
+import { createTabSession } from '@/utils/tabSession';
+
 // ** Components **
-import { InputField, PhoneInputField, OtpPinInput } from '@/components/FormField';
+import { InputField, PhoneInputField, PasswordField, OtpPinInput } from '@/components/FormField';
 import Button from '@/components/ui/Button';
 
-// ** Hooks **
+// ** Hooks & Services **
 import { usePasswordlessLogin } from '../hooks/usePasswordlessLogin';
+import { useLoginStudentIdAPI } from '../services';
 
 // ** Validation **
 import {
@@ -31,10 +39,14 @@ import {
 type AuthMethod = 'PHONE' | 'STUDENT_ID';
 
 const LoginForm = () => {
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const [authMethod, setAuthMethod] = useState<AuthMethod>('PHONE');
   const [cooldownTime, setCooldownTime] = useState<number>(0);
 
-  // Passwordless Login Hook (handles OTP request, verify, and resend across phone and studentId)
+  const { loginStudentIdAPI, isLoading: isStudentIdLoggingIn } = useLoginStudentIdAPI();
+
+  // Passwordless Login Hook (handles Mobile OTP request, verify, and resend)
   const {
     requestOtp,
     verifyOtp,
@@ -60,14 +72,14 @@ const LoginForm = () => {
     defaultValues: { mobileNumber: '' },
   });
 
-  // ─── 2. Student ID Form ───────────────────────────────────────────────────
+  // ─── 2. Student ID + Password Form ────────────────────────────────────────
   const {
     register: registerStudentId,
     handleSubmit: handleSubmitStudentId,
     formState: { errors: errorsStudentId },
   } = useForm<StudentIdLoginFormValues>({
     resolver: yupResolver(studentIdLoginSchema),
-    defaultValues: { studentId: '' },
+    defaultValues: { studentId: '', password: '' },
   });
 
   // ─── 3. OTP Verification Form ─────────────────────────────────────────────
@@ -112,7 +124,26 @@ const LoginForm = () => {
   };
 
   const handleStudentIdSubmit = async (values: StudentIdLoginFormValues) => {
-    await requestOtp(values.studentId);
+    setLoginError(null);
+    const { data, error: apiError } = await loginStudentIdAPI({
+      studentId: values.studentId,
+      password: values.password,
+    });
+
+    if (!apiError && data) {
+      createTabSession();
+      dispatch(
+        setCredentials({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          user: data.user,
+          student: data.student,
+        }),
+      );
+      navigate(PRIVATE_NAVIGATION.dashboard, { replace: true });
+    } else {
+      setLoginError(apiError ?? 'Invalid Student ID or password. Please check your credentials.');
+    }
   };
 
   const handleVerifySubmit = async (values: VerifyOtpFormValues) => {
@@ -201,7 +232,7 @@ const LoginForm = () => {
             </form>
           )}
 
-          {/* TAB 2: Student ID */}
+          {/* TAB 2: Student ID + Password */}
           {authMethod === 'STUDENT_ID' && (
             <form onSubmit={handleSubmitStudentId(handleStudentIdSubmit)} className="space-y-4">
               <InputField
@@ -210,17 +241,31 @@ const LoginForm = () => {
                 errors={errorsStudentId}
                 label="Student ID or Code"
                 placeholder="e.g. BRN-2026-000001 or STU001001"
-                helperText="We will dispatch an OTP to the mobile number associated with your Student ID."
+                helperText="Enter the unique Student ID assigned by your institution."
+                required
               />
+
+              <PasswordField
+                name="password"
+                register={registerStudentId}
+                errors={errorsStudentId}
+                label="Password"
+                placeholder="Enter your account password"
+                required
+              />
+
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
+                <span>Forgot password? Contact your school administrator to reset it.</span>
+              </div>
 
               <Button
                 type="submit"
                 variant="primary"
                 size="lg"
-                isLoading={isRequestingOtp}
-                className="w-full"
+                isLoading={isStudentIdLoggingIn}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold shadow-lg shadow-indigo-500/25"
               >
-                <span>Send Login OTP</span>
+                <span>Sign In with Password</span>
               </Button>
             </form>
           )}
@@ -281,9 +326,7 @@ const LoginForm = () => {
               className="inline-flex items-center text-slate-500 hover:text-slate-800 font-semibold"
             >
               <ArrowLeft className="h-3.5 w-3.5 mr-1" />
-              <span>
-                Change {authMethod === 'PHONE' ? 'Mobile' : 'Student ID'}
-              </span>
+              <span>Change Mobile Number</span>
             </button>
 
             <button

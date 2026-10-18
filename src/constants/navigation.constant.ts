@@ -197,6 +197,7 @@ export const PRIVATE_NAVIGATION = Object.freeze({
   // ── Sales Agent role-prefixed routes ──
   salesAgentDashboard: '/sales-agent/dashboard',
   salesAgentAddActivity: '/sales-agent/add-activity',
+  salesAgentUploadSlip: '/sales-agent/upload-slip',
   salesAgentVisits: '/sales-agent/visits',
   salesAgentReports: '/sales-agent/reports',
   salesAgentNotifications: '/sales-agent/notifications',

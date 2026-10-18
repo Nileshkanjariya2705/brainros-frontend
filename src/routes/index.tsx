@@ -221,6 +221,11 @@ const AddActivityPage = lazyRoute(() =>
     default: m.AddActivityPage,
   })),
 );
+const UploadSlipPage = lazyRoute(() =>
+  import('@/modules/SalesAgent/pages/UploadSlipPage').then((m) => ({
+    default: m.UploadSlipPage,
+  })),
+);
 
 // ** Super Admin Sales Agent Management Pages **
 const SuperAdminSalesAgentsPage = lazyRoute(
@@ -892,6 +897,8 @@ const salesAgentRoutes: RouteObject[] = [
       { path: 'dashboard', element: <SalesAgentDashboardPage /> },
       { path: 'add-activity', element: <AddActivityPage /> },
       { path: 'activity/new', element: <AddActivityPage /> },
+      { path: 'upload-slip', element: <UploadSlipPage /> },
+      { path: 'slips', element: <UploadSlipPage /> },
       { path: 'visits', element: <SalesVisitsPage /> },
       { path: 'history', element: <SalesVisitsPage /> },
       { path: 'reports', element: <SalesReportsPage /> },

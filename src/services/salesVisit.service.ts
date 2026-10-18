@@ -128,4 +128,16 @@ export const SalesVisitService = {
     const res = await Axios.post('/sales-agent/visits/upload-photo', formData);
     return res.data.data;
   },
+
+  attachSlip: async (id: string, slipUrl: string): Promise<SalesVisit> => {
+    const res = await Axios.post(`/sales-agent/visits/${id}/slip`, { slipUrl });
+    return res.data.data;
+  },
+
+  uploadSlip: async (id: string, file: File): Promise<SalesVisit> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await Axios.post(`/sales-agent/visits/${id}/upload-slip`, formData);
+    return res.data.data;
+  },
 };

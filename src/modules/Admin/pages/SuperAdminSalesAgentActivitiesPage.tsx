@@ -18,6 +18,7 @@ import {
   Camera,
   X,
   Filter,
+  CheckCircle2,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Pagination from '@/components/ui/Pagination';
@@ -32,6 +33,7 @@ export const SuperAdminSalesAgentActivitiesPage: React.FC = () => {
   // Filters state
   const [search, setSearch] = useState('');
   const [selectedAgentId, setSelectedAgentId] = useState('');
+  const [slipFilter, setSlipFilter] = useState<'ALL' | 'PENDING' | 'UPLOADED'>('ALL');
   const [dateFilter, setDateFilter] = useState<'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'THIS_MONTH' | 'ALL'>('TODAY');
   const [customDate, setCustomDate] = useState('');
   const [page, setPage] = useState(1);
@@ -101,6 +103,7 @@ export const SuperAdminSalesAgentActivitiesPage: React.FC = () => {
       limit,
       search,
       selectedAgentId,
+      slipFilter,
       dateRange.startDate,
       dateRange.endDate,
     ],
@@ -110,6 +113,7 @@ export const SuperAdminSalesAgentActivitiesPage: React.FC = () => {
         limit,
         search: search.trim() || undefined,
         salesAgentId: selectedAgentId || undefined,
+        slipStatus: slipFilter !== 'ALL' ? slipFilter : undefined,
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
       }),
@@ -153,9 +157,18 @@ export const SuperAdminSalesAgentActivitiesPage: React.FC = () => {
     ).length;
   }, [activities]);
 
+  const pendingSlipsCount = useMemo(() => {
+    return activities.filter((a) => !a.slipPhoto && !a.slipUrl).length;
+  }, [activities]);
+
+  const verifiedSlipsCount = useMemo(() => {
+    return activities.filter((a) => Boolean(a.slipPhoto || a.slipUrl)).length;
+  }, [activities]);
+
   const handleResetFilters = () => {
     setSearch('');
     setSelectedAgentId('');
+    setSlipFilter('ALL');
     setDateFilter('TODAY');
     setCustomDate('');
     setPage(1);
@@ -209,7 +222,7 @@ export const SuperAdminSalesAgentActivitiesPage: React.FC = () => {
       </div>
 
       {/* KPI Stats Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Total Activities */}
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
@@ -301,6 +314,39 @@ export const SuperAdminSalesAgentActivitiesPage: React.FC = () => {
             Watermarked with coordinates
           </p>
         </div>
+
+        {/* Slips Pending Card */}
+        <div
+          onClick={() => {
+            setSlipFilter(slipFilter === 'PENDING' ? 'ALL' : 'PENDING');
+            setPage(1);
+          }}
+          className={`p-5 rounded-2xl border transition-all cursor-pointer ${
+            slipFilter === 'PENDING'
+              ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 shadow-md ring-2 ring-amber-400/30'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+              Pending Slips
+            </span>
+            <div className="p-2.5 bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-xl">
+              <Clock className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-extrabold text-amber-800 dark:text-amber-300">
+              {pendingSlipsCount}
+            </span>
+            <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
+              Action Req.
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">
+            Awaiting upload ({verifiedSlipsCount} attached)
+          </p>
+        </div>
       </div>
 
       {/* Filter Toolbar */}
@@ -357,10 +403,10 @@ export const SuperAdminSalesAgentActivitiesPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Search & Agent Filter Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Search, Agent & Slip Filter Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Search bar */}
-          <div className="sm:col-span-2 relative">
+          <div className="sm:col-span-2 lg:col-span-2 relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -375,7 +421,7 @@ export const SuperAdminSalesAgentActivitiesPage: React.FC = () => {
           </div>
 
           {/* Sales Agent Dropdown */}
-          <div className="flex items-center gap-2">
+          <div>
             <select
               value={selectedAgentId}
               onChange={(e) => {
@@ -391,8 +437,24 @@ export const SuperAdminSalesAgentActivitiesPage: React.FC = () => {
                 </option>
               ))}
             </select>
+          </div>
 
-            {(search || selectedAgentId || dateFilter !== 'TODAY' || customDate) && (
+          {/* Slip Status Filter Dropdown & Reset */}
+          <div className="flex items-center gap-2">
+            <select
+              value={slipFilter}
+              onChange={(e) => {
+                setSlipFilter(e.target.value as any);
+                setPage(1);
+              }}
+              className="w-full px-3 py-2.5 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none dark:text-white font-medium"
+            >
+              <option value="ALL">All Slip Statuses</option>
+              <option value="PENDING">⏳ Slip Pending Upload</option>
+              <option value="UPLOADED">✓ Slip Uploaded & Attached</option>
+            </select>
+
+            {(search || selectedAgentId || slipFilter !== 'ALL' || dateFilter !== 'TODAY' || customDate) && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -445,6 +507,7 @@ export const SuperAdminSalesAgentActivitiesPage: React.FC = () => {
                     <th className="py-3.5 px-4">School / Institution</th>
                     <th className="py-3.5 px-4">Location & GPS</th>
                     <th className="py-3.5 px-4">GPS Photo Proof</th>
+                    <th className="py-3.5 px-4">Slip Proof</th>
                     <th className="py-3.5 px-4">Discussion Notes</th>
                     <th className="py-3.5 px-4">Submission Time</th>
                     <th className="py-3.5 px-5 text-right">Actions</th>
@@ -557,6 +620,38 @@ export const SuperAdminSalesAgentActivitiesPage: React.FC = () => {
                             </div>
                           ) : (
                             <span className="text-slate-400 text-xs italic">No photo proof</span>
+                          )}
+                        </td>
+
+                        {/* Slip Proof Column */}
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          {act.slipPhoto || act.slipUrl ? (
+                            <div className="flex items-center gap-2">
+                              <div
+                                onClick={() => setLightboxPhotoUrl(act.slipPhoto || act.slipUrl || null)}
+                                className="relative group/slip w-16 h-12 rounded-xl overflow-hidden border border-emerald-400/60 bg-slate-900 cursor-pointer shadow-xs hover:shadow transition-all shrink-0"
+                                title="Click to View Activity Slip"
+                              >
+                                <img
+                                  src={act.slipPhoto || act.slipUrl || ''}
+                                  alt="Activity Slip Proof"
+                                  className="w-full h-full object-contain group-hover/slip:scale-105 transition-transform bg-black/40"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/slip:opacity-100 transition-opacity flex items-center justify-center text-white text-[9px] font-extrabold gap-0.5">
+                                  <Eye className="w-3 h-3" />
+                                  <span>View</span>
+                                </div>
+                              </div>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                Uploaded
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/80 shadow-2xs">
+                              <Clock className="w-3 h-3 text-amber-600" />
+                              Slip Pending
+                            </span>
                           )}
                         </td>
 

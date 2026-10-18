@@ -11,6 +11,7 @@ import {
   Activity,
   X,
   TrendingUp,
+  Receipt,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SalesAgentService } from '@/services/salesAgent.service';
@@ -61,6 +62,7 @@ export const SalesAgentDashboardPage: React.FC = () => {
 
   const displayVisits = allVisits.slice(0, 10);
   const completedVisitsCount = allVisits.filter((v) => v.status === 'COMPLETED').length;
+  const pendingSlipsCount = allVisits.filter((v) => !v.slipPhoto && !v.slipUrl).length;
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-300">
@@ -90,6 +92,18 @@ export const SalesAgentDashboardPage: React.FC = () => {
               <span>Add Activity</span>
             </button>
             <button
+              onClick={() => navigate('/sales-agent/upload-slip')}
+              className="px-4 py-2.5 rounded-xl bg-emerald-500/90 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm backdrop-blur transition-transform hover:-translate-y-0.5 flex items-center gap-2 shadow-lg"
+            >
+              <Receipt className="w-4 h-4" />
+              <span>Upload Slips</span>
+              {pendingSlipsCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-300 text-amber-950">
+                  {pendingSlipsCount}
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => navigate('/sales-agent/visits')}
               className="px-4 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 border border-white/20 text-white font-bold text-xs sm:text-sm backdrop-blur transition-transform hover:-translate-y-0.5 flex items-center gap-2"
             >
@@ -103,6 +117,35 @@ export const SalesAgentDashboardPage: React.FC = () => {
         <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         <div className="absolute right-1/3 -top-12 w-48 h-48 bg-purple-400/20 rounded-full blur-xl pointer-events-none" />
       </div>
+
+      {/* Pending Slips Attention Banner */}
+      {pendingSlipsCount > 0 && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-amber-500 text-white shadow-xs shrink-0">
+              <Receipt className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-black text-sm text-amber-900 dark:text-amber-200 flex items-center gap-2">
+                <span>Pending Activity Slips</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 text-[10px] font-black">
+                  {pendingSlipsCount} Pending
+                </span>
+              </h4>
+              <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                You have {pendingSlipsCount} logged {pendingSlipsCount === 1 ? 'activity' : 'activities'} awaiting physical slip uploads for Super Admin verification.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/sales-agent/upload-slip')}
+            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs whitespace-nowrap self-start sm:self-auto shadow-sm transition-colors"
+          >
+            Upload Slips Now →
+          </button>
+        </div>
+      )}
+
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

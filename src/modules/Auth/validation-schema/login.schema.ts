@@ -25,7 +25,7 @@ export const emailLoginSchema = yup
   })
   .required();
 
-// ─── 3. Student ID (OTP) Login Schema ───────────────────────────────────────
+// ─── 3. Student ID (Password) Login Schema ───────────────────────────────────────
 export const studentIdLoginSchema = yup
   .object({
     studentId: yup
@@ -33,6 +33,10 @@ export const studentIdLoginSchema = yup
       .trim()
       .required('Student ID or Student Code is required')
       .min(3, 'Enter a valid Student ID (e.g. BRN-2026-000001 or STU001001)'),
+    password: yup
+      .string()
+      .required('Password is required')
+      .min(6, 'Password must be at least 6 characters'),
   })
   .required();
 

@@ -47,6 +47,8 @@ export interface SalesAgentActivityItem {
   status: string;
   interestLevel?: string;
   followUpDate?: string;
+  slipPhoto?: string;
+  slipUrl?: string;
   timestamp: string;
   rawType: string;
   rawId: string;

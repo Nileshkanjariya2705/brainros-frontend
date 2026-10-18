@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Clock,
   Filter,
+  Pencil,
 } from 'lucide-react';
 import {
   useSuperAdminRegistrationsQuery,
@@ -28,6 +29,12 @@ import {
   type RegistrationFilterOptions,
   type RegistrationFilterParams,
 } from '../services/superAdminRegistrations.service';
+import {
+  useAdminStudentFilterOptionsQuery,
+} from '../services/admin.queries';
+import { type AdminStudentItem, type AdminStudentFilterOptions } from '../services/admin-students.service';
+import { useStatesQuery } from '@/services/location.queries';
+import { EditStudentModal } from '../components/EditStudentModal';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
 import Pagination from '@/components/ui/Pagination';
 import Skeleton from '@/components/ui/Skeleton';
@@ -48,6 +55,24 @@ export const SuperAdminRegistrationsPage: React.FC = () => {
   const [pageSize, setPageSize] = useState(5);
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // Edit Modal State
+  const [editingStudent, setEditingStudent] = useState<AdminStudentItem | null>(null);
+  const { data: rawStudentFilterOptions } = useAdminStudentFilterOptionsQuery();
+  const { data: statesData } = useStatesQuery();
+  const publicStates = useMemo(() => ((Array.isArray(statesData) ? statesData : (statesData as any)?.data) || []) as any[], [statesData]);
+
+  const studentFilterOptions: AdminStudentFilterOptions = useMemo(
+    () => rawStudentFilterOptions || {
+      states: [],
+      districts: [],
+      classes: [],
+      examTargets: [],
+      institutions: [],
+      statuses: [],
+    },
+    [rawStudentFilterOptions],
+  );
 
   // Debounce search input
   useEffect(() => {
@@ -335,6 +360,46 @@ export const SuperAdminRegistrationsPage: React.FC = () => {
               />
               <span>{status}</span>
             </span>
+          );
+        },
+      },
+      {
+        id: 'actions',
+        header: () => <div className="text-right">Actions</div>,
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div className="flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  const studentItem: AdminStudentItem = {
+                    id: item.id,
+                    studentId: item.studentId,
+                    studentCode: item.studentCode || item.studentId,
+                    name: item.name,
+                    email: item.email || '',
+                    mobile: item.mobile || '',
+                    schoolCollege: item.schoolCollege || '',
+                    state: { id: item.stateId, name: item.state },
+                    district: { id: item.districtId, name: item.district },
+                    class: null,
+                    examTarget: item.examTarget,
+                    institutions: item.institutions || [],
+                    status: item.status,
+                    createdAt: item.createdAt,
+                    parentsCount: 0,
+                    hasParent: false,
+                  };
+                  setEditingStudent(studentItem);
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition shadow-2xs cursor-pointer"
+                title="Edit Student Details & Password"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                <span>Edit</span>
+              </button>
+            </div>
           );
         },
       },
@@ -873,6 +938,16 @@ export const SuperAdminRegistrationsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {editingStudent && (
+        <EditStudentModal
+          student={editingStudent}
+          filterOptions={studentFilterOptions}
+          publicStates={publicStates}
+          onClose={() => setEditingStudent(null)}
+          onSuccess={() => refetchList()}
+        />
+      )}
     </div>
   );
 };

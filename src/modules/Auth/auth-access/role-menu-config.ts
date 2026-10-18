@@ -761,6 +761,12 @@ export const SALES_AGENT_MENU_GROUPS: MenuGroupConfig[] = [
         end: true,
       },
       {
+        key: 'sales-upload-slip',
+        label: 'Upload Slip',
+        to: PRIVATE_NAVIGATION.salesAgentUploadSlip,
+        icon: Receipt,
+      },
+      {
         key: 'sales-visits',
         label: 'Activity History',
         to: PRIVATE_NAVIGATION.salesAgentVisits,

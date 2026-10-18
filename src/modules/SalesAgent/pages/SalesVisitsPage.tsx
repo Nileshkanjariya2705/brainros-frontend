@@ -14,11 +14,13 @@ import {
 } from 'lucide-react';
 import { SalesVisitService, type SalesVisit } from '@/services/salesVisit.service';
 import { salesAgentKeys } from '@/services/queryKeys';
+import { UploadSlipModal } from '../components/UploadSlipModal';
 
 export const SalesVisitsPage: React.FC = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
+  const [uploadSlipVisit, setUploadSlipVisit] = useState<SalesVisit | null>(null);
 
   const { data: visitsData, isLoading } = useQuery({
     queryKey: salesAgentKeys.visits({ search }),
@@ -55,6 +57,13 @@ export const SalesVisitsPage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => navigate('/sales-agent/upload-slip')}
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-md transition-transform hover:-translate-y-0.5 flex items-center gap-2 self-start sm:self-auto"
+          >
+            <Receipt className="w-4 h-4" />
+            Upload Slips
+          </button>
           <button
             onClick={() => navigate('/sales-agent/add-activity')}
             className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-md transition-transform hover:-translate-y-0.5 flex items-center gap-2 self-start sm:self-auto"
@@ -156,52 +165,60 @@ export const SalesVisitsPage: React.FC = () => {
                 )}
 
                 {/* Visual Proof Thumbnails: GPS Photos & Slip Proof */}
-                {(visit.slipPhoto || visit.slipUrl || (visit.photos && visit.photos.length > 0) || (visit.checkInPhotos && visit.checkInPhotos.length > 0)) ? (
-                  <div className="pt-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Slip Proof Thumbnail */}
-                      {(visit.slipPhoto || visit.slipUrl) && (
-                        <div
-                          onClick={() => setSelectedPhotoUrl(visit.slipPhoto || visit.slipUrl || null)}
-                          className="relative group w-20 h-14 rounded-xl overflow-hidden border-2 border-emerald-500/40 bg-slate-100 dark:bg-slate-800 cursor-pointer shadow-sm hover:shadow transition-all"
-                        >
-                          <img
-                            src={visit.slipPhoto || visit.slipUrl || ''}
-                            alt="Activity Slip Proof"
-                            className="w-full h-full object-contain group-hover:scale-105 transition-transform bg-black/40"
-                          />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
-                            View
-                          </div>
-                          <span className="absolute bottom-1 right-1 px-1 py-0.5 rounded bg-emerald-700/90 text-white text-[8px] font-bold flex items-center gap-0.5">
-                            <Receipt className="w-2.5 h-2.5" /> Slip
-                          </span>
+                <div className="pt-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Slip Proof Thumbnail (if uploaded) */}
+                    {(visit.slipPhoto || visit.slipUrl) ? (
+                      <div
+                        onClick={() => setSelectedPhotoUrl(visit.slipPhoto || visit.slipUrl || null)}
+                        className="relative group w-20 h-14 rounded-xl overflow-hidden border-2 border-emerald-500/40 bg-slate-100 dark:bg-slate-800 cursor-pointer shadow-sm hover:shadow transition-all"
+                      >
+                        <img
+                          src={visit.slipPhoto || visit.slipUrl || ''}
+                          alt="Activity Slip Proof"
+                          className="w-full h-full object-contain group-hover:scale-105 transition-transform bg-black/40"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
+                          View
                         </div>
-                      )}
+                        <span className="absolute bottom-1 right-1 px-1 py-0.5 rounded bg-emerald-700/90 text-white text-[8px] font-bold flex items-center gap-0.5">
+                          <Receipt className="w-2.5 h-2.5" /> Slip
+                        </span>
+                      </div>
+                    ) : (
+                      /* Slip Pending Upload Button */
+                      <button
+                        type="button"
+                        onClick={() => setUploadSlipVisit(visit)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 text-xs font-bold hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors shadow-xs"
+                      >
+                        <Receipt className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Upload Slip</span>
+                      </button>
+                    )}
 
-                      {/* GPS Map Camera Photos */}
-                      {((visit.photos || visit.checkInPhotos) as string[] || []).map((photoUrl, pIdx) => (
-                        <div
-                          key={pIdx}
-                          onClick={() => setSelectedPhotoUrl(photoUrl)}
-                          className="relative group w-20 h-14 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 cursor-pointer shadow-sm hover:shadow transition-all"
-                        >
-                          <img
-                            src={photoUrl}
-                            alt="GPS Map Camera Proof"
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                          />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
-                            View
-                          </div>
-                          <span className="absolute bottom-1 right-1 p-0.5 rounded bg-black/60 text-white text-[8px] font-bold flex items-center">
-                            📷 GPS
-                          </span>
+                    {/* GPS Map Camera Photos */}
+                    {((visit.photos || visit.checkInPhotos) as string[] || []).map((photoUrl, pIdx) => (
+                      <div
+                        key={pIdx}
+                        onClick={() => setSelectedPhotoUrl(photoUrl)}
+                        className="relative group w-20 h-14 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 cursor-pointer shadow-sm hover:shadow transition-all"
+                      >
+                        <img
+                          src={photoUrl}
+                          alt="GPS Map Camera Proof"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
+                          View
                         </div>
-                      ))}
-                    </div>
+                        <span className="absolute bottom-1 right-1 p-0.5 rounded bg-black/60 text-white text-[8px] font-bold flex items-center">
+                          📷 GPS
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ) : null}
+                </div>
 
                 {visit.summary && (
                   <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 bg-slate-50/70 dark:bg-slate-800/30 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
@@ -212,6 +229,15 @@ export const SalesVisitsPage: React.FC = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Upload Slip Modal */}
+      {uploadSlipVisit && (
+        <UploadSlipModal
+          isOpen={Boolean(uploadSlipVisit)}
+          onClose={() => setUploadSlipVisit(null)}
+          visit={uploadSlipVisit}
+        />
       )}
 
       {/* Lightbox Modal for Photo Proof */}
@@ -234,3 +260,4 @@ export const SalesVisitsPage: React.FC = () => {
   );
 };
 export default SalesVisitsPage;
+

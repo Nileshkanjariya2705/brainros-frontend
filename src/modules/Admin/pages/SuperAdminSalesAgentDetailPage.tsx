@@ -17,6 +17,8 @@ import {
   CheckCircle2,
   TrendingUp,
   AlertTriangle,
+  Receipt,
+  Clock,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
@@ -45,6 +47,7 @@ export const SuperAdminSalesAgentDetailPage: React.FC = () => {
   const [activityType, setActivityType] = useState('');
   const [activityStatus, setActivityStatus] = useState('');
   const [activityInterest, setActivityInterest] = useState('');
+  const [activitySlipFilter, setActivitySlipFilter] = useState('');
   const [activityPage, setActivityPage] = useState(1);
   const [activityLimit, setActivityLimit] = useState(10);
 
@@ -130,11 +133,19 @@ export const SuperAdminSalesAgentDetailPage: React.FC = () => {
   });
 
   const activityList: SalesAgentActivityItem[] = useMemo(() => {
-    if (Array.isArray(activitiesResponse?.items)) return activitiesResponse.items;
-    if (Array.isArray(activitiesResponse?.data?.items)) return activitiesResponse.data.items;
-    if (Array.isArray(activitiesResponse?.data)) return activitiesResponse.data;
-    return [];
-  }, [activitiesResponse]);
+    let list: any[] = [];
+    if (Array.isArray(activitiesResponse?.items)) list = activitiesResponse.items;
+    else if (Array.isArray(activitiesResponse?.data?.items)) list = activitiesResponse.data.items;
+    else if (Array.isArray(activitiesResponse?.data)) list = activitiesResponse.data;
+    else list = [];
+
+    if (activitySlipFilter === 'PENDING') {
+      return list.filter((act) => !act.slipPhoto && !act.slipUrl);
+    } else if (activitySlipFilter === 'UPLOADED') {
+      return list.filter((act) => Boolean(act.slipPhoto || act.slipUrl));
+    }
+    return list;
+  }, [activitiesResponse, activitySlipFilter]);
 
   const activityPagination = useMemo(() => {
     const p = activitiesResponse?.pagination || activitiesResponse?.data?.pagination;
@@ -507,6 +518,21 @@ export const SuperAdminSalesAgentDetailPage: React.FC = () => {
                 <option value="WARM">Warm</option>
                 <option value="COLD">Cold</option>
               </select>
+
+              {/* Slip Filter */}
+              <select
+                id="filter-activity-slip"
+                value={activitySlipFilter}
+                onChange={(e) => {
+                  setActivitySlipFilter(e.target.value);
+                  setActivityPage(1);
+                }}
+                className="py-1.5 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-xs font-bold focus:bg-white transition-all"
+              >
+                <option value="">All Slip Proofs</option>
+                <option value="PENDING">⏳ Slip Pending</option>
+                <option value="UPLOADED">✓ Slip Attached</option>
+              </select>
             </div>
           </div>
 
@@ -539,6 +565,7 @@ export const SuperAdminSalesAgentDetailPage: React.FC = () => {
                       <th className="py-3 px-4">Institute / Client</th>
                       <th className="py-3 px-4">Contact Person</th>
                       <th className="py-3 px-4">Status / Interest</th>
+                      <th className="py-3 px-4">Slip Proof</th>
                       <th className="py-3 px-4">Follow-Up Date</th>
                       <th className="py-3 px-4">Timestamp</th>
                       <th className="py-3 px-4 text-right">Actions</th>
@@ -606,6 +633,25 @@ export const SuperAdminSalesAgentDetailPage: React.FC = () => {
                                 </Badge>
                               )}
                             </div>
+                          </td>
+
+                          <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                            {act.slipPhoto || (act as any).slipPhotoUrl || (act as any).slipUrl ? (
+                              <button
+                                type="button"
+                                onClick={() => handleSelectActivity(act.id)}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[11px] font-bold hover:bg-emerald-100 transition-colors"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <Receipt className="w-3.5 h-3.5 text-emerald-600" />
+                                Attached
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200/80 text-[11px] font-bold">
+                                <Clock className="w-3.5 h-3.5 text-amber-500" />
+                                Pending
+                              </span>
+                            )}
                           </td>
 
                           <td className="py-3 px-4 text-slate-600">

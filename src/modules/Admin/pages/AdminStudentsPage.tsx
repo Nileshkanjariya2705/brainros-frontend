@@ -27,343 +27,20 @@ import {
   Eye,
   Users,
   Pencil,
-  Save,
-  CheckCircle2,
 } from 'lucide-react';
 import {
   type AdminStudentItem,
   type AdminStudentFilterOptions,
-  useUpdateAdminStudentAPI,
 } from '../services/admin-students.service';
 import {
   useAdminStudentsQuery,
   useAdminStudentFilterOptionsQuery,
 } from '../services/admin.queries';
-import {
-  fetchDistrictsByStateSlugAPI,
-  getStateSlug,
-  formatLocationName,
-  type StateItem,
-  type DistrictItem,
-} from '@/modules/Auth/services';
 import { useStatesQuery } from '@/services/location.queries';
 import Button from '@/components/ui/Button';
 import Skeleton from '@/components/ui/Skeleton';
 import { ExportPdfButton } from '@/components/export/ExportPdfButton';
-
-/* ── Edit Student Modal Component ────────────────────────────────────────── */
-interface EditStudentModalProps {
-  student: AdminStudentItem;
-  filterOptions: AdminStudentFilterOptions;
-  publicStates: StateItem[];
-  onClose: () => void;
-  onSuccess: () => void;
-}
-
-const EditStudentModal: React.FC<EditStudentModalProps> = ({
-  student,
-  filterOptions,
-  publicStates,
-  onClose,
-  onSuccess,
-}) => {
-  const { updateAdminStudentAPI, isLoading: isUpdating } = useUpdateAdminStudentAPI();
-
-  const [name, setName] = useState(student.name || '');
-  const [email, setEmail] = useState(student.email === '—' ? '' : student.email || '');
-  const [mobile, setMobile] = useState(student.mobile === '—' ? '' : student.mobile || '');
-  const [schoolCollege, setSchoolCollege] = useState(
-    student.schoolCollege === '—' ? '' : student.schoolCollege || '',
-  );
-  const [classId, setClassId] = useState(student.class?.id || '');
-  const [examTargetId, setExamTargetId] = useState(student.examTarget?.id || '');
-  const [status, setStatus] = useState(student.status || 'ACTIVE');
-
-  const initialRawState = student.state?.name || '';
-  const initialRawDistrict = student.district?.name || '';
-  const [selectedState, setSelectedState] = useState(formatLocationName(initialRawState));
-  const [selectedDistrict, setSelectedDistrict] = useState(formatLocationName(initialRawDistrict));
-
-  const [modalDistricts, setModalDistricts] = useState<DistrictItem[]>([]);
-  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  // Load public districts when selected state changes
-  useEffect(() => {
-    if (!selectedState) return;
-    let isMounted = true;
-    setIsLoadingDistricts(true);
-    const slug = getStateSlug(selectedState);
-    fetchDistrictsByStateSlugAPI(slug).then(({ data }) => {
-      if (!isMounted) return;
-      setIsLoadingDistricts(false);
-      if (data && data.length > 0) {
-        setModalDistricts(data);
-      }
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedState]);
-
-  const stateOptions = useMemo(() => {
-    const opts = publicStates.map((s) => {
-      const formatted = formatLocationName(s.name);
-      return { label: formatted, value: formatted };
-    });
-    if (selectedState && !opts.some((o) => o.value.toLowerCase() === selectedState.toLowerCase())) {
-      opts.unshift({ label: selectedState, value: selectedState });
-    }
-    return opts;
-  }, [publicStates, selectedState]);
-
-  const districtOptions = useMemo(() => {
-    const opts = modalDistricts.map((d) => {
-      const formatted = formatLocationName(d.name);
-      return { label: formatted, value: formatted };
-    });
-    if (
-      selectedDistrict &&
-      !opts.some((o) => o.value.toLowerCase() === selectedDistrict.toLowerCase())
-    ) {
-      opts.unshift({ label: selectedDistrict, value: selectedDistrict });
-    }
-    return opts;
-  }, [modalDistricts, selectedDistrict]);
-
-  const handleStateChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextState = e.target.value;
-    setSelectedState(nextState);
-    setSelectedDistrict('');
-    setModalDistricts([]);
-    if (!nextState) return;
-
-    setIsLoadingDistricts(true);
-    const slug = getStateSlug(nextState);
-    const { data } = await fetchDistrictsByStateSlugAPI(slug);
-    setIsLoadingDistricts(false);
-    if (data && data.length > 0) {
-      setModalDistricts(data);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
-    const payload = {
-      name: name.trim(),
-      email: email.trim() || undefined,
-      mobile: mobile.trim() || undefined,
-      schoolCollege: schoolCollege.trim() || undefined,
-      classId: classId || undefined,
-      examTargetId: examTargetId || undefined,
-      state: selectedState || undefined,
-      district: selectedDistrict || undefined,
-      status: status || undefined,
-    };
-
-    const { error } = await updateAdminStudentAPI(student.id, payload);
-    if (error) {
-      setErrorMsg(error);
-    } else {
-      setSuccessMsg('Student record updated successfully!');
-      setTimeout(() => {
-        onSuccess();
-        onClose();
-      }, 800);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-50 text-teal-700 border border-teal-200">
-              <Pencil className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Edit Student Details</h3>
-              <p className="font-mono text-xs text-teal-700">ID: {student.studentCode}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-200/60 hover:text-slate-600 transition"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
-          {errorMsg && (
-            <div className="flex items-start space-x-2 rounded-xl bg-rose-50 p-3 border border-rose-200 text-rose-800 font-medium">
-              <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-          {successMsg && (
-            <div className="flex items-start space-x-2 rounded-xl bg-emerald-50 p-3 border border-emerald-200 text-emerald-800 font-medium">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-              <span>{successMsg}</span>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Student Name */}
-            <div className="space-y-1">
-              <label className="block text-[11px] font-bold text-slate-700">
-                Full Name <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-teal-600 focus:outline-none"
-                required
-              />
-            </div>
-
-            {/* School / College */}
-            <div className="space-y-1">
-              <label className="block text-[11px] font-bold text-slate-700">School / College</label>
-              <input
-                type="text"
-                value={schoolCollege}
-                onChange={(e) => setSchoolCollege(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-teal-600 focus:outline-none"
-              />
-            </div>
-
-            {/* Email */}
-            <div className="space-y-1">
-              <label className="block text-[11px] font-bold text-slate-700">Email Address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-teal-600 focus:outline-none"
-              />
-            </div>
-
-            {/* Mobile Number */}
-            <div className="space-y-1">
-              <label className="block text-[11px] font-bold text-slate-700">Mobile Number</label>
-              <input
-                type="text"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-mono text-slate-800 focus:border-teal-600 focus:outline-none"
-              />
-            </div>
-
-            {/* Class */}
-            <div className="space-y-1">
-              <label className="block text-[11px] font-bold text-slate-700">Class</label>
-              <select
-                value={classId}
-                onChange={(e) => setClassId(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-teal-600 focus:outline-none"
-              >
-                <option value="">Select Class</option>
-                {filterOptions.classes.map((cls) => (
-                  <option key={cls.id} value={cls.id}>
-                    {cls.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Exam Target */}
-            <div className="space-y-1">
-              <label className="block text-[11px] font-bold text-slate-700">Exam Target</label>
-              <select
-                value={examTargetId}
-                onChange={(e) => setExamTargetId(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-teal-600 focus:outline-none"
-              >
-                <option value="">Select Target Exam</option>
-                {filterOptions.examTargets.map((tgt) => (
-                  <option key={tgt.id} value={tgt.id}>
-                    {tgt.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* State (Public API) */}
-            <div className="space-y-1">
-              <label className="block text-[11px] font-bold text-slate-700">State (Public API)</label>
-              <select
-                value={selectedState}
-                onChange={handleStateChange}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-teal-600 focus:outline-none"
-              >
-                <option value="">Select State</option>
-                {stateOptions.map((st) => (
-                  <option key={st.value} value={st.value}>
-                    {st.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* City / District (Public API) */}
-            <div className="space-y-1">
-              <label className="block text-[11px] font-bold text-slate-700">
-                City / District {isLoadingDistricts && '(Loading...)'}
-              </label>
-              <select
-                value={selectedDistrict}
-                onChange={(e) => setSelectedDistrict(e.target.value)}
-                disabled={!selectedState || isLoadingDistricts}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-teal-600 focus:outline-none disabled:bg-slate-100"
-              >
-                <option value="">Select City / District</option>
-                {districtOptions.map((dst) => (
-                  <option key={dst.value} value={dst.value}>
-                    {dst.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Status */}
-            <div className="col-span-1 sm:col-span-2 space-y-1">
-              <label className="block text-[11px] font-bold text-slate-700">Student Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 focus:border-teal-600 focus:outline-none"
-              >
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="PENDING">PENDING</option>
-                <option value="SUSPENDED">SUSPENDED</option>
-                <option value="INACTIVE">INACTIVE</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-100 pt-4 flex justify-end gap-2">
-            <Button size="sm" variant="secondary" type="button" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button size="sm" variant="primary" type="submit" isLoading={isUpdating}>
-              <Save className="h-3.5 w-3.5 mr-1" />
-              Save Changes
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
+import { EditStudentModal } from '../components/EditStudentModal';
 
 /* ── Main Admin Students Page ───────────────────────────────────────────── */
 export const AdminStudentsPage: React.FC = () => {
@@ -400,7 +77,7 @@ export const AdminStudentsPage: React.FC = () => {
 
   // Public Location API State list cached via TanStack Query for modal editing
   const { data: publicStatesData } = useStatesQuery();
-  const publicStates: StateItem[] = (publicStatesData as any) || [];
+  const publicStates = (publicStatesData as any) || [];
 
   // Server-side cached table query with keepPreviousData to prevent blank loading flash
   const queryParams = useMemo(
@@ -533,16 +210,42 @@ export const AdminStudentsPage: React.FC = () => {
         id: 'classAndTarget',
         header: 'Class & Target',
         enableSorting: false,
-        cell: (info) => (
-          <div className="space-y-1">
-            <div className="inline-flex rounded-md bg-indigo-50 border border-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
-              {info.row.original.class?.name || 'Class —'}
+        cell: (info) => {
+          const s = info.row.original;
+          const hasFlags = s.jee || s.cet || s.neet;
+          return (
+            <div className="space-y-1">
+              <div className="inline-flex rounded-md bg-indigo-50 border border-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+                {s.class?.name || 'Class —'}
+              </div>
+              <div className="flex flex-wrap gap-1 mt-0.5">
+                {hasFlags ? (
+                  <>
+                    {s.jee && (
+                      <span className="inline-flex rounded-md bg-blue-50 border border-blue-200 px-1.5 py-0.5 text-[9px] font-bold text-blue-700">
+                        JEE
+                      </span>
+                    )}
+                    {s.cet && (
+                      <span className="inline-flex rounded-md bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[9px] font-bold text-amber-700">
+                        CET
+                      </span>
+                    )}
+                    {s.neet && (
+                      <span className="inline-flex rounded-md bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">
+                        NEET
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <div className="inline-flex rounded-md bg-purple-50 border border-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">
+                    {s.examTarget?.name || 'Exam —'}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="inline-flex ml-1.5 rounded-md bg-purple-50 border border-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">
-              {info.row.original.examTarget?.name || 'Exam —'}
-            </div>
-          </div>
-        ),
+          );
+        },
       },
       {
         id: 'location',
@@ -1024,9 +727,20 @@ export const AdminStudentsPage: React.FC = () => {
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 uppercase block">Target</span>
-                        <span className="font-semibold text-slate-800">
-                          {student.examTarget?.name || '—'}
-                        </span>
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {student.jee && (
+                            <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">JEE</span>
+                          )}
+                          {student.cet && (
+                            <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">CET</span>
+                          )}
+                          {student.neet && (
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">NEET</span>
+                          )}
+                          {!student.jee && !student.cet && !student.neet && (
+                            <span className="font-semibold text-slate-800">{student.examTarget?.name || '—'}</span>
+                          )}
+                        </div>
                       </div>
                       <div className="col-span-2">
                         <span className="text-[10px] text-slate-400 uppercase block">City</span>
@@ -1168,9 +882,23 @@ export const AdminStudentsPage: React.FC = () => {
                 </div>
                 <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
                   <span className="text-[10px] uppercase text-slate-400 font-bold block">Class & Target</span>
-                  <span className="font-semibold text-slate-800">
-                    {selectedStudentDetails.class?.name || '—'} / {selectedStudentDetails.examTarget?.name || '—'}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                    <span className="font-semibold text-slate-800 mr-1">
+                      {selectedStudentDetails.class?.name || '—'}
+                    </span>
+                    {selectedStudentDetails.jee && (
+                      <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">JEE</span>
+                    )}
+                    {selectedStudentDetails.cet && (
+                      <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">CET</span>
+                    )}
+                    {selectedStudentDetails.neet && (
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">NEET</span>
+                    )}
+                    {!selectedStudentDetails.jee && !selectedStudentDetails.cet && !selectedStudentDetails.neet && (
+                      <span className="font-semibold text-slate-800">{selectedStudentDetails.examTarget?.name || '—'}</span>
+                    )}
+                  </div>
                 </div>
                 <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100">
                   <span className="text-[10px] uppercase text-slate-400 font-bold block">Location</span>

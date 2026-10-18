@@ -13,20 +13,29 @@ test.describe('Authentication & Session Management', () => {
     await expect(page.locator('body')).toBeVisible();
   });
 
-  test('AUTH-002: Student ID Login Mode Toggle', async ({ page }) => {
+  test('AUTH-002: Student ID Login Mode Toggle with Password Authentication', async ({ page }) => {
     await page.goto('/login');
     // Click "Student ID" tab
     const studentIdTab = page.getByRole('button', { name: /student id/i });
     await expect(studentIdTab).toBeVisible();
     await studentIdTab.click();
 
-    // Verify student ID input field is rendered
+    // Verify student ID and password input fields are rendered
     const idInput = page.locator('input[name="studentId"]');
     await expect(idInput).toBeVisible();
     await idInput.fill('BRN-2026-000031');
 
-    const sendBtn = page.getByRole('button', { name: /send login otp/i });
-    await expect(sendBtn).toBeEnabled();
+    const passInput = page.locator('input[name="password"]');
+    await expect(passInput).toBeVisible();
+    await passInput.fill('Password123!');
+
+    const signInBtn = page.getByRole('button', { name: /sign in with password/i });
+    await expect(signInBtn).toBeVisible();
+    await expect(signInBtn).toBeEnabled();
+
+    // Verify OTP button is NOT present in Student ID mode
+    const sendOtpBtn = page.getByRole('button', { name: /send login otp/i });
+    await expect(sendOtpBtn).not.toBeVisible();
   });
 
   test('AUTH-003: Admin Login and Dashboard Redirect', async ({ page }) => {

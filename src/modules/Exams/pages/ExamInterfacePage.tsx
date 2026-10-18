@@ -20,7 +20,6 @@ import {
   Loader2,
   Flag,
   Maximize,
-  Minimize,
   GraduationCap,
   LogOut,
 } from 'lucide-react';
@@ -41,6 +40,7 @@ import { useExamSecurity } from '../hooks/useExamSecurity';
 import { ExamSecurityWarningModal } from '../components/ExamSecurityWarningModal';
 import { ExamLeaveWarningModal } from '../components/ExamLeaveWarningModal';
 import { ExamSessionConflictModal } from '../components/ExamSessionConflictModal';
+import { FullscreenLockOverlay } from '../components/FullscreenLockOverlay';
 import type { SecurityProfile } from '../services/security.service';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -287,6 +287,7 @@ const ExamInterfacePage = () => {
     transferActiveSession,
     enterFullscreen: enterSecFullscreen,
     recordEvent: recordSecEvent,
+    violationsCount,
   } = useExamSecurity({
     attemptId,
     examId,
@@ -456,22 +457,52 @@ const ExamInterfacePage = () => {
     };
   }, [attemptId]);
 
-  // ─── Fullscreen Change Listener ───────────────────────────────
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  // ─── Fullscreen Enforcement & Change Listener ───────────────────
+  const handleEnterFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.warn('Fullscreen request blocked or failed:', err);
+      });
+    }
   }, []);
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => { });
-    } else {
-      document.exitFullscreen().catch(() => { });
+  // Listen for fullscreen transitions
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const active = Boolean(document.fullscreenElement);
+      setIsFullscreen(active);
+      if (!active && isExamInProgress) {
+        recordSecEvent('FULLSCREEN_EXITED', 0, {}, true);
+      }
+    };
+
+    setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [isExamInProgress, recordSecEvent]);
+
+  // Automatically attempt entering fullscreen when exam is active
+  useEffect(() => {
+    if (isExamInProgress && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {
+        // Handled gracefully: overlay appears with explicit action button if browser requires gesture
+      });
     }
-  };
+  }, [isExamInProgress]);
+
+  // Intercept F11 to prevent exiting or toggling outside locked state
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isExamInProgress && e.key === 'F11') {
+        e.preventDefault();
+        if (!document.fullscreenElement) {
+          handleEnterFullscreen();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isExamInProgress, handleEnterFullscreen]);
 
   // ─── Replay Offline Sync Queue ────────────────────────────────
   const syncPendingQueue = useCallback(
@@ -695,6 +726,9 @@ const ExamInterfacePage = () => {
     } catch {
       // Non-blocking
     } finally {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
       setShowSubmitModal(false);
       setShowLeaveModal(false);
       navigate(PRIVATE_NAVIGATION.examResult.replace(':attemptId', attemptId));
@@ -1151,16 +1185,28 @@ const ExamInterfacePage = () => {
             )}
           </div>
 
-          {/* Full-screen Toggle */}
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            aria-label={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
-            title={isFullscreen ? 'Exit Full Screen' : 'Enter Full Screen'}
-            className="hidden sm:flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all shrink-0"
-          >
-            {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
-          </button>
+          {/* Full-screen Status / Lock Badge */}
+          {isExamInProgress ? (
+            <div
+              title="Fullscreen mode is locked and enforced until test submission"
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold select-none shrink-0"
+            >
+              <Maximize size={13} className="text-indigo-600" />
+              <span className="hidden xl:inline text-[11px] font-bold text-slate-600">
+                Fullscreen Locked
+              </span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleEnterFullscreen}
+              aria-label={isFullscreen ? 'Full Screen Active' : 'Enter Full Screen'}
+              title={isFullscreen ? 'Full Screen Active' : 'Enter Full Screen'}
+              className="hidden sm:flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all shrink-0"
+            >
+              <Maximize size={14} />
+            </button>
+          )}
 
           {/* User badge */}
           <div className="hidden lg:flex items-center gap-2 border-l border-slate-200 pl-3 text-xs shrink-0">
@@ -1851,6 +1897,14 @@ const ExamInterfacePage = () => {
         }}
         onLeaveAndSubmit={handleLeaveAndSubmit}
         isSubmitting={isSubmitting}
+      />
+
+      {/* Fullscreen Lockdown Enforcement Overlay */}
+      <FullscreenLockOverlay
+        isOpen={isExamInProgress && !isFullscreen}
+        onEnterFullscreen={handleEnterFullscreen}
+        violationsCount={violationsCount}
+        examTitle={examTitle}
       />
 
       {/* Multi-Tab & Device Session Conflict Modal */}

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { Axios } from '@/base-axios';
 import { adminKeys } from '@/services/queryKeys';
 import type {
+  AdminStudentItem,
   AdminStudentsResponse,
   AdminStudentsQueryParams,
   AdminStudentFilterOptions,
@@ -113,3 +114,22 @@ export const useDeleteStudentParentMutation = () => {
     },
   });
 };
+
+/**
+ * Single student complete profile query for Super Admin editing & profile inspection.
+ * Fetches fresh academic details, institutions, targets, and verification status directly from backend.
+ */
+export const useAdminStudentDetailQuery = (studentId?: string) =>
+  useQuery<AdminStudentItem>({
+    queryKey: ['admin-student-detail', studentId],
+    queryFn: async () => {
+      if (!studentId) throw new Error('Student ID is required');
+      const res = await Axios.get<AdminStudentItem | { data: AdminStudentItem }>(
+        `/admin/students/${studentId}`,
+      );
+      return (res.data as any).data || res.data;
+    },
+    enabled: Boolean(studentId),
+    staleTime: 10_000,
+  });
+
