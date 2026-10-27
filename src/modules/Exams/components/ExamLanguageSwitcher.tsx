@@ -4,6 +4,7 @@ import {
   useGetLanguagesAPI,
   useSwitchAttemptLanguageAPI,
 } from '@/modules/RegionalLanguage/services/regionalLanguage.service';
+import { useGetAvailableExamLanguagesAPI } from '../services';
 import type { SupportedLanguage } from '@/modules/RegionalLanguage/types/regionalLanguage.types';
 import { SUPPORTED_EXAM_LANGUAGES } from '@/constants/languages.constant';
 
@@ -15,6 +16,7 @@ interface ExamLanguageSwitcherProps {
 }
 
 export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
+  examId,
   attemptId,
   currentLanguageId,
   onLanguageChanged,
@@ -25,28 +27,54 @@ export const ExamLanguageSwitcher: React.FC<ExamLanguageSwitcherProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { getLanguagesAPI, isLoading: isLoadingLanguages } = useGetLanguagesAPI();
+  const { getAvailableExamLanguagesAPI } = useGetAvailableExamLanguagesAPI();
   const { switchAttemptLanguageAPI, isLoading: isSwitching } = useSwitchAttemptLanguageAPI();
 
-  // Load languages (prefers database records, falls back to 9 mandatory constants)
+  // Load languages (prefers exam-specific configured languages if examId provided, then global DB, then 9 mandatory constants)
   useEffect(() => {
-    getLanguagesAPI().then(({ data }) => {
+    let isMounted = true;
+    const fetchLangs = async () => {
+      if (examId) {
+        const { data: examLangData } = await getAvailableExamLanguagesAPI(examId);
+        if (isMounted && examLangData?.languages && examLangData.languages.length > 0) {
+          setLanguages(
+            examLangData.languages.map((sl, idx) => ({
+              id: sl.id,
+              code: sl.code,
+              name: sl.name,
+              nativeName: sl.nativeName || sl.name,
+              isActive: true,
+              displayOrder: (sl as any).displayOrder ?? idx + 1,
+            })),
+          );
+          return;
+        }
+      }
+
+      const { data } = await getLanguagesAPI();
+      if (!isMounted) return;
       if (data && data.length > 0) {
         setLanguages(data);
       } else {
         // Fallback to the 9 mandatory languages configuration
         setLanguages(
-          SUPPORTED_EXAM_LANGUAGES.map((sl) => ({
+          SUPPORTED_EXAM_LANGUAGES.map((sl, idx) => ({
             id: sl.code,
             code: sl.code,
             name: sl.name,
             nativeName: sl.nativeName,
             isActive: true,
-            displayOrder: sl.displayOrder,
+            displayOrder: (sl as any).displayOrder ?? idx + 1,
           })),
         );
       }
-    });
-  }, [getLanguagesAPI]);
+    };
+
+    fetchLangs();
+    return () => {
+      isMounted = false;
+    };
+  }, [examId, getAvailableExamLanguagesAPI, getLanguagesAPI]);
 
   useEffect(() => {
     if (currentLanguageId) {

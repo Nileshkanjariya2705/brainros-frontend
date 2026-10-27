@@ -140,7 +140,7 @@ export const ExamStartLanguageModal: React.FC<ExamStartLanguageModalProps> = ({
             <div className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 via-purple-50/40 to-white p-3.5 flex items-start gap-2.5">
               <ShieldCheck className="text-indigo-600 shrink-0 mt-0.5" size={16} />
               <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                Your examination will start in your chosen language. You can also toggle translations dynamically during the test without losing answers.
+                Your examination will strictly render in your chosen language. Language selection is locked once the examination begins.
               </p>
             </div>
 

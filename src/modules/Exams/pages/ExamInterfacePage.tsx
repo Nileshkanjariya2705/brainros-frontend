@@ -22,6 +22,7 @@ import {
   Maximize,
   GraduationCap,
   LogOut,
+  Languages,
 } from 'lucide-react';
 import cn from 'classnames';
 import { API_URL } from '@config';
@@ -47,7 +48,6 @@ import { useAuth } from '@/hooks/useAuth';
 // ** Components **
 import Loader from '@/components/feedback/Loader';
 import Button from '@/components/ui/Button';
-// import { ExamLanguageSwitcher } from '../components/ExamLanguageSwitcher';
 import { QuestionPalette, type QuestionStatusType } from '../components/QuestionPalette';
 import { RichContentRenderer } from '@/components/renderer/RichContentRenderer';
 import { mergeTranslationWithRichDoc } from '@/types/richContent.types';
@@ -212,6 +212,12 @@ const ExamInterfacePage = () => {
   const [examId, setExamId] = useState<string>('');
   const [examTitle, setExamTitle] = useState<string>('Competitive Mock Examination');
   const [currentLanguageId, setCurrentLanguageId] = useState<string>('');
+  const [currentLanguageMetadata, setCurrentLanguageMetadata] = useState<{
+    id?: string;
+    code?: string;
+    name?: string;
+    nativeName?: string | null;
+  } | null>(null);
   const [securityProfile, setSecurityProfile] = useState<SecurityProfile | null>(null);
   const [warningModalOpen, setWarningModalOpen] = useState(false);
   const [securityWarningMessage, setSecurityWarningMessage] = useState('');
@@ -537,8 +543,12 @@ const ExamInterfacePage = () => {
       if (!attemptId) return;
 
       try {
-        // 1. Fetch questions
-        const qRes = await getAttemptQuestionsAPI(attemptId);
+        // 1. Fetch questions and attempt status in parallel
+        const [qRes, sRes] = await Promise.all([
+          getAttemptQuestionsAPI(attemptId),
+          getAttemptStatusAPI(attemptId),
+        ]);
+
         const qData: ExamQuestion[] = Array.isArray(qRes.data)
           ? qRes.data
           : Array.isArray((qRes.data as any)?.data)
@@ -558,8 +568,7 @@ const ExamInterfacePage = () => {
         }
         setQuestions(qData);
 
-        // 2. Fetch attempt status
-        const sRes = await getAttemptStatusAPI(attemptId);
+        // 2. Process attempt status & language configuration
         const sData: any = sRes.data?.answers
           ? sRes.data
           : (sRes.data as any)?.data || sRes.response?.data?.data;
@@ -583,7 +592,19 @@ const ExamInterfacePage = () => {
           if (sData.exam?.title || sData.examTitle) {
             setExamTitle(sData.exam?.title || sData.examTitle);
           }
-          if (sData.languageId) setCurrentLanguageId(sData.languageId);
+
+          // Prioritize forced switch, then display language, then attempt language
+          const resolvedLangId =
+            _forceLanguageId ||
+            sData.displayLanguageId ||
+            sData.languageId;
+          if (resolvedLangId) {
+            setCurrentLanguageId(resolvedLangId);
+          }
+          if (sData.language) {
+            setCurrentLanguageMetadata(sData.language);
+          }
+
           if (sData.serverEndTime) setServerEndTime(sData.serverEndTime);
           if (sData.securityProfile) setSecurityProfile(sData.securityProfile);
 
@@ -625,7 +646,7 @@ const ExamInterfacePage = () => {
         isInitialLoadDoneRef.current = true;
       }
     },
-    [attemptId, getAttemptQuestionsAPI, getAttemptStatusAPI, syncPendingQueue],
+    [attemptId, getAttemptQuestionsAPI, getAttemptStatusAPI, syncPendingQueue, navigate],
   );
 
   useEffect(() => {
@@ -994,7 +1015,8 @@ const ExamInterfacePage = () => {
   // Multilingual active translation derivation
   const activeQTrans = currentLanguageId
     ? currentQuestion?.translations?.[currentLanguageId] ||
-    currentQuestion?.translations?.[currentLanguageId.toLowerCase()]
+    currentQuestion?.translations?.[currentLanguageId.toLowerCase()] ||
+    currentQuestion?.translations?.[currentLanguageId.toUpperCase()]
     : null;
 
   const masterQContent = currentQuestion?.questionContent || currentQuestion?.questionText;
@@ -1141,15 +1163,27 @@ const ExamInterfacePage = () => {
 
         {/* Right: Controls & Actions */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 ml-auto sm:ml-0">
-          {/* Language Switcher */}
-          {/* {attemptId && (
-            <ExamLanguageSwitcher
-              examId={examId}
-              attemptId={attemptId}
-              currentLanguageId={currentLanguageId}
-              onLanguageChanged={handleLanguageChanged}
-            />
-          )} */}
+          {/* Read-Only Locked Exam Language Badge */}
+          {currentLanguageId && (
+            <div
+              className="flex items-center gap-1.5 rounded-xl border border-slate-300/60 bg-slate-100/90 px-2 sm:px-2.5 py-1 sm:py-1.5 text-xs font-semibold text-slate-800 shadow-2xs shrink-0 select-none"
+              title="Exam language is locked to your pre-exam selection"
+            >
+              <div className="flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 shrink-0">
+                <Languages size={13} />
+              </div>
+              <div className="flex flex-col text-left leading-none">
+                <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold hidden sm:inline">
+                  Language
+                </span>
+                <span className="text-[11px] sm:text-xs font-bold text-slate-900">
+                  {currentLanguageMetadata?.nativeName ||
+                    currentLanguageMetadata?.name ||
+                    (currentLanguageId.length <= 3 ? currentLanguageId.toUpperCase() : 'Active')}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Network & Autosave State Indicator */}
           <div
@@ -1455,7 +1489,8 @@ const ExamInterfacePage = () => {
 
                       const activeOptTrans = currentLanguageId
                         ? opt.translations?.[currentLanguageId] ||
-                        opt.translations?.[currentLanguageId.toLowerCase()]
+                        opt.translations?.[currentLanguageId.toLowerCase()] ||
+                        opt.translations?.[currentLanguageId.toUpperCase()]
                         : null;
 
                       const masterOptContent =
@@ -1471,7 +1506,9 @@ const ExamInterfacePage = () => {
                         (activeOptTrans?.optionText &&
                           activeOptTrans.optionText !== '[Image]' &&
                           !activeOptTrans.optionText.includes('[Image]')
-                          ? activeOptTrans.optionText
+                          ? opt.optionContent
+                            ? mergeTranslationWithRichDoc(opt.optionContent, activeOptTrans.optionText)
+                            : activeOptTrans.optionText
                           : opt.optionContent
                             ? opt.optionContent
                             : activeOptTrans?.optionText);
@@ -1516,7 +1553,8 @@ const ExamInterfacePage = () => {
 
                       const activeOptTrans = currentLanguageId
                         ? opt.translations?.[currentLanguageId] ||
-                        opt.translations?.[currentLanguageId.toLowerCase()]
+                        opt.translations?.[currentLanguageId.toLowerCase()] ||
+                        opt.translations?.[currentLanguageId.toUpperCase()]
                         : null;
 
                       const masterOptContent =
@@ -1531,7 +1569,9 @@ const ExamInterfacePage = () => {
                         (activeOptTrans?.optionText &&
                           activeOptTrans.optionText !== '[Image]' &&
                           !activeOptTrans.optionText.includes('[Image]')
-                          ? activeOptTrans.optionText
+                          ? opt.optionContent
+                            ? mergeTranslationWithRichDoc(opt.optionContent, activeOptTrans.optionText)
+                            : activeOptTrans.optionText
                           : opt.optionContent
                             ? opt.optionContent
                             : activeOptTrans?.optionText);

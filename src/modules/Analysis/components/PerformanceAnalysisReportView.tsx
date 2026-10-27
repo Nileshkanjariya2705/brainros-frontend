@@ -28,6 +28,13 @@ interface PerformanceAnalysisReportViewProps {
   isDownloadingPdf?: boolean;
 }
 
+const AiBadge: React.FC<{ label?: string }> = ({ label = 'Gemini AI' }) => (
+  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-200 border border-amber-400/40 tracking-wider uppercase ml-auto print:border-slate-400 print:text-slate-700 shadow-2xs">
+    <Sparkles className="w-3 h-3 text-amber-300 animate-pulse print:hidden" />
+    {label}
+  </span>
+);
+
 export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportViewProps> = ({
   analysis,
   onBack,
@@ -145,6 +152,35 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
               <span className="text-white font-medium">{analysis.overall.totalMarks}</span>
             </div>
           </div>
+        </div>
+
+        {/* Gemini AI Diagnostic Intelligence Banner */}
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-xl p-4 shadow-sm border border-indigo-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 print:border-slate-300">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-lg bg-indigo-500/20 border border-indigo-400/30 text-amber-300">
+              <Sparkles className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm tracking-tight text-white flex items-center gap-1.5">
+                  AI-Powered Diagnostic Assessment
+                </span>
+                <span className="bg-gradient-to-r from-amber-400 to-amber-200 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                  {analysis.aiMetadata?.isAiGenerated ? 'Google Gemini AI' : 'Deterministic Engine'}
+                </span>
+              </div>
+              <p className="text-xs text-indigo-200 mt-0.5">
+                {analysis.aiMetadata?.isAiGenerated
+                  ? `Intelligent error root-cause diagnosis, personalized 14-day study plan, and parent guidance predicted using ${analysis.aiMetadata.model || 'Gemini 1.5 Flash'}.`
+                  : 'Diagnostic evaluation generated via BRAINROS Psychometric Heuristic Rules.'}
+              </p>
+            </div>
+          </div>
+          {analysis.aiMetadata?.generatedAt && (
+            <div className="text-xs text-indigo-300/80 font-mono text-left sm:text-right shrink-0">
+              Analyzed: {new Date(analysis.aiMetadata.generatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            </div>
+          )}
         </div>
 
         {/* 1. STUDENT DETAILS */}
@@ -364,6 +400,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <Sparkles className="w-4 h-4" />
             6. STRENGTH & WEAKNESS ANALYSIS
+            <AiBadge />
           </div>
           <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div className="bg-emerald-50/70 border border-emerald-200 rounded-lg p-3.5 space-y-2">
@@ -397,6 +434,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <XCircle className="w-4 h-4" />
             7. ERROR ANALYSIS
+            <AiBadge label="Gemini Error Classifier" />
           </div>
           <div className="p-4 space-y-3">
             <div className="overflow-x-auto">
@@ -443,6 +481,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <Clock className="w-4 h-4" />
             8. TIME MANAGEMENT & PACING
+            <AiBadge label="AI Pacing" />
           </div>
           <div className="p-4 space-y-3">
             <div className="overflow-x-auto">
@@ -538,6 +577,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <Target className="w-4 h-4" />
             10. EXPECTED PERFORMANCE & TARGETS
+            <AiBadge label="AI Targets" />
           </div>
           <div className="p-4 space-y-3">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs">
@@ -578,6 +618,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <Calendar className="w-4 h-4" />
             11. 14-DAY IMPROVEMENT PLAN
+            <AiBadge label="Personalized AI Plan" />
           </div>
           <div className="p-4 space-y-2.5">
             {(s11?.blocks || []).map((blk, idx) => (
@@ -606,6 +647,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" />
             12. PERSONALIZED ACTION CHECKLIST
+            <AiBadge label="AI Checklist" />
           </div>
           <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
             {(s12?.items || []).map((item) => {
@@ -638,6 +680,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <HelpCircle className="w-4 h-4" />
             13. PARENT SUMMARY
+            <AiBadge label="AI Parent Diagnostic" />
           </div>
           <div className="p-5 bg-gradient-to-br from-slate-50 to-indigo-50/30 text-slate-800 text-xs md:text-sm leading-relaxed space-y-3">
             <p className="font-normal">{s13?.summaryParagraph}</p>
@@ -659,6 +702,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <Star className="w-4 h-4" />
             14. BRAINROS PERFORMANCE INDEX
+            <AiBadge label="Multidimensional Rating" />
           </div>
           <div className="p-4 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

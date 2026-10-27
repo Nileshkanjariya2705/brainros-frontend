@@ -105,8 +105,18 @@ export interface AttemptStatus {
     | 'AUTO_SUBMITTED'
     | 'EXPIRED'
     | 'INTERRUPTED';
+  languageId?: string;
+  displayLanguageId?: string;
+  language?: {
+    id: string;
+    code: string;
+    name: string;
+    nativeName?: string | null;
+  } | null;
   startedAt: string;
   serverEndTime: string;
+  scheduleId?: string;
+  examVersionId?: string;
   answers: AttemptAnswer[];
 }
 
@@ -695,6 +705,14 @@ export interface BrainrosPerformanceIndexSection {
   overallRating: string;
 }
 
+export interface AiAnalysisMetadata {
+  isAiGenerated: boolean;
+  provider: 'gemini' | 'heuristic_fallback';
+  model?: string;
+  generatedAt: string;
+  confidenceScore?: number;
+}
+
 export interface FullAnalysisReport {
   attemptId: string;
   examId: string;
@@ -717,6 +735,9 @@ export interface FullAnalysisReport {
   timeAnalysis: TimeAnalyticsReport;
   attemptStrategy: AttemptStrategyReport;
   recommendations: ActionableRecommendation[];
+
+  // AI Diagnostic Generation Metadata
+  aiMetadata?: AiAnalysisMetadata;
 
   // 14 Canonical Sections
   section1StudentDetails?: StudentDetailsSection;
