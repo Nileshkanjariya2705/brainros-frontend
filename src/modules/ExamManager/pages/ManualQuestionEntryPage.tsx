@@ -21,12 +21,20 @@ import {
   CheckSquare,
   ArrowRightLeft,
   Zap,
+  Bookmark,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { Axios } from '@/base-axios';
 import { toast } from '@/utils/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { questionPaperKeys, examKeys, adminKeys } from '@/services/queryKeys';
+import { useAppDispatch } from '@/redux/store';
+import { useSelector } from 'react-redux';
+import {
+  saveManualDraft,
+  clearManualDraft,
+  selectManualQuestionDraft,
+} from '@/redux/slices/manualQuestionDraftSlice';
 import {
   QuestionDraft,
   QuestionDifficulty,
@@ -94,6 +102,7 @@ export const ManualQuestionEntryPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const dispatch = useAppDispatch();
 
   const firstSegment = location.pathname.split('/')[1];
   const routePrefix = [
@@ -111,6 +120,11 @@ export const ManualQuestionEntryPage: React.FC = () => {
   const [exam, setExam] = useState<any | null>(null);
   const [isLoadingExam, setIsLoadingExam] = useState(true);
 
+  // ── Redux Persist Draft Selector (hydrated from localStorage via redux-persist) ─
+  const reduxDraft = useSelector(
+    selectManualQuestionDraft(examId || '', exam?.examVersionId),
+  );
+
   // ── Questions & Draft State ───────────────────────────────────────────────────
   const [questions, setQuestions] = useState<QuestionDraft[]>(() => createInitialDrafts(10));
   const [isInitialized, setIsInitialized] = useState(false);
@@ -127,6 +141,54 @@ export const ManualQuestionEntryPage: React.FC = () => {
   const navScrollRef = useRef<HTMLDivElement>(null);
   const questionInputRef = useRef<HTMLTextAreaElement>(null);
 
+  /**
+   * Persists the current manual question draft state to local storage via Redux Persist
+   */
+  const persistDraftState = (
+    targetIndex: number,
+    updatedQuestions: QuestionDraft[],
+    showToast = false,
+  ) => {
+    if (!examId || updatedQuestions.length === 0) return;
+
+    // 1. Dispatch to Redux Persist (stored in localStorage under 'persist:root' whitelist)
+    dispatch(
+      saveManualDraft({
+        examId,
+        examVersionId: exam?.examVersionId,
+        currentIndex: targetIndex,
+        questions: updatedQuestions,
+      }),
+    );
+
+    // 2. Also persist to manualQuestionDraft for backward compatibility
+    saveManualQuestionDraft(
+      examId,
+      targetIndex,
+      updatedQuestions,
+      exam?.examVersionId,
+    );
+
+    const timeStr = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    setLastSavedTime(timeStr);
+
+    if (showToast) {
+      toast.success(
+        `Question paper draft saved to local storage via Redux Persist (${updatedQuestions.length} questions).`,
+      );
+    }
+  };
+
+  /**
+   * Explicit Save as Draft action triggered by super admin
+   */
+  const handleSaveAsDraft = () => {
+    persistDraftState(currentIndex, questions, true);
+  };
+
   // Fetch target exam context & restore draft if available or allocate total question slots
   useEffect(() => {
     if (!examId) return;
@@ -139,7 +201,12 @@ export const ManualQuestionEntryPage: React.FC = () => {
         if (data) {
           setExam(data);
           const totalQ = data.totalQuestions || 10;
-          const savedDraft = loadManualQuestionDraft(examId, data.examVersionId);
+          // Check Redux Persist draft first, then legacy localStorage
+          const savedDraft =
+            reduxDraft && reduxDraft.questions && reduxDraft.questions.length > 0
+              ? reduxDraft
+              : loadManualQuestionDraft(examId, data.examVersionId);
+
           if (savedDraft && savedDraft.questions.length > 0) {
             setQuestions(savedDraft.questions);
             setCurrentIndex(savedDraft.currentIndex);
@@ -149,8 +216,19 @@ export const ManualQuestionEntryPage: React.FC = () => {
               restoredDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             );
             toast.info(
-              `Your unsaved Question Paper draft has been restored (${savedDraft.questions.length} questions).`,
+              `Your Question Paper draft has been restored from local storage (${savedDraft.questions.length} questions).`,
             );
+            // Sync to Redux Persist if loaded from legacy localStorage
+            if (!reduxDraft) {
+              dispatch(
+                saveManualDraft({
+                  examId,
+                  examVersionId: data.examVersionId,
+                  currentIndex: savedDraft.currentIndex,
+                  questions: savedDraft.questions,
+                }),
+              );
+            }
           } else {
             setQuestions(createInitialDrafts(totalQ));
           }
@@ -165,7 +243,11 @@ export const ManualQuestionEntryPage: React.FC = () => {
             if (data) {
               setExam(data);
               const totalQ = data.totalQuestions || 10;
-              const savedDraft = loadManualQuestionDraft(examId, data.examVersionId);
+              const savedDraft =
+                reduxDraft && reduxDraft.questions && reduxDraft.questions.length > 0
+                  ? reduxDraft
+                  : loadManualQuestionDraft(examId, data.examVersionId);
+
               if (savedDraft && savedDraft.questions.length > 0) {
                 setQuestions(savedDraft.questions);
                 setCurrentIndex(savedDraft.currentIndex);
@@ -175,8 +257,18 @@ export const ManualQuestionEntryPage: React.FC = () => {
                   restoredDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 );
                 toast.info(
-                  `Your unsaved Question Paper draft has been restored (${savedDraft.questions.length} questions).`,
+                  `Your Question Paper draft has been restored from local storage (${savedDraft.questions.length} questions).`,
                 );
+                if (!reduxDraft) {
+                  dispatch(
+                    saveManualDraft({
+                      examId,
+                      examVersionId: data.examVersionId,
+                      currentIndex: savedDraft.currentIndex,
+                      questions: savedDraft.questions,
+                    }),
+                  );
+                }
               } else {
                 setQuestions(createInitialDrafts(totalQ));
               }
@@ -185,34 +277,37 @@ export const ManualQuestionEntryPage: React.FC = () => {
           })
           .catch(() => {
             setIsLoadingExam(false);
-            const savedDraft = loadManualQuestionDraft(examId);
+            const savedDraft =
+              reduxDraft && reduxDraft.questions && reduxDraft.questions.length > 0
+                ? reduxDraft
+                : loadManualQuestionDraft(examId);
+
             if (savedDraft && savedDraft.questions.length > 0) {
               setQuestions(savedDraft.questions);
               setCurrentIndex(savedDraft.currentIndex);
               setIsDraftRestored(true);
-              toast.info(`Your unsaved Question Paper draft has been restored.`);
+              toast.info(`Your Question Paper draft has been restored from local storage.`);
+              if (!reduxDraft) {
+                dispatch(
+                  saveManualDraft({
+                    examId,
+                    currentIndex: savedDraft.currentIndex,
+                    questions: savedDraft.questions,
+                  }),
+                );
+              }
             }
             setIsInitialized(true);
           });
       });
   }, [examId]);
 
-  // Debounced autosave to localStorage on questions or index changes
+  // Debounced autosave to local storage (via Redux Persist) on questions or index changes
   useEffect(() => {
     if (!isInitialized || !examId || questions.length === 0) return;
 
     const timer = setTimeout(() => {
-      const saved = saveManualQuestionDraft(
-        examId,
-        currentIndex,
-        questions,
-        exam?.examVersionId,
-      );
-      if (saved) {
-        setLastSavedTime(
-          new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        );
-      }
+      persistDraftState(currentIndex, questions, false);
     }, 400);
 
     return () => clearTimeout(timer);
@@ -294,7 +389,7 @@ export const ManualQuestionEntryPage: React.FC = () => {
   // Navigate to Question with Directional Slide Animation
   const goToQuestion = (targetIndex: number) => {
     if (targetIndex === currentIndex || targetIndex < 0 || targetIndex >= questions.length) return;
-    saveManualQuestionDraft(examId || '', targetIndex, questions, exam?.examVersionId);
+    persistDraftState(targetIndex, questions);
     setSlideDirection(targetIndex > currentIndex ? 'next' : 'prev');
     setCurrentIndex(targetIndex);
     setTimeout(() => {
@@ -317,10 +412,7 @@ export const ManualQuestionEntryPage: React.FC = () => {
           : q,
       );
       setQuestions(updatedQuestions);
-      saveManualQuestionDraft(examId || '', nextIdx, updatedQuestions, exam?.examVersionId);
-      setLastSavedTime(
-        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      );
+      persistDraftState(nextIdx, updatedQuestions);
       setSlideDirection('next');
       setCurrentIndex(nextIdx);
       toast.success(`Copied to Question #${nextIdx + 1}`);
@@ -356,10 +448,7 @@ export const ManualQuestionEntryPage: React.FC = () => {
         : q,
     );
     setQuestions(updatedQuestions);
-    saveManualQuestionDraft(examId || '', currentIndex, updatedQuestions, exam?.examVersionId);
-    setLastSavedTime(
-      new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    );
+    persistDraftState(currentIndex, updatedQuestions);
     toast.info(`Cleared Question #${currentIndex + 1}`);
     questionInputRef.current?.focus();
   };
@@ -530,11 +619,8 @@ export const ManualQuestionEntryPage: React.FC = () => {
 
     const nextIdx = currentIndex < questions.length - 1 ? currentIndex + 1 : currentIndex;
 
-    // Immediately persist current progress to localStorage before advancing
-    saveManualQuestionDraft(examId || '', nextIdx, questions, exam?.examVersionId);
-    setLastSavedTime(
-      new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    );
+    // Immediately persist current progress to local storage (Redux Persist) before advancing
+    persistDraftState(nextIdx, questions);
 
     if (currentIndex < questions.length - 1) {
       setSlideDirection('next');
@@ -550,7 +636,7 @@ export const ManualQuestionEntryPage: React.FC = () => {
   const handlePrevious = () => {
     if (currentIndex > 0) {
       const prevIdx = currentIndex - 1;
-      saveManualQuestionDraft(examId || '', prevIdx, questions, exam?.examVersionId);
+      persistDraftState(prevIdx, questions);
       setSlideDirection('prev');
       setCurrentIndex(prevIdx);
       setTimeout(() => questionInputRef.current?.focus(), 50);
@@ -729,7 +815,8 @@ export const ManualQuestionEntryPage: React.FC = () => {
         payload,
       );
 
-      // Clear draft ONLY on success
+      // Clear draft ONLY on success from Redux Persist and localStorage
+      dispatch(clearManualDraft({ examId: examId || '', examVersionId: exam?.examVersionId }));
       clearManualQuestionDraft(examId || '', exam?.examVersionId);
 
       const translationJobId =
@@ -792,9 +879,12 @@ export const ManualQuestionEntryPage: React.FC = () => {
                 {completedCount} of {expectedQuestionsCount} Questions Completed
               </span>
               {lastSavedTime && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                <span
+                  className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/20"
+                  title="Draft stored in local storage via Redux Persist"
+                >
                   <Check size={11} />
-                  Draft saved {lastSavedTime}
+                  Draft saved {lastSavedTime} (Redux Persist)
                 </span>
               )}
               {isDraftRestored && (
@@ -817,6 +907,17 @@ export const ManualQuestionEntryPage: React.FC = () => {
           >
             {isPreviewMode ? <EyeOff size={15} /> : <Eye size={15} />}
             <span>{isPreviewMode ? 'Question Editor' : 'Preview Paper'}</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={handleSaveAsDraft}
+            disabled={isLoadingExam}
+            className="flex items-center gap-1.5 rounded-2xl text-xs font-bold text-slate-700 hover:text-indigo-600 hover:border-indigo-300 transition-colors shadow-2xs"
+            title="Save draft to local storage via Redux Persist"
+          >
+            <Bookmark size={15} className="text-indigo-600" />
+            <span>Save as Draft</span>
           </Button>
 
           <Button
@@ -1579,6 +1680,17 @@ export const ManualQuestionEntryPage: React.FC = () => {
             className="rounded-2xl text-xs font-bold"
           >
             {isPreviewMode ? 'Edit Mode' : 'Preview All'}
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={handleSaveAsDraft}
+            disabled={isLoadingExam}
+            className="flex items-center gap-1.5 rounded-2xl text-xs font-bold text-slate-700 hover:text-indigo-600 hover:border-indigo-300 transition-colors"
+            title="Save draft to local storage via Redux Persist"
+          >
+            <Bookmark size={15} className="text-indigo-600" />
+            <span>Save as Draft</span>
           </Button>
 
           <Button

@@ -96,7 +96,7 @@ const LoginForm = () => {
 
   const currentOtp = watchVerify('otp') || '';
 
-  // Sync cooldown timer when OTP is sent
+  // Sync cooldown timer when OTP is sent (keep OTP input empty for user to enter)
   useEffect(() => {
     if (pendingLogin) {
       setCooldownTime(pendingLogin.resendAvailableIn || 60);
@@ -225,7 +225,7 @@ const LoginForm = () => {
                 variant="primary"
                 size="lg"
                 isLoading={isRequestingOtp}
-                className="w-full"
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold shadow-lg shadow-indigo-500/25"
               >
                 <span>Send Login OTP</span>
               </Button>
@@ -284,11 +284,21 @@ const LoginForm = () => {
               <span>OTP Dispatched Successfully</span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Enter the OTP sent to your registered mobile number ending in{' '}
-              <strong className="font-mono text-slate-900 font-bold">
-                {pendingLogin.mobileMasked}
-              </strong>
-              .
+              {pendingLogin.bypassOtp ? (
+                <>
+                  Bypass mode active. Please enter OTP code{' '}
+                  <strong className="font-mono text-emerald-800 font-bold">1234</strong>{' '}
+                  to sign in.
+                </>
+              ) : (
+                <>
+                  Enter the OTP sent to your registered mobile number ending in{' '}
+                  <strong className="font-mono text-slate-900 font-bold">
+                    {pendingLogin.mobileMasked}
+                  </strong>
+                  .
+                </>
+              )}
             </p>
           </div>
 
@@ -297,11 +307,11 @@ const LoginForm = () => {
               Enter OTP Code
             </label>
             <OtpPinInput
-              length={pendingLogin.otpLength || 6}
+              length={pendingLogin.otpLength || 4}
               value={currentOtp}
               onChange={(newOtp) => {
                 setValueVerify('otp', newOtp, { shouldValidate: true });
-                if (newOtp.length === (pendingLogin.otpLength || 6) && !isVerifyingOtp) {
+                if (newOtp.length === (pendingLogin.otpLength || 4) && !isVerifyingOtp) {
                   verifyOtp(newOtp);
                 }
               }}

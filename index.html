@@ -5,9 +5,57 @@
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Brainros</title>
+    <!-- Preconnect & Preload hCaptcha for MSG91 Headless OTP -->
+    <link rel="preconnect" href="https://js.hcaptcha.com" crossorigin />
+    <link rel="preconnect" href="https://newassets.hcaptcha.com" crossorigin />
+    <script src="https://js.hcaptcha.com/1/api.js?render=explicit" async defer></script>
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- MSG91 Headless OTP Web SDK Loader (exposeMethods: true) -->
+    <script type="text/javascript">
+      window.msg91Configuration = {
+        widgetId: "%VITE_MSG91_WIDGET_ID%",
+        tokenAuth: "%VITE_MSG91_TOKEN_AUTH%",
+        exposeMethods: true,
+        success: function (data) {
+          if (typeof window.onMsg91GlobalSuccess === 'function') {
+            window.onMsg91GlobalSuccess(data);
+          }
+        },
+        failure: function (error) {
+          if (typeof window.onMsg91GlobalFailure === 'function') {
+            window.onMsg91GlobalFailure(error);
+          }
+        },
+      };
+
+      (function loadOtpScript(urls) {
+        var i = 0;
+        function attempt() {
+          var s = document.createElement('script');
+          s.src = urls[i];
+          s.async = true;
+          s.onload = function () {
+            if (typeof window.initSendOTP === 'function') {
+              window.initSendOTP(window.msg91Configuration);
+            }
+          };
+          s.onerror = function () {
+            i++;
+            if (i < urls.length) {
+              attempt();
+            }
+          };
+          document.head.appendChild(s);
+        }
+        attempt();
+      })([
+        'https://verify.msg91.com/otp-provider.js',
+        'https://verify.phone91.com/otp-provider.js'
+      ]);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

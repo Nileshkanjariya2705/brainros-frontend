@@ -72,6 +72,20 @@ export const useVerifyOtpAPI = () => {
 };
 
 /**
+ * 2b. MSG91 OTP Widget Token Verification API
+ */
+export const useVerifyMsg91TokenAPI = () => {
+  const [callApi, { isLoading, isError, isSuccess }] = useAxiosPost();
+  const verifyMsg91TokenAPI = useCallback(
+    async (token: string, config: AxiosRequestConfig = {}) => {
+      return callApi<LoginResponse>(`${AUTH_API_BASE_PATH}/otp/verify`, { token }, config);
+    },
+    [callApi],
+  );
+  return { verifyMsg91TokenAPI, isLoading, isError, isSuccess };
+};
+
+/**
  * 3. Email & Password Login API
  */
 export const useLoginEmailAPI = () => {
@@ -377,6 +391,8 @@ export const useRequestPasswordlessLoginOtpAPI = () => {
         expiresIn: number;
         resendAvailableIn: number;
         otpLength?: number;
+        bypassOtp?: boolean;
+        devBypassOtp?: string;
       }>(`${AUTH_API_BASE_PATH}/login/request-otp`, data, config);
     },
     [callApi],
@@ -422,6 +438,24 @@ export const useResendOtpAPI = () => {
     [callApi],
   );
   return { resendOtpAPI, isLoading, isError, isSuccess };
+};
+
+/**
+ * 18. Get OTP Configuration API (bypass mode, dev OTP code, length)
+ */
+export const useGetOtpConfigAPI = () => {
+  const [callApi, { isLoading, isError, isSuccess }] = useAxiosGet();
+  const getOtpConfigAPI = useCallback(
+    async (config: AxiosRequestConfig = {}) => {
+      return callApi<{
+        bypassOtp: boolean;
+        devBypassOtp?: string;
+        otpLength: number;
+      }>(`${AUTH_API_BASE_PATH}/otp-config`, config);
+    },
+    [callApi],
+  );
+  return { getOtpConfigAPI, isLoading, isError, isSuccess };
 };
 
 // ** Location & Pincode Services **
