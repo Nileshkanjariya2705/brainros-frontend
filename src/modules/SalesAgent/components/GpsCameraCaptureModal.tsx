@@ -159,6 +159,7 @@ export const GpsCameraCaptureModal: React.FC<GpsCameraCaptureModalProps> = ({
                 <MapPin className="w-3 h-3 text-rose-500" />
                 <span>
                   Lat {gpsData.latitude.toFixed(4)}°, Long {gpsData.longitude.toFixed(4)}°
+                  {gpsData.accuracy ? ` (±${Math.round(gpsData.accuracy)}m)` : ''}
                 </span>
               </p>
             </div>
@@ -215,7 +216,7 @@ export const GpsCameraCaptureModal: React.FC<GpsCameraCaptureModalProps> = ({
                 <div className="flex items-center justify-between font-bold text-slate-200">
                   <span className="flex items-center gap-1 text-emerald-400">
                     <MapPin className="w-3.5 h-3.5 text-rose-500" />
-                    GPS Location Locked
+                    GPS Location Locked {gpsData.accuracy ? `(±${Math.round(gpsData.accuracy)}m)` : ''}
                   </span>
                   <span className="text-[10px] text-slate-400">
                     {new Date().toLocaleTimeString()}

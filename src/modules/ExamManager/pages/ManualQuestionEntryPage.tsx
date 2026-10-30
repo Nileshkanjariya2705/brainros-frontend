@@ -1,4 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+interface SubjectOption {
+  id: string;
+  name: string;
+}
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -119,6 +123,57 @@ export const ManualQuestionEntryPage: React.FC = () => {
   // ── Exam Details State ────────────────────────────────────────────────────────
   const [exam, setExam] = useState<any | null>(null);
   const [isLoadingExam, setIsLoadingExam] = useState(true);
+
+  // ── Dynamic Subjects from Exam Configuration ──────────────────────────────
+  const availableSubjects = useMemo(() => {
+    if (!exam) return [];
+    const map = new Map<string, SubjectOption>();
+
+    // 1. Try exam.sections (has subjectId and subject.name)
+    if (exam.sections && Array.isArray(exam.sections)) {
+      for (const sec of exam.sections) {
+        const subId = sec.subjectId || sec.subject?.id;
+        const subName = sec.subject?.name || (sec.name ? sec.name.replace(/\s+Section$/i, '') : '');
+        if (subId && subName) {
+          map.set(subId, { id: subId, name: subName });
+        }
+      }
+    }
+
+    // 2. Try exam.subjects (from schedule details or performanceThresholds)
+    if (exam.subjects && Array.isArray(exam.subjects)) {
+      for (const sub of exam.subjects) {
+        const subId = sub.subjectId || sub.id;
+        const subName = sub.name || sub.subjectName;
+        if (subId && subName && !map.has(subId)) {
+          map.set(subId, { id: subId, name: subName });
+        }
+      }
+    }
+
+    // 3. Try examTarget.examTargetSubjects
+    if (exam.examTarget?.examTargetSubjects && Array.isArray(exam.examTarget.examTargetSubjects)) {
+      for (const ets of exam.examTarget.examTargetSubjects) {
+        const sub = ets.subject;
+        if (sub && sub.id && sub.name && !map.has(sub.id)) {
+          map.set(sub.id, { id: sub.id, name: sub.name });
+        }
+      }
+    }
+
+    // 4. Try thresholdMetadata subjectGroups
+    if (exam.subjectGroups && Array.isArray(exam.subjectGroups)) {
+      for (const g of exam.subjectGroups) {
+        const subId = g.subjectId || g.subject?.id;
+        const subName = g.subject?.name;
+        if (subId && subName && !map.has(subId)) {
+          map.set(subId, { id: subId, name: subName });
+        }
+      }
+    }
+
+    return Array.from(map.values()) as SubjectOption[];
+  }, [exam]);
 
   // ── Redux Persist Draft Selector (hydrated from localStorage via redux-persist) ─
   const reduxDraft = useSelector(
@@ -301,6 +356,26 @@ export const ManualQuestionEntryPage: React.FC = () => {
           });
       });
   }, [examId]);
+
+  // ── Auto-assign default Subject to questions if missing ─────────────────────
+  useEffect(() => {
+    if (!availableSubjects.length) return;
+    setQuestions((prev) => {
+      let changed = false;
+      const updated = prev.map((q) => {
+        if (!q.subjectId || (availableSubjects.length === 1 && q.subjectId !== availableSubjects[0].id)) {
+          changed = true;
+          return {
+            ...q,
+            subjectId: availableSubjects.length === 1 ? availableSubjects[0].id : (q.subjectId || availableSubjects[0].id),
+            subjectName: availableSubjects.length === 1 ? availableSubjects[0].name : (q.subjectName || availableSubjects[0].name),
+          };
+        }
+        return q;
+      });
+      return changed ? updated : prev;
+    });
+  }, [availableSubjects]);
 
   // Debounced autosave to local storage (via Redux Persist) on questions or index changes
   useEffect(() => {
@@ -750,6 +825,7 @@ export const ManualQuestionEntryPage: React.FC = () => {
             questionContent: q.questionContent || undefined,
             difficulty: q.difficulty,
             type: q.type,
+            subjectId: q.subjectId || (availableSubjects.length > 0 ? availableSubjects[0].id : undefined),
             explanation: q.explanation?.trim() || undefined,
             explanationContent: q.explanationContent || undefined,
           };
@@ -1080,6 +1156,11 @@ export const ManualQuestionEntryPage: React.FC = () => {
                     <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full">
                       Question #{idx + 1}
                     </span>
+                    {(q.subjectName || availableSubjects.find((s: SubjectOption) => s.id === q.subjectId)?.name) && (
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-200">
+                        {q.subjectName || availableSubjects.find((s: SubjectOption) => s.id === q.subjectId)?.name}
+                      </span>
+                    )}
                     <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${diffMeta.badgeBg}`}>
                       {diffMeta.label}
                     </span>
@@ -1291,8 +1372,43 @@ export const ManualQuestionEntryPage: React.FC = () => {
               </div>
             </div>
 
-            {/* ── Difficulty & Question Type Selectors (Required) ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80">
+            {/* ── Subject, Difficulty & Question Type Selectors (Required) ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80">
+              {/* Subject Selector */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                  Subject <span className="text-rose-500">*</span>
+                  {availableSubjects.length === 1 && (
+                    <span className="ml-1 text-[10px] font-normal text-slate-400 lowercase">(single subject)</span>
+                  )}
+                </label>
+                <select
+                  value={currentQ.subjectId || (availableSubjects.length === 1 ? availableSubjects[0].id : '')}
+                  onChange={(e) => {
+                    const chosenId = e.target.value;
+                    const chosenObj = availableSubjects.find((s: SubjectOption) => s.id === chosenId);
+                    setQuestions((prev) =>
+                      prev.map((q, idx) =>
+                        idx === currentIndex
+                          ? { ...q, subjectId: chosenId, subjectName: chosenObj?.name }
+                          : q,
+                      ),
+                    );
+                  }}
+                  disabled={availableSubjects.length <= 1}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-2xs disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  {availableSubjects.length === 0 ? (
+                    <option value="">Loading subjects...</option>
+                  ) : (
+                    availableSubjects.map((sub: SubjectOption) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
               {/* Difficulty Selector */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">

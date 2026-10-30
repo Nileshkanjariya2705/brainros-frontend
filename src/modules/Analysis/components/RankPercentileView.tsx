@@ -3,7 +3,6 @@ import {
   MapPin,
   Building2,
   GraduationCap,
-  Sparkles,
   RotateCw,
   Clock,
   CheckCircle2,
@@ -61,7 +60,7 @@ export const RankPercentileView: React.FC<Props> = ({
     );
   }
 
-  const { overall, state, district, school, category, predictedRank } = ranks;
+  const { overall, state, district, school, category } = ranks;
 
   const getRankMedal = (rank: number) => {
     if (rank === 1)
@@ -237,52 +236,6 @@ export const RankPercentileView: React.FC<Props> = ({
           />
         </div>
       </div>
-
-      {/* ── Predicted Rank Projection Card ──────────────────────────── */}
-      {predictedRank && (
-        <div className="rounded-3xl border border-indigo-200 bg-gradient-to-br from-white to-indigo-50/40 p-6 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
-                  Statistical Model {predictedRank.modelVersion}
-                </span>
-                <span
-                  className={cn(
-                    'px-2 py-0.5 rounded-full text-[11px] font-bold border',
-                    predictedRank.confidence === 'HIGH'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : 'bg-amber-50 text-amber-700 border-amber-200',
-                  )}
-                >
-                  {predictedRank.confidence} Confidence
-                </span>
-              </div>
-              <h3 className="text-base font-black text-slate-900 flex items-center gap-2 mt-1">
-                <Sparkles className="text-indigo-600" size={18} />
-                <span>Projected Target Exam Rank Bracket</span>
-              </h3>
-              <p className="text-xs text-slate-500 max-w-xl leading-relaxed">
-                {predictedRank.disclaimer}
-              </p>
-            </div>
-
-            {/* Predicted Bracket Box */}
-            <div className="rounded-2xl border border-indigo-200 bg-white p-4 text-center min-w-[200px] shadow-sm">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                Estimated Range
-              </span>
-              <div className="text-2xl font-black text-indigo-600 mt-1">
-                #{predictedRank.predictedRankMin.toLocaleString()} – #
-                {predictedRank.predictedRankMax.toLocaleString()}
-              </div>
-              <span className="text-[10px] text-slate-400 font-medium mt-0.5 block">
-                Projected Final Benchmark
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

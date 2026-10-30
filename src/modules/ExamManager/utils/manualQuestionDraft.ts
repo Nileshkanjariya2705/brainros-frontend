@@ -50,6 +50,8 @@ export interface QuestionDraft {
   matchPairs: MatchPair[];
   explanation?: string;
   explanationContent?: any;
+  subjectId?: string;
+  subjectName?: string;
 }
 
 export interface ManualQuestionPaperDraft {
@@ -93,7 +95,7 @@ export const getDefaultMatchPairs = (): MatchPair[] => [
 /**
  * Creates empty initial question draft placeholders for a given question count
  */
-export const createInitialDrafts = (count: number): QuestionDraft[] => {
+export const createInitialDrafts = (count: number, defaultSubjectId?: string): QuestionDraft[] => {
   const targetCount = Math.max(1, count || 1);
   const list: QuestionDraft[] = [];
   for (let i = 1; i <= targetCount; i++) {
@@ -116,6 +118,7 @@ export const createInitialDrafts = (count: number): QuestionDraft[] => {
       columnB: getDefaultColumnB(),
       matchPairs: getDefaultMatchPairs(),
       explanation: '',
+      subjectId: defaultSubjectId || undefined,
     });
   }
   return list;

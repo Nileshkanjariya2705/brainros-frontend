@@ -23,6 +23,8 @@ export interface SalesVisit {
   notes?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  accuracy?: number | null;
+  checkInAccuracy?: number | null;
   status: 'SCHEDULED' | 'CHECKED_IN' | 'COMPLETED' | 'CANCELLED' | 'MISSED';
   outcome?: 'INTERESTED' | 'DEMO_REQUESTED' | 'FOLLOW_UP_NEEDED' | 'PROPOSAL_REQUESTED' | 'NOT_INTERESTED' | 'ONBOARDED' | null;
   checkInTime?: string | null;
@@ -59,6 +61,7 @@ export interface CreateSalesVisitPayload {
   notes?: string;
   latitude?: number;
   longitude?: number;
+  accuracy?: number;
   photos?: string[];
   slipPhoto?: string;
   slipUrl?: string;

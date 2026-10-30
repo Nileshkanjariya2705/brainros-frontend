@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import cn from 'classnames';
 import {
   Download,
+  Building2,
   Printer,
   ChevronLeft,
   Award,
@@ -26,6 +28,8 @@ interface PerformanceAnalysisReportViewProps {
   onBack?: () => void;
   onDownloadPdf?: () => void;
   isDownloadingPdf?: boolean;
+  onSendToInstitute?: () => void;
+  isSendingToInstitute?: boolean;
 }
 
 const AiBadge: React.FC<{ label?: string }> = ({ label = 'Gemini AI' }) => (
@@ -40,6 +44,8 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
   onBack,
   onDownloadPdf,
   isDownloadingPdf = false,
+  onSendToInstitute,
+  isSendingToInstitute = false,
 }) => {
   // Local state for interactive checklist
   const [completedChecklist, setCompletedChecklist] = useState<Record<string, boolean>>({});
@@ -107,6 +113,18 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
               <Printer className="w-4 h-4" />
               Print Report
             </Button>
+            {onSendToInstitute && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onSendToInstitute}
+                disabled={isSendingToInstitute}
+                className="gap-1.5 text-indigo-700 border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100 font-semibold"
+              >
+                <Building2 className="w-4 h-4" />
+                {isSendingToInstitute ? 'Sending...' : 'Send to Institute'}
+              </Button>
+            )}
             {onDownloadPdf && (
               <Button
                 variant="primary"
@@ -120,6 +138,44 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
               </Button>
             )}
           </div>
+        </div>
+        {/* 14-Section Quick Navigation Scroll Pills */}
+        <div className="max-w-5xl mx-auto mt-2.5 pt-2 border-t border-slate-100 flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-none py-0.5">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+            <Layers className="w-3 h-3 text-indigo-600" /> Jump To:
+          </span>
+          {[
+            { id: 'section-1', num: '1', title: 'Student' },
+            { id: 'section-2', num: '2', title: 'Overall' },
+            { id: 'section-3', num: '3', title: 'Subject Table' },
+            { id: 'section-4', num: '4', title: 'Subject Diag' },
+            { id: 'section-5', num: '5', title: 'Topics' },
+            { id: 'section-6', num: '6', title: 'Strengths' },
+            { id: 'section-7', num: '7', title: 'Errors' },
+            { id: 'section-8', num: '8', title: 'Time' },
+            { id: 'section-9', num: '9', title: 'Trend' },
+            { id: 'section-10', num: '10', title: 'Targets' },
+            { id: 'section-11', num: '11', title: '14-Day Plan' },
+            { id: 'section-12', num: '12', title: 'Checklist' },
+            { id: 'section-13', num: '13', title: 'Parents' },
+            { id: 'section-14', num: '14', title: 'Index' },
+          ].map((sec) => (
+            <button
+              key={sec.id}
+              onClick={() => {
+                const el = document.getElementById(sec.id);
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              className="shrink-0 px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-md border border-slate-200/80 hover:border-indigo-300 transition-all flex items-center gap-1 cursor-pointer"
+            >
+              <span className="w-3.5 h-3.5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-bold">
+                {sec.num}
+              </span>
+              <span>{sec.title}</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -184,7 +240,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
         </div>
 
         {/* 1. STUDENT DETAILS */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300">
+        <div id="section-1" className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300 scroll-mt-24">
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <User className="w-4 h-4" />
             1. STUDENT DETAILS
@@ -228,7 +284,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
         </div>
 
         {/* 2. OVERALL PERFORMANCE */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300">
+        <div id="section-2" className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300 scroll-mt-24">
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <Award className="w-4 h-4" />
             2. OVERALL PERFORMANCE
@@ -269,7 +325,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
         </div>
 
         {/* 3. SUBJECT-WISE ANALYSIS */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300">
+        <div id="section-3" className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300 scroll-mt-24">
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <Layers className="w-4 h-4" />
             3. SUBJECT-WISE ANALYSIS
@@ -321,7 +377,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
         </div>
 
         {/* 4. SUBJECT PERFORMANCE */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300">
+        <div id="section-4" className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300 scroll-mt-24">
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <BookOpen className="w-4 h-4" />
             4. SUBJECT PERFORMANCE & DIAGNOSIS
@@ -331,7 +387,18 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
               <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 text-xs space-y-1.5">
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-slate-200 font-bold text-slate-900 text-sm">
                   <span>{sp.subjectName.toUpperCase()} — {sp.score} / {sp.maxScore}</span>
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                  <span
+                    className={cn(
+                      'text-xs px-2.5 py-0.5 rounded-full font-bold border',
+                      sp.performanceLevel === 'Strong'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        : sp.performanceLevel === 'Good'
+                          ? 'bg-blue-100 text-blue-800 border-blue-200'
+                          : sp.performanceLevel === 'Need to Focus'
+                            ? 'bg-rose-100 text-rose-800 border-rose-200'
+                            : 'bg-indigo-100 text-indigo-800 border-indigo-200',
+                    )}
+                  >
                     Performance Level: {sp.performanceLevel}
                   </span>
                 </div>
@@ -353,7 +420,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
         </div>
 
         {/* 5. TOPIC-WISE PERFORMANCE */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300">
+        <div id="section-5" className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300 scroll-mt-24">
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <Target className="w-4 h-4" />
             5. TOPIC-WISE PERFORMANCE
@@ -371,8 +438,10 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
               <tbody className="divide-y divide-slate-100">
                 {(s5 || []).map((row, idx) => {
                   const statusBadgeColor =
-                    row.status === 'Excellent' || row.status === 'Strong'
+                    row.status === 'Strong' || row.status === 'Excellent'
                       ? 'bg-emerald-100 text-emerald-800'
+                      : row.status === 'Good'
+                      ? 'bg-blue-100 text-blue-800'
                       : row.status === 'Needs Improvement'
                       ? 'bg-amber-100 text-amber-800'
                       : 'bg-rose-100 text-rose-800';
@@ -396,7 +465,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
         </div>
 
         {/* 6. STRENGTH & WEAKNESS ANALYSIS */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300">
+        <div id="section-6" className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300 scroll-mt-24">
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <Sparkles className="w-4 h-4" />
             6. STRENGTH & WEAKNESS ANALYSIS
@@ -430,7 +499,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
         </div>
 
         {/* 7. ERROR ANALYSIS */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300">
+        <div id="section-7" className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300 scroll-mt-24">
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <XCircle className="w-4 h-4" />
             7. ERROR ANALYSIS
@@ -477,7 +546,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
         </div>
 
         {/* 8. TIME MANAGEMENT */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300">
+        <div id="section-8" className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300 scroll-mt-24">
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <Clock className="w-4 h-4" />
             8. TIME MANAGEMENT & PACING
@@ -535,7 +604,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
         </div>
 
         {/* 9. BRAINROS PERFORMANCE TREND */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300">
+        <div id="section-9" className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300 scroll-mt-24">
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <TrendingUp className="w-4 h-4" />
             9. BRAINROS PERFORMANCE TREND
@@ -573,7 +642,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
         </div>
 
         {/* 10. EXPECTED PERFORMANCE */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300">
+        <div id="section-10" className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300 scroll-mt-24">
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <Target className="w-4 h-4" />
             10. EXPECTED PERFORMANCE & TARGETS
@@ -614,7 +683,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
         </div>
 
         {/* 11. 14-DAY IMPROVEMENT PLAN */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300">
+        <div id="section-11" className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300 scroll-mt-24">
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <Calendar className="w-4 h-4" />
             11. 14-DAY IMPROVEMENT PLAN
@@ -643,7 +712,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
         </div>
 
         {/* 12. PERSONALIZED ACTION CHECKLIST */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300">
+        <div id="section-12" className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300 scroll-mt-24">
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" />
             12. PERSONALIZED ACTION CHECKLIST
@@ -676,7 +745,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
         </div>
 
         {/* 13. PARENT SUMMARY */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300">
+        <div id="section-13" className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300 scroll-mt-24">
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <HelpCircle className="w-4 h-4" />
             13. PARENT SUMMARY
@@ -698,7 +767,7 @@ export const PerformanceAnalysisReportView: React.FC<PerformanceAnalysisReportVi
         </div>
 
         {/* 14. BRAINROS PERFORMANCE INDEX */}
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300">
+        <div id="section-14" className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden print:border-slate-300 scroll-mt-24">
           <div className="bg-indigo-700 text-white px-4 py-2.5 font-bold text-xs md:text-sm tracking-wide flex items-center gap-2">
             <Star className="w-4 h-4" />
             14. BRAINROS PERFORMANCE INDEX

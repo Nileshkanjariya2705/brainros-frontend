@@ -5,10 +5,7 @@ import cn from 'classnames';
 import {
   Trophy,
   BarChart3,
-  Target,
   Clock,
-  Compass,
-  Lightbulb,
   FileSpreadsheet,
   ArrowLeft,
   XCircle,
@@ -20,6 +17,7 @@ import {
   Check,
   X,
   Download,
+  Send,
 } from 'lucide-react';
 import { Axios } from '@/base-axios';
 import { toast } from '@/utils/toast';
@@ -29,7 +27,6 @@ import { Pagination } from '@/components/ui/Pagination';
 import {
   useResultStatusQuery,
   useFullAnalysisQuery,
-  useAttemptStrategyQuery,
   useMyRanksQuery,
   useAnswerReviewQuery,
 } from '../services/exams.queries';
@@ -43,10 +40,7 @@ import { RichContentRenderer } from '@/components/renderer/RichContentRenderer';
 // ** Analysis Modular Components **
 import { OverallPerformanceCard } from '@/modules/Analysis/components/OverallPerformanceCard';
 import { SubjectAnalyticsView } from '@/modules/Analysis/components/SubjectAnalyticsView';
-import { ChapterDiagnosisView } from '@/modules/Analysis/components/ChapterDiagnosisView';
 import { TimeAnalyticsView } from '@/modules/Analysis/components/TimeAnalyticsView';
-import { AttemptStrategyView } from '@/modules/Analysis/components/AttemptStrategyView';
-import { SmartRecommendationsView } from '@/modules/Analysis/components/SmartRecommendationsView';
 import { RankPercentileView } from '@/modules/Analysis/components/RankPercentileView';
 import { PerformanceAnalysisReportView } from '@/modules/Analysis/components/PerformanceAnalysisReportView';
 
@@ -63,14 +57,27 @@ const ExamResultPage = () => {
     | 'performance-report'
     | 'ranks'
     | 'subjects'
-    | 'chapters'
     | 'time'
-    | 'strategy'
-    | 'recommendations'
     | 'review'
   >('overview');
 
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [isSendingToInstitute, setIsSendingToInstitute] = useState(false);
+
+  const handleSendToInstitute = async () => {
+    if (!attemptId) return;
+    try {
+      setIsSendingToInstitute(true);
+      const res = await Axios.post(`/results/${attemptId}/send-institute-email`);
+      toast.success(res.data?.message || 'Report sent to institute successfully.');
+    } catch (err: any) {
+      console.error('Failed to send report to institute', err);
+      const msg = err.response?.data?.message || 'Failed to send report to institute. Please ensure an institute is assigned.';
+      toast.error(msg);
+    } finally {
+      setIsSendingToInstitute(false);
+    }
+  };
 
   const handleDownloadPdf = async () => {
     if (!attemptId) return;
@@ -133,14 +140,6 @@ const ExamResultPage = () => {
     isLoading: isAnalysisLoading,
     error: analysisError,
   } = useFullAnalysisQuery(attemptId, isReady);
-
-  // Lazy-loaded section queries
-  const {
-    data: detailedStrategy,
-  } = useAttemptStrategyQuery(
-    attemptId,
-    isReady && (activeTab === 'strategy' || activeTab === 'overview'),
-  );
 
   const {
     data: ranks,
@@ -353,10 +352,7 @@ const ExamResultPage = () => {
   const {
     overall,
     subjects,
-    chapters,
     timeAnalysis,
-    attemptStrategy,
-    recommendations,
   } = analysis;
 
   // ─── Case 4: Complete Published Brainros Diagnostic Report ──────
@@ -402,6 +398,21 @@ const ExamResultPage = () => {
             <span>{isDownloadingPdf ? 'Generating PDF...' : 'Download PDF Report'}</span>
           </Button>
 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSendToInstitute}
+            disabled={isSendingToInstitute}
+            className="flex items-center gap-1.5 text-xs font-bold border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800 shadow-2xs"
+          >
+            {isSendingToInstitute ? (
+              <RefreshCw size={14} className="animate-spin text-emerald-600" />
+            ) : (
+              <Send size={14} className="text-emerald-600" />
+            )}
+            <span>{isSendingToInstitute ? 'Sending...' : 'Send to Institute'}</span>
+          </Button>
+
 
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
             Exam Target:{' '}
@@ -426,15 +437,7 @@ const ExamResultPage = () => {
           { id: 'performance-report', label: '14-Section Full Report', icon: BrainCircuit, badge: 14 },
           { id: 'ranks', label: 'Ranks & Percentile', icon: Award },
           { id: 'subjects', label: 'Subject Analytics', icon: BarChart3 },
-          { id: 'chapters', label: 'Chapter Diagnosis', icon: Target },
           { id: 'time', label: 'Time Analytics', icon: Clock },
-          { id: 'strategy', label: 'Attempt Strategy', icon: Compass },
-          {
-            id: 'recommendations',
-            label: 'Smart Insights',
-            icon: Lightbulb,
-            badge: recommendations.length,
-          },
           { id: 'review', label: 'Question Review', icon: FileSpreadsheet },
         ].map((tab) => (
           <button
@@ -498,10 +501,7 @@ const ExamResultPage = () => {
           </div>
 
           <SubjectAnalyticsView subjects={subjects} />
-          <ChapterDiagnosisView chapters={chapters} />
           <TimeAnalyticsView timeAnalysis={timeAnalysis} />
-          <AttemptStrategyView attemptStrategy={attemptStrategy} />
-          <SmartRecommendationsView recommendations={recommendations} />
         </div>
       )}
 
@@ -511,6 +511,8 @@ const ExamResultPage = () => {
           onBack={() => setActiveTab('overview')}
           onDownloadPdf={handleDownloadPdf}
           isDownloadingPdf={isDownloadingPdf}
+          onSendToInstitute={handleSendToInstitute}
+          isSendingToInstitute={isSendingToInstitute}
         />
       )}
 
@@ -527,20 +529,7 @@ const ExamResultPage = () => {
 
       {activeTab === 'subjects' && <SubjectAnalyticsView subjects={subjects} />}
 
-      {activeTab === 'chapters' && <ChapterDiagnosisView chapters={chapters} />}
-
       {activeTab === 'time' && <TimeAnalyticsView timeAnalysis={timeAnalysis} />}
-
-      {activeTab === 'strategy' && (
-        <AttemptStrategyView
-          attemptStrategy={attemptStrategy}
-          detailedStrategy={detailedStrategy}
-        />
-      )}
-
-      {activeTab === 'recommendations' && (
-        <SmartRecommendationsView recommendations={recommendations} />
-      )}
 
       {activeTab === 'review' && (() => {
         if (isReviewLoading || (isReviewFetching && !reviewData)) {

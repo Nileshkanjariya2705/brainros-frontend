@@ -1,23 +1,22 @@
 import React from 'react';
 import cn from 'classnames';
 import { Flame, AlertTriangle, Clock, BarChart2, ShieldCheck } from 'lucide-react';
-import type { SubjectAnalyticsItem, PerformanceStatus } from '@/types/exam.types';
+import type { SubjectAnalyticsItem } from '@/types/exam.types';
 
-const getStatusBadge = (status: PerformanceStatus) => {
-  switch (status) {
-    case 'EXCELLENT':
-      return { label: 'Excellent', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-    case 'STRONG':
-      return { label: 'Strong', bg: 'bg-teal-50 text-teal-700 border-teal-200' };
-    case 'GOOD':
-      return { label: 'Good', bg: 'bg-blue-50 text-blue-700 border-blue-200' };
-    case 'WEAK':
-      return { label: 'Weak', bg: 'bg-amber-50 text-amber-700 border-amber-200' };
-    case 'CRITICAL':
-      return { label: 'Critical', bg: 'bg-rose-50 text-rose-700 border-rose-200' };
-    default:
-      return { label: 'Unattempted', bg: 'bg-slate-50 text-slate-600 border-slate-200' };
+/**
+ * Subject Analysis Classification:
+ * - Strong: 80% to 100% accuracy
+ * - Good: 50% to 79% accuracy
+ * - Need to Focus: < 50% accuracy
+ */
+const getSubjectClassificationBadge = (accuracy: number) => {
+  if (accuracy >= 80) {
+    return { label: 'Strong', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
   }
+  if (accuracy >= 50) {
+    return { label: 'Good', bg: 'bg-blue-50 text-blue-700 border-blue-200' };
+  }
+  return { label: 'Need to Focus', bg: 'bg-rose-50 text-rose-700 border-rose-200' };
 };
 
 interface Props {
@@ -180,10 +179,10 @@ export const SubjectAnalyticsView: React.FC<Props> = ({ subjects }) => {
                             <div
                               className={cn(
                                 'h-full rounded-full',
-                                sub.accuracy >= 75
+                                sub.accuracy >= 80
                                   ? 'bg-emerald-500'
                                   : sub.accuracy >= 50
-                                    ? 'bg-amber-500'
+                                    ? 'bg-blue-500'
                                     : 'bg-rose-500',
                               )}
                               style={{ width: `${Math.min(100, Math.max(0, sub.accuracy))}%` }}
@@ -297,12 +296,12 @@ export const SubjectAnalyticsView: React.FC<Props> = ({ subjects }) => {
       {/* ── Subject Cards Grid ─────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {items.map((sub) => {
-          const badge = getStatusBadge(sub.status);
+          const badge = getSubjectClassificationBadge(sub.accuracy);
           const accColor =
-            sub.accuracy >= 75
+            sub.accuracy >= 80
               ? 'bg-emerald-500'
               : sub.accuracy >= 50
-                ? 'bg-amber-500'
+                ? 'bg-blue-500'
                 : 'bg-rose-500';
 
           return (

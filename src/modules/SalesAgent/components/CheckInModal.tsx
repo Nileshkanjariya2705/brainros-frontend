@@ -9,6 +9,8 @@ import {
   Navigation,
 } from 'lucide-react';
 import { SalesVisitService, type SalesVisit } from '@/services/salesVisit.service';
+import { acquireAccurateLocation } from '@/utils/geoAccuracy';
+import { reverseGeocodeCoordinates } from '@/utils/reverseGeocoding';
 import { toast } from '@/utils/toast';
 
 interface CheckInModalProps {
@@ -34,26 +36,34 @@ export const CheckInModal: React.FC<CheckInModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser.');
-      return;
-    }
-
+  const handleGetLocation = async () => {
     setGettingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude, accuracy } = position.coords;
-        setCoords({ latitude, longitude, accuracy });
-        setGettingLocation(false);
-        toast.success(`GPS Location acquired (Accuracy: ±${Math.round(accuracy)}m)`);
-      },
-      (error) => {
-        setGettingLocation(false);
-        toast.error(`Unable to retrieve GPS location: ${error.message}`);
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
-    );
+    try {
+      const loc = await acquireAccurateLocation({
+        targetAccuracyMeters: 25,
+        maxWaitTimeMs: 8000,
+        timeoutMs: 18000,
+      });
+
+      setCoords({
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        accuracy: loc.accuracy,
+      });
+
+      if (!locationAddress) {
+        const geocoded = await reverseGeocodeCoordinates(loc.latitude, loc.longitude);
+        if (geocoded.formattedAddress) {
+          setLocationAddress(geocoded.formattedAddress);
+        }
+      }
+
+      toast.success(`GPS Location acquired accurately (Accuracy: ±${Math.round(loc.accuracy)}m)`);
+    } catch (err: any) {
+      toast.error(err.message || 'Unable to retrieve accurate GPS location.');
+    } finally {
+      setGettingLocation(false);
+    }
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {

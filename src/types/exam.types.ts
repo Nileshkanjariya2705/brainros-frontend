@@ -594,7 +594,7 @@ export interface TopicPerformanceRow {
   topic: string;
   subjectName: string;
   accuracy: number;
-  status: 'Excellent' | 'Strong' | 'Needs Improvement' | 'Weak';
+  status: 'Strong' | 'Good' | 'Need to Focus' | 'Excellent' | 'Needs Improvement' | 'Weak';
   totalQuestions: number;
   correct: number;
   wrong: number;

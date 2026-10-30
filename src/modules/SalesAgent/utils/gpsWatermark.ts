@@ -7,6 +7,7 @@
 export interface GpsWatermarkData {
   latitude: number;
   longitude: number;
+  accuracy?: number;
   locationAddress?: string;
   city?: string;
   state?: string;
@@ -297,10 +298,10 @@ export async function stampGpsWatermark(
         let textY = cardY + 28 * scale;
 
         // Header: City, State, Country 🇮🇳
-        const cityState = [gpsData.city, gpsData.state, gpsData.country || 'India']
-          .filter(Boolean)
-          .join(', ');
-        const locationTitle = cityState || 'Verified Location, India';
+        const regionalParts = [gpsData.city, gpsData.state].filter(Boolean);
+        const locationTitle = regionalParts.length > 0
+          ? `${regionalParts.join(', ')}, ${gpsData.country || 'India'}`
+          : (gpsData.city || gpsData.state || 'Verified GPS Location, India');
 
         ctx.font = `bold ${21 * scale}px system-ui, -apple-system, sans-serif`;
         ctx.fillStyle = '#ffffff';
@@ -313,11 +314,12 @@ export async function stampGpsWatermark(
         const rawAddr = gpsData.locationAddress || `${gpsData.latitude.toFixed(5)}, ${gpsData.longitude.toFixed(5)}`;
         textY = wrapText(ctx, rawAddr, textX, textY, textMaxW - 10 * scale, 17 * scale, 2);
 
-        // Coordinates line
+        // Coordinates & Accuracy line
         ctx.font = `bold ${13 * scale}px system-ui, monospace`;
         ctx.fillStyle = '#f8fafc';
+        const accuracyStr = gpsData.accuracy ? ` (±${Math.round(gpsData.accuracy)}m)` : '';
         ctx.fillText(
-          `Lat ${gpsData.latitude.toFixed(6)}° Long ${gpsData.longitude.toFixed(6)}°`,
+          `Lat ${gpsData.latitude.toFixed(6)}° Long ${gpsData.longitude.toFixed(6)}°${accuracyStr}`,
           textX,
           textY + 2 * scale,
         );

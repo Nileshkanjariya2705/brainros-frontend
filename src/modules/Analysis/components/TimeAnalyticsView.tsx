@@ -7,7 +7,6 @@ import {
   BarChart3,
   Zap,
   Clock,
-  TrendingDown,
 } from 'lucide-react';
 import cn from 'classnames';
 import type { TimeAnalyticsReport } from '@/types/exam.types';
@@ -22,42 +21,27 @@ export const TimeAnalyticsView: React.FC<Props> = ({ timeAnalysis }) => {
   const totalOverthought = timeAnalysis.pacingMetrics?.overthoughtCount || 0;
   const totalPacedQuestions = totalRushed + totalOptimal + totalOverthought || 1;
 
-  const timeWastedMins = Math.round((timeAnalysis.timeWastedSeconds || 0) / 60);
-
   return (
     <div className="space-y-6">
-      {/* ── Time Wasted Alert Callout Banner ──────────────────────── */}
-      {timeAnalysis.timeWastedSeconds > 0 && (
-        <div className="rounded-3xl border border-amber-300/80 bg-gradient-to-r from-amber-500/10 via-amber-50 to-orange-50 p-5 md:p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-amber-500/20 border border-amber-300 flex items-center justify-center text-amber-700 shrink-0">
-              <TrendingDown size={24} />
-            </div>
-            <div>
-              <h4 className="text-sm font-black text-amber-950 uppercase tracking-wide">
-                Time Investment Efficiency Alert
-              </h4>
-              <p className="text-xs text-amber-900/90 mt-0.5 max-w-xl leading-relaxed">
-                You spent ~
-                <strong>
-                  {timeWastedMins} minutes ({timeAnalysis.timeWastedSeconds}s)
-                </strong>{' '}
-                on questions that were answered incorrectly or skipped. Improving your
-                decision-speed will free up crucial minutes for high-scoring questions.
-              </p>
-            </div>
+      {/* ── 4 Key Time Metric Cards ─────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-500/10 via-indigo-500/5 to-white p-6 shadow-sm">
+          <div className="flex items-center gap-2 text-indigo-700 font-bold text-xs uppercase tracking-wider mb-2">
+            <Clock size={16} />
+            <span>Avg Time Per Question</span>
           </div>
-          <div className="rounded-2xl bg-amber-600/10 border border-amber-300 px-4 py-2 text-center shrink-0 w-full sm:w-auto">
-            <span className="text-xl font-black text-amber-900 block">{timeWastedMins}m</span>
-            <span className="text-[10px] font-bold text-amber-700 uppercase">
-              Unproductive Time
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-black text-slate-900">
+              {timeAnalysis.averageTimePerQuestionSeconds}s
             </span>
+            <span className="text-xs text-slate-500 font-semibold">overall avg / Q</span>
           </div>
+          <p className="mt-2 text-xs text-slate-600 leading-relaxed">
+            Total of <strong>{Math.round(timeAnalysis.totalTimeUsedSeconds / 60)} mins</strong> used
+            across {timeAnalysis.totalExamDurationMinutes}m exam window.
+          </p>
         </div>
-      )}
 
-      {/* ── 3 Outcome Time Cards ─────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-white p-6 shadow-sm">
           <div className="flex items-center gap-2 text-emerald-700 font-bold text-xs uppercase tracking-wider mb-2">
             <CheckCircle2 size={16} />

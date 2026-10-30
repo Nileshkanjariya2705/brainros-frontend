@@ -15,6 +15,8 @@ import {
   Navigation,
 } from 'lucide-react';
 import { SalesVisitService, type CreateSalesVisitPayload } from '@/services/salesVisit.service';
+import { acquireAccurateLocation } from '@/utils/geoAccuracy';
+import { reverseGeocodeCoordinates } from '@/utils/reverseGeocoding';
 import { toast } from '@/utils/toast';
 
 interface AddActivityModalProps {
@@ -49,34 +51,36 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
   const [notes, setNotes] = useState('');
   const [nextFollowUpDate, setNextFollowUpDate] = useState('');
   const [gpsLocation, setGpsLocation] = useState<{ lat?: number; lng?: number } | null>(null);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [detectingGps, setDetectingGps] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleDetectGps = () => {
-    if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser.');
-      return;
-    }
+  const handleDetectGps = async () => {
     setDetectingGps(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setGpsLocation({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        });
-        if (!locationAddress) {
-          setLocationAddress(`GPS: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`);
-        }
-        setDetectingGps(false);
-        toast.success('Current location detected successfully!');
-      },
-      (err) => {
-        setDetectingGps(false);
-        toast.error(`Could not detect location: ${err.message}`);
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
+    try {
+      const loc = await acquireAccurateLocation({
+        targetAccuracyMeters: 25,
+        maxWaitTimeMs: 8000,
+        timeoutMs: 18000,
+      });
+
+      setGpsLocation({
+        lat: loc.latitude,
+        lng: loc.longitude,
+      });
+      setGpsAccuracy(loc.accuracy);
+
+      const geocoded = await reverseGeocodeCoordinates(loc.latitude, loc.longitude);
+      if (!locationAddress || locationAddress.startsWith('GPS:')) {
+        setLocationAddress(geocoded.formattedAddress);
+      }
+      toast.success(`GPS Location detected accurately (±${Math.round(loc.accuracy)}m)!`);
+    } catch (err: any) {
+      toast.error(err.message || 'Could not detect location. Please verify GPS permissions.');
+    } finally {
+      setDetectingGps(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,6 +102,7 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
         notes: notes.trim() || undefined,
         latitude: gpsLocation?.lat,
         longitude: gpsLocation?.lng,
+        accuracy: gpsAccuracy || undefined,
       };
 
       const visit = await SalesVisitService.scheduleVisit(payload);
@@ -263,7 +268,8 @@ export const AddActivityModal: React.FC<AddActivityModalProps> = ({
             />
             {gpsLocation && (
               <span className="inline-block mt-1 text-[11px] font-semibold text-emerald-600">
-                ✓ GPS Coordinates Captured ({gpsLocation.lat?.toFixed(4)}, {gpsLocation.lng?.toFixed(4)})
+                ✓ GPS Coordinates Captured ({gpsLocation.lat?.toFixed(5)}, {gpsLocation.lng?.toFixed(5)})
+                {gpsAccuracy && ` (±${Math.round(gpsAccuracy)}m accuracy)`}
               </span>
             )}
           </div>
